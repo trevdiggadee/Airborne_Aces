@@ -1,0 +1,343 @@
+"use strict";
+
+  // ---------- Sound — layered procedural audio engine, no audio files needed ----------
+  // Everything here — SFX and music both — is synthesized live with the Web Audio
+  // API (oscillators + filtered noise + a generated reverb impulse). No external
+  // assets, so nothing to fail to load and no licensing concerns.
+  let muted = false;
+  try { muted = localStorage.getItem("aa_muted") === "1"; } catch (e) { muted = false; }
+
+  let audioCtx = null;
+  let masterGain = null;
+  let sfxGainNode = null;
+  let musicGainNode = null;
+  let reverbNode = null;
+  let reverbSendGain = null;
+
+  function ensureAudio() {
+    if (audioCtx) {
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      buildAudioGraph();
+      return;
+    }
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      buildAudioGraph();
+    } catch (e) { audioCtx = null; }
+  }
+
+  function buildAudioGraph() {
+    if (!audioCtx || masterGain) return;
+
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = muted ? 0 : 1;
+    masterGain.connect(audioCtx.destination);
+
+    sfxGainNode = audioCtx.createGain();
+    sfxGainNode.gain.value = (typeof sfxVolumePref !== "undefined") ? sfxVolumePref : 1;
+    sfxGainNode.connect(masterGain);
+
+    musicGainNode = audioCtx.createGain();
+    musicGainNode.gain.value = (typeof musicVolumePref !== "undefined") ? musicVolumePref : 0.25;
+    musicGainNode.connect(masterGain);
+    window.__debugGains = () => ({ m: musicGainNode.gain.value, s: sfxGainNode.gain.value, master: masterGain.gain.value, muted: muted, audioCtxState: audioCtx.state });
+
+    // a short synthetic "room" reverb — an exponentially decaying noise impulse,
+    // cheap to generate and good enough to give tones some body without files
+    reverbNode = audioCtx.createConvolver();
+    const rate = audioCtx.sampleRate;
+    const len = Math.floor(rate * 1.4);
+    const impulse = audioCtx.createBuffer(2, len, rate);
+    for (let ch = 0; ch < 2; ch++) {
+      const data = impulse.getChannelData(ch);
+      for (let i = 0; i < len; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.2);
+      }
+    }
+    reverbNode.buffer = impulse;
+    reverbSendGain = audioCtx.createGain();
+    reverbSendGain.gain.value = 0.4;
+    reverbNode.connect(reverbSendGain);
+    reverbSendGain.connect(masterGain);
+  }
+
+  function setMuted(m) {
+    muted = m;
+    try { localStorage.setItem("aa_muted", muted ? "1" : "0"); } catch (e) {}
+    if (masterGain) masterGain.gain.setTargetAtTime(muted ? 0 : 1, audioCtx.currentTime, 0.02);
+    if (window.__airborneSetGameplayMusicMuted) window.__airborneSetGameplayMusicMuted(muted);
+    const btn = document.getElementById("muteBtn");
+    if (btn) btn.textContent = muted ? "🔇" : "🔊";
+  }
+
+  window.__airborneSetSynthMusicVolume = function(v) {
+    if (musicGainNode && audioCtx) musicGainNode.gain.setTargetAtTime(v, audioCtx.currentTime, 0.02);
+  };
+  window.__airborneSetSfxVolume = function(v) {
+    if (sfxGainNode && audioCtx) sfxGainNode.gain.setTargetAtTime(v, audioCtx.currentTime, 0.02);
+  };
+
+  function noteFreq(midi) {
+    return 440 * Math.pow(2, (midi - 69) / 12);
+  }
+
+  // a tone with a proper little attack/decay envelope, optional pitch sweep,
+  // optional detune (for a thicker/metallic double-oscillator feel), and an
+  // optional send to the reverb bus
+  function playTone({ freq = 440, duration = 0.1, type = "sine", vol = 0.2, sweep = 0,
+                       startDelay = 0, attack = 0.006, detune = 0, reverbSend = 0 }) {
+    if (muted || !audioCtx) return;
+    const t0 = audioCtx.currentTime + Math.max(0, startDelay);
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    if (detune) osc.detune.setValueAtTime(detune, t0);
+    if (sweep) osc.frequency.exponentialRampToValueAtTime(Math.max(20, freq + sweep), t0 + duration);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(Math.max(vol, 0.0005), t0 + attack);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+    osc.connect(gain);
+    gain.connect(sfxGainNode);
+    if (reverbSend > 0 && reverbNode) {
+      const send = audioCtx.createGain();
+      send.gain.value = reverbSend;
+      gain.connect(send);
+      send.connect(reverbNode);
+    }
+    osc.start(t0);
+    osc.stop(t0 + duration + 0.05);
+  }
+
+  // filtered noise burst — the workhorse for explosions, wind, thunder, hits
+  function playNoise({ duration = 0.2, vol = 0.25, startDelay = 0, filterType = "lowpass",
+                        filterFreq = 2000, filterFreqEnd = null, Q = 1, reverbSend = 0 }) {
+    if (muted || !audioCtx) return;
+    const t0 = audioCtx.currentTime + Math.max(0, startDelay);
+    const bufferSize = Math.max(1, Math.floor(audioCtx.sampleRate * duration));
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    const src = audioCtx.createBufferSource();
+    src.buffer = buffer;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = filterType;
+    filter.frequency.setValueAtTime(filterFreq, t0);
+    if (filterFreqEnd !== null) filter.frequency.exponentialRampToValueAtTime(Math.max(40, filterFreqEnd), t0 + duration);
+    filter.Q.value = Q;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(vol, t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+    src.connect(filter); filter.connect(gain); gain.connect(sfxGainNode);
+    if (reverbSend > 0 && reverbNode) {
+      const send = audioCtx.createGain();
+      send.gain.value = reverbSend;
+      gain.connect(send);
+      send.connect(reverbNode);
+    }
+    src.start(t0);
+  }
+
+  function sfxFlap() {
+    playNoise({ duration: 0.09, vol: 0.045, filterType: "bandpass", filterFreq: 900, filterFreqEnd: 380, Q: 0.8 });
+    playTone({ freq: 230, duration: 0.09, type: "triangle", vol: 0.08, sweep: 130, attack: 0.004 });
+  }
+
+  function sfxShoot() {
+    playTone({ freq: 920, duration: 0.05, type: "square", vol: 0.05, sweep: -520, attack: 0.002 });
+    playTone({ freq: 1500, duration: 0.02, type: "square", vol: 0.03, attack: 0.001 });
+  }
+
+  function sfxExplosion(size = 1) {
+    playNoise({ duration: 0.26 + size * 0.12, vol: 0.17 + size * 0.08, filterType: "lowpass",
+      filterFreq: 3200, filterFreqEnd: 180, Q: 0.8, reverbSend: 0.45 });
+    playTone({ freq: 82, duration: 0.22 + size * 0.1, type: "sawtooth", vol: 0.12 + size * 0.06,
+      sweep: -45, attack: 0.005, reverbSend: 0.2 });
+    for (let i = 0; i < 3; i++) {
+      playNoise({ duration: 0.03, vol: 0.05, filterType: "highpass", filterFreq: 2600, startDelay: 0.02 + i * 0.045 });
+    }
+  }
+
+  function sfxHit() {
+    playNoise({ duration: 0.12, vol: 0.14, filterType: "bandpass", filterFreq: 1300, Q: 1.5 });
+    playTone({ freq: 145, duration: 0.15, type: "sawtooth", vol: 0.17, sweep: -85, attack: 0.003 });
+  }
+
+  function sfxPowerup() {
+    [0, 4, 7, 12].forEach((iv, i) => {
+      playTone({ freq: noteFreq(64 + iv), duration: 0.14, type: "triangle", vol: 0.1,
+        sweep: 40, startDelay: i * 0.07, attack: 0.004, reverbSend: 0.3 });
+    });
+  }
+
+  function sfxHeart() {
+    playTone({ freq: 660, duration: 0.16, type: "sine", vol: 0.12, sweep: 140, reverbSend: 0.35 });
+    playTone({ freq: 990, duration: 0.14, type: "sine", vol: 0.06, startDelay: 0.03, reverbSend: 0.35 });
+  }
+
+  function sfxBossDefeat() {
+    // a little triumphant major chord + rising fanfare stab
+    [0, 4, 7, 12].forEach(iv => {
+      playTone({ freq: noteFreq(45 + iv), duration: 0.6, type: "sawtooth", vol: 0.07, attack: 0.02, reverbSend: 0.4 });
+    });
+    [0, 0.14, 0.28].forEach((d, i) => {
+      playTone({ freq: 300 + i * 140, duration: 0.22, type: "square", vol: 0.14, sweep: 90, startDelay: d, reverbSend: 0.3 });
+    });
+  }
+
+  function sfxCrash() {
+    playNoise({ duration: 0.42, vol: 0.22, filterType: "lowpass", filterFreq: 2600, filterFreqEnd: 150, reverbSend: 0.35 });
+    playTone({ freq: 90, duration: 0.42, type: "sawtooth", vol: 0.18, sweep: -65, attack: 0.005, reverbSend: 0.2 });
+    playTone({ freq: 55, duration: 0.5, type: "sine", vol: 0.12, startDelay: 0.05 });
+  }
+
+  function sfxClick() {
+    playTone({ freq: 900, duration: 0.035, type: "square", vol: 0.07, attack: 0.001 });
+    playNoise({ duration: 0.02, vol: 0.03, filterType: "highpass", filterFreq: 3200 });
+  }
+
+  function sfxThunder() {
+    playNoise({ duration: 0.6, vol: 0.16, filterType: "lowpass", filterFreq: 500, filterFreqEnd: 80, reverbSend: 0.55 });
+    playNoise({ duration: 0.12, vol: 0.1, filterType: "highpass", filterFreq: 3000, startDelay: 0.01 });
+    playTone({ freq: 50, duration: 0.6, type: "sawtooth", vol: 0.1, sweep: -15, reverbSend: 0.35 });
+  }
+
+  function sfxDeflect() {
+    playTone({ freq: 1200, duration: 0.08, type: "sine", vol: 0.1, sweep: 320, detune: 8, reverbSend: 0.3 });
+    playTone({ freq: 1600, duration: 0.06, type: "sine", vol: 0.06, sweep: 320, startDelay: 0.01 });
+  }
+
+  function sfxTypewriterTick() {
+    playTone({ freq: 1050 + Math.random() * 260, duration: 0.028, type: "square", vol: 0.05, attack: 0.001 });
+  }
+
+  function sfxStreak() {
+    [0, 0.07].forEach((d, i) => {
+      playTone({ freq: 660 * Math.pow(2, (i * 3) / 12), duration: 0.09, type: "triangle", vol: 0.09, sweep: 120, startDelay: d });
+    });
+  }
+
+  function sfxStormReady() {
+    // bright rising sparkle + chime — signals the power is charged and tappable
+    [0, 4, 7, 12, 16].forEach((iv, i) => {
+      playTone({ freq: noteFreq(69 + iv), duration: 0.16, type: "triangle", vol: 0.09,
+        sweep: 60, startDelay: i * 0.045, attack: 0.003, reverbSend: 0.4 });
+    });
+    playTone({ freq: 1760, duration: 0.22, type: "sine", vol: 0.07, startDelay: 0.18, reverbSend: 0.45 });
+  }
+
+  // ---------- Music — original adaptive score, two hand-written 16-step loops ----------
+  // (normal flight vs. boss-fight), scheduled with a standard lookahead sequencer
+  // so timing stays tight even though we're just calling setInterval.
+  const THEME_NORMAL = {
+    bpm: 116,
+    lead: [62, 0, 66, 0, 69, 0, 67, 66, 62, 0, 69, 0, 71, 69, 67, 0],
+    bass: [50, 0, 0, 0, 45, 0, 0, 0, 43, 0, 0, 0, 45, 0, 0, 0],
+    hat:  [1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1],
+    kick: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0]
+  };
+  const THEME_BOSS = {
+    bpm: 150,
+    lead: [62, 65, 67, 65, 70, 67, 65, 62, 74, 72, 70, 67, 65, 67, 62, 0],
+    bass: [50, 50, 45, 45, 43, 43, 45, 45, 50, 50, 45, 45, 43, 43, 45, 45],
+    hat:  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+  };
+
+  let musicPlaying = false;
+  let musicTheme = THEME_NORMAL;
+  let musicStep = 0;
+  let musicNextNoteTime = 0;
+  let musicTimerId = null;
+  const MUSIC_SCHEDULE_AHEAD = 0.14;
+  const MUSIC_LOOKAHEAD_MS = 30;
+
+  function musicStepDuration() {
+    return 60 / musicTheme.bpm / 4; // 16th notes
+  }
+
+  function scheduleMusicStep(step, time) {
+    const t = musicTheme;
+    const dur = musicStepDuration();
+    const delay = Math.max(0, time - audioCtx.currentTime);
+
+    const leadNote = t.lead[step];
+    if (leadNote) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(noteFreq(leadNote), time);
+      gain.gain.setValueAtTime(0.0001, time);
+      gain.gain.exponentialRampToValueAtTime(0.11, time + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + dur * 1.7);
+      osc.connect(gain); gain.connect(musicGainNode);
+      const send = audioCtx.createGain();
+      send.gain.value = 0.2;
+      gain.connect(send); send.connect(reverbNode);
+      osc.start(time); osc.stop(time + dur * 1.8);
+    }
+    const bassNote = t.bass[step];
+    if (bassNote) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(noteFreq(bassNote - 12), time);
+      gain.gain.setValueAtTime(0.0001, time);
+      gain.gain.exponentialRampToValueAtTime(0.16, time + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + dur * 1.9);
+      osc.connect(gain); gain.connect(musicGainNode);
+      osc.start(time); osc.stop(time + dur * 2);
+    }
+    if (t.hat[step] && !muted) {
+      playNoise({ duration: 0.035, vol: 0.03, filterType: "highpass", filterFreq: 6500, startDelay: delay });
+    }
+    if (t.kick[step]) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(140, time);
+      osc.frequency.exponentialRampToValueAtTime(50, time + 0.1);
+      gain.gain.setValueAtTime(0.0001, time);
+      gain.gain.exponentialRampToValueAtTime(0.15, time + 0.006);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.13);
+      osc.connect(gain); gain.connect(musicGainNode);
+      osc.start(time); osc.stop(time + 0.15);
+    }
+  }
+
+  function musicScheduler() {
+    if (!audioCtx) return;
+    if (muted) {
+      // keep the clock from drifting behind while muted, so unmuting resumes
+      // cleanly instead of bursting through every skipped step at once
+      musicNextNoteTime = audioCtx.currentTime + 0.05;
+      return;
+    }
+    while (musicNextNoteTime < audioCtx.currentTime + MUSIC_SCHEDULE_AHEAD) {
+      scheduleMusicStep(musicStep, musicNextNoteTime);
+      musicNextNoteTime += musicStepDuration();
+      musicStep = (musicStep + 1) % musicTheme.lead.length;
+    }
+  }
+
+  function startMusic() {
+    if (window.__airborneStartGameplayMusic) window.__airborneStartGameplayMusic();
+    if (!audioCtx) return;
+    buildAudioGraph();
+    if (musicPlaying) return;
+    musicPlaying = true;
+    musicStep = 0;
+    musicNextNoteTime = audioCtx.currentTime + 0.05;
+    musicTimerId = setInterval(musicScheduler, MUSIC_LOOKAHEAD_MS);
+  }
+
+  function stopMusic() {
+    if (window.__airborneStopGameplayMusic) window.__airborneStopGameplayMusic();
+    musicPlaying = false;
+    if (musicTimerId) { clearInterval(musicTimerId); musicTimerId = null; }
+  }
+
+  function setMusicTheme(theme) {
+    musicTheme = theme;
+  }
+

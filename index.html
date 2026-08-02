@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="format-detection" content="telephone=no" />
+<title>Airborne Aces</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="blimp-profile.css">
+</head>
+<body>
+
+<!-- Screen Effects Overlay Layers -->
+<div id="screenChromatic" class="screen-chromatic"></div>
+<div id="screenGrain" class="screen-grain"></div>
+<div id="screenScanlines" class="screen-scanlines"></div>
+<div id="screenFlash" class="screen-flash"></div>
+
+<div id="tutorialGuide" class="hidden">
+  <div class="tutGuideChar">
+    <img src="" alt="" id="tutGuideImg">
+  </div>
+  <div class="tutBubble">
+    <p id="tutBubbleText"></p>
+    <button type="button" id="tutSkipBtn">GOT IT ▶</button>
+  </div>
+</div>
+
+
+
+<div id="splashScreen">
+  <div class="splashSandGlow" aria-hidden="true"></div>
+  <div class="splashRadar" aria-hidden="true">
+    <svg class="splashRadarSvg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="radarGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="rgba(255,255,255,0.35)"/>
+          <stop offset="40%" stop-color="rgba(255,255,255,0.12)"/>
+          <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+        </radialGradient>
+        <linearGradient id="sweepGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="rgba(255,255,255,0)"/>
+          <stop offset="70%" stop-color="rgba(255,255,255,0.08)"/>
+          <stop offset="100%" stop-color="rgba(255,255,255,0.45)"/>
+        </linearGradient>
+      </defs>
+      <circle class="radarRing thick" cx="200" cy="200" r="196"/>
+      <circle class="radarRing" cx="200" cy="200" r="157"/>
+      <circle class="radarRing" cx="200" cy="200" r="118"/>
+      <circle class="radarRing" cx="200" cy="200" r="78"/>
+      <circle class="radarRing" cx="200" cy="200" r="39"/>
+      <line class="radarCross" x1="200" y1="10" x2="200" y2="390"/>
+      <line class="radarCross" x1="10" y1="200" x2="390" y2="200"/>
+      <line class="radarCross" x1="58" y1="58" x2="342" y2="342"/>
+      <line class="radarCross" x1="342" y1="58" x2="58" y2="342"/>
+      <g class="radarSweep">
+        <path class="radarSweepFan" d="M200,200 L200,10 A190,190 0 0,1 340,70 Z" fill="url(#sweepGrad)"/>
+        <line x1="200" y1="200" x2="200" y2="12" stroke="rgba(255,255,255,0.7)" stroke-width="2"/>
+      </g>
+      <g class="radarBlimp b1" transform="translate(258,118)">
+        <ellipse class="blimpGlow" cx="0" cy="0" rx="10" ry="7"/>
+        <ellipse class="blimpBody" cx="0" cy="0" rx="7" ry="3.2"/>
+        <rect class="blimpBody" x="-1.5" y="2.5" width="3" height="2.2" rx="0.4"/>
+        <line class="blimpBody" x1="6" y1="0" x2="9" y2="-1.5" stroke="rgba(255,255,255,0.7)" stroke-width="0.8"/>
+      </g>
+    </svg>
+  </div>
+  <div class="splashParticles" id="splashParticles" aria-hidden="true"></div>
+  <div class="splashStage">
+    <div class="splashTitle">AIRBORNE ACES</div>
+  </div>
+  <button class="enterHangarBtn" id="splashEnterBtn" type="button">ENTER HANGAR</button>
+</div>
+
+<div id="menuScreen">
+<audio id="menuMusic" loop preload="auto" src="victory_brass_step.mp3"></audio>
+<audio id="gameplayMusic" loop preload="auto" src="skyward-march%202.mp3"></audio>
+<div class="stage">
+  <img class="stageBg" crossorigin="anonymous" src="hangar_bg.jpg" alt="Airborne Aces" />
+
+  <img class="cloudLayer cA" crossorigin="anonymous" src="asset_extra_04.webp?cb=2" alt="" />
+  <img class="cloudLayer cB" crossorigin="anonymous" src="asset_extra_05.webp?cb=2" alt="" />
+
+  <div class="menuBanner">
+    <img crossorigin="anonymous" src="menuBanner.webp?cb=2" alt="" />
+  </div>
+
+  <div class="heroBlimpWrap">
+    <img id="heroBlimpImgA" class="heroBlimpLayer" crossorigin="anonymous" src="asset_extra_06.webp?cb=2" alt="" />
+    <img id="heroBlimpImgB" class="heroBlimpLayer heroBlimpLayerB" crossorigin="anonymous" src="" alt="" />
+    <div class="propBlur" id="propBlur"></div>
+    <div class="smokeParticles" id="smokeParticles">
+      <span class="puff p1"></span>
+      <span class="puff p2"></span>
+      <span class="puff p3"></span>
+      <span class="puff p4"></span>
+      <span class="puff p5"></span>
+    </div>
+  </div>
+
+  
+  <!-- Blimp Profile Panel -->
+  <div class="blimpProfile" id="blimpProfile">
+    <div class="bpBadge" aria-hidden="true">
+      <svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 20 Q20 8 32 20 Q20 18 8 20Z" fill="#c9a66b" opacity="0.85"/>
+        <path d="M56 20 Q44 8 32 20 Q44 18 56 20Z" fill="#c9a66b" opacity="0.85"/>
+        <circle cx="32" cy="20" r="10" fill="#2a1c10" stroke="#c9a66b" stroke-width="1.5"/>
+        <path d="M32 14 L33.5 18.5 L38 19 L34.5 22 L35.5 26.5 L32 24 L28.5 26.5 L29.5 22 L26 19 L30.5 18.5Z" fill="#c9a66b"/>
+      </svg>
+    </div>
+    <div class="bpName" id="bpName">—</div>
+    <div class="bpMk" id="bpMk">Mk I</div>
+    <div class="bpDivider"></div>
+    <div class="bpMeta">
+      <div class="bpMetaRow"><span class="k">Class</span><span class="v" id="bpClass">—</span></div>
+      <div class="bpMetaRow"><span class="k">Call Sign</span><span class="v" id="bpCall">—</span></div>
+    </div>
+    <div class="bpDivider"></div>
+    <div class="bpSection">Stats</div>
+    <div class="bpStats" id="bpStats"></div>
+    <div class="bpDivider"></div>
+    <div class="bpSection">Special Ability</div>
+    <div class="bpAbility">
+      <div class="bpAbilityIcon" id="bpAbilityIcon"></div>
+      <div class="bpAbilityText">
+        <div class="bpAbilityName" id="bpAbilityName">—</div>
+        <div class="bpAbilityDesc" id="bpAbilityDesc">—</div>
+      </div>
+    </div>
+    <div class="bpDivider"></div>
+    <div class="bpSection">Next Rank</div>
+    <div class="bpUpgrade">
+      <div class="bpUpgradeRow"><span id="bpUpgrade">—</span></div>
+      <div class="bpXpTrack"><div class="bpXpFill" id="bpXpFill"></div></div>
+      <div class="bpXpLabel" id="bpXpLabel">0 / 0 XP</div>
+    </div>
+  </div>
+
+  <button class="flyBtn" id="flyBtn">Take Flight</button>
+
+  <button class="numBtn n1 active" onclick="selectBlimp('blimp1', this)" aria-label="Zeppelin Ace">
+    <img crossorigin="anonymous" src="asset_extra_06.webp?cb=2" alt="" />
+  </button>
+  <button class="numBtn n2" onclick="selectBlimp('blimp2', this)" aria-label="Deco Liner">
+    <img crossorigin="anonymous" src="blimp2_main.webp?cb=2" alt="" />
+  </button>
+  <button class="numBtn n3" onclick="selectBlimp('blimp3', this)" aria-label="Aero Slicer">
+    <img crossorigin="anonymous" src="blimp3_main.webp?cb=2" alt="" />
+  </button>
+  <button class="numBtn n4" onclick="selectBlimp('blimp4', this)" aria-label="Steampunk">
+    <img crossorigin="anonymous" src="blimp4_main.webp?cb=2" alt="" />
+  </button>
+
+  <button class="numBtn n5" onclick="selectBlimp('blimp5', this)" aria-label="Royal Voyager">
+    <img crossorigin="anonymous" src="ship_purple.png" alt="" />
+  </button>
+  <button class="numBtn n6" onclick="selectBlimp('blimp6', this)" aria-label="Brass Chronograph">
+    <img crossorigin="anonymous" src="ship_wood.png" alt="" />
+  </button>
+  <button class="numBtn n7" onclick="selectBlimp('blimp7', this)" aria-label="Storm Chaser">
+    <img crossorigin="anonymous" src="ship_lightning.png" alt="" />
+  </button>
+  <button class="numBtn n8" onclick="selectBlimp('blimp8', this)" aria-label="Cargo King">
+    <img crossorigin="anonymous" src="ship_cargo.png" alt="" />
+  </button>
+  <button class="numBtn n9" onclick="selectBlimp('blimp9', this)" aria-label="Jolly Rogers">
+    <img crossorigin="anonymous" src="ship_pirate.png" alt="" />
+  </button>
+  <button class="numBtn n10" onclick="selectBlimp('blimp10', this)" aria-label="Ivory Anchor">
+    <img crossorigin="anonymous" src="ship_ivory.png" alt="" />
+  </button>
+
+</div>
+</div>
+
+<div id="cutsceneScreen" class="cutsceneScreen" style="display:none;">
+  <div class="cutsceneStage">
+    <div class="cutsceneBg"></div>
+    <img class="cutsceneCloud cc1" crossorigin="anonymous" src="asset_extra_04.webp?cb=2" alt="" />
+    <img class="cutsceneCloud cc2" crossorigin="anonymous" src="asset_extra_05.webp?cb=2" alt="" />
+    <div class="cutsceneGlow left"></div>
+    <div class="cutsceneGlow right"></div>
+
+    <div class="cutsceneBlimpWrap" id="cutsceneBlimpWrap">
+      <img id="cutsceneBlimpImg" crossorigin="anonymous" src="" alt="" />
+    </div>
+
+    <div class="cutsceneTutorWrap" id="cutsceneTutorWrap"></div>
+
+    <div class="cutsceneVignette"></div>
+
+    <button class="cutsceneSkip" id="cutsceneSkip" type="button">Skip &#9654;</button>
+
+    <div class="cutsceneDialogue" id="cutsceneDialogue">
+      <span class="cutsceneNameplate">Flight Tutor</span>
+      <p class="cutsceneText" id="cutsceneText"></p>
+      <span class="cutsceneTapHint">Tap to continue</span>
+    </div>
+  </div>
+</div>
+
+<div id="gameScreen" style="display:none;">
+<canvas id="gameCanvas"></canvas>
+
+<button id="muteBtn" aria-label="Toggle sound">🔊</button>
+
+<div id="hudFrame">
+  <img id="hudFrameImg" crossorigin="anonymous" src="hudFrame.webp?cb=2" alt="" />
+
+  <div id="healthMeter">
+    <img id="healthImg" crossorigin="anonymous" src="heartPickup.webp?cb=2" alt="Health" />
+  </div>
+
+  <div id="bonusHearts"></div>
+
+  <div class="scoreFrame">SCORE: <span id="scoreVal">0</span></div>
+
+  <div id="timerFrame">
+    <div class="flip-clock" id="flipClock">
+      <div class="flip-unit" data-pos="m1">
+        <div class="flip-card-static" id="fc-m1-static">0</div>
+        <div class="flip-card" id="fc-m1" style="display:none;">
+          <div class="flip-card-top" id="fc-m1-top"><span class="digit">0</span></div>
+          <div class="flip-card-bottom" id="fc-m1-bottom"><span class="digit">0</span></div>
+        </div>
+      </div>
+      <div class="flip-unit" data-pos="m2">
+        <div class="flip-card-static" id="fc-m2-static">0</div>
+        <div class="flip-card" id="fc-m2" style="display:none;">
+          <div class="flip-card-top" id="fc-m2-top"><span class="digit">0</span></div>
+          <div class="flip-card-bottom" id="fc-m2-bottom"><span class="digit">0</span></div>
+        </div>
+      </div>
+      <div class="flip-separator"><span></span><span></span></div>
+      <div class="flip-unit" data-pos="s1">
+        <div class="flip-card-static" id="fc-s1-static">0</div>
+        <div class="flip-card" id="fc-s1" style="display:none;">
+          <div class="flip-card-top" id="fc-s1-top"><span class="digit">0</span></div>
+          <div class="flip-card-bottom" id="fc-s1-bottom"><span class="digit">0</span></div>
+        </div>
+      </div>
+      <div class="flip-unit" data-pos="s2">
+        <div class="flip-card-static" id="fc-s2-static">0</div>
+        <div class="flip-card" id="fc-s2" style="display:none;">
+          <div class="flip-card-top" id="fc-s2-top"><span class="digit">0</span></div>
+          <div class="flip-card-bottom" id="fc-s2-bottom"><span class="digit">0</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="stormMeter">
+  <img id="stormIcon" crossorigin="anonymous" src="storm_icon_1.webp?cb=2" alt="Storm Power" data-stage="0" />
+</div>
+
+<div id="startOverlay" class="overlay">
+  <h1>AIRBORNE ACES</h1>
+  <p>Tap anywhere to climb.<br/>Dodge the balloons and birds!</p>
+  <button class="gameFlyBtn" id="startBtn">FLY!</button>
+</div>
+
+<div id="gameOverOverlay" class="overlay hidden">
+  <span class="ember" style="left:8%; animation-duration:3.4s; animation-delay:0s; --drift:18px;"></span>
+  <span class="ember" style="left:22%; animation-duration:2.8s; animation-delay:0.6s; --drift:-14px;"></span>
+  <span class="ember" style="left:38%; animation-duration:3.8s; animation-delay:0.2s; --drift:22px;"></span>
+  <span class="ember" style="left:58%; animation-duration:3.1s; animation-delay:1.1s; --drift:-20px;"></span>
+  <span class="ember" style="left:74%; animation-duration:3.6s; animation-delay:0.4s; --drift:16px;"></span>
+  <span class="ember" style="left:88%; animation-duration:2.9s; animation-delay:0.9s; --drift:-18px;"></span>
+  <span class="ember" style="left:50%; animation-duration:4.1s; animation-delay:1.5s; --drift:10px;"></span>
+  <div class="overlayPanel">
+    <h1>CRASHED!</h1>
+    <div class="bigScore" id="finalScore">0</div>
+    <div class="bestScore" id="bestScoreLine">Best: 0</div>
+    <button class="gameFlyBtn" id="retryBtn">RETRY</button>
+    <button class="gameFlyBtn secondaryBtn hidden" id="checkpointBtn">CHECKPOINT</button>
+    <button class="gameFlyBtn secondaryBtn" id="menuBtn">CHANGE BLIMP</button>
+  </div>
+</div>
+
+<div id="bossDialogueOverlay" class="hidden">
+  <div class="dlgStage">
+    <div class="dlgPortrait dlgPortraitPlayer">
+      <div class="dlgPortraitFrame"><img id="dlgPlayerImg" src="" alt=""></div>
+      <div class="dlgNamePlate">YOU</div>
+    </div>
+    <div class="dlgVs">VS</div>
+    <div class="dlgPortrait dlgPortraitBoss">
+      <div class="dlgPortraitFrame"><img id="dlgBossImg" src="" alt=""></div>
+      <div class="dlgNamePlate" id="dlgBossName">BOSS</div>
+    </div>
+  </div>
+  <div class="dlgDialogueArea">
+    <div class="dlgBubble dlgBubbleBoss hidden" id="dlgBossBubble">
+      <p id="dlgBossText"></p>
+    </div>
+    <div class="dlgBubble dlgBubblePlayer hidden" id="dlgPlayerBubble">
+      <p id="dlgPlayerText"></p>
+    </div>
+    <button type="button" id="dlgSkipBtn" class="dlgSkipBtn">SKIP ▶</button>
+    <div class="dlgTapHint">TAP TO CONTINUE</div>
+  </div>
+</div>
+</div>
+
+
+<script src="assets-placeholders.js"></script>
+<script src="blimp-profile.js"></script>
+<script src="menu-intro.js"></script>
+<script src="audio.js"></script>
+<script src="asset-loading.js"></script>
+<script src="world-buildings.js"></script>
+<script src="player-obstacles.js"></script>
+<script src="bosses.js"></script>
+<script src="boss-dialogue.js"></script>
+<script src="effects-combat.js"></script>
+<script src="gamestate-ui.js"></script>
+<script src="world-atmosphere.js"></script>
+<script src="main-loop.js"></script>
+
+</body>
+</html>
