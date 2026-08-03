@@ -44,18 +44,18 @@
       upgrade: "Durability +1", xp: 200, xpMax: 500
     },
     blimp5: {
-      name: "ROYAL VOYAGER", mk: "Mk I", cls: "Flagship", call: "RV-01",
+      name: "PETRO", mk: "Mk I", cls: "Tanker", call: "PETRO-5",
       locked: false,
-      stats: { Speed: 3, Lift: 4, Durability: 4, Maneuverability: 3, Boost: 3 },
-      ability: { icon: "", name: "BORN NOBLE", desc: "Aura boosts nearby allies." },
+      stats: { Speed: 3, Lift: 5, Durability: 4, Maneuverability: 2, Boost: 3 },
+      ability: { icon: "", name: "FUEL RESERVE", desc: "Extra fuel keeps the engines roaring longer." },
       upgrade: "Lift +1", xp: 120, xpMax: 500
     },
     blimp6: {
-      name: "BRASS CHRONOGRAPH", mk: "Mk I", cls: "Scout", call: "BC-06",
+      name: "LITTLE SPY", mk: "Mk I", cls: "Recon Scout", call: "SPY-06",
       locked: false,
-      stats: { Speed: 3, Lift: 3, Durability: 4, Maneuverability: 3, Boost: 2 },
-      ability: { icon: "", name: "TIMBER TOUGH", desc: "Absorbs extra hull damage." },
-      upgrade: "Durability +1", xp: 210, xpMax: 500
+      stats: { Speed: 3, Lift: 3, Durability: 4, Maneuverability: 3, Boost: 4 },
+      ability: { icon: "", name: "SILENT WATCH", desc: "Slips through radar and storm fronts unseen." },
+      upgrade: "Boost +1", xp: 210, xpMax: 500
     },
     blimp7: {
       name: "STORM CHASER", mk: "Mk I", cls: "Interceptor", call: "SC-03",

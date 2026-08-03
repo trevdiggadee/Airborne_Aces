@@ -6,8 +6,8 @@ const BLIMP_DATA = {
   blimp2: { url: "blimp2_main.webp?cb=2", key: "blimp2_main", name: "Deco Liner", effect: null },
   blimp3: { url: "blimp3_main.webp?cb=2", key: "blimp3_main", name: "Aero Slicer", effect: null },
   blimp4: { url: "blimp4_main.webp?cb=2", key: "blimp4_main", name: "Steampunk", effect: null },
-  blimp5: { url: "ship_purple.png", key: "ship_purple", name: "Royal Voyager", effect: null },
-  blimp6: { url: "ship_wood.png", key: "ship_wood", name: "Brass Chronograph", effect: null },
+  blimp5: { url: "ship_petro.png", key: "ship_petro", name: "Petro", effect: null },
+  blimp6: { url: "ship_wood.png", key: "ship_wood", name: "Little Spy", effect: null },
   blimp7: { url: "ship_lightning.png", key: "ship_lightning", name: "Storm Chaser", effect: null },
   blimp8: { url: "ship_cargo.png", key: "ship_cargo", name: "Cargo King", effect: null },
   blimp9: { url: "ship_pirate.png", key: "ship_pirate", name: "Jolly Rogers", effect: null },
@@ -44,15 +44,15 @@ const SHIP_STATS = {
     upgrade: "Next Rank", xp: 60, xpMax: 400, locked: false
   },
   blimp5: {
-    name: "Royal Voyager", mk: "Mk I", cls: "State Airship", call: "ROYAL-5",
-    stats: { Speed: 3, Lift: 5, Durability: 3, Maneuverability: 3, Boost: 3 },
-    ability: { icon: "♛", name: "Royal Escort", desc: "Commands the sky with regal poise." },
+    name: "Petro", mk: "Mk I", cls: "Tanker", call: "PETRO-5",
+    stats: { Speed: 3, Lift: 5, Durability: 4, Maneuverability: 2, Boost: 3 },
+    ability: { icon: "⛽", name: "Fuel Reserve", desc: "Extra fuel keeps the engines roaring longer." },
     upgrade: "Next Rank", xp: 0, xpMax: 450, locked: false
   },
   blimp6: {
-    name: "Brass Chronograph", mk: "Mk I", cls: "Clockwork Freighter", call: "BRASS-6",
+    name: "Little Spy", mk: "Mk I", cls: "Recon Scout", call: "SPY-06",
     stats: { Speed: 3, Lift: 3, Durability: 4, Maneuverability: 3, Boost: 4 },
-    ability: { icon: "⏱", name: "Timed Boost", desc: "Clockwork gearing gives bursts of thrust." },
+    ability: { icon: "🕵", name: "Silent Watch", desc: "Slips through radar and storm fronts unseen." },
     upgrade: "Next Rank", xp: 0, xpMax: 450, locked: false
   },
   blimp7: {
@@ -167,8 +167,11 @@ const HERO_ANIM = {
   blimp2: { urls: heroFramesFor(25, "blimp2_flight_"), fps: 18 },
   blimp3: { urls: heroFramesFor(25, "blimp3_flight_"), fps: 18 },
   blimp4: { urls: heroFramesFor(25, "blimp4_flight_"), fps: 18 },
+  blimp5: { urls: heroFramesFor(36, "ship_petro_"), fps: 20 },
+  blimp6: { urls: heroFramesFor(36, "ship_wood_"), fps: 20 },
   blimp7: { urls: heroFramesFor(25, "ship_lightning_"), fps: 20 },
-  blimp9: { urls: heroFramesFor(36, "ship_pirate_"), fps: 20 }
+  blimp9: { urls: heroFramesFor(36, "ship_pirate_"), fps: 20 },
+  blimp10: { urls: heroFramesFor(36, "ship_ivory_"), fps: 20 }
 };
 
 function blimpSrc(data) {

@@ -502,7 +502,7 @@
     blimp2_main:    "blimp2_main.webp?cb=2",
     blimp3_main:    "blimp3_main.webp?cb=2",
     blimp4_main:    "blimp4_main.webp?cb=2",
-    ship_purple:    "ship_purple.png",
+    ship_petro:     "ship_petro.png",
     ship_wood:      "ship_wood.png",
     ship_cargo:     "ship_cargo.png",
     ship_ivory:     "ship_ivory.png",
@@ -650,6 +650,117 @@
     ship_pirate_34: "ship_pirate_34.webp",
     ship_pirate_35: "ship_pirate_35.webp",
     ship_pirate_36: "ship_pirate_36.webp",
+    // ship_wood (Little Spy / Brass Chronograph) full 36-frame flight animation
+    ship_wood_01: "ship_wood_01.webp",
+    ship_wood_02: "ship_wood_02.webp",
+    ship_wood_03: "ship_wood_03.webp",
+    ship_wood_04: "ship_wood_04.webp",
+    ship_wood_05: "ship_wood_05.webp",
+    ship_wood_06: "ship_wood_06.webp",
+    ship_wood_07: "ship_wood_07.webp",
+    ship_wood_08: "ship_wood_08.webp",
+    ship_wood_09: "ship_wood_09.webp",
+    ship_wood_10: "ship_wood_10.webp",
+    ship_wood_11: "ship_wood_11.webp",
+    ship_wood_12: "ship_wood_12.webp",
+    ship_wood_13: "ship_wood_13.webp",
+    ship_wood_14: "ship_wood_14.webp",
+    ship_wood_15: "ship_wood_15.webp",
+    ship_wood_16: "ship_wood_16.webp",
+    ship_wood_17: "ship_wood_17.webp",
+    ship_wood_18: "ship_wood_18.webp",
+    ship_wood_19: "ship_wood_19.webp",
+    ship_wood_20: "ship_wood_20.webp",
+    ship_wood_21: "ship_wood_21.webp",
+    ship_wood_22: "ship_wood_22.webp",
+    ship_wood_23: "ship_wood_23.webp",
+    ship_wood_24: "ship_wood_24.webp",
+    ship_wood_25: "ship_wood_25.webp",
+    ship_wood_26: "ship_wood_26.webp",
+    ship_wood_27: "ship_wood_27.webp",
+    ship_wood_28: "ship_wood_28.webp",
+    ship_wood_29: "ship_wood_29.webp",
+    ship_wood_30: "ship_wood_30.webp",
+    ship_wood_31: "ship_wood_31.webp",
+    ship_wood_32: "ship_wood_32.webp",
+    ship_wood_33: "ship_wood_33.webp",
+    ship_wood_34: "ship_wood_34.webp",
+    ship_wood_35: "ship_wood_35.webp",
+    ship_wood_36: "ship_wood_36.webp",
+    // ship_ivory (Ivory Anchor) full 36-frame flight animation
+    ship_ivory_01: "ship_ivory_01.webp",
+    ship_ivory_02: "ship_ivory_02.webp",
+    ship_ivory_03: "ship_ivory_03.webp",
+    ship_ivory_04: "ship_ivory_04.webp",
+    ship_ivory_05: "ship_ivory_05.webp",
+    ship_ivory_06: "ship_ivory_06.webp",
+    ship_ivory_07: "ship_ivory_07.webp",
+    ship_ivory_08: "ship_ivory_08.webp",
+    ship_ivory_09: "ship_ivory_09.webp",
+    ship_ivory_10: "ship_ivory_10.webp",
+    ship_ivory_11: "ship_ivory_11.webp",
+    ship_ivory_12: "ship_ivory_12.webp",
+    ship_ivory_13: "ship_ivory_13.webp",
+    ship_ivory_14: "ship_ivory_14.webp",
+    ship_ivory_15: "ship_ivory_15.webp",
+    ship_ivory_16: "ship_ivory_16.webp",
+    ship_ivory_17: "ship_ivory_17.webp",
+    ship_ivory_18: "ship_ivory_18.webp",
+    ship_ivory_19: "ship_ivory_19.webp",
+    ship_ivory_20: "ship_ivory_20.webp",
+    ship_ivory_21: "ship_ivory_21.webp",
+    ship_ivory_22: "ship_ivory_22.webp",
+    ship_ivory_23: "ship_ivory_23.webp",
+    ship_ivory_24: "ship_ivory_24.webp",
+    ship_ivory_25: "ship_ivory_25.webp",
+    ship_ivory_26: "ship_ivory_26.webp",
+    ship_ivory_27: "ship_ivory_27.webp",
+    ship_ivory_28: "ship_ivory_28.webp",
+    ship_ivory_29: "ship_ivory_29.webp",
+    ship_ivory_30: "ship_ivory_30.webp",
+    ship_ivory_31: "ship_ivory_31.webp",
+    ship_ivory_32: "ship_ivory_32.webp",
+    ship_ivory_33: "ship_ivory_33.webp",
+    ship_ivory_34: "ship_ivory_34.webp",
+    ship_ivory_35: "ship_ivory_35.webp",
+    ship_ivory_36: "ship_ivory_36.webp",
+    // ship_petro (Petro / former Royal Voyager) full 36-frame flight animation
+    ship_petro_01: "ship_petro_01.webp",
+    ship_petro_02: "ship_petro_02.webp",
+    ship_petro_03: "ship_petro_03.webp",
+    ship_petro_04: "ship_petro_04.webp",
+    ship_petro_05: "ship_petro_05.webp",
+    ship_petro_06: "ship_petro_06.webp",
+    ship_petro_07: "ship_petro_07.webp",
+    ship_petro_08: "ship_petro_08.webp",
+    ship_petro_09: "ship_petro_09.webp",
+    ship_petro_10: "ship_petro_10.webp",
+    ship_petro_11: "ship_petro_11.webp",
+    ship_petro_12: "ship_petro_12.webp",
+    ship_petro_13: "ship_petro_13.webp",
+    ship_petro_14: "ship_petro_14.webp",
+    ship_petro_15: "ship_petro_15.webp",
+    ship_petro_16: "ship_petro_16.webp",
+    ship_petro_17: "ship_petro_17.webp",
+    ship_petro_18: "ship_petro_18.webp",
+    ship_petro_19: "ship_petro_19.webp",
+    ship_petro_20: "ship_petro_20.webp",
+    ship_petro_21: "ship_petro_21.webp",
+    ship_petro_22: "ship_petro_22.webp",
+    ship_petro_23: "ship_petro_23.webp",
+    ship_petro_24: "ship_petro_24.webp",
+    ship_petro_25: "ship_petro_25.webp",
+    ship_petro_26: "ship_petro_26.webp",
+    ship_petro_27: "ship_petro_27.webp",
+    ship_petro_28: "ship_petro_28.webp",
+    ship_petro_29: "ship_petro_29.webp",
+    ship_petro_30: "ship_petro_30.webp",
+    ship_petro_31: "ship_petro_31.webp",
+    ship_petro_32: "ship_petro_32.webp",
+    ship_petro_33: "ship_petro_33.webp",
+    ship_petro_34: "ship_petro_34.webp",
+    ship_petro_35: "ship_petro_35.webp",
+    ship_petro_36: "ship_petro_36.webp",
     // Storm cloud animation frames (36 frames) for rain level decorative clouds
     storm_cloud_01: "storm_cloud_01.webp?cb=2",
     storm_cloud_02: "storm_cloud_02.webp?cb=2",
@@ -727,6 +838,18 @@
   const SHIP_PIRATE_FPS = 20;
   const SHIP_PIRATE_KEYS = Array.from({ length: SHIP_PIRATE_FRAME_COUNT }, (_, i) => `ship_pirate_${String(i + 1).padStart(2, "0")}`);
 
+  const SHIP_WOOD_FRAME_COUNT = 36;
+  const SHIP_WOOD_FPS = 20;
+  const SHIP_WOOD_KEYS = Array.from({ length: SHIP_WOOD_FRAME_COUNT }, (_, i) => `ship_wood_${String(i + 1).padStart(2, "0")}`);
+
+  const SHIP_IVORY_FRAME_COUNT = 36;
+  const SHIP_IVORY_FPS = 20;
+  const SHIP_IVORY_KEYS = Array.from({ length: SHIP_IVORY_FRAME_COUNT }, (_, i) => `ship_ivory_${String(i + 1).padStart(2, "0")}`);
+
+  const SHIP_PETRO_FRAME_COUNT = 36;
+  const SHIP_PETRO_FPS = 20;
+  const SHIP_PETRO_KEYS = Array.from({ length: SHIP_PETRO_FRAME_COUNT }, (_, i) => `ship_petro_${String(i + 1).padStart(2, "0")}`);
+
   // per-blimp animated frame sets — any blimp not listed here falls back to
   // its single static hero image (see BLIMP_HERO_KEYS below)
   const BLIMP_ANIM = {
@@ -734,11 +857,14 @@
     blimp2: { keys: BLIMP2_FLIGHT_KEYS, fps: BLIMP2_FLIGHT_FPS, frameCount: BLIMP2_FLIGHT_FRAME_COUNT },
     blimp3: { keys: BLIMP3_FLIGHT_KEYS, fps: BLIMP3_FLIGHT_FPS, frameCount: BLIMP3_FLIGHT_FRAME_COUNT },
     blimp4: { keys: BLIMP4_FLIGHT_KEYS, fps: BLIMP4_FLIGHT_FPS, frameCount: BLIMP4_FLIGHT_FRAME_COUNT },
+    blimp5: { keys: SHIP_PETRO_KEYS, fps: SHIP_PETRO_FPS, frameCount: SHIP_PETRO_FRAME_COUNT },
+    blimp6: { keys: SHIP_WOOD_KEYS, fps: SHIP_WOOD_FPS, frameCount: SHIP_WOOD_FRAME_COUNT },
     blimp7: { keys: SHIP_LIGHTNING_KEYS, fps: SHIP_LIGHTNING_FPS, frameCount: SHIP_LIGHTNING_FRAME_COUNT },
-    blimp9: { keys: SHIP_PIRATE_KEYS, fps: SHIP_PIRATE_FPS, frameCount: SHIP_PIRATE_FRAME_COUNT }
+    blimp9: { keys: SHIP_PIRATE_KEYS, fps: SHIP_PIRATE_FPS, frameCount: SHIP_PIRATE_FRAME_COUNT },
+    blimp10: { keys: SHIP_IVORY_KEYS, fps: SHIP_IVORY_FPS, frameCount: SHIP_IVORY_FRAME_COUNT }
   };
 
-  // blimp1, blimp2, blimp7 and blimp9 have their own flight animations;
+  // blimp1, blimp2, blimp5, blimp6, blimp7, blimp9 and blimp10 have their own flight animations;
   // everything else only has a single static hero image so far, so gameplay
   // falls back to that
   const BLIMP_HERO_KEYS = {
@@ -746,12 +872,12 @@
     blimp2: "blimp2_main",
     blimp3: "blimp3_main",
     blimp4: "blimp4_main",
-    blimp5: "ship_purple",
-    blimp6: "ship_wood",
+    blimp5: "ship_petro_01",
+    blimp6: "ship_wood_01",
     blimp7: "ship_lightning_01",
     blimp8: "ship_cargo",
     blimp9: "ship_pirate_01",
-    blimp10: "ship_ivory"
+    blimp10: "ship_ivory_01"
   };
 
   // ---------- Animation frame validation — detect and skip near-blank frames ----------
