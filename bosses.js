@@ -476,7 +476,271 @@
   const BONUS_COIN_POINTS = 4;   // coin round: points per coin
   const BONUS_PERFECT_BONUS = 20;
 
-  function queueBonusRound(type, delayMs) {
+
+  // ---------- Level-end landing sequence (after boss 1 bonus round) ----------
+  // Flow: wind-down city → landing pad approaches → player lands → victory FX → resume
+  let levelEndActive = false;
+  let levelEndPhase = null; // "windDown" | "approach" | "landing" | "victory"
+  let levelEndTimer = 0;
+  let levelEndPad = null; // { x, y, w, h, surfaceY, docked }
+  let levelEndParticles = [];
+  let levelEndFireworks = [];
+  let levelEndBannerUntil = 0;
+  let levelEndSavedFlap = true;
+
+  function startLevelEndLanding() {
+    levelEndActive = true;
+    levelEndPhase = "windDown";
+    levelEndTimer = 0;
+    levelEndPad = null;
+    levelEndParticles = [];
+    levelEndFireworks = [];
+    levelEndBannerUntil = 0;
+    // Stop enemy spawns & clear remaining obstacles
+    if (typeof obstacles !== "undefined") obstacles = [];
+    if (typeof bombs !== "undefined") bombs = [];
+    if (typeof rockets !== "undefined") rockets = [];
+    spawnTimer = 9999;
+    startWorldWindDown(2.2);
+    showBanner("CITY CLEAR — APPROACH THE HANGAR!", 2800, "defeat");
+  }
+
+  function spawnLandingPad() {
+    const img = images.landing_pad;
+    const aspect = (img && img.naturalWidth && img.naturalHeight)
+      ? img.naturalWidth / img.naturalHeight : 0.7;
+    // Pad building sits on the ground line; landing surface is near the top platform
+    const h = Math.min(H * 0.72, W * 0.85 / aspect);
+    const w = h * aspect;
+    const groundY = groundLevelY();
+    // The wooden deck with the X is roughly in the upper third of the art
+    const surfaceY = groundY - h * 0.78;
+    levelEndPad = {
+      x: W + 40,
+      y: groundY - h,
+      w: w,
+      h: h,
+      surfaceY: surfaceY,
+      targetX: W * 0.42,
+      docked: false,
+      glowPhase: 0
+    };
+  }
+
+  function spawnVictoryFirework(x, y) {
+    const colors = ["#ffd700", "#ff6b35", "#7ec8ff", "#ff4d6d", "#b8f2e6", "#c9a66b"];
+    for (let i = 0; i < 18; i++) {
+      const ang = (Math.PI * 2 * i) / 18 + Math.random() * 0.3;
+      const spd = 80 + Math.random() * 160;
+      levelEndFireworks.push({
+        x, y,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd - 40,
+        life: 0.7 + Math.random() * 0.5,
+        age: 0,
+        color: colors[i % colors.length],
+        r: 2 + Math.random() * 3
+      });
+    }
+  }
+
+  function completeLevelLanding() {
+    levelEndPhase = "victory";
+    levelEndTimer = 0;
+    levelEndPad.docked = true;
+    player.vy = 0;
+    // Snap player onto the pad surface
+    player.y = levelEndPad.surfaceY - player.h * 0.35;
+    player.rotation = 0;
+
+    triggerScreenShake(5, 500);
+    triggerScreenFlash(0.35, 400);
+    if (typeof sfxBossDefeat === "function") sfxBossDefeat();
+    showBanner("LEVEL 1 COMPLETE!", 3200, "defeat");
+
+    // Fireworks burst
+    const cx = levelEndPad.x + levelEndPad.w * 0.45;
+    const cy = levelEndPad.surfaceY - 20;
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => {
+        if (!levelEndActive) return;
+        spawnVictoryFirework(cx + (Math.random() - 0.5) * 120, cy - Math.random() * 80);
+      }, i * 280);
+    }
+
+    // Score bonus for clean landing
+    score += 50;
+    if (typeof scoreVal !== "undefined") scoreVal.textContent = score;
+    if (typeof bumpScorePop === "function") bumpScorePop();
+  }
+
+  function finishLevelEndAndResume() {
+    levelEndActive = false;
+    levelEndPhase = null;
+    levelEndPad = null;
+    levelEndParticles = [];
+    levelEndFireworks = [];
+    stopWorldWindDown();
+    // Rebuild level-2 city strip (bossesDefeatedCount already 1+)
+    initBuildings();
+    spawnTimer = 0;
+
+    // Bank checkpoint for boss 2
+    const next = nextBossConfig();
+    if (next) {
+      spawnCheckpointPickup(next.num);
+    } else {
+      checkpointReached = lastBossTriggered;
+      checkpointScore = score;
+      checkpointGameplayScore = gameplayScore;
+      checkpointBossesDefeated = bossesDefeatedCount;
+    }
+    showBanner("LEVEL 2 — KEEP FLYING!", 2200, "level");
+  }
+
+  function updateLevelEnd(dt) {
+    if (!levelEndActive) return;
+    levelEndTimer += dt;
+
+    // Fireworks always update during victory
+    if (levelEndFireworks.length) {
+      levelEndFireworks.forEach(p => {
+        p.age += dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 220 * dt;
+      });
+      levelEndFireworks = levelEndFireworks.filter(p => p.age < p.life);
+    }
+
+    if (levelEndPhase === "windDown") {
+      // Wait until city has mostly cleared, or timeout
+      if (groundLayersCleared() || levelEndTimer > 4.5) {
+        levelEndPhase = "approach";
+        levelEndTimer = 0;
+        spawnLandingPad();
+        showBanner("LAND ON THE PAD!", 2500, "defeat");
+      }
+      return;
+    }
+
+    if (levelEndPhase === "approach" || levelEndPhase === "landing") {
+      if (!levelEndPad) return;
+      levelEndPad.glowPhase += dt * 3;
+
+      // Scroll pad left until it reaches target dock position
+      if (levelEndPad.x > levelEndPad.targetX) {
+        levelEndPad.x -= 140 * dt;
+        if (levelEndPad.x <= levelEndPad.targetX) {
+          levelEndPad.x = levelEndPad.targetX;
+          if (levelEndPhase === "approach") {
+            levelEndPhase = "landing";
+            levelEndTimer = 0;
+          }
+        }
+      }
+
+      // Landing detection — player near the deck surface and over the pad
+      const padLeft = levelEndPad.x + levelEndPad.w * 0.12;
+      const padRight = levelEndPad.x + levelEndPad.w * 0.72;
+      const overPad = player.x > padLeft && player.x < padRight;
+      const nearSurface = Math.abs((player.y + player.h * 0.4) - levelEndPad.surfaceY) < player.h * 0.55;
+      const descending = player.vy > -40; // not rocketing upward
+
+      if (levelEndPhase === "landing" && overPad && nearSurface && descending) {
+        completeLevelLanding();
+      }
+
+      // Soft floor while over pad so they don't die on ground
+      if (overPad && player.y + player.h / 2 > levelEndPad.surfaceY + 8) {
+        player.y = levelEndPad.surfaceY + 8 - player.h / 2;
+        if (player.vy > 0) player.vy *= 0.4;
+      }
+      return;
+    }
+
+    if (levelEndPhase === "victory") {
+      // Hold victory for a few seconds then resume
+      if (levelEndTimer > 4.0) {
+        finishLevelEndAndResume();
+      }
+    }
+  }
+
+  function drawLevelEnd() {
+    if (!levelEndActive) return;
+
+    // Landing pad
+    if (levelEndPad) {
+      const img = images.landing_pad;
+      const p = levelEndPad;
+      ctx.save();
+      // Soft glow under the platform
+      const glow = 0.25 + Math.sin(p.glowPhase) * 0.12;
+      ctx.fillStyle = `rgba(201, 166, 107, ${glow})`;
+      ctx.beginPath();
+      ctx.ellipse(p.x + p.w * 0.42, p.surfaceY + 6, p.w * 0.28, 14, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (img && img.naturalWidth) {
+        ctx.drawImage(img, p.x, p.y, p.w, p.h);
+      } else {
+        // fallback silhouette
+        ctx.fillStyle = "#5a4632";
+        ctx.fillRect(p.x, p.y, p.w, p.h);
+      }
+
+      // Pulsing X ring on the deck during landing phase
+      if (levelEndPhase === "landing" || levelEndPhase === "approach") {
+        const pulse = 0.5 + Math.sin(p.glowPhase * 2) * 0.5;
+        ctx.strokeStyle = `rgba(255, 220, 120, ${0.35 + pulse * 0.45})`;
+        ctx.lineWidth = 3;
+        const rx = p.x + p.w * 0.42;
+        const ry = p.surfaceY - 4;
+        ctx.beginPath();
+        ctx.ellipse(rx, ry, 28 + pulse * 8, 10 + pulse * 3, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // "LAND HERE" hint
+      if (levelEndPhase === "landing") {
+        ctx.font = "bold 14px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillStyle = `rgba(255,235,180,${0.7 + Math.sin(p.glowPhase * 3) * 0.3})`;
+        ctx.fillText("▼ LAND HERE ▼", p.x + p.w * 0.42, p.surfaceY - 28);
+      }
+      ctx.restore();
+    }
+
+    // Fireworks
+    levelEndFireworks.forEach(fw => {
+      const t = 1 - fw.age / fw.life;
+      ctx.globalAlpha = Math.max(0, t);
+      ctx.fillStyle = fw.color;
+      ctx.beginPath();
+      ctx.arc(fw.x, fw.y, fw.r * t, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+
+    // Victory vignette flash
+    if (levelEndPhase === "victory" && levelEndTimer < 0.6) {
+      const a = (1 - levelEndTimer / 0.6) * 0.35;
+      ctx.fillStyle = `rgba(255, 220, 140, ${a})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  function isLevelEndActive() {
+    return levelEndActive;
+  }
+
+  function isLevelEndBlockingSpawns() {
+    return levelEndActive;
+  }
+
+
+    function queueBonusRound(type, delayMs) {
     bonusPending = true;
     bonusPendingType = type;
     bonusPendingAt = performance.now() + delayMs;
@@ -589,6 +853,13 @@
     bonusType = null;
     // resume the normal spawn cadence cleanly
     spawnTimer = 0;
+
+    // After boss 1's bonus round, run the hangar landing sequence before
+    // continuing into level 2. Later bosses keep the normal checkpoint flow.
+    if (bossesDefeatedCount === 1) {
+      startLevelEndLanding();
+      return;
+    }
 
     // Checkpoints are now granted after the bonus round, not before the boss —
     // the player has just cleared both the fight and its reward round, so a

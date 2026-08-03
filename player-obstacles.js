@@ -54,7 +54,12 @@
     const groundY = groundLevelY();
     if (player.y + player.h / 2 > groundY) {
       player.y = groundY - player.h / 2;
-      takeHit();
+      // During level-end landing, the pad handles the floor — don't punish ground contact
+      if (!(typeof isLevelEndActive === "function" && isLevelEndActive())) {
+        takeHit();
+      } else {
+        player.vy = Math.min(player.vy, 0);
+      }
     }
     if (player.y - player.h / 2 < 0) {
       player.y = player.h / 2;
@@ -218,7 +223,7 @@ ctx.save();
   }
 
   function updateObstacles(dt) {
-    if (!bossActive && !bonusActive && !bonusPending) {
+    if (!bossActive && !bonusActive && !bonusPending && !(typeof isLevelEndActive === "function" && isLevelEndActive())) {
       spawnTimer += dt;
       if (spawnTimer >= spawnInterval) {
         spawnTimer = 0;

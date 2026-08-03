@@ -31,6 +31,10 @@
   }
   let buildings = []; // tiles of the current strip: { x, w, h }
   let buildingRowKey = null;
+  // When true, ground layers (buildings, street, lamps, powerlines) scroll off
+  // and do NOT respawn — used for the level-1 landing sequence.
+  let worldWindDown = false;
+  let worldWindDownSpeedMult = 1.6;
 
   function currentBuildingRowKey() {
     return BUILDING_ROW_KEYS[bossesDefeatedCount % BUILDING_ROW_KEYS.length];
@@ -60,6 +64,14 @@
   }
 
   function updateBuildings(dtScale) {
+    if (worldWindDown) {
+      const speed = 0.8 * dtScale * (obstacleSpeedScale()) * worldWindDownSpeedMult;
+      buildings.forEach(b => (b.x -= speed));
+      while (buildings.length && buildings[0].x + buildings[0].w < -10) {
+        buildings.shift();
+      }
+      return;
+    }
     const targetKey = currentBuildingRowKey();
     if (targetKey !== buildingRowKey) {
       initBuildings(); // level changed — rebuild with that level's strip
@@ -75,6 +87,23 @@
       const startX = last ? last.x + last.w : 0;
       buildings.push(makeBuildingRowTile(startX, buildingRowKey));
     }
+  }
+
+  function groundLayersCleared() {
+    // true once the city strip has fully scrolled off during wind-down
+    return worldWindDown && buildings.length === 0 &&
+      (!streetTiles || streetTiles.length === 0) &&
+      (!powerlineTiles || powerlineTiles.length === 0);
+  }
+
+  function startWorldWindDown(speedMult) {
+    worldWindDown = true;
+    worldWindDownSpeedMult = speedMult || 1.8;
+  }
+
+  function stopWorldWindDown() {
+    worldWindDown = false;
+    worldWindDownSpeedMult = 1.6;
   }
 
   function obstacleSpeedScale() {
@@ -169,16 +198,19 @@
   }
 
   function updatePowerlines(dtScale) {
-    const speed = 0.4 * dtScale * obstacleSpeedScale(); // half of updateBuildings' 0.8x
+    const mult = worldWindDown ? worldWindDownSpeedMult : 1;
+    const speed = 0.4 * dtScale * obstacleSpeedScale() * mult;
     powerlineTiles.forEach(t => (t.x -= speed));
     while (powerlineTiles.length && powerlineTiles[0].x + powerlineTiles[0].w < -10) {
       powerlineTiles.shift();
     }
+    if (worldWindDown) return;
     const last = powerlineTiles[powerlineTiles.length - 1];
     if (!last || last.x + last.w < W + 200) {
       const startX = last ? last.x + last.w - 1 : 0;
       const h = last ? last.h : H * 0.2904;
-      const aspect = last ? last.w / last.h : 3;
+      const img = images.powerlines;
+      const aspect = (img && img.naturalWidth) ? img.naturalWidth / img.naturalHeight : 4;
       powerlineTiles.push({ x: startX, w: h * aspect, h: h });
     }
   }
@@ -219,18 +251,20 @@
   }
 
   function updateStreet(dtScale) {
-    const speed = 0.8 * dtScale * obstacleSpeedScale();
-    if (!streetTiles.length) initStreetTiles();
+    const mult = worldWindDown ? worldWindDownSpeedMult : 1;
+    const speed = 0.8 * dtScale * obstacleSpeedScale() * mult;
+    if (!streetTiles.length && !worldWindDown) initStreetTiles();
     streetTiles.forEach(t => (t.x -= speed));
     while (streetTiles.length && streetTiles[0].x + streetTiles[0].w < -10) {
       streetTiles.shift();
     }
+    if (worldWindDown) return;
     const last = streetTiles[streetTiles.length - 1];
     if (!last || last.x + last.w < W + 200) {
       const img = images.streetTexture;
       const aspect = (img && img.naturalWidth) ? img.naturalWidth / img.naturalHeight : 4;
-      const h = streetTileHeight();
-      const startX = last ? last.x + last.w - 1 : 0;
+      const h = last ? last.h : Math.max(58, H * 0.088);
+      const startX = last ? last.x + last.w : 0;
       streetTiles.push({ x: startX, w: h * aspect, h });
     }
   }
@@ -344,11 +378,13 @@
       if (streetlamps.length) streetlamps = [];
       return;
     }
-    const speed = 0.8 * dtScale * (obstacleSpeedScale()); // same speed as buildings — same ground plane
+    const mult = worldWindDown ? worldWindDownSpeedMult : 1;
+    const speed = 0.8 * dtScale * (obstacleSpeedScale()) * mult; // same speed as buildings — same ground plane
     streetlamps.forEach(l => (l.x -= speed));
     while (streetlamps.length && streetlamps[0].x + streetlamps[0].w < -10) {
       streetlamps.shift();
     }
+    if (worldWindDown) return;
     const last = streetlamps[streetlamps.length - 1];
     if (!last || last.x < W + 400) {
       const gap = STREETLAMP_GAP_MIN + Math.random() * (STREETLAMP_GAP_MAX - STREETLAMP_GAP_MIN);

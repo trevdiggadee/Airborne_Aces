@@ -142,6 +142,7 @@
       updateWindParticles(dt);
       updateStorm(dt);
       updateBonusRound(dt);
+      updateLevelEnd(dt);
       updateComboPopups();
       updateRain(dt);
       updateCloudWisps(dt);
@@ -190,6 +191,7 @@
     drawHitParticles();
     drawPowerup();
     drawBonusRound();
+    drawLevelEnd();
     drawBullets();
     drawHealPickup();
     drawShieldPickup();

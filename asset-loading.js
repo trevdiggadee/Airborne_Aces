@@ -503,6 +503,7 @@
     blimp3_main:    "blimp3_main.webp?cb=2",
     blimp4_main:    "blimp4_main.webp?cb=2",
     ship_petro:     "ship_petro.png",
+    landing_pad:    "landing_pad.webp",
     ship_wood:      "ship_wood.png",
     ship_cargo:     "ship_cargo.png",
     ship_ivory:     "ship_ivory.png",

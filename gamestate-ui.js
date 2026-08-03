@@ -318,6 +318,8 @@
     bonusActive = false;
     bonusType = null;
     bonusPending = false;
+    if (typeof levelEndActive !== "undefined") { levelEndActive = false; levelEndPhase = null; levelEndPad = null; }
+    if (typeof stopWorldWindDown === "function") stopWorldWindDown();
     bonusPendingType = null;
     bonusItems = [];
     bonusTotal = 0;
