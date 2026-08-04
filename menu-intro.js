@@ -167,9 +167,10 @@ const HERO_ANIM = {
   blimp2: { urls: heroFramesFor(25, "blimp2_flight_"), fps: 18 },
   blimp3: { urls: heroFramesFor(25, "blimp3_flight_"), fps: 18 },
   blimp4: { urls: heroFramesFor(25, "blimp4_flight_"), fps: 18 },
-  blimp5: { urls: heroFramesFor(36, "ship_petro_"), fps: 20 },
+  blimp5: { urls: heroFramesFor(36, "ship_purple_"), fps: 20 },
   blimp6: { urls: heroFramesFor(36, "ship_wood_"), fps: 20 },
   blimp7: { urls: heroFramesFor(25, "ship_lightning_"), fps: 20 },
+  blimp8: { urls: heroFramesFor(36, "ship_cargo_"), fps: 20 },
   blimp9: { urls: heroFramesFor(36, "ship_pirate_"), fps: 20 },
   blimp10: { urls: heroFramesFor(36, "ship_ivory_"), fps: 20 }
 };
