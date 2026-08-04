@@ -15,10 +15,12 @@ html, body {
 
 #menuScreen {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: stretch;
   width: 100%;
   height: 100%;
+  overflow: hidden;
+  background: #1a1208;
 }
 
 
@@ -240,9 +242,10 @@ html, body {
 .stage {
   position: relative;
   width: 100%;
-  max-width: 480px;
-  aspect-ratio: 832 / 1248;
-  margin: 0 auto;
+  max-width: none;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
 }
 
 .stageBg {
@@ -252,6 +255,7 @@ html, body {
   height: 100%;
   display: block;
   z-index: 0;
+  object-fit: fill;
 }
 
 /* BACKGROUND CLOUDS — sit behind the blimp, subtle drift, fixed 50% opacity */
@@ -307,13 +311,15 @@ html, body {
    motion-blurred spin rather than a hard frame-to-frame pop. */
 .heroBlimpWrap {
   position: absolute;
-  top: 34%;
+  /* On the platform, clear of the Take Flight button */
+  top: 22%;
   left: 50%;
-  width: 46%;
+  width: 32%;
   transform: translateX(-50%);
   z-index: 2;
-  animation: floatHero 3s ease-in-out infinite;
-  filter: blur(0.5px) drop-shadow(0 5px 6px rgba(0,0,0,0.3));
+  animation: floatHero 3.2s ease-in-out infinite;
+  filter: drop-shadow(0 8px 10px rgba(0,0,0,0.45));
+  pointer-events: none;
 }
 
 .heroBlimpWrap img {
@@ -398,29 +404,31 @@ html, body {
 /* TAKE FLIGHT HOTSPOT — invisible button over the baked-in circle */
 .flyBtn {
   position: absolute;
-  /* Between hangar platform and the berth grid */
-  top: 53.5%;
+  /* Below the hero blimp, above the berth grid */
+  top: 56.5%;
   left: 50%;
   transform: translate(-50%, -50%);
-  padding: 12px 44px;
+  padding: 8px 28px;
   background: linear-gradient(#a8783f, #6b4a2b);
   border: 2px solid #c9a66b;
   border-radius: 9px;
   color: #f5e6c8;
   font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
-  font-size: 3.6vw;
+  font-size: 3.2vw;
   font-weight: bold;
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
   box-shadow: 0 3px 0 #2c1a0a, 0 6px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.08s ease-out;
-  z-index: 3;
+  z-index: 4;
+  white-space: nowrap;
+  line-height: 1.15;
 }
 
 @media (min-width: 480px) {
-  .flyBtn { font-size: 17px; }
+  .flyBtn { font-size: 15px; padding: 9px 32px; }
 }
 
 .flyBtn.pressed {
@@ -433,35 +441,49 @@ html, body {
    placeholders for now. Positions measured directly against hangar_bg.jpg. */
 .numBtn {
   position: absolute;
-  top: 67%;
-  width: 15%;
-  height: 10%;
+  /* Measured against hangar_bg_v2 ornate frames (3×5 grid) */
+  top: 66.8%;
+  width: 11.2%;
+  height: 8.4%;
   transform: translate(-50%, -50%);
-  border-radius: 6px;
+  border-radius: 8px;
   border: none;
   background: transparent;
-  padding: 2%; /* was 10% — percentage padding resolves against the CONTAINING
-                  BLOCK'S WIDTH on every side, including top/bottom, so 10%
-                  padding on this box consumed more than its own full height
-                  and collapsed the image inside to 0×0. That's why every
-                  grid thumbnail was invisible. */
+  padding: 1%;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   z-index: 3;
-  transition: transform 0.1s ease-out;
+  transition: transform 0.1s ease-out, box-shadow 0.15s ease;
 }
 .numBtn:active { transform: translate(-50%, -50%) scale(0.93); }
 
-.numBtn.n1 { left: 17.25%; }
-.numBtn.n2 { left: 33.7%; }
-.numBtn.n3 { left: 50.2%; }
-.numBtn.n4 { left: 66.6%; }
-.numBtn.n5 { left: 83.1%; }
-.numBtn.n6 { top: 79.4%; left: 17.25%; }
-.numBtn.n7 { top: 79.4%; left: 33.7%; }
-.numBtn.n8 { top: 79.4%; left: 50.2%; }
-.numBtn.n9 { top: 79.4%; left: 66.6%; }
-.numBtn.n10 { top: 79.4%; left: 83.1%; }
+/* Column centers (left → right) */
+.numBtn.n1, .numBtn.n6, .numBtn.n11 { left: 18.6%; }
+.numBtn.n2, .numBtn.n7, .numBtn.n12 { left: 34.4%; }
+.numBtn.n3, .numBtn.n8, .numBtn.n13 { left: 50.2%; }
+.numBtn.n4, .numBtn.n9, .numBtn.n14 { left: 65.4%; }
+.numBtn.n5, .numBtn.n10, .numBtn.n15 { left: 81.3%; }
+
+/* Row centers (top → bottom) */
+.numBtn.n1, .numBtn.n2, .numBtn.n3, .numBtn.n4, .numBtn.n5 { top: 66.8%; }
+.numBtn.n6, .numBtn.n7, .numBtn.n8, .numBtn.n9, .numBtn.n10 { top: 78.5%; }
+.numBtn.n11, .numBtn.n12, .numBtn.n13, .numBtn.n14, .numBtn.n15 { top: 89.9%; }
+
+.numBtn.locked {
+  cursor: default;
+  opacity: 0.55;
+  pointer-events: none;
+}
+.numBtn .lockGlyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 16px;
+  opacity: 0.7;
+  filter: grayscale(0.3);
+}
 
 .numBtn img {
   width: 100%;
