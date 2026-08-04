@@ -300,13 +300,36 @@ try {
   if (savedSfxVol !== null) sfxVolumePref = Math.max(0, Math.min(1, parseFloat(savedSfxVol)));
 } catch (e) {}
 
-function setMusicVolumePref(v) {
-  musicVolumePref = Math.max(0, Math.min(1, v));
-  try { localStorage.setItem("aa_music_vol", String(musicVolumePref)); } catch (e) {}
-  menuMusicFadeStep();
-  if (gameplayMusic && !gameplayMusic.paused && !gameplayMusicMuted) {
-    gameplayMusic.volume = musicVolumePref;
+function getGameplayMusicEl() {
+  return document.getElementById("gameplayMusic");
+}
+
+let gameplayMusicFadeRaf = null;
+function cancelGameplayMusicFade() {
+  if (gameplayMusicFadeRaf != null) {
+    cancelAnimationFrame(gameplayMusicFadeRaf);
+    gameplayMusicFadeRaf = null;
   }
+}
+
+let gameplayMusicMuted = false;
+try { gameplayMusicMuted = localStorage.getItem("aa_muted") === "1"; } catch (e) {}
+
+function applyGameplayMusicVolumeNow() {
+  const el = getGameplayMusicEl();
+  if (!el) return;
+  const mutedAll = (typeof muted !== "undefined" && muted) || gameplayMusicMuted;
+  try {
+    el.volume = mutedAll ? 0 : Math.max(0, Math.min(1, musicVolumePref));
+  } catch (e) {}
+}
+
+function setMusicVolumePref(v) {
+  musicVolumePref = Math.max(0, Math.min(1, Number(v) || 0));
+  try { localStorage.setItem("aa_music_vol", String(musicVolumePref)); } catch (e) {}
+  cancelGameplayMusicFade();
+  try { if (typeof menuMusicFadeStep === "function") menuMusicFadeStep(); } catch (e) {}
+  applyGameplayMusicVolumeNow();
   if (window.__airborneSetSynthMusicVolume) window.__airborneSetSynthMusicVolume(musicVolumePref);
 }
 function setSfxVolumePref(v) {
@@ -413,41 +436,48 @@ if (splashEnterBtn) {
 // this track too, with no extra call sites needed. ----------
 const gameplayMusic = document.getElementById("gameplayMusic");
 const GAMEPLAY_MUSIC_FADE_MS = 900;
-let gameplayMusicMuted = false;
-try { gameplayMusicMuted = localStorage.getItem("aa_muted") === "1"; } catch (e) {}
+// gameplayMusicMuted declared above with volume helpers
 if (gameplayMusic) gameplayMusic.volume = 0;
 
 function fadeGameplayMusicVolume(target, thenPause) {
-  if (!gameplayMusic) return;
+  const el = getGameplayMusicEl();
+  if (!el) return;
   cancelGameplayMusicFade();
-  const startVol = gameplayMusic.volume;
+  const startVol = el.volume;
   const startedAt = performance.now();
   (function step() {
     const p = Math.min(1, (performance.now() - startedAt) / GAMEPLAY_MUSIC_FADE_MS);
-    gameplayMusic.volume = startVol + (target - startVol) * p;
+    el.volume = startVol + (target - startVol) * p;
     if (p < 1) {
       gameplayMusicFadeRaf = requestAnimationFrame(step);
     } else {
       gameplayMusicFadeRaf = null;
-      if (thenPause) gameplayMusic.pause();
-      else applyGameplayMusicVolumeNow();
+      if (thenPause) {
+        el.pause();
+      } else {
+        applyGameplayMusicVolumeNow();
+      }
     }
   })();
 }
 
 function startGameplayMusic() {
-  if (!gameplayMusic) return;
-  if (gameplayMusic.paused) gameplayMusic.play().catch(() => {});
-  fadeGameplayMusicVolume(gameplayMusicMuted ? 0 : musicVolumePref, false);
+  const el = getGameplayMusicEl();
+  if (!el) return;
+  if (el.paused) el.play().catch(() => {});
+  // Jump to preferred volume (or 0 if muted) — no long fade fighting the slider
+  cancelGameplayMusicFade();
+  applyGameplayMusicVolumeNow();
 }
 
 function stopGameplayMusic() {
-  if (!gameplayMusic || gameplayMusic.paused) return;
+  const el = getGameplayMusicEl();
+  if (!el || el.paused) return;
   fadeGameplayMusicVolume(0, true);
 }
 
 function setGameplayMusicMuted(m) {
-  gameplayMusicMuted = m;
+  gameplayMusicMuted = !!m;
   cancelGameplayMusicFade();
   applyGameplayMusicVolumeNow();
 }
@@ -455,6 +485,8 @@ function setGameplayMusicMuted(m) {
 window.__airborneStartGameplayMusic = startGameplayMusic;
 window.__airborneStopGameplayMusic = stopGameplayMusic;
 window.__airborneSetGameplayMusicMuted = setGameplayMusicMuted;
+window.__airborneSetMusicVolume = setMusicVolumePref;
+window.__airborneApplyGameplayMusicVolume = applyGameplayMusicVolumeNow;
 
 function setEffect(effect) {
   propBlur.style.display = effect === "propeller" ? "block" : "none";

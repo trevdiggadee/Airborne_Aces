@@ -62,13 +62,32 @@
   }
 
   function setMuted(m) {
-    muted = m;
+    muted = !!m;
     try { localStorage.setItem("aa_muted", muted ? "1" : "0"); } catch (e) {}
-    if (masterGain) masterGain.gain.setTargetAtTime(muted ? 0 : 1, audioCtx.currentTime, 0.02);
+    if (masterGain && audioCtx) {
+      masterGain.gain.setTargetAtTime(muted ? 0 : 1, audioCtx.currentTime, 0.02);
+    }
+    // HTMLAudioElement MP3 (gameplay + menu)
     if (window.__airborneSetGameplayMusicMuted) window.__airborneSetGameplayMusicMuted(muted);
+    if (window.__airborneApplyGameplayMusicVolume) window.__airborneApplyGameplayMusicVolume();
+    const menuEl = document.getElementById("menuMusic");
+    if (menuEl) {
+      if (muted) {
+        menuEl.dataset.userMuted = "1";
+        menuEl.volume = 0;
+      } else {
+        menuEl.dataset.userMuted = "0";
+        if (typeof menuMusicFadeStep === "function") menuMusicFadeStep();
+      }
+    }
+    // Gear button stays ⚙ during gameplay; only show mute emoji outside pause UI
     const btn = document.getElementById("muteBtn");
-    if (btn) btn.textContent = muted ? "🔇" : "🔊";
+    if (btn && btn.dataset.mode !== "settings") {
+      btn.textContent = muted ? "🔇" : "🔊";
+    }
   }
+  window.__airborneSetMuted = setMuted;
+  window.__airborneIsMuted = function () { return muted; };
 
   window.__airborneSetSynthMusicVolume = function(v) {
     if (musicGainNode && audioCtx) musicGainNode.gain.setTargetAtTime(v, audioCtx.currentTime, 0.02);
