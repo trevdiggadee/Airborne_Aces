@@ -66,9 +66,17 @@
     var layer0 = parallaxLayers[0];
     var targetKey = currentLevelBgKey();
     if (layer0.imgKey !== targetKey && (!bgTransition || bgTransition.to !== targetKey)) {
+      // Don't announce LEVEL 2 while the boss-1 landing sequence is still running —
+      // that banner is shown after the player successfully lands.
+      const suppressBanner = (typeof isLevelEndActive === "function" && isLevelEndActive())
+        || (typeof levelEndActive !== "undefined" && levelEndActive)
+        || (typeof bonusActive !== "undefined" && bonusActive)
+        || (typeof bonusPending !== "undefined" && bonusPending);
       bgTransition = { from: layer0.imgKey, to: targetKey, t: 0 };
-      const levelNum = targetKey === 'skylineFar' ? 1 : targetKey === 'skylineFarL2' ? 2 : 3;
-      showBanner("LEVEL " + levelNum, 2000, "level");
+      if (!suppressBanner) {
+        const levelNum = targetKey === 'skylineFar' ? 1 : targetKey === 'skylineFarL2' ? 2 : 3;
+        showBanner("LEVEL " + levelNum, 2000, "level");
+      }
     }
     if (bgTransition) {
       bgTransition.t += dtScale / 210; // ~3.5s eased crossfade at a 60fps baseline

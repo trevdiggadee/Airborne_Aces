@@ -509,19 +509,25 @@
     const img = images.landing_pad;
     const aspect = (img && img.naturalWidth && img.naturalHeight)
       ? img.naturalWidth / img.naturalHeight : 0.7;
-    // Pad building sits on the ground line; landing surface is near the top platform
-    const h = Math.min(H * 0.72, W * 0.85 / aspect);
+    // Size so the building sits on the ground; keep most of the pad on-screen
+    const h = Math.min(H * 0.78, W * 0.95 / aspect);
     const w = h * aspect;
     const groundY = groundLevelY();
-    // The wooden deck with the X is roughly in the upper third of the art
-    const surfaceY = groundY - h * 0.78;
+    // Deck with the X is ~42% down from the top of the art (measured from the sprite)
+    const deckFromTop = 0.43;
+    const surfaceY = (groundY - h) + h * deckFromTop;
+    // Horizontal center of the circular X pad within the sprite
+    const deckCenterFrac = 0.38;
     levelEndPad = {
-      x: W + 40,
+      x: W + 20,
       y: groundY - h,
       w: w,
       h: h,
       surfaceY: surfaceY,
-      targetX: W * 0.42,
+      deckFromTop: deckFromTop,
+      deckCenterFrac: deckCenterFrac,
+      // Stop with the X well onto the screen so the player can reach it
+      targetX: W * 0.28,
       docked: false,
       glowPhase: 0
     };
@@ -550,7 +556,8 @@
     levelEndPad.docked = true;
     player.vy = 0;
     // Snap player onto the pad surface
-    player.y = levelEndPad.surfaceY - player.h * 0.35;
+    player.y = levelEndPad.surfaceY - player.h * 0.45;
+    player.x = levelEndPad.x + levelEndPad.w * (levelEndPad.deckCenterFrac || 0.38);
     player.rotation = 0;
 
     triggerScreenShake(5, 500);
@@ -628,33 +635,54 @@
       if (!levelEndPad) return;
       levelEndPad.glowPhase += dt * 3;
 
+      // Keep surfaceY in sync if layout changes
+      levelEndPad.surfaceY = levelEndPad.y + levelEndPad.h * levelEndPad.deckFromTop;
+      const deckCx = levelEndPad.x + levelEndPad.w * levelEndPad.deckCenterFrac;
+
       // Scroll pad left until it reaches target dock position
       if (levelEndPad.x > levelEndPad.targetX) {
-        levelEndPad.x -= 140 * dt;
+        levelEndPad.x -= 160 * dt;
         if (levelEndPad.x <= levelEndPad.targetX) {
           levelEndPad.x = levelEndPad.targetX;
           if (levelEndPhase === "approach") {
             levelEndPhase = "landing";
             levelEndTimer = 0;
+            showBanner("TAP TO SET DOWN ON THE X!", 2500, "defeat");
           }
         }
       }
 
-      // Landing detection — player near the deck surface and over the pad
-      const padLeft = levelEndPad.x + levelEndPad.w * 0.12;
-      const padRight = levelEndPad.x + levelEndPad.w * 0.72;
+      // Move the blimp forward toward the landing X (unlock from fixed x)
+      // Player still controls altitude with flaps; we ease them horizontally onto the pad.
+      const targetPlayerX = deckCx - player.w * 0.1;
+      if (player.x < targetPlayerX - 2) {
+        // accelerate forward; faster once pad has mostly arrived
+        const speed = levelEndPhase === "landing" ? 95 : 55;
+        player.x = Math.min(targetPlayerX, player.x + speed * dt);
+      }
+
+      // Landing zone around the X on the deck
+      const padLeft = deckCx - levelEndPad.w * 0.22;
+      const padRight = deckCx + levelEndPad.w * 0.22;
       const overPad = player.x > padLeft && player.x < padRight;
-      const nearSurface = Math.abs((player.y + player.h * 0.4) - levelEndPad.surfaceY) < player.h * 0.55;
-      const descending = player.vy > -40; // not rocketing upward
+      // Player feet / belly near the deck surface
+      const playerBottom = player.y + player.h * 0.45;
+      const nearSurface = playerBottom > levelEndPad.surfaceY - player.h * 0.35
+                       && playerBottom < levelEndPad.surfaceY + player.h * 0.5;
+      const descending = player.vy > -80;
 
       if (levelEndPhase === "landing" && overPad && nearSurface && descending) {
         completeLevelLanding();
       }
 
-      // Soft floor while over pad so they don't die on ground
-      if (overPad && player.y + player.h / 2 > levelEndPad.surfaceY + 8) {
-        player.y = levelEndPad.surfaceY + 8 - player.h / 2;
-        if (player.vy > 0) player.vy *= 0.4;
+      // Soft floor on the deck — stand on it instead of falling through / dying
+      if (overPad && playerBottom > levelEndPad.surfaceY) {
+        player.y = levelEndPad.surfaceY - player.h * 0.45;
+        if (player.vy > 0) player.vy = 0;
+        // If they're resting on the pad, count it as landed
+        if (levelEndPhase === "landing" && Math.abs(player.vy) < 30) {
+          completeLevelLanding();
+        }
       }
       return;
     }
@@ -675,39 +703,40 @@
       const img = images.landing_pad;
       const p = levelEndPad;
       ctx.save();
-      // Soft glow under the platform
-      const glow = 0.25 + Math.sin(p.glowPhase) * 0.12;
-      ctx.fillStyle = `rgba(201, 166, 107, ${glow})`;
-      ctx.beginPath();
-      ctx.ellipse(p.x + p.w * 0.42, p.surfaceY + 6, p.w * 0.28, 14, 0, 0, Math.PI * 2);
-      ctx.fill();
+      // Deck target point (center of the X)
+      const deckCx = p.x + p.w * (p.deckCenterFrac || 0.38);
+      const deckCy = p.y + p.h * (p.deckFromTop || 0.43);
 
       if (img && img.naturalWidth) {
         ctx.drawImage(img, p.x, p.y, p.w, p.h);
       } else {
-        // fallback silhouette
         ctx.fillStyle = "#5a4632";
         ctx.fillRect(p.x, p.y, p.w, p.h);
       }
 
-      // Pulsing X ring on the deck during landing phase
+      // Soft glow on the deck
+      const glow = 0.3 + Math.sin(p.glowPhase) * 0.15;
+      ctx.fillStyle = `rgba(255, 210, 120, ${glow * 0.45})`;
+      ctx.beginPath();
+      ctx.ellipse(deckCx, deckCy + 4, p.w * 0.2, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Pulsing ring sitting ON the wooden X
       if (levelEndPhase === "landing" || levelEndPhase === "approach") {
         const pulse = 0.5 + Math.sin(p.glowPhase * 2) * 0.5;
-        ctx.strokeStyle = `rgba(255, 220, 120, ${0.35 + pulse * 0.45})`;
+        ctx.strokeStyle = `rgba(255, 220, 120, ${0.4 + pulse * 0.5})`;
         ctx.lineWidth = 3;
-        const rx = p.x + p.w * 0.42;
-        const ry = p.surfaceY - 4;
         ctx.beginPath();
-        ctx.ellipse(rx, ry, 28 + pulse * 8, 10 + pulse * 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(deckCx, deckCy, 32 + pulse * 10, 12 + pulse * 3, 0, 0, Math.PI * 2);
         ctx.stroke();
       }
 
-      // "LAND HERE" hint
-      if (levelEndPhase === "landing") {
-        ctx.font = "bold 14px system-ui, sans-serif";
+      // "LAND HERE" just above the deck
+      if (levelEndPhase === "landing" || levelEndPhase === "approach") {
+        ctx.font = "bold 15px system-ui, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillStyle = `rgba(255,235,180,${0.7 + Math.sin(p.glowPhase * 3) * 0.3})`;
-        ctx.fillText("▼ LAND HERE ▼", p.x + p.w * 0.42, p.surfaceY - 28);
+        ctx.fillStyle = `rgba(255,235,180,${0.75 + Math.sin(p.glowPhase * 3) * 0.25})`;
+        ctx.fillText("▼ LAND HERE ▼", deckCx, deckCy - 22);
       }
       ctx.restore();
     }
