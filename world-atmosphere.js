@@ -70,9 +70,11 @@
   }
 
   function updateParallaxLayers(dtScale) {
-    // During the level-end landing sequence, freeze all parallax layers in place
-    // so the pad approaching reads as the blimp flying forward.
-    if (typeof levelEndActive !== "undefined" && levelEndActive) {
+    // Keep parallax scrolling during approach; freeze only after the blimp lands
+    if (typeof worldScrollFrozen === "function" && worldScrollFrozen()) {
+      return;
+    }
+    if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) {
       return;
     }
     var speed = obstacleSpeedScale();

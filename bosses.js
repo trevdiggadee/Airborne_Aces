@@ -755,6 +755,7 @@
   function startLevelEndLanding() {
     levelEndActive = true;
     levelEndPhase = "windDown";
+    window.__airborneWorldFrozen = false;
     levelEndTimer = 0;
     levelEndPad = null;
     levelEndParticles = [];
@@ -877,6 +878,7 @@
     levelEndTimer = 0;
     levelEndFade = 0;
     levelEndPad.docked = true;
+    window.__airborneWorldFrozen = true;
     player.vy = 0;
     player.rotation = 0;
     // Snap solidly onto the deck (slightly lower rest)
@@ -924,6 +926,7 @@
   }
 
   function finishLevelEndAndResume() {
+    window.__airborneWorldFrozen = false;
     levelEndActive = false;
     levelEndPhase = null;
     levelEndPad = null;

@@ -36,6 +36,17 @@
   let worldWindDown = false;
   let worldWindDownSpeedMult = 1.6;
 
+  // True only after the blimp has landed — approach still scrolls the world
+  function worldScrollFrozen() {
+    if (window.__airborneWorldFrozen) return true;
+    if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) return true;
+    if (typeof levelEndPhase === "string" &&
+        (levelEndPhase === "victory" || levelEndPhase === "stats" || levelEndPhase === "fadeOut")) {
+      return true;
+    }
+    return false;
+  }
+
   function currentBuildingRowKey() {
     // Keep level-1 buildings through boss-1 defeat, bonus round, and landing.
     // Switch to level-2 only after finishLevelEndAndResume re-inits the strip.
@@ -74,8 +85,8 @@
   }
 
   function updateBuildings(dtScale) {
-    // Freeze city in place during landing — pad approach = blimp flying forward
-    if (worldWindDown || (typeof levelEndActive !== "undefined" && levelEndActive)) {
+    // Keep scrolling during approach; freeze only once the blimp has landed
+    if (worldScrollFrozen()) {
       return;
     }
     const targetKey = currentBuildingRowKey();
@@ -158,8 +169,8 @@
   }
 
   function updateSketchSkyline(dtScale) {
-    // Hold the skyline still during the landing approach
-    if (typeof levelEndActive !== "undefined" && levelEndActive) return;
+    // Hold the skyline still only after touchdown
+    if (worldScrollFrozen()) return;
     const speed = 0.35 * dtScale * obstacleSpeedScale(); // between parallax layer 3 (0.28) and power lines (0.4) — matches its position in the draw order
     sketchSkylineTiles.forEach(t => (t.x -= speed));
     while (sketchSkylineTiles.length && sketchSkylineTiles[0].x + sketchSkylineTiles[0].w < -10) {
@@ -211,7 +222,7 @@
   }
 
   function updatePowerlines(dtScale) {
-    if (worldWindDown || (typeof levelEndActive !== "undefined" && levelEndActive)) return;
+    if (worldScrollFrozen()) return;
     const speed = 0.4 * dtScale * obstacleSpeedScale();
     powerlineTiles.forEach(t => (t.x -= speed));
     while (powerlineTiles.length && powerlineTiles[0].x + powerlineTiles[0].w < -10) {
@@ -263,7 +274,7 @@
   }
 
   function updateStreet(dtScale) {
-    if (worldWindDown || (typeof levelEndActive !== "undefined" && levelEndActive)) return;
+    if (worldScrollFrozen()) return;
     const speed = 0.8 * dtScale * obstacleSpeedScale();
     if (!streetTiles.length) initStreetTiles();
     streetTiles.forEach(t => (t.x -= speed));
@@ -389,7 +400,7 @@
       if (streetlamps.length) streetlamps = [];
       return;
     }
-    if (worldWindDown || (typeof levelEndActive !== "undefined" && levelEndActive)) return;
+    if (worldScrollFrozen()) return;
     const speed = 0.8 * dtScale * (obstacleSpeedScale()); // same speed as buildings — same ground plane
     streetlamps.forEach(l => (l.x -= speed));
     while (streetlamps.length && streetlamps[0].x + streetlamps[0].w < -10) {
@@ -444,7 +455,7 @@
   }
 
   function updateGroundVehicles(dt, dtScale) {
-    if (worldWindDown || (typeof levelEndActive !== "undefined" && levelEndActive)) return;
+    if (worldScrollFrozen()) return;
     vehicleSpawnTimer -= dt;
     if (vehicleSpawnTimer <= 0) {
       vehicleSpawnTimer = 4.5 + Math.random() * 6;
@@ -537,8 +548,8 @@
     }
   }
   function updateClouds(dtScale) {
-    // Freeze clouds during landing so background stays put
-    if (typeof levelEndActive !== "undefined" && levelEndActive) return;
+    // Freeze clouds only after touchdown
+    if (worldScrollFrozen()) return;
     const img = images.cloud;
     const baseW = (img && img.naturalWidth) ? img.naturalWidth : 256;
     clouds.forEach(c => {
@@ -602,7 +613,7 @@
   }
 
   function updateBirdFlocks(dt) {
-    if (typeof levelEndActive !== "undefined" && levelEndActive) return;
+    if (worldScrollFrozen()) return;
     birdFlockTimer -= dt;
     if (birdFlockTimer <= 0) {
       birdFlockTimer = 22 + Math.random() * 26; // periodic — not a constant presence
