@@ -3,6 +3,7 @@
   // ---------- Assets ----------
   const ASSET_SOURCES = {
     blimp:   "blimp.webp?cb=2",
+    pirate_bomb: "pirate_bomb.webp",
     cloud:   "cloud.webp?cb=2",
     skylineFar: "skylineFar.webp",
     skylineFarL2: "IMG_0845.png",

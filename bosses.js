@@ -128,10 +128,12 @@
   let stormWasReady = false;   // tracks ready-state transitions so the ready sound only fires once
   let stormActive = false;
   let stormUntil = 0;
-  let stormCloud = null; // single descending cloud while the ability is active
+  let stormCloud = null; // single descending cloud/bomb while the ability is active
   let stormLightning = null; // { points, life, age } — the current main bolt, if any
   let stormChainBolts = []; // secondary bolts branching from the cloud to each zapped obstacle
   let nextStormLightningAt = 0;
+  let stormMode = "storm"; // "storm" | "pirate"
+  let pirateBlastParticles = [];
   const stormMeterEl = document.getElementById("stormMeter");
   const stormIconDisplayEl = document.getElementById("stormIcon");
 
@@ -189,24 +191,32 @@
     stormActive = true;
     stormCharge = 0;
     updateStormMeterDisplay();
-    sfxThunder();
+    pirateBlastParticles = [];
 
-    // a single cloud drops in from above down to screen-center, then bursts —
-    // the actual "zap everything" payoff happens on impact, in stormImpact()
+    // Jolly Rogers (blimp9) drops a pirate bomb; everyone else gets the storm cloud
+    const isPirate = (typeof selectedBlimp !== "undefined" && selectedBlimp === "blimp9");
+    stormMode = isPirate ? "pirate" : "storm";
+
+    if (typeof sfxThunder === "function") sfxThunder();
+    if (isPirate && typeof sfxExplosion === "function") sfxExplosion(0.5);
+
+    // a single prop drops from above to screen-center, then bursts
     stormCloud = {
       phase: "falling", // falling -> impact -> fading
       t: 0,
       x: W / 2,
-      startY: -H * 0.3,
-      y: -H * 0.3,
-      targetY: H * 0.4,
-      w: Math.min(340, W * 0.55),
+      startY: -H * 0.35,
+      y: -H * 0.35,
+      targetY: H * 0.42,
+      w: isPirate ? Math.min(180, W * 0.32) : Math.min(340, W * 0.55),
       animFrame: Math.floor(Math.random() * STORM_CLOUD_FRAME_COUNT),
       animTimer: 0,
       glowPhase: 0,
-      ringPhase: 0
+      ringPhase: 0,
+      spin: 0
     };
     stormLightning = null;
+    stormChainBolts = [];
   }
 
   function buildLightningPath(x1, y1, x2, y2, wander) {
@@ -224,23 +234,64 @@
     return points;
   }
 
-  function stormImpact() {
-    // the moment the cloud reaches center — screen-clear + boss damage payoff
-    sfxThunder();
-    triggerScreenFlash(0.22, 220);
-    triggerScreenShake(6, 380);
+  function spawnPirateBlast(cx, cy) {
+    const colors = ["#1a1a1a", "#3a2a1a", "#c9a66b", "#ff6b2d", "#ffd27a", "#5a4030", "#8b1a1a"];
+    for (let i = 0; i < 55; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const spd = 60 + Math.random() * 320;
+      pirateBlastParticles.push({
+        x: cx, y: cy,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd - 40,
+        life: 0.45 + Math.random() * 0.7,
+        age: 0,
+        r: 2 + Math.random() * 7,
+        color: colors[i % colors.length],
+        kind: Math.random() < 0.25 ? "ember" : (Math.random() < 0.4 ? "smoke" : "spark")
+      });
+    }
+    for (let i = 0; i < 3; i++) {
+      pirateBlastParticles.push({
+        kind: "ring",
+        x: cx, y: cy,
+        vx: 0, vy: 0,
+        life: 0.35 + i * 0.12,
+        age: 0,
+        r: 10,
+        grow: 280 + i * 90,
+        color: i === 0 ? "#ffd27a" : (i === 1 ? "#ff6b2d" : "#c9a66b")
+      });
+    }
+  }
 
-    // a single decisive lightning bolt striking down from the cloud
+  function stormImpact() {
+    // screen-clear + boss damage payoff
     const startX = stormCloud.x;
     const startY = stormCloud.y + stormCloud.w * 0.1;
-    stormLightning = { points: buildLightningPath(startX, startY, startX + (Math.random() - 0.5) * W * 0.2, H, W * 0.1), age: 0, life: 0.3 };
 
-    // electricity branches out from the cloud to strike every obstacle on screen
-    stormChainBolts = obstacles.map(o => {
-      const drawY = o.y + Math.sin(o.bobPhase) * o.bobAmount;
-      const ex = o.x + o.w / 2, ey = drawY + o.h / 2;
-      return { points: buildLightningPath(startX, startY, ex, ey, 30), age: 0, life: 0.25 + Math.random() * 0.15 };
-    });
+    if (stormMode === "pirate") {
+      if (typeof sfxExplosion === "function") sfxExplosion(1.4);
+      if (typeof sfxCrash === "function") sfxCrash();
+      triggerScreenFlash(0.35, 280);
+      triggerScreenShake(9, 480);
+      spawnPirateBlast(startX, startY);
+      stormLightning = null;
+      stormChainBolts = [];
+      obstacles.forEach(o => {
+        const drawY = o.y + Math.sin(o.bobPhase) * o.bobAmount;
+        spawnPirateBlast(o.x + o.w / 2, drawY + o.h / 2);
+      });
+    } else {
+      if (typeof sfxThunder === "function") sfxThunder();
+      triggerScreenFlash(0.22, 220);
+      triggerScreenShake(6, 380);
+      stormLightning = { points: buildLightningPath(startX, startY, startX + (Math.random() - 0.5) * W * 0.2, H, W * 0.1), age: 0, life: 0.3 };
+      stormChainBolts = obstacles.map(o => {
+        const drawY = o.y + Math.sin(o.bobPhase) * o.bobAmount;
+        const ex = o.x + o.w / 2, ey = drawY + o.h / 2;
+        return { points: buildLightningPath(startX, startY, ex, ey, 30), age: 0, life: 0.25 + Math.random() * 0.15 };
+      });
+    }
 
     // zap every obstacle currently on screen
     obstacles.forEach(o => {
@@ -278,7 +329,24 @@
     }
     stormCloud.glowPhase += dt * 3.5;
     stormCloud.ringPhase += dt * 4;
+    stormCloud.spin = (stormCloud.spin || 0) + dt * (stormMode === "pirate" ? 2.8 : 0);
     stormCloud.t += dt;
+
+    if (pirateBlastParticles.length) {
+      pirateBlastParticles.forEach(pt => {
+        pt.age += dt;
+        if (pt.kind === "ring") {
+          pt.r += pt.grow * dt;
+        } else {
+          pt.x += pt.vx * dt;
+          pt.y += pt.vy * dt;
+          pt.vy += 220 * dt;
+          pt.vx *= (1 - 0.8 * dt);
+          if (pt.kind === "smoke") pt.r += 18 * dt;
+        }
+      });
+      pirateBlastParticles = pirateBlastParticles.filter(pt => pt.age < pt.life);
+    }
 
     if (stormCloud.phase === "falling") {
       const dur = 0.5;
@@ -301,6 +369,7 @@
         stormCloud = null;
         stormLightning = null;
         stormChainBolts = [];
+        pirateBlastParticles = [];
         updateStormMeterDisplay();
         return;
       }
@@ -322,15 +391,23 @@
     if (!stormActive || !stormCloud) return;
     ctx.save();
 
-    // darkening atmosphere overlay while the storm cloud is present
+    // atmosphere — cool for storm, smoky/amber for pirate bomb
     const dusk = ctx.createLinearGradient(0, 0, 0, H);
-    dusk.addColorStop(0, "rgba(30,26,40,0.34)");
-    dusk.addColorStop(0.6, "rgba(30,26,40,0.16)");
-    dusk.addColorStop(1, "rgba(30,26,40,0.04)");
+    if (stormMode === "pirate") {
+      dusk.addColorStop(0, "rgba(40,18,8,0.38)");
+      dusk.addColorStop(0.55, "rgba(30,12,6,0.18)");
+      dusk.addColorStop(1, "rgba(20,8,4,0.05)");
+    } else {
+      dusk.addColorStop(0, "rgba(30,26,40,0.34)");
+      dusk.addColorStop(0.6, "rgba(30,26,40,0.16)");
+      dusk.addColorStop(1, "rgba(30,26,40,0.04)");
+    }
     ctx.fillStyle = dusk;
     ctx.fillRect(0, 0, W, H);
 
-    const img = images[STORM_CLOUD_KEYS[stormCloud.animFrame]];
+    const img = stormMode === "pirate"
+      ? (images.pirate_bomb || null)
+      : images[STORM_CLOUD_KEYS[stormCloud.animFrame]];
     const aspect = (img && img.naturalWidth) ? img.naturalHeight / img.naturalWidth : 0.72;
     const w = stormCloud.w;
     const h = w * aspect;
@@ -347,6 +424,7 @@
 
     ctx.save();
     ctx.translate(stormCloud.x, stormCloud.y);
+    if (stormMode === "pirate") ctx.rotate(stormCloud.spin || 0);
     ctx.scale(scale, scale);
     ctx.globalAlpha = cloudAlpha;
 
@@ -428,6 +506,32 @@
           if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
         });
         ctx.stroke();
+        ctx.restore();
+      });
+    }
+
+    // Pirate bomb unique explosion debris
+    if (pirateBlastParticles.length) {
+      pirateBlastParticles.forEach(pt => {
+        const t = 1 - pt.age / pt.life;
+        const a = Math.max(0, t);
+        ctx.save();
+        ctx.globalAlpha = a * (pt.kind === "smoke" ? 0.45 : 0.9);
+        if (pt.kind === "ring") {
+          ctx.strokeStyle = pt.color;
+          ctx.lineWidth = 3 * t;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+          ctx.stroke();
+        } else {
+          const grd = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, pt.r);
+          grd.addColorStop(0, pt.color);
+          grd.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = grd;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
         ctx.restore();
       });
     }

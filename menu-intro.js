@@ -70,7 +70,7 @@ const SHIP_STATS = {
   blimp9: {
     name: "Jolly Rogers", mk: "Mk I", cls: "Raider", call: "ROGER-9",
     stats: { Speed: 4, Lift: 3, Durability: 3, Maneuverability: 4, Boost: 3 },
-    ability: { icon: "☠", name: "Plunder", desc: "A scrappy raider that fights dirty." },
+    ability: { icon: "💣", name: "Blackpowder Bomb", desc: "Drops a pirate bomb that blasts every enemy on screen." },
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
   },
   blimp10: {
