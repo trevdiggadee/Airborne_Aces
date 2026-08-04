@@ -1,7 +1,7 @@
 "use strict";
 
   // ---------- Game state ----------
-  let state = "start"; // start | playing | over
+  let state = "start"; // start | playing | over | paused
   let score = 0;
   let gameplayScore = 0; // dodge-only score used for boss pacing; excludes bonus-round points
   let best = 0;
@@ -526,13 +526,106 @@
     showBanner("RESUMED FROM CHECKPOINT!", 2000, "checkpoint");
   }
 
-  const muteBtn = document.getElementById("muteBtn");
-  if (muteBtn) {
-    muteBtn.textContent = muted ? "🔇" : "🔊";
-    muteBtn.addEventListener("click", (e) => {
+  // ---------- In-game pause / volume panel (opened via bottom-right button) ----------
+  let pausedFromState = "playing";
+  const pauseOverlay = document.getElementById("pauseOverlay");
+  const pauseMusicSlider = document.getElementById("pauseMusicSlider");
+  const pauseSfxSlider = document.getElementById("pauseSfxSlider");
+  const pauseMusicVal = document.getElementById("pauseMusicVal");
+  const pauseSfxVal = document.getElementById("pauseSfxVal");
+  const pauseResumeBtn = document.getElementById("pauseResumeBtn");
+  const pauseMuteToggle = document.getElementById("pauseMuteToggle");
+
+  function syncPauseSliders() {
+    const mv = Math.round(((typeof musicVolumePref !== "undefined") ? musicVolumePref : 0.25) * 100);
+    const sv = Math.round(((typeof sfxVolumePref !== "undefined") ? sfxVolumePref : 1) * 100);
+    if (pauseMusicSlider) pauseMusicSlider.value = String(mv);
+    if (pauseSfxSlider) pauseSfxSlider.value = String(sv);
+    if (pauseMusicVal) pauseMusicVal.textContent = mv + "%";
+    if (pauseSfxVal) pauseSfxVal.textContent = sv + "%";
+    if (pauseMuteToggle) pauseMuteToggle.textContent = muted ? "Unmute All" : "Mute All";
+  }
+
+  function openPauseMenu() {
+    if (state !== "playing" && state !== "bossDialogue") return;
+    pausedFromState = state;
+    state = "paused";
+    syncPauseSliders();
+    if (pauseOverlay) {
+      pauseOverlay.classList.remove("hidden");
+      pauseOverlay.setAttribute("aria-hidden", "false");
+    }
+    if (typeof sfxClick === "function") sfxClick();
+  }
+
+  function closePauseMenu() {
+    if (state !== "paused") return;
+    state = pausedFromState || "playing";
+    if (pauseOverlay) {
+      pauseOverlay.classList.add("hidden");
+      pauseOverlay.setAttribute("aria-hidden", "true");
+    }
+    if (typeof sfxClick === "function") sfxClick();
+  }
+
+  if (pauseMusicSlider) {
+    pauseMusicSlider.addEventListener("input", () => {
+      const v = parseInt(pauseMusicSlider.value, 10) / 100;
+      if (typeof setMusicVolumePref === "function") setMusicVolumePref(v);
+      if (pauseMusicVal) pauseMusicVal.textContent = pauseMusicSlider.value + "%";
+    });
+    // prevent flap when dragging
+    pauseMusicSlider.addEventListener("pointerdown", (e) => e.stopPropagation());
+    pauseMusicSlider.addEventListener("click", (e) => e.stopPropagation());
+  }
+  if (pauseSfxSlider) {
+    pauseSfxSlider.addEventListener("input", () => {
+      const v = parseInt(pauseSfxSlider.value, 10) / 100;
+      if (typeof setSfxVolumePref === "function") setSfxVolumePref(v);
+      if (pauseSfxVal) pauseSfxVal.textContent = pauseSfxSlider.value + "%";
+    });
+    pauseSfxSlider.addEventListener("pointerdown", (e) => e.stopPropagation());
+    pauseSfxSlider.addEventListener("click", (e) => e.stopPropagation());
+  }
+  if (pauseResumeBtn) {
+    pauseResumeBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closePauseMenu();
+    });
+  }
+  if (pauseMuteToggle) {
+    pauseMuteToggle.addEventListener("click", (e) => {
       e.stopPropagation();
       ensureAudio();
       setMuted(!muted);
+      pauseMuteToggle.textContent = muted ? "Unmute All" : "Mute All";
+      const btn = document.getElementById("muteBtn");
+      if (btn) btn.textContent = "⚙";
+    });
+  }
+  if (pauseOverlay) {
+    pauseOverlay.addEventListener("click", (e) => {
+      // click backdrop to resume
+      if (e.target === pauseOverlay) closePauseMenu();
+    });
+  }
+
+  const muteBtn = document.getElementById("muteBtn");
+  if (muteBtn) {
+    muteBtn.textContent = "⚙";
+    muteBtn.setAttribute("aria-label", "Pause and settings");
+    muteBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      ensureAudio();
+      if (state === "paused") {
+        closePauseMenu();
+      } else if (state === "playing" || state === "bossDialogue") {
+        openPauseMenu();
+      } else {
+        // Outside active play — keep simple mute toggle
+        setMuted(!muted);
+        muteBtn.textContent = muted ? "🔇" : "⚙";
+      }
     });
   }
 
@@ -554,6 +647,7 @@
     if (e.cancelable) e.preventDefault();
     ensureAudio();
     if (state === "playing") flap();
+    // ignore input while paused
   }
   canvas.addEventListener("touchstart", handleInput, { passive: false });
   canvas.addEventListener("mousedown", handleInput);

@@ -150,6 +150,8 @@
       updateShockwaves(dt);
       updateBossWarning(dt);
       updateScreenEffects(dt);
+    } else if (state === "paused") {
+      // Freeze world — still draw below, no simulation advance
     } else if (state === "start" && buildings.length === 0) {
       initBuildings();
       initClouds();

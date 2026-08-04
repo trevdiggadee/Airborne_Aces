@@ -205,7 +205,40 @@
 <div id="gameScreen" style="display:none;">
 <canvas id="gameCanvas"></canvas>
 
-<button id="muteBtn" aria-label="Toggle sound">🔊</button>
+<button id="muteBtn" aria-label="Game settings">⚙</button>
+
+<div id="pauseOverlay" class="hidden" aria-hidden="true">
+  <div class="pausePanel">
+    <div class="pausePanelGlow"></div>
+    <div class="pausePanelInner">
+      <h2 class="pauseTitle">PAUSED</h2>
+      <p class="pauseSubtitle">Adjust volumes · game is paused</p>
+
+      <div class="pauseSliderRow">
+        <div class="pauseSliderLabel">
+          <span class="pauseIcon">🎵</span>
+          <span>Music</span>
+          <span class="pauseVal" id="pauseMusicVal">25%</span>
+        </div>
+        <input type="range" id="pauseMusicSlider" class="pauseSlider" min="0" max="100" value="25" aria-label="Music volume" />
+      </div>
+
+      <div class="pauseSliderRow">
+        <div class="pauseSliderLabel">
+          <span class="pauseIcon">🔊</span>
+          <span>Sound FX</span>
+          <span class="pauseVal" id="pauseSfxVal">100%</span>
+        </div>
+        <input type="range" id="pauseSfxSlider" class="pauseSlider" min="0" max="100" value="100" aria-label="Sound effects volume" />
+      </div>
+
+      <div class="pauseActions">
+        <button type="button" id="pauseMuteToggle" class="pauseSecondaryBtn">Mute All</button>
+        <button type="button" id="pauseResumeBtn" class="pausePrimaryBtn">Resume</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div id="hudFrame">
   <img id="hudFrameImg" crossorigin="anonymous" src="hudFrame.webp?cb=2" alt="" />
