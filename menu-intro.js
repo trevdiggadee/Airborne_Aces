@@ -631,20 +631,19 @@ function endCutscene() {
 })();
 
 (function initRadarBeeps() {
-  // Radar "bleep" only plays on the splash screen (synced to the sweep).
+  // Radar bleep — only while the splash screen is visible
   var PERIOD = 4;
   var HITS = [0.392];
   var ctx = null;
   var started = false;
   var timer = null;
-  var active = true; // set false once splash is dismissed
+  var active = true;
 
   function splashVisible() {
     var s = document.getElementById("splashScreen");
     if (!s) return false;
     if (s.classList.contains("hidden")) return false;
     if (s.style.display === "none") return false;
-    // also treat fully faded/opacity-0 as gone
     if (s.classList.contains("splashOut") || s.classList.contains("fadeOut")) return false;
     return true;
   }
@@ -662,7 +661,6 @@ function endCutscene() {
   function beep() {
     if (!active || !splashVisible()) return;
     if (document.hidden) return;
-    // Respect global mute if present
     if (typeof muted !== "undefined" && muted) return;
     var ac = ensureCtx();
     if (!ac) return;
@@ -685,7 +683,6 @@ function endCutscene() {
   function tick() {
     if (!started || !active) return;
     if (!splashVisible()) {
-      // Splash gone — stop the radar loop entirely
       active = false;
       if (timer) { cancelAnimationFrame(timer); timer = null; }
       if (ctx && ctx.state === "running") {
@@ -730,14 +727,12 @@ function endCutscene() {
     }
   }
 
-  // Expose so splash Enter can kill the beep immediately
   window.__airborneStopSplashRadar = stopRadar;
 
   document.addEventListener("click", start);
   document.addEventListener("touchstart", start, { passive: true });
   document.addEventListener("keydown", start);
 
-  // Pause radar when tab is hidden
   document.addEventListener("visibilitychange", function () {
     if (document.hidden && ctx && ctx.state === "running") {
       try { ctx.suspend(); } catch (e) {}
