@@ -337,6 +337,38 @@
     if (musicTimerId) { clearInterval(musicTimerId); musicTimerId = null; }
   }
 
+  // Pause all audio when the tab/app is backgrounded so music doesn't keep
+  // playing after the player leaves the browser (mobile + desktop).
+  let musicWasPlayingBeforeHide = false;
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) {
+      musicWasPlayingBeforeHide = musicPlaying;
+      if (musicPlaying) stopMusic();
+      if (audioCtx && audioCtx.state === "running") {
+        try { audioCtx.suspend(); } catch (e) {}
+      }
+    } else {
+      if (audioCtx && audioCtx.state === "suspended") {
+        try { audioCtx.resume(); } catch (e) {}
+      }
+      if (musicWasPlayingBeforeHide) {
+        musicWasPlayingBeforeHide = false;
+        // Only resume if the game is still in an active playable state
+        if (typeof state !== "undefined" && (state === "playing" || state === "bossDialogue")) {
+          startMusic();
+        }
+      }
+    }
+  });
+  // iOS Safari sometimes only fires pagehide
+  window.addEventListener("pagehide", function () {
+    musicWasPlayingBeforeHide = musicPlaying;
+    if (musicPlaying) stopMusic();
+    if (audioCtx && audioCtx.state === "running") {
+      try { audioCtx.suspend(); } catch (e) {}
+    }
+  });
+
   function setMusicTheme(theme) {
     musicTheme = theme;
   }

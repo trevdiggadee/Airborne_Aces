@@ -393,6 +393,7 @@ window.__airborneShowMenu = () => { startHeroAnimation(selectedBlimp); startMenu
 const splashEnterBtn = document.getElementById("splashEnterBtn");
 if (splashEnterBtn) {
   splashEnterBtn.addEventListener("click", () => {
+    if (window.__airborneStopSplashRadar) window.__airborneStopSplashRadar();
     const s = document.getElementById("splashScreen");
     s.classList.add("fade-out");
     setTimeout(() => {
@@ -630,11 +631,23 @@ function endCutscene() {
 })();
 
 (function initRadarBeeps() {
+  // Radar "bleep" only plays on the splash screen (synced to the sweep).
   var PERIOD = 4;
   var HITS = [0.392];
   var ctx = null;
   var started = false;
   var timer = null;
+  var active = true; // set false once splash is dismissed
+
+  function splashVisible() {
+    var s = document.getElementById("splashScreen");
+    if (!s) return false;
+    if (s.classList.contains("hidden")) return false;
+    if (s.style.display === "none") return false;
+    // also treat fully faded/opacity-0 as gone
+    if (s.classList.contains("splashOut") || s.classList.contains("fadeOut")) return false;
+    return true;
+  }
 
   function ensureCtx() {
     if (!ctx) {
@@ -647,6 +660,10 @@ function endCutscene() {
   }
 
   function beep() {
+    if (!active || !splashVisible()) return;
+    if (document.hidden) return;
+    // Respect global mute if present
+    if (typeof muted !== "undefined" && muted) return;
     var ac = ensureCtx();
     if (!ac) return;
     var t = ac.currentTime + 0.01;
@@ -655,8 +672,9 @@ function endCutscene() {
     o.type = "sine";
     o.frequency.setValueAtTime(980, t);
     o.frequency.exponentialRampToValueAtTime(420, t + 0.18);
+    var vol = (typeof sfxVolumePref === "number") ? (0.25 * sfxVolumePref) : 0.25;
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.25, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0001, vol), t + 0.01);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
     o.connect(g);
     g.connect(ac.destination);
@@ -665,33 +683,64 @@ function endCutscene() {
   }
 
   function tick() {
-    if (!started) return;
-    var now = performance.now() / 1000;
-    var phase = now % PERIOD;
-    HITS.forEach(function (hit) {
-      var delta = phase - hit;
-      if (delta >= 0 && delta < 0.08) {
-        var key = Math.floor(now / PERIOD) + ":" + hit;
-        if (tick._last !== key) {
-          tick._last = key;
-          beep();
-        }
+    if (!started || !active) return;
+    if (!splashVisible()) {
+      // Splash gone — stop the radar loop entirely
+      active = false;
+      if (timer) { cancelAnimationFrame(timer); timer = null; }
+      if (ctx && ctx.state === "running") {
+        try { ctx.suspend(); } catch (e) {}
       }
-    });
+      return;
+    }
+    if (!document.hidden) {
+      var now = performance.now() / 1000;
+      var phase = now % PERIOD;
+      HITS.forEach(function (hit) {
+        var delta = phase - hit;
+        if (delta >= 0 && delta < 0.08) {
+          var key = Math.floor(now / PERIOD) + ":" + hit;
+          if (tick._last !== key) {
+            tick._last = key;
+            beep();
+          }
+        }
+      });
+    }
     timer = requestAnimationFrame(tick);
   }
 
   function start() {
+    if (!splashVisible()) return;
     if (started) {
       ensureCtx();
       return;
     }
     started = true;
+    active = true;
     ensureCtx();
     if (!timer) timer = requestAnimationFrame(tick);
   }
 
+  function stopRadar() {
+    active = false;
+    if (timer) { cancelAnimationFrame(timer); timer = null; }
+    if (ctx && ctx.state === "running") {
+      try { ctx.suspend(); } catch (e) {}
+    }
+  }
+
+  // Expose so splash Enter can kill the beep immediately
+  window.__airborneStopSplashRadar = stopRadar;
+
   document.addEventListener("click", start);
-  document.addEventListener("touchstart", start);
+  document.addEventListener("touchstart", start, { passive: true });
   document.addEventListener("keydown", start);
+
+  // Pause radar when tab is hidden
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden && ctx && ctx.state === "running") {
+      try { ctx.suspend(); } catch (e) {}
+    }
+  });
 })();
