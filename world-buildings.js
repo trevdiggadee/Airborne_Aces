@@ -74,12 +74,8 @@
   }
 
   function updateBuildings(dtScale) {
-    if (worldWindDown) {
-      const speed = 0.8 * dtScale * (obstacleSpeedScale()) * worldWindDownSpeedMult;
-      buildings.forEach(b => (b.x -= speed));
-      while (buildings.length && buildings[0].x + buildings[0].w < -10) {
-        buildings.shift();
-      }
+    // Freeze city in place during landing — pad approach = blimp flying forward
+    if (worldWindDown || (typeof levelEndActive !== "undefined" && levelEndActive)) {
       return;
     }
     const targetKey = currentBuildingRowKey();
@@ -107,10 +103,8 @@
   }
 
   function groundLayersCleared() {
-    // true once the city strip has fully scrolled off during wind-down
-    return worldWindDown && buildings.length === 0 &&
-      (!streetTiles || streetTiles.length === 0) &&
-      (!powerlineTiles || powerlineTiles.length === 0);
+    // City freezes in place now; ready as soon as freeze/wind-down is active
+    return worldWindDown;
   }
 
   function startWorldWindDown(speedMult) {
@@ -164,6 +158,8 @@
   }
 
   function updateSketchSkyline(dtScale) {
+    // Hold the skyline still during the landing approach
+    if (typeof levelEndActive !== "undefined" && levelEndActive) return;
     const speed = 0.35 * dtScale * obstacleSpeedScale(); // between parallax layer 3 (0.28) and power lines (0.4) — matches its position in the draw order
     sketchSkylineTiles.forEach(t => (t.x -= speed));
     while (sketchSkylineTiles.length && sketchSkylineTiles[0].x + sketchSkylineTiles[0].w < -10) {
@@ -215,13 +211,12 @@
   }
 
   function updatePowerlines(dtScale) {
-    const mult = worldWindDown ? worldWindDownSpeedMult : 1;
-    const speed = 0.4 * dtScale * obstacleSpeedScale() * mult;
+    if (worldWindDown || (typeof levelEndActive !== "undefined" && levelEndActive)) return;
+    const speed = 0.4 * dtScale * obstacleSpeedScale();
     powerlineTiles.forEach(t => (t.x -= speed));
     while (powerlineTiles.length && powerlineTiles[0].x + powerlineTiles[0].w < -10) {
       powerlineTiles.shift();
     }
-    if (worldWindDown) return;
     const last = powerlineTiles[powerlineTiles.length - 1];
     if (!last || last.x + last.w < W + 200) {
       const startX = last ? last.x + last.w - 1 : 0;
@@ -268,14 +263,13 @@
   }
 
   function updateStreet(dtScale) {
-    const mult = worldWindDown ? worldWindDownSpeedMult : 1;
-    const speed = 0.8 * dtScale * obstacleSpeedScale() * mult;
-    if (!streetTiles.length && !worldWindDown) initStreetTiles();
+    if (worldWindDown || (typeof levelEndActive !== "undefined" && levelEndActive)) return;
+    const speed = 0.8 * dtScale * obstacleSpeedScale();
+    if (!streetTiles.length) initStreetTiles();
     streetTiles.forEach(t => (t.x -= speed));
     while (streetTiles.length && streetTiles[0].x + streetTiles[0].w < -10) {
       streetTiles.shift();
     }
-    if (worldWindDown) return;
     const last = streetTiles[streetTiles.length - 1];
     if (!last || last.x + last.w < W + 200) {
       const img = images.streetTexture;
@@ -395,13 +389,12 @@
       if (streetlamps.length) streetlamps = [];
       return;
     }
-    const mult = worldWindDown ? worldWindDownSpeedMult : 1;
-    const speed = 0.8 * dtScale * (obstacleSpeedScale()) * mult; // same speed as buildings — same ground plane
+    if (worldWindDown || (typeof levelEndActive !== "undefined" && levelEndActive)) return;
+    const speed = 0.8 * dtScale * (obstacleSpeedScale()); // same speed as buildings — same ground plane
     streetlamps.forEach(l => (l.x -= speed));
     while (streetlamps.length && streetlamps[0].x + streetlamps[0].w < -10) {
       streetlamps.shift();
     }
-    if (worldWindDown) return;
     const last = streetlamps[streetlamps.length - 1];
     if (!last || last.x < W + 400) {
       const gap = STREETLAMP_GAP_MIN + Math.random() * (STREETLAMP_GAP_MAX - STREETLAMP_GAP_MIN);
@@ -451,6 +444,7 @@
   }
 
   function updateGroundVehicles(dt, dtScale) {
+    if (worldWindDown || (typeof levelEndActive !== "undefined" && levelEndActive)) return;
     vehicleSpawnTimer -= dt;
     if (vehicleSpawnTimer <= 0) {
       vehicleSpawnTimer = 4.5 + Math.random() * 6;
@@ -535,24 +529,34 @@
       clouds.push({
         x: Math.random() * W,
         y: 40 + Math.random() * (H * 0.35),
-        scale: 0.4 + Math.random() * 0.5,
+        // At least 50% smaller (was 0.4–0.9, now 0.15–0.40)
+        scale: 0.15 + Math.random() * 0.25,
         speed: 0.15 + Math.random() * 0.2,
         alpha: 0.35 + Math.random() * 0.3
       });
     }
   }
   function updateClouds(dtScale) {
+    // Freeze clouds during landing so background stays put
+    if (typeof levelEndActive !== "undefined" && levelEndActive) return;
+    const img = images.cloud;
+    const baseW = (img && img.naturalWidth) ? img.naturalWidth : 256;
     clouds.forEach(c => {
       c.x -= c.speed * dtScale;
-      if (c.x < -300) {
-        c.x = W + 100 + Math.random() * 200;
+      // Fully off-screen (entire cloud past left edge) before recycling
+      const drawnW = baseW * c.scale;
+      if (c.x + drawnW < 0) {
+        c.x = W + 20 + Math.random() * 100;
         c.y = 40 + Math.random() * (H * 0.35);
+        c.scale = 0.15 + Math.random() * 0.25;
+        c.speed = 0.15 + Math.random() * 0.2;
+        c.alpha = 0.35 + Math.random() * 0.3;
       }
     });
   }
   function drawClouds() {
     const img = images.cloud;
-    if (!img.naturalWidth) return;
+    if (!img || !img.naturalWidth) return;
     clouds.forEach(c => {
       const w = img.naturalWidth * c.scale;
       const h = img.naturalHeight * c.scale;
@@ -598,6 +602,7 @@
   }
 
   function updateBirdFlocks(dt) {
+    if (typeof levelEndActive !== "undefined" && levelEndActive) return;
     birdFlockTimer -= dt;
     if (birdFlockTimer <= 0) {
       birdFlockTimer = 22 + Math.random() * 26; // periodic — not a constant presence

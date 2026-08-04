@@ -70,6 +70,11 @@
   }
 
   function updateParallaxLayers(dtScale) {
+    // During the level-end landing sequence, freeze all parallax layers in place
+    // so the pad approaching reads as the blimp flying forward.
+    if (typeof levelEndActive !== "undefined" && levelEndActive) {
+      return;
+    }
     var speed = obstacleSpeedScale();
 
     // detect a level change and (re)start the crossfade toward the new background

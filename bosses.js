@@ -992,7 +992,8 @@
 
     if (levelEndPhase === "windDown") {
       // Wait until city has mostly cleared, or timeout
-      if (groundLayersCleared() || levelEndTimer > 4.5) {
+      // City freezes immediately; short beat so "CITY CLEAR" can be read, then pad approaches
+      if ((groundLayersCleared() && levelEndTimer > 1.1) || levelEndTimer > 3.5) {
         levelEndPhase = "approach";
         levelEndTimer = 0;
         spawnLandingPad();
