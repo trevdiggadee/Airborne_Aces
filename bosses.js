@@ -505,6 +505,7 @@
     spawnTimer = 9999;
     startWorldWindDown(2.2);
     showBanner("CITY CLEAR — APPROACH THE HANGAR!", 2800, "defeat");
+    if (typeof sfxCityClear === "function") sfxCityClear();
   }
 
   function spawnLandingPad() {
@@ -516,7 +517,7 @@
     const w = h * aspect;
     const groundY = groundLevelY();
     // Deck with the X is ~42% down from the top of the art (measured from the sprite)
-    const deckFromTop = 0.50;
+    const deckFromTop = 0.525;
     const surfaceY = (groundY - h) + h * deckFromTop;
     // Horizontal center of the circular X pad within the sprite
     const deckCenterFrac = 0.42;
@@ -552,6 +553,62 @@
     }
   }
 
+  // Landing dust burst — puffs outward from under the blimp on touchdown
+  function spawnLandingDust(cx, cy) {
+    for (let i = 0; i < 28; i++) {
+      const ang = -Math.PI * 0.15 + Math.random() * Math.PI * 1.3; // mostly outward/up
+      const spd = 40 + Math.random() * 120;
+      const side = (i % 2 === 0) ? -1 : 1;
+      levelEndParticles.push({
+        kind: "dust",
+        x: cx + (Math.random() - 0.5) * 30,
+        y: cy + Math.random() * 6,
+        vx: side * (30 + Math.random() * 90) + Math.cos(ang) * spd * 0.3,
+        vy: -20 - Math.random() * 70,
+        life: 0.55 + Math.random() * 0.55,
+        age: 0,
+        r: 3 + Math.random() * 6,
+        alpha: 0.45 + Math.random() * 0.35
+      });
+    }
+    // a few bigger soft puffs
+    for (let i = 0; i < 8; i++) {
+      const side = (i % 2 === 0) ? -1 : 1;
+      levelEndParticles.push({
+        kind: "dust",
+        x: cx + side * (10 + Math.random() * 40),
+        y: cy,
+        vx: side * (20 + Math.random() * 50),
+        vy: -10 - Math.random() * 40,
+        life: 0.8 + Math.random() * 0.5,
+        age: 0,
+        r: 8 + Math.random() * 10,
+        alpha: 0.3 + Math.random() * 0.25
+      });
+    }
+  }
+
+  // Continuous steam vents around the pad deck
+  function spawnPadSteam(pad, dt) {
+    if (!pad || Math.random() > dt * 14) return; // ~14 puffs/sec
+    const deckCx = pad.x + pad.w * (pad.deckCenterFrac || 0.42);
+    const deckCy = pad.y + pad.h * (pad.deckFromTop || 0.525);
+    // Spawn near the rim of the circular pad
+    const ang = Math.random() * Math.PI * 2;
+    const rad = pad.w * (0.12 + Math.random() * 0.16);
+    levelEndParticles.push({
+      kind: "steam",
+      x: deckCx + Math.cos(ang) * rad,
+      y: deckCy + 4 + Math.random() * 6,
+      vx: (Math.random() - 0.5) * 18,
+      vy: -25 - Math.random() * 40,
+      life: 1.1 + Math.random() * 0.9,
+      age: 0,
+      r: 4 + Math.random() * 7,
+      alpha: 0.2 + Math.random() * 0.25
+    });
+  }
+
   function completeLevelLanding() {
     if (levelEndPhase === "victory" || levelEndPhase === "stats" || levelEndPhase === "fadeOut") return;
     levelEndPhase = "victory";
@@ -560,9 +617,14 @@
     levelEndPad.docked = true;
     player.vy = 0;
     player.rotation = 0;
-    // Snap solidly onto the deck
-    player.y = levelEndPad.surfaceY - player.h * 0.45;
+    // Snap solidly onto the deck (slightly lower rest)
+    player.y = levelEndPad.surfaceY - player.h * 0.42;
     player.x = levelEndPad.x + levelEndPad.w * (levelEndPad.deckCenterFrac || 0.42);
+    spawnLandingDust(
+      levelEndPad.x + levelEndPad.w * (levelEndPad.deckCenterFrac || 0.42),
+      levelEndPad.surfaceY + 2
+    );
+    triggerScreenShake(3, 280);
 
     const landingBonus = 50;
     score += landingBonus;
@@ -584,7 +646,8 @@
 
     triggerScreenShake(5, 500);
     triggerScreenFlash(0.35, 400);
-    if (typeof sfxBossDefeat === "function") sfxBossDefeat();
+    if (typeof sfxTouchdown === "function") sfxTouchdown();
+    if (typeof sfxLevelCompleteFanfare === "function") sfxLevelCompleteFanfare();
 
     // Fireworks around the pad
     const cx = levelEndPad.x + levelEndPad.w * (levelEndPad.deckCenterFrac || 0.42);
@@ -593,6 +656,7 @@
       setTimeout(() => {
         if (!levelEndActive) return;
         spawnVictoryFirework(cx + (Math.random() - 0.5) * 140, cy - Math.random() * 90);
+        if (typeof sfxFireworkPop === "function") sfxFireworkPop();
       }, i * 250);
     }
   }
@@ -621,11 +685,37 @@
       checkpointBossesDefeated = bossesDefeatedCount;
     }
     showBanner("LEVEL 2 — KEEP FLYING!", 2400, "level");
+    if (typeof sfxLevel2Start === "function") sfxLevel2Start();
   }
 
   function updateLevelEnd(dt) {
     if (!levelEndActive) return;
     levelEndTimer += dt;
+
+    // Ambient steam while pad is on-screen
+    if (levelEndPad && (levelEndPhase === "approach" || levelEndPhase === "landing" || levelEndPhase === "victory" || levelEndPhase === "stats")) {
+      spawnPadSteam(levelEndPad, dt);
+    }
+
+    // Dust + steam particles
+    if (levelEndParticles.length) {
+      levelEndParticles.forEach(p => {
+        p.age += dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        if (p.kind === "steam") {
+          p.vy -= 12 * dt; // keep rising
+          p.vx *= (1 - 0.6 * dt);
+          p.r += 10 * dt; // expand
+        } else {
+          // dust
+          p.vy += 180 * dt; // gravity
+          p.vx *= (1 - 1.2 * dt);
+          p.r += 4 * dt;
+        }
+      });
+      levelEndParticles = levelEndParticles.filter(p => p.age < p.life);
+    }
 
     // Fireworks always update during victory
     if (levelEndFireworks.length) {
@@ -645,6 +735,7 @@
         levelEndTimer = 0;
         spawnLandingPad();
         showBanner("LAND ON THE PAD!", 2500, "defeat");
+        if (typeof sfxPadApproach === "function") sfxPadApproach();
       }
       return;
     }
@@ -666,6 +757,7 @@
             levelEndPhase = "landing";
             levelEndTimer = 0;
             showBanner("TAP TO SET DOWN ON THE X!", 2500, "defeat");
+            if (typeof sfxLandPrompt === "function") sfxLandPrompt();
           }
         }
       }
@@ -695,7 +787,7 @@
 
       // Soft floor on the deck — stand on it instead of falling through / dying
       if (overPad && playerBottom > levelEndPad.surfaceY) {
-        player.y = levelEndPad.surfaceY - player.h * 0.45;
+        player.y = levelEndPad.surfaceY - player.h * 0.42;
         if (player.vy > 0) player.vy = 0;
         // If they're resting on the pad, count it as landed
         if (levelEndPhase === "landing" && Math.abs(player.vy) < 30) {
@@ -710,6 +802,7 @@
       if (levelEndTimer > 2.8) {
         levelEndPhase = "stats";
         levelEndTimer = 0;
+        if (typeof sfxStatsReveal === "function") sfxStatsReveal();
       }
       return;
     }
@@ -719,6 +812,7 @@
       if (levelEndTimer > 3.5) {
         levelEndPhase = "fadeOut";
         levelEndTimer = 0;
+        if (typeof sfxLevelFadeOut === "function") sfxLevelFadeOut();
       }
       return;
     }
@@ -742,7 +836,7 @@
       ctx.save();
       // Deck target point (center of the X)
       const deckCx = p.x + p.w * (p.deckCenterFrac || 0.42);
-      const deckCy = p.y + p.h * (p.deckFromTop || 0.50);
+      const deckCy = p.y + p.h * (p.deckFromTop || 0.525);
 
       if (img && img.naturalWidth) {
         ctx.drawImage(img, p.x, p.y, p.w, p.h);
@@ -776,6 +870,31 @@
         ctx.fillText("▼ LAND HERE ▼", deckCx, deckCy - 22);
       }
       ctx.restore();
+    }
+
+    // Dust + steam particles
+    if (levelEndParticles.length) {
+      levelEndParticles.forEach(pt => {
+        const t = 1 - pt.age / pt.life;
+        const a = Math.max(0, t * (pt.alpha || 0.4));
+        ctx.save();
+        ctx.globalAlpha = a;
+        if (pt.kind === "steam") {
+          const grd = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, pt.r);
+          grd.addColorStop(0, "rgba(230,230,235,0.85)");
+          grd.addColorStop(1, "rgba(200,200,210,0)");
+          ctx.fillStyle = grd;
+        } else {
+          const grd = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, pt.r);
+          grd.addColorStop(0, "rgba(180,150,110,0.9)");
+          grd.addColorStop(1, "rgba(120,95,60,0)");
+          ctx.fillStyle = grd;
+        }
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
     }
 
     // Fireworks

@@ -185,6 +185,78 @@
     });
   }
 
+  // ---------- Level-end / landing sequence SFX ----------
+  function sfxCityClear() {
+    // whoosh of the city rushing past + low rumble
+    playNoise({ duration: 0.55, vol: 0.14, filterType: "lowpass", filterFreq: 1800, filterFreqEnd: 220, Q: 0.7, reverbSend: 0.35 });
+    playTone({ freq: 90, duration: 0.5, type: "sawtooth", vol: 0.08, sweep: -35, attack: 0.02, reverbSend: 0.25 });
+    playTone({ freq: 180, duration: 0.35, type: "triangle", vol: 0.06, sweep: -80, startDelay: 0.08 });
+  }
+
+  function sfxPadApproach() {
+    // distant mechanical/hangar tone — pad coming into view
+    playTone({ freq: 220, duration: 0.4, type: "triangle", vol: 0.07, sweep: 40, attack: 0.04, reverbSend: 0.4 });
+    playTone({ freq: 330, duration: 0.3, type: "sine", vol: 0.05, startDelay: 0.12, reverbSend: 0.35 });
+    playNoise({ duration: 0.25, vol: 0.05, filterType: "bandpass", filterFreq: 600, Q: 1.2, startDelay: 0.05 });
+  }
+
+  function sfxLandPrompt() {
+    // soft double-ping cue to land
+    playTone({ freq: 520, duration: 0.12, type: "sine", vol: 0.09, attack: 0.005, reverbSend: 0.3 });
+    playTone({ freq: 780, duration: 0.14, type: "sine", vol: 0.07, startDelay: 0.11, reverbSend: 0.3 });
+  }
+
+  function sfxTouchdown() {
+    // solid dock thud + dust whoosh + metal settle
+    playNoise({ duration: 0.28, vol: 0.16, filterType: "lowpass", filterFreq: 1400, filterFreqEnd: 200, Q: 0.8, reverbSend: 0.25 });
+    playTone({ freq: 70, duration: 0.32, type: "sine", vol: 0.16, sweep: -20, attack: 0.004, reverbSend: 0.2 });
+    playTone({ freq: 140, duration: 0.18, type: "triangle", vol: 0.08, startDelay: 0.04 });
+    // short steam hiss
+    playNoise({ duration: 0.35, vol: 0.08, filterType: "highpass", filterFreq: 2200, filterFreqEnd: 900, Q: 0.6, startDelay: 0.06 });
+  }
+
+  function sfxLevelCompleteFanfare() {
+    // bigger triumphant fanfare than boss defeat
+    [0, 4, 7, 12, 16].forEach((iv, i) => {
+      playTone({ freq: noteFreq(52 + iv), duration: 0.7, type: "sawtooth", vol: 0.08,
+        attack: 0.02, startDelay: i * 0.04, reverbSend: 0.45 });
+    });
+    [0, 0.16, 0.32, 0.48].forEach((d, i) => {
+      playTone({ freq: 280 + i * 110, duration: 0.28, type: "square", vol: 0.12,
+        sweep: 70, startDelay: d, reverbSend: 0.35 });
+    });
+    // shimmer top
+    playTone({ freq: 1320, duration: 0.5, type: "sine", vol: 0.05, startDelay: 0.35, reverbSend: 0.5 });
+  }
+
+  function sfxFireworkPop() {
+    playNoise({ duration: 0.18, vol: 0.1, filterType: "highpass", filterFreq: 1800, filterFreqEnd: 600, Q: 0.9, reverbSend: 0.3 });
+    playTone({ freq: 400 + Math.random() * 500, duration: 0.15, type: "triangle", vol: 0.07,
+      sweep: -120, attack: 0.003, reverbSend: 0.35 });
+  }
+
+  function sfxStatsReveal() {
+    // UI panel whoosh + soft chime
+    playNoise({ duration: 0.2, vol: 0.06, filterType: "lowpass", filterFreq: 1200, filterFreqEnd: 400, reverbSend: 0.2 });
+    [0, 5, 9].forEach((iv, i) => {
+      playTone({ freq: noteFreq(67 + iv), duration: 0.22, type: "sine", vol: 0.08,
+        startDelay: 0.05 + i * 0.07, attack: 0.01, reverbSend: 0.4 });
+    });
+  }
+
+  function sfxLevelFadeOut() {
+    // deep descending wash into silence
+    playNoise({ duration: 0.9, vol: 0.1, filterType: "lowpass", filterFreq: 900, filterFreqEnd: 80, Q: 0.5, reverbSend: 0.4 });
+    playTone({ freq: 160, duration: 0.85, type: "sine", vol: 0.07, sweep: -100, attack: 0.05, reverbSend: 0.35 });
+  }
+
+  function sfxLevel2Start() {
+    // bright lift-off into the next level
+    playTone({ freq: 260, duration: 0.25, type: "triangle", vol: 0.09, sweep: 120, attack: 0.01, reverbSend: 0.3 });
+    playTone({ freq: 390, duration: 0.28, type: "sine", vol: 0.07, startDelay: 0.1, sweep: 80, reverbSend: 0.35 });
+    playTone({ freq: 520, duration: 0.3, type: "sine", vol: 0.05, startDelay: 0.2, reverbSend: 0.4 });
+  }
+
   function sfxCrash() {
     playNoise({ duration: 0.42, vol: 0.22, filterType: "lowpass", filterFreq: 2600, filterFreqEnd: 150, reverbSend: 0.35 });
     playTone({ freq: 90, duration: 0.42, type: "sawtooth", vol: 0.18, sweep: -65, attack: 0.005, reverbSend: 0.2 });
