@@ -134,6 +134,7 @@
   let nextStormLightningAt = 0;
   let stormMode = "storm"; // "storm" | "pirate"
   let pirateBlastParticles = [];
+  let pirateFireBolts = [];
   const stormMeterEl = document.getElementById("stormMeter");
   const stormIconDisplayEl = document.getElementById("stormIcon");
 
@@ -234,20 +235,22 @@
     return points;
   }
 
-  function spawnPirateBlast(cx, cy) {
-    const colors = ["#1a1a1a", "#3a2a1a", "#c9a66b", "#ff6b2d", "#ffd27a", "#5a4030", "#8b1a1a"];
-    for (let i = 0; i < 55; i++) {
+  function spawnPirateBlast(cx, cy, scale) {
+    scale = scale || 1;
+    const colors = ["#1a1a1a", "#3a2a1a", "#c9a66b", "#ff6b2d", "#ffd27a", "#5a4030", "#8b1a1a", "#ff4500"];
+    const n = Math.floor(40 * scale);
+    for (let i = 0; i < n; i++) {
       const ang = Math.random() * Math.PI * 2;
-      const spd = 60 + Math.random() * 320;
+      const spd = (50 + Math.random() * 280) * scale;
       pirateBlastParticles.push({
         x: cx, y: cy,
         vx: Math.cos(ang) * spd,
-        vy: Math.sin(ang) * spd - 40,
-        life: 0.45 + Math.random() * 0.7,
+        vy: Math.sin(ang) * spd - 30,
+        life: 0.4 + Math.random() * 0.65,
         age: 0,
-        r: 2 + Math.random() * 7,
+        r: (2 + Math.random() * 7) * scale,
         color: colors[i % colors.length],
-        kind: Math.random() < 0.25 ? "ember" : (Math.random() < 0.4 ? "smoke" : "spark")
+        kind: Math.random() < 0.3 ? "ember" : (Math.random() < 0.35 ? "smoke" : "spark")
       });
     }
     for (let i = 0; i < 3; i++) {
@@ -255,57 +258,100 @@
         kind: "ring",
         x: cx, y: cy,
         vx: 0, vy: 0,
-        life: 0.35 + i * 0.12,
+        life: 0.4 + i * 0.12,
         age: 0,
-        r: 10,
-        grow: 280 + i * 90,
-        color: i === 0 ? "#ffd27a" : (i === 1 ? "#ff6b2d" : "#c9a66b")
+        r: 8,
+        grow: (260 + i * 100) * scale,
+        color: i === 0 ? "#ffd27a" : (i === 1 ? "#ff6b2d" : "#ff4500")
+      });
+    }
+  }
+
+  function spawnPirateFireTrail(x, y) {
+    for (let i = 0; i < 3; i++) {
+      const ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.4;
+      const spd = 40 + Math.random() * 90;
+      pirateBlastParticles.push({
+        x: x + (Math.random() - 0.5) * 20,
+        y: y + (Math.random() - 0.5) * 20,
+        vx: Math.cos(ang) * spd * 0.4,
+        vy: Math.sin(ang) * spd - 20,
+        life: 0.35 + Math.random() * 0.35,
+        age: 0,
+        r: 4 + Math.random() * 8,
+        color: Math.random() < 0.5 ? "#ff6b2d" : "#ffd27a",
+        kind: "ember"
       });
     }
   }
 
   function stormImpact() {
-    // screen-clear + boss damage payoff
     const startX = stormCloud.x;
-    const startY = stormCloud.y + stormCloud.w * 0.1;
+    const startY = stormCloud.y + stormCloud.w * 0.05;
 
     if (stormMode === "pirate") {
       if (typeof sfxExplosion === "function") sfxExplosion(1.4);
       if (typeof sfxCrash === "function") sfxCrash();
-      triggerScreenFlash(0.35, 280);
+      triggerScreenFlash(0.32, 260);
       triggerScreenShake(9, 480);
-      spawnPirateBlast(startX, startY);
+      spawnPirateBlast(startX, startY, 1.15);
       stormLightning = null;
       stormChainBolts = [];
-      obstacles.forEach(o => {
+      pirateFireBolts = [];
+
+      obstacles.forEach((o, i) => {
         const drawY = o.y + Math.sin(o.bobPhase) * o.bobAmount;
-        spawnPirateBlast(o.x + o.w / 2, drawY + o.h / 2);
+        pirateFireBolts.push({
+          x: startX, y: startY,
+          tx: o.x + o.w / 2,
+          ty: drawY + o.h / 2,
+          progress: 0,
+          speed: 2.2 + Math.random() * 0.9,
+          delay: i * 0.04,
+          age: 0,
+          hit: false,
+          targetId: o
+        });
       });
-    } else {
-      if (typeof sfxThunder === "function") sfxThunder();
-      triggerScreenFlash(0.22, 220);
-      triggerScreenShake(6, 380);
-      stormLightning = { points: buildLightningPath(startX, startY, startX + (Math.random() - 0.5) * W * 0.2, H, W * 0.1), age: 0, life: 0.3 };
-      stormChainBolts = obstacles.map(o => {
-        const drawY = o.y + Math.sin(o.bobPhase) * o.bobAmount;
-        const ex = o.x + o.w / 2, ey = drawY + o.h / 2;
-        return { points: buildLightningPath(startX, startY, ex, ey, 30), age: 0, life: 0.25 + Math.random() * 0.15 };
-      });
+      if (typeof bombs !== "undefined") {
+        bombs.forEach((b, i) => {
+          pirateFireBolts.push({
+            x: startX, y: startY, tx: b.x, ty: b.y,
+            progress: 0, speed: 2.5, delay: 0.05 + i * 0.03,
+            age: 0, hit: false, targetBomb: b
+          });
+        });
+      }
+      if (bossActive && boss) {
+        pirateFireBolts.push({
+          x: startX, y: startY,
+          tx: boss.x + boss.w / 2, ty: boss.y + boss.h / 2,
+          progress: 0, speed: 1.8, delay: 0.08,
+          age: 0, hit: false, targetBoss: true
+        });
+      }
+      return;
     }
 
-    // zap every obstacle currently on screen
+    if (typeof sfxThunder === "function") sfxThunder();
+    triggerScreenFlash(0.22, 220);
+    triggerScreenShake(6, 380);
+    stormLightning = { points: buildLightningPath(startX, startY, startX + (Math.random() - 0.5) * W * 0.2, H, W * 0.1), age: 0, life: 0.3 };
+    stormChainBolts = obstacles.map(o => {
+      const drawY = o.y + Math.sin(o.bobPhase) * o.bobAmount;
+      const ex = o.x + o.w / 2, ey = drawY + o.h / 2;
+      return { points: buildLightningPath(startX, startY, ex, ey, 30), age: 0, life: 0.25 + Math.random() * 0.15 };
+    });
+
     obstacles.forEach(o => {
       const drawY = o.y + Math.sin(o.bobPhase) * o.bobAmount;
       triggerBigExplosion(o.x + o.w / 2, drawY + o.h / 2, o.w, o.h);
       score += 2;
     });
     obstacles = [];
-
-    // zap any enemy bombs in flight
     bombs.forEach(b => triggerBigExplosion(b.x, b.y, 40, 40));
     bombs = [];
 
-    // heavy damage to the boss, if the fight is on
     if (bossActive && boss) {
       const dmg = Math.max(3, Math.ceil(boss.maxHealth * 0.3));
       boss.health -= dmg;
@@ -348,10 +394,67 @@
       pirateBlastParticles = pirateBlastParticles.filter(pt => pt.age < pt.life);
     }
 
+    if (pirateFireBolts.length) {
+      pirateFireBolts.forEach(b => {
+        b.age += dt;
+        if (b.age < b.delay || b.hit) return;
+        b.progress += b.speed * dt;
+        if (Math.random() < 0.75) {
+          const px = b.x + (b.tx - b.x) * Math.min(1, b.progress);
+          const py = b.y + (b.ty - b.y) * Math.min(1, b.progress);
+          pirateBlastParticles.push({
+            x: px, y: py,
+            vx: (Math.random() - 0.5) * 40,
+            vy: (Math.random() - 0.5) * 40 - 20,
+            life: 0.2 + Math.random() * 0.2,
+            age: 0,
+            r: 3 + Math.random() * 5,
+            color: Math.random() < 0.5 ? "#ff6b2d" : "#ffd27a",
+            kind: "ember"
+          });
+        }
+        if (b.progress >= 1) {
+          b.hit = true;
+          b.progress = 1;
+          if (b.targetId) {
+            const o = b.targetId;
+            const oi = obstacles.indexOf(o);
+            if (oi >= 0) {
+              const drawY = o.y + Math.sin(o.bobPhase) * o.bobAmount;
+              triggerBigExplosion(o.x + o.w / 2, drawY + o.h / 2, o.w, o.h);
+              spawnPirateBlast(o.x + o.w / 2, drawY + o.h / 2, 0.55);
+              obstacles.splice(oi, 1);
+              score += 2;
+              if (typeof scoreVal !== "undefined") scoreVal.textContent = score;
+              if (typeof bumpScorePop === "function") bumpScorePop();
+            }
+          }
+          if (b.targetBomb && typeof bombs !== "undefined") {
+            const bi = bombs.indexOf(b.targetBomb);
+            if (bi >= 0) {
+              triggerBigExplosion(b.tx, b.ty, 40, 40);
+              spawnPirateBlast(b.tx, b.ty, 0.4);
+              bombs.splice(bi, 1);
+            }
+          }
+          if (b.targetBoss && bossActive && boss) {
+            const dmg = Math.max(3, Math.ceil(boss.maxHealth * 0.3));
+            boss.health -= dmg;
+            bossHitFlashUntil = performance.now() + 200;
+            bossShakeUntil = performance.now() + 300;
+            triggerBigExplosion(boss.x + boss.w / 2, boss.y + boss.h / 2, boss.w * 0.6, boss.h * 0.6);
+            spawnPirateBlast(boss.x + boss.w / 2, boss.y + boss.h / 2, 0.8);
+            if (boss.health <= 0) defeatBoss();
+          }
+        }
+      });
+      pirateFireBolts = pirateFireBolts.filter(b => !(b.hit && b.age > b.delay + 0.4));
+    }
+
     if (stormCloud.phase === "falling") {
-      const dur = 0.5;
+      const dur = 0.55;
       const p = Math.min(1, stormCloud.t / dur);
-      const eased = 1 - Math.pow(1 - p, 3); // ease-out — fast start, gentle settle at center
+      const eased = 1 - Math.pow(1 - p, 3);
       stormCloud.y = stormCloud.startY + (stormCloud.targetY - stormCloud.startY) * eased;
       if (p >= 1) {
         stormCloud.phase = "impact";
@@ -359,17 +462,38 @@
         stormImpact();
       }
     } else if (stormCloud.phase === "impact") {
-      if (stormCloud.t >= 0.35) {
+      if (stormMode === "pirate") {
+        spawnPirateFireTrail(stormCloud.x, stormCloud.y);
+        const streamsDone = pirateFireBolts.length === 0 || pirateFireBolts.every(b => b.hit);
+        if (stormCloud.t >= 0.9 || (streamsDone && stormCloud.t >= 0.5)) {
+          stormCloud.phase = "fading";
+          stormCloud.t = 0;
+        }
+      } else if (stormCloud.t >= 0.35) {
         stormCloud.phase = "fading";
         stormCloud.t = 0;
       }
     } else if (stormCloud.phase === "fading") {
-      if (stormCloud.t >= 0.4) {
+      if (stormMode === "pirate") {
+        spawnPirateFireTrail(stormCloud.x, stormCloud.y);
+      }
+      const fadeDur = stormMode === "pirate" ? 0.75 : 0.4;
+      if (stormCloud.t >= fadeDur) {
+        if (stormMode === "pirate" && obstacles.length) {
+          obstacles.forEach(o => {
+            const drawY = o.y + Math.sin(o.bobPhase) * o.bobAmount;
+            triggerBigExplosion(o.x + o.w / 2, drawY + o.h / 2, o.w, o.h);
+            score += 2;
+          });
+          obstacles = [];
+          if (typeof scoreVal !== "undefined") scoreVal.textContent = score;
+        }
         stormActive = false;
         stormCloud = null;
         stormLightning = null;
         stormChainBolts = [];
         pirateBlastParticles = [];
+        pirateFireBolts = [];
         updateStormMeterDisplay();
         return;
       }
@@ -415,9 +539,11 @@
     let cloudAlpha = 1;
     let scale = 1;
     if (stormCloud.phase === "fading") {
-      const p = Math.min(1, stormCloud.t / 0.4);
+      const fadeDur = stormMode === "pirate" ? 0.75 : 0.4;
+      const p = Math.min(1, stormCloud.t / fadeDur);
       cloudAlpha = 1 - p;
-      scale = 1 + p * 0.35; // slight outward pop as it dissolves
+      // Pirate bomb shrinks away; storm cloud pops outward
+      scale = stormMode === "pirate" ? (1 - p * 0.85) : (1 + p * 0.35);
     } else if (stormCloud.phase === "falling") {
       scale = 0.85 + Math.min(1, stormCloud.t / 0.5) * 0.15;
     }
@@ -506,6 +632,38 @@
           if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
         });
         ctx.stroke();
+        ctx.restore();
+      });
+    }
+
+    // Fire streams from bomb to targets
+    if (pirateFireBolts.length) {
+      pirateFireBolts.forEach(b => {
+        if (b.age < b.delay) return;
+        const pr = Math.min(1, b.progress);
+        const x2 = b.x + (b.tx - b.x) * pr;
+        const y2 = b.y + (b.ty - b.y) * pr;
+        ctx.save();
+        const grd = ctx.createLinearGradient(b.x, b.y, x2, y2);
+        grd.addColorStop(0, "rgba(255,210,120,0.12)");
+        grd.addColorStop(0.45, "rgba(255,100,30,0.8)");
+        grd.addColorStop(1, "rgba(255,230,120,0.95)");
+        ctx.strokeStyle = grd;
+        ctx.lineWidth = 5;
+        ctx.lineCap = "round";
+        ctx.shadowColor = "rgba(255,120,20,0.95)";
+        ctx.shadowBlur = 16;
+        ctx.beginPath();
+        ctx.moveTo(b.x, b.y);
+        const mx = (b.x + x2) / 2 + (b.ty - b.y) * 0.08;
+        const my = (b.y + y2) / 2 - (b.tx - b.x) * 0.08;
+        ctx.quadraticCurveTo(mx, my, x2, y2);
+        ctx.stroke();
+        ctx.fillStyle = "#fff3c0";
+        ctx.shadowBlur = 20;
+        ctx.beginPath();
+        ctx.arc(x2, y2, 5 + Math.sin(b.age * 22) * 1.5, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
       });
     }
