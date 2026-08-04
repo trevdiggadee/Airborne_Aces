@@ -572,6 +572,13 @@
     pauseMusicSlider.addEventListener("input", () => {
       const v = parseInt(pauseMusicSlider.value, 10) / 100;
       if (typeof setMusicVolumePref === "function") setMusicVolumePref(v);
+      else if (window.__airborneSetMusicVolume) window.__airborneSetMusicVolume(v);
+      // Force HTMLAudioElement update even if a fade was mid-flight
+      if (window.__airborneApplyGameplayMusicVolume) window.__airborneApplyGameplayMusicVolume();
+      const gm = document.getElementById("gameplayMusic");
+      if (gm && !(typeof muted !== "undefined" && muted)) {
+        gm.volume = Math.max(0, Math.min(1, v));
+      }
       if (pauseMusicVal) pauseMusicVal.textContent = pauseMusicSlider.value + "%";
     });
     // prevent flap when dragging

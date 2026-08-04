@@ -419,15 +419,18 @@ if (gameplayMusic) gameplayMusic.volume = 0;
 
 function fadeGameplayMusicVolume(target, thenPause) {
   if (!gameplayMusic) return;
+  cancelGameplayMusicFade();
   const startVol = gameplayMusic.volume;
   const startedAt = performance.now();
   (function step() {
     const p = Math.min(1, (performance.now() - startedAt) / GAMEPLAY_MUSIC_FADE_MS);
     gameplayMusic.volume = startVol + (target - startVol) * p;
     if (p < 1) {
-      requestAnimationFrame(step);
-    } else if (thenPause) {
-      gameplayMusic.pause();
+      gameplayMusicFadeRaf = requestAnimationFrame(step);
+    } else {
+      gameplayMusicFadeRaf = null;
+      if (thenPause) gameplayMusic.pause();
+      else applyGameplayMusicVolumeNow();
     }
   })();
 }
@@ -445,9 +448,8 @@ function stopGameplayMusic() {
 
 function setGameplayMusicMuted(m) {
   gameplayMusicMuted = m;
-  if (gameplayMusic && !gameplayMusic.paused) {
-    gameplayMusic.volume = m ? 0 : musicVolumePref;
-  }
+  cancelGameplayMusicFade();
+  applyGameplayMusicVolumeNow();
 }
 
 window.__airborneStartGameplayMusic = startGameplayMusic;
