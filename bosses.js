@@ -480,13 +480,15 @@
   // ---------- Level-end landing sequence (after boss 1 bonus round) ----------
   // Flow: wind-down city → landing pad approaches → player lands → victory FX → resume
   let levelEndActive = false;
-  let levelEndPhase = null; // "windDown" | "approach" | "landing" | "victory"
+  let levelEndPhase = null; // "windDown" | "approach" | "landing" | "victory" | "stats" | "fadeOut"
   let levelEndTimer = 0;
   let levelEndPad = null; // { x, y, w, h, surfaceY, docked }
   let levelEndParticles = [];
   let levelEndFireworks = [];
   let levelEndBannerUntil = 0;
   let levelEndSavedFlap = true;
+  let levelEndFade = 0; // 0..1 black overlay
+  let levelEndStats = null; // { score, timeStr, bonus, landingBonus, health }
 
   function startLevelEndLanding() {
     levelEndActive = true;
@@ -551,34 +553,48 @@
   }
 
   function completeLevelLanding() {
+    if (levelEndPhase === "victory" || levelEndPhase === "stats" || levelEndPhase === "fadeOut") return;
     levelEndPhase = "victory";
     levelEndTimer = 0;
+    levelEndFade = 0;
     levelEndPad.docked = true;
     player.vy = 0;
-    // Snap player onto the pad surface
+    player.rotation = 0;
+    // Snap solidly onto the deck
     player.y = levelEndPad.surfaceY - player.h * 0.45;
     player.x = levelEndPad.x + levelEndPad.w * (levelEndPad.deckCenterFrac || 0.38);
-    player.rotation = 0;
+
+    const landingBonus = 50;
+    score += landingBonus;
+    if (typeof scoreVal !== "undefined") scoreVal.textContent = score;
+    if (typeof bumpScorePop === "function") bumpScorePop();
+
+    // Snapshot stats for the celebration panel
+    const totalSec = Math.floor((typeof elapsedMs !== "undefined" ? elapsedMs : 0) / 1000);
+    const mm = String(Math.floor(totalSec / 60)).padStart(2, "0");
+    const ss = String(totalSec % 60).padStart(2, "0");
+    levelEndStats = {
+      score: score,
+      timeStr: mm + ":" + ss,
+      landingBonus: landingBonus,
+      bonusRound: (typeof bonusPoints !== "undefined" ? bonusPoints : 0),
+      health: (typeof health !== "undefined" ? health : 3),
+      bossName: "Baron Blackpowder"
+    };
 
     triggerScreenShake(5, 500);
     triggerScreenFlash(0.35, 400);
     if (typeof sfxBossDefeat === "function") sfxBossDefeat();
-    showBanner("LEVEL 1 COMPLETE!", 3200, "defeat");
 
-    // Fireworks burst
-    const cx = levelEndPad.x + levelEndPad.w * 0.45;
-    const cy = levelEndPad.surfaceY - 20;
-    for (let i = 0; i < 5; i++) {
+    // Fireworks around the pad
+    const cx = levelEndPad.x + levelEndPad.w * (levelEndPad.deckCenterFrac || 0.38);
+    const cy = levelEndPad.surfaceY - 30;
+    for (let i = 0; i < 6; i++) {
       setTimeout(() => {
         if (!levelEndActive) return;
-        spawnVictoryFirework(cx + (Math.random() - 0.5) * 120, cy - Math.random() * 80);
-      }, i * 280);
+        spawnVictoryFirework(cx + (Math.random() - 0.5) * 140, cy - Math.random() * 90);
+      }, i * 250);
     }
-
-    // Score bonus for clean landing
-    score += 50;
-    if (typeof scoreVal !== "undefined") scoreVal.textContent = score;
-    if (typeof bumpScorePop === "function") bumpScorePop();
   }
 
   function finishLevelEndAndResume() {
@@ -587,6 +603,8 @@
     levelEndPad = null;
     levelEndParticles = [];
     levelEndFireworks = [];
+    levelEndFade = 0;
+    levelEndStats = null;
     stopWorldWindDown();
     // Rebuild level-2 city strip (bossesDefeatedCount already 1+)
     initBuildings();
@@ -602,7 +620,7 @@
       checkpointGameplayScore = gameplayScore;
       checkpointBossesDefeated = bossesDefeatedCount;
     }
-    showBanner("LEVEL 2 — KEEP FLYING!", 2200, "level");
+    showBanner("LEVEL 2 — KEEP FLYING!", 2400, "level");
   }
 
   function updateLevelEnd(dt) {
@@ -688,8 +706,27 @@
     }
 
     if (levelEndPhase === "victory") {
-      // Hold victory for a few seconds then resume
-      if (levelEndTimer > 4.0) {
+      // Hold docked celebration + fireworks, then show stats
+      if (levelEndTimer > 2.8) {
+        levelEndPhase = "stats";
+        levelEndTimer = 0;
+      }
+      return;
+    }
+
+    if (levelEndPhase === "stats") {
+      // Show stats panel, then begin fade
+      if (levelEndTimer > 3.5) {
+        levelEndPhase = "fadeOut";
+        levelEndTimer = 0;
+      }
+      return;
+    }
+
+    if (levelEndPhase === "fadeOut") {
+      // Fade to black, then start level 2
+      levelEndFade = Math.min(1, levelEndTimer / 1.2);
+      if (levelEndTimer > 1.5) {
         finishLevelEndAndResume();
       }
     }
@@ -752,12 +789,93 @@
       ctx.globalAlpha = 1;
     });
 
-    // Victory vignette flash
+    // Victory flash
     if (levelEndPhase === "victory" && levelEndTimer < 0.6) {
       const a = (1 - levelEndTimer / 0.6) * 0.35;
       ctx.fillStyle = `rgba(255, 220, 140, ${a})`;
       ctx.fillRect(0, 0, W, H);
     }
+
+    // Level complete title during victory
+    if (levelEndPhase === "victory") {
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.font = "bold " + Math.floor(W * 0.07) + "px system-ui, sans-serif";
+      ctx.fillStyle = "rgba(0,0,0,0.45)";
+      ctx.fillText("LEVEL 1 COMPLETE!", W / 2 + 2, H * 0.18 + 2);
+      ctx.fillStyle = "#ffe9a8";
+      ctx.fillText("LEVEL 1 COMPLETE!", W / 2, H * 0.18);
+      ctx.restore();
+    }
+
+    // Stats celebration panel
+    if ((levelEndPhase === "stats" || levelEndPhase === "fadeOut") && levelEndStats) {
+      const s = levelEndStats;
+      const panelW = Math.min(W * 0.82, 340);
+      const panelH = 220;
+      const px = (W - panelW) / 2;
+      const py = H * 0.22;
+      const alpha = levelEndPhase === "fadeOut" ? Math.max(0, 1 - levelEndFade) : Math.min(1, levelEndTimer * 2);
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+
+      // Panel background
+      ctx.fillStyle = "rgba(20, 14, 8, 0.88)";
+      roundRect(ctx, px, py, panelW, panelH, 14);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(201, 166, 107, 0.85)";
+      ctx.lineWidth = 2.5;
+      roundRect(ctx, px, py, panelW, panelH, 14);
+      ctx.stroke();
+
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#ffe9a8";
+      ctx.font = "bold 22px system-ui, sans-serif";
+      ctx.fillText("LEVEL 1 CLEAR", W / 2, py + 36);
+
+      ctx.font = "14px system-ui, sans-serif";
+      ctx.fillStyle = "rgba(255,230,180,0.7)";
+      ctx.fillText("Baron Blackpowder defeated", W / 2, py + 58);
+
+      // Stat rows
+      const rows = [
+        ["SCORE", String(s.score)],
+        ["TIME", s.timeStr],
+        ["LANDING BONUS", "+" + s.landingBonus],
+        ["HEALTH LEFT", String(s.health)]
+      ];
+      ctx.font = "15px system-ui, sans-serif";
+      rows.forEach((row, i) => {
+        const ry = py + 90 + i * 28;
+        ctx.textAlign = "left";
+        ctx.fillStyle = "rgba(255,235,200,0.75)";
+        ctx.fillText(row[0], px + 28, ry);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#fff4d0";
+        ctx.font = "bold 15px system-ui, sans-serif";
+        ctx.fillText(row[1], px + panelW - 28, ry);
+        ctx.font = "15px system-ui, sans-serif";
+      });
+
+      ctx.restore();
+    }
+
+    // Fade to black
+    if (levelEndPhase === "fadeOut" && levelEndFade > 0) {
+      ctx.fillStyle = `rgba(0, 0, 0, ${levelEndFade})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
   }
 
   function isLevelEndActive() {

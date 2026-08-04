@@ -43,6 +43,17 @@
   }
 
   function updatePlayer(dt) {
+    // Fully freeze the blimp once it has docked on the landing pad
+    if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) {
+      player.vy = 0;
+      player.rotation = 0;
+      player.y = levelEndPad.surfaceY - player.h * 0.45;
+      player.x = levelEndPad.x + levelEndPad.w * (levelEndPad.deckCenterFrac || 0.38);
+      updatePlayerBlimpAnimation(dt);
+      updateBlimpPersonality(dt);
+      return;
+    }
+
     player.vy += GRAVITY * dt;
     if (player.vy > MAX_FALL_SPEED) player.vy = MAX_FALL_SPEED;
     player.y += player.vy * dt;
