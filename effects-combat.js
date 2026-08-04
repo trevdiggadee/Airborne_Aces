@@ -864,6 +864,30 @@
     explosionBursts.push({ x, y, age: 0, delay: 0, life: 0.28, maxR: 26 + Math.random() * 10 });
   }
 
+  function spawnFeathers(x, y) {
+    // Small feathers that puff off birds on collision
+    const colors = ["#f5f0e6", "#e8dcc8", "#d4c4a8", "#c4b89a", "#fff8ee", "#b8a888"];
+    const count = 10 + Math.floor(Math.random() * 6);
+    for (let i = 0; i < count; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const spd = 40 + Math.random() * 140;
+      hitParticles.push({
+        type: "feather",
+        x: x + (Math.random() - 0.5) * 12,
+        y: y + (Math.random() - 0.5) * 12,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd - 30 - Math.random() * 40,
+        life: 0.55 + Math.random() * 0.55,
+        age: 0,
+        r: 3 + Math.random() * 4, // length scale
+        rot: Math.random() * Math.PI * 2,
+        rotSpd: (Math.random() - 0.5) * 10,
+        color: colors[i % colors.length],
+        flutter: 4 + Math.random() * 6
+      });
+    }
+  }
+
   function updateHitParticles(dt) {
     hitParticles.forEach(p => {
       p.age += dt;
@@ -872,6 +896,13 @@
       if (p.type === "smoke") {
         p.vy -= 20 * dt; // smoke drifts upward, slowing its own rise
         p.vx *= 0.96;
+      } else if (p.type === "feather") {
+        // light flutter: side-to-side drift + slow fall + spin
+        p.vx += Math.sin(p.age * p.flutter + p.rot) * 90 * dt;
+        p.vx *= (1 - 1.5 * dt);
+        p.vy += 70 * dt; // gentle gravity
+        p.vy *= (1 - 0.4 * dt);
+        p.rot += p.rotSpd * dt;
       } else {
         p.vy += 260 * dt; // sparks fall with gravity
       }
@@ -970,6 +1001,26 @@
         ctx.beginPath();
         ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
         ctx.fill();
+      } else if (p.type === "feather") {
+        ctx.globalAlpha = Math.max(0, t) * 0.9;
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        const len = p.r * (0.85 + 0.15 * t);
+        const wid = len * 0.35;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        // simple leaf/feather oval pointed at both ends
+        ctx.moveTo(0, -len);
+        ctx.quadraticCurveTo(wid, 0, 0, len);
+        ctx.quadraticCurveTo(-wid, 0, 0, -len);
+        ctx.fill();
+        // soft shaft line
+        ctx.strokeStyle = "rgba(80,70,55,0.35)";
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(0, -len * 0.85);
+        ctx.lineTo(0, len * 0.85);
+        ctx.stroke();
       } else {
         ctx.globalAlpha = Math.max(0, t);
         ctx.fillStyle = "#ffdd66";

@@ -417,6 +417,9 @@ ctx.save();
           o.hitDeflected = true;
           o.deflectVy = (Math.random() < 0.5 ? -1 : 1) * (150 + Math.random() * 90);
           spawnHitParticles(o.x + o.w / 2, drawY + o.h / 2);
+          if (isBird && typeof spawnFeathers === "function") {
+            spawnFeathers(o.x + o.w / 2, drawY + o.h / 2);
+          }
         }
         takeHit();
       }
