@@ -8,7 +8,17 @@
   // boss threshold (i.e. the level changes) the two backgrounds blend into
   // each other over a couple of seconds instead of popping.
   function currentLevelBgKey() {
+    // Hold level-1 far background through boss-1 bonus + landing sequence
     if (bossesDefeatedCount < 1) return 'skylineFar';
+    if (bossesDefeatedCount === 1) {
+      const stillInL1Outro =
+        (typeof bonusActive !== "undefined" && bonusActive) ||
+        (typeof bonusPending !== "undefined" && bonusPending) ||
+        (typeof levelEndActive !== "undefined" && levelEndActive) ||
+        (typeof worldWindDown !== "undefined" && worldWindDown);
+      if (stillInL1Outro) return 'skylineFar';
+      return 'skylineFarL2';
+    }
     if (bossesDefeatedCount < 2) return 'skylineFarL2';
     return 'skylineFarL3'; // level 3 and beyond, until more art is added
   }

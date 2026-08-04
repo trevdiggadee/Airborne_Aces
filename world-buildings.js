@@ -37,6 +37,16 @@
   let worldWindDownSpeedMult = 1.6;
 
   function currentBuildingRowKey() {
+    // Keep level-1 buildings through boss-1 defeat, bonus round, and landing.
+    // Switch to level-2 only after finishLevelEndAndResume re-inits the strip.
+    if (bossesDefeatedCount === 1) {
+      const holdL1 =
+        (typeof bonusActive !== "undefined" && bonusActive) ||
+        (typeof bonusPending !== "undefined" && bonusPending) ||
+        (typeof levelEndActive !== "undefined" && levelEndActive) ||
+        worldWindDown;
+      if (holdL1) return BUILDING_ROW_KEYS[0]; // streetrow1
+    }
     return BUILDING_ROW_KEYS[bossesDefeatedCount % BUILDING_ROW_KEYS.length];
   }
 
@@ -74,8 +84,15 @@
     }
     const targetKey = currentBuildingRowKey();
     if (targetKey !== buildingRowKey) {
-      initBuildings(); // level changed — rebuild with that level's strip
-      return;
+      // Don't swap strips during bonus / pre-landing; wait for wind-down or resume
+      if ((typeof bonusActive !== "undefined" && bonusActive) ||
+          (typeof bonusPending !== "undefined" && bonusPending) ||
+          (typeof levelEndActive !== "undefined" && levelEndActive)) {
+        // keep scrolling current strip
+      } else {
+        initBuildings(); // level changed — rebuild with that level's strip
+        return;
+      }
     }
     const speed = 0.8 * dtScale * (obstacleSpeedScale());
     buildings.forEach(b => (b.x -= speed));

@@ -512,14 +512,14 @@
     const aspect = (img && img.naturalWidth && img.naturalHeight)
       ? img.naturalWidth / img.naturalHeight : 0.7;
     // Size so the building sits on the ground; keep most of the pad on-screen
-    const h = Math.min(H * 0.78, W * 0.95 / aspect);
+    const h = Math.min(H * 0.70, W * 0.92 / aspect);
     const w = h * aspect;
     const groundY = groundLevelY();
     // Deck with the X is ~42% down from the top of the art (measured from the sprite)
-    const deckFromTop = 0.43;
+    const deckFromTop = 0.50;
     const surfaceY = (groundY - h) + h * deckFromTop;
     // Horizontal center of the circular X pad within the sprite
-    const deckCenterFrac = 0.38;
+    const deckCenterFrac = 0.42;
     levelEndPad = {
       x: W + 20,
       y: groundY - h,
@@ -562,7 +562,7 @@
     player.rotation = 0;
     // Snap solidly onto the deck
     player.y = levelEndPad.surfaceY - player.h * 0.45;
-    player.x = levelEndPad.x + levelEndPad.w * (levelEndPad.deckCenterFrac || 0.38);
+    player.x = levelEndPad.x + levelEndPad.w * (levelEndPad.deckCenterFrac || 0.42);
 
     const landingBonus = 50;
     score += landingBonus;
@@ -587,7 +587,7 @@
     if (typeof sfxBossDefeat === "function") sfxBossDefeat();
 
     // Fireworks around the pad
-    const cx = levelEndPad.x + levelEndPad.w * (levelEndPad.deckCenterFrac || 0.38);
+    const cx = levelEndPad.x + levelEndPad.w * (levelEndPad.deckCenterFrac || 0.42);
     const cy = levelEndPad.surfaceY - 30;
     for (let i = 0; i < 6; i++) {
       setTimeout(() => {
@@ -741,8 +741,8 @@
       const p = levelEndPad;
       ctx.save();
       // Deck target point (center of the X)
-      const deckCx = p.x + p.w * (p.deckCenterFrac || 0.38);
-      const deckCy = p.y + p.h * (p.deckFromTop || 0.43);
+      const deckCx = p.x + p.w * (p.deckCenterFrac || 0.42);
+      const deckCy = p.y + p.h * (p.deckFromTop || 0.50);
 
       if (img && img.naturalWidth) {
         ctx.drawImage(img, p.x, p.y, p.w, p.h);
