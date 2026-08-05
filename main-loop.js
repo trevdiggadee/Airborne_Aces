@@ -73,11 +73,25 @@
     ctx.fillRect(-jx - 4, -jy - 4, W + 8, H + 8);
     ctx.restore();
 
-    // soft vignette to complete the vintage-film feel
+    // Stronger cinematic vignette (corners fall off, center stays clear)
     ctx.save();
-    const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.32, W / 2, H / 2, H * 0.78);
-    vg.addColorStop(0, "rgba(10,6,3,0)");
-    vg.addColorStop(1, "rgba(10,6,3,0.28)");
+    const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.28, W / 2, H / 2, Math.max(W, H) * 0.72);
+    vg.addColorStop(0, "rgba(8,5,2,0)");
+    vg.addColorStop(0.55, "rgba(8,5,2,0.08)");
+    vg.addColorStop(0.82, "rgba(8,5,2,0.32)");
+    vg.addColorStop(1, "rgba(0,0,0,0.55)");
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+
+  function drawVignette() {
+    // Standalone vignette so it can run even if grain is off
+    ctx.save();
+    const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.75);
+    vg.addColorStop(0, "rgba(0,0,0,0)");
+    vg.addColorStop(0.65, "rgba(0,0,0,0.06)");
+    vg.addColorStop(1, "rgba(0,0,0,0.42)");
     ctx.fillStyle = vg;
     ctx.fillRect(0, 0, W, H);
     ctx.restore();

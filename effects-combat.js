@@ -384,14 +384,12 @@
       if (powerup.kind === "blue") {
         hasFirepower = true;
         hasDualFire = true;
-        showBanner("DUAL CANNONS ACTIVATED!", 1600, "power");
       } else if (powerup.kind === "arcbomb") {
         hasArcBomb = true;
-        showBanner("BOMBARDIER ACTIVATED!", 1600, "power");
       } else {
         hasFirepower = true;
-        showBanner("FIREPOWER ACTIVATED!", 1600, "power");
       }
+      // No weapon banner — pickup SFX is enough feedback
     }
   }
 
@@ -1274,7 +1272,7 @@
     boss:       { top: "92,32,22",   bottom: "46,15,10",  text: "245,228,205", glow: "205,100,60",  accent: "chevron" },
     defeat:     { top: "150,115,48", bottom: "92,66,26",  text: "252,240,210", glow: "222,178,105", accent: "burst" },
     power:      { top: "48,78,86",   bottom: "22,40,46",  text: "228,240,238", glow: "145,195,182", accent: "spark" },
-    bonus:      { top: "108,56,74",  bottom: "58,26,40",  text: "245,228,232", glow: "198,140,150", accent: "confetti" },
+    bonus:      { top: "150,100,35", bottom: "80,48,14",  text: "255,245,210", glow: "255,200,90",  accent: "confetti" },
     level:      { top: "120,86,45",  bottom: "70,48,22",  text: "245,230,200", glow: "220,180,110", accent: "gear" },
     checkpoint: { top: "150,116,30", bottom: "94,68,14",  text: "255,246,220", glow: "230,190,90",  accent: "sparkle" },
     health:     { top: "122,46,54",  bottom: "70,23,30",  text: "248,226,222", glow: "208,120,120", accent: "heart" },

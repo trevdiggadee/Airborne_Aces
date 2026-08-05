@@ -1112,8 +1112,8 @@
     }
 
     if (levelEndPhase === "stats") {
-      // Show stats panel, then begin fade
-      if (levelEndTimer > 3.5) {
+      // Show stats ~5s with counting numbers, then fade
+      if (levelEndTimer > 5.0) {
         levelEndPhase = "fadeOut";
         levelEndTimer = 0;
         if (typeof sfxLevelFadeOut === "function") sfxLevelFadeOut();
@@ -1238,25 +1238,36 @@
       ctx.restore();
     }
 
-    // Stats celebration panel
+    // Stats celebration panel (~5s) with count-up numbers
     if ((levelEndPhase === "stats" || levelEndPhase === "fadeOut") && levelEndStats) {
       const s = levelEndStats;
       const panelW = Math.min(W * 0.82, 340);
-      const panelH = 220;
+      const panelH = 228;
       const px = (W - panelW) / 2;
       const py = H * 0.22;
       const alpha = levelEndPhase === "fadeOut" ? Math.max(0, 1 - levelEndFade) : Math.min(1, levelEndTimer * 2);
 
+      // Ease-out count-up over ~3.2s of the 5s stats hold
+      const countT = levelEndPhase === "fadeOut" ? 1 : Math.min(1, levelEndTimer / 3.2);
+      const ease = 1 - Math.pow(1 - countT, 3);
+      function countInt(target) {
+        return Math.round((Number(target) || 0) * ease);
+      }
+
       ctx.save();
       ctx.globalAlpha = alpha;
 
-      // Panel background
-      ctx.fillStyle = "rgba(20, 14, 8, 0.88)";
+      // Panel background + gold glow edge
+      ctx.fillStyle = "rgba(20, 14, 8, 0.9)";
       roundRect(ctx, px, py, panelW, panelH, 14);
       ctx.fill();
-      ctx.strokeStyle = "rgba(201, 166, 107, 0.85)";
+      ctx.strokeStyle = "rgba(255, 210, 120, 0.95)";
       ctx.lineWidth = 2.5;
       roundRect(ctx, px, py, panelW, panelH, 14);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(201, 166, 107, 0.35)";
+      ctx.lineWidth = 6;
+      roundRect(ctx, px - 1, py - 1, panelW + 2, panelH + 2, 15);
       ctx.stroke();
 
       ctx.textAlign = "center";
@@ -1266,27 +1277,25 @@
       ctx.fillText("LEVEL " + clearLvl + " CLEAR", W / 2, py + 36);
 
       ctx.font = "14px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
-      ctx.fillStyle = "rgba(255,230,180,0.7)";
+      ctx.fillStyle = "rgba(255,230,180,0.75)";
       ctx.fillText((s.bossName || "Boss") + " defeated", W / 2, py + 58);
 
-      // Stat rows
       const rows = [
-        ["SCORE", String(s.score)],
-        ["TIME", s.timeStr],
-        ["LANDING BONUS", "+" + s.landingBonus],
-        ["HEALTH LEFT", String(s.health)]
+        ["SCORE", countInt(s.score).toLocaleString(), false],
+        ["TIME", s.timeStr, true], // time string shown as-is
+        ["LANDING BONUS", "+" + countInt(s.landingBonus), false],
+        ["HEALTH LEFT", String(countInt(s.health)), false]
       ];
-      ctx.font = "15px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
       rows.forEach((row, i) => {
-        const ry = py + 90 + i * 28;
+        const ry = py + 92 + i * 28;
         ctx.textAlign = "left";
         ctx.fillStyle = "rgba(255,235,200,0.75)";
+        ctx.font = "15px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
         ctx.fillText(row[0], px + 28, ry);
         ctx.textAlign = "right";
         ctx.fillStyle = "#fff4d0";
-        ctx.font = "bold 15px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
+        ctx.font = "bold 16px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
         ctx.fillText(row[1], px + panelW - 28, ry);
-        ctx.font = "15px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
       });
 
       ctx.restore();
@@ -1390,12 +1399,12 @@
       hasFirepower = false;
       hasDualFire = false;
       spawnCoinWave();
-      showBanner("BONUS ROUND! GRAB THE COINS!", 1800, "bonus");
+      showBanner("★ BONUS ROUND ★  GRAB THE COINS!", 2600, "bonus");
     } else {
       hasFirepower = true;
       hasDualFire = false;
       spawnBalloonWave();
-      showBanner("BONUS ROUND! POP THE BALLOONS!", 1800, "bonus");
+      showBanner("★ BONUS ROUND ★  POP THE BALLOONS!", 2600, "bonus");
     }
   }
 
@@ -1504,21 +1513,71 @@
     });
   }
 
-  function drawBonusHUD() {
+    function drawBonusHUD() {
     if (!bonusActive) return;
     const secsLeft = Math.max(0, Math.ceil((bonusEndsAt - performance.now()) / 1000));
-    const verb = bonusType === "coin" ? " grabbed · " : " popped · ";
-    const text = "BONUS: " + bonusCollected + "/" + bonusTotal + verb + secsLeft + "s";
+    const totalSecs = Math.max(1, Math.round((typeof BONUS_DURATION_MS !== "undefined" ? BONUS_DURATION_MS : 15000) / 1000));
+    const progress = Math.max(0, Math.min(1, bonusTotal ? bonusCollected / bonusTotal : 0));
+    const timeFrac = Math.max(0, Math.min(1, secsLeft / totalSecs));
+    const title = bonusType === "coin" ? "COIN RUSH" : "BALLOON BASH";
+    const pulse = 0.92 + Math.sin(performance.now() / 220) * 0.08;
+
+    const barW = Math.min(W * 0.78, 360);
+    const barH = 54;
+    const bx = (W - barW) / 2;
+    const by = H * 0.075;
+
     ctx.save();
+    // Outer glow
+    ctx.shadowColor = "rgba(255, 190, 80, 0.55)";
+    ctx.shadowBlur = 18 * pulse;
+    ctx.fillStyle = "rgba(18, 12, 6, 0.82)";
+    roundRect(ctx, bx, by, barW, barH, 12);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Gold border
+    ctx.strokeStyle = "rgba(255, 210, 120, 0.9)";
+    ctx.lineWidth = 2;
+    roundRect(ctx, bx, by, barW, barH, 12);
+    ctx.stroke();
+
+    // Title
     ctx.textAlign = "center";
-    const fontSize = Math.max(15, Math.min(22, W * 0.055));
-    ctx.font = "bold " + fontSize + "px Georgia, serif";
-    ctx.fillStyle = "rgba(20,12,5,0.5)";
-    ctx.fillRect(0, H * 0.08, W, fontSize + 16);
-    ctx.fillStyle = "#f5e6c8";
-    ctx.fillText(text, W / 2, H * 0.08 + fontSize + 2);
+    ctx.font = "bold " + Math.max(13, Math.floor(W * 0.038)) + "px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
+    ctx.fillStyle = "#ffe7a8";
+    ctx.fillText(title, W / 2, by + 18);
+
+    // Counter
+    ctx.font = "bold " + Math.max(14, Math.floor(W * 0.042)) + "px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
+    ctx.fillStyle = "#fff6e0";
+    ctx.fillText(bonusCollected + " / " + bonusTotal + "   ·   " + secsLeft + "s", W / 2, by + 38);
+
+    // Progress track
+    const trackX = bx + 14;
+    const trackW = barW - 28;
+    const trackY = by + barH - 10;
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    roundRect(ctx, trackX, trackY, trackW, 5, 3);
+    ctx.fill();
+    // Collection fill
+    if (progress > 0) {
+      const grd = ctx.createLinearGradient(trackX, 0, trackX + trackW * progress, 0);
+      grd.addColorStop(0, "#c9a66b");
+      grd.addColorStop(1, "#ffe29a");
+      ctx.fillStyle = grd;
+      roundRect(ctx, trackX, trackY, trackW * progress, 5, 3);
+      ctx.fill();
+    }
+    // Time remaining thin glow at right
+    ctx.globalAlpha = 0.35 + timeFrac * 0.45;
+    ctx.fillStyle = secsLeft <= 3 ? "#ff8866" : "#a8d8ff";
+    ctx.fillRect(trackX + trackW * (1 - timeFrac), trackY - 1, 2, 7);
+    ctx.globalAlpha = 1;
+
     ctx.restore();
   }
+
 
   let bossBanner = null; // { text, until } — brief on-screen announcement
 
