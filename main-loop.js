@@ -113,6 +113,14 @@
     if (lastTime === null) lastTime = ts;
     let dt = (ts - lastTime) / 1000;
     dt = Math.min(dt, 0.033); // clamp for tab-switch hitches
+    // Dramatic slow-mo while boss 1 sinks
+    if (typeof defeatSlowMo !== "undefined" && defeatSlowMo &&
+        typeof defeatSlowMoUntil !== "undefined" && performance.now() < defeatSlowMoUntil) {
+      dt *= 0.38;
+    } else if (typeof defeatSlowMo !== "undefined" && defeatSlowMo &&
+               typeof defeatSlowMoUntil !== "undefined" && performance.now() >= defeatSlowMoUntil) {
+      defeatSlowMo = false;
+    }
     lastTime = ts;
 
     // background — slowly cycles day → dusk → night → dawn as gameplayScore climbs
@@ -160,6 +168,8 @@
         updateRockets(dt);
         updatePlayerBombs(dt);
       }
+      // Sink sequence continues after bossActive is cleared
+      if (typeof updateBossSinking === 'function') updateBossSinking(dt);
       updatePowerup(dt);
       updateBullets(dt);
       updateHealPickup(dt);
@@ -215,6 +225,7 @@
       drawRockets();
       drawPlayerBombs();
     }
+    if (typeof drawBossSinking === 'function') drawBossSinking();
     drawHitParticles();
     drawPowerup();
     drawBonusRound();

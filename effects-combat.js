@@ -280,30 +280,39 @@
     ctx.strokeRect(barX, barY, barW, barH);
   }
 
-  function defeatBoss() {
-    if (boss) {
-      const cx = boss.x + boss.w / 2;
-      const cy = boss.y + boss.h / 2;
-      // cascading, multi-point explosion across the boss's body instead of
-      // one single blast — reads as the whole thing coming apart
-      triggerBigExplosion(cx, cy, boss.w * 0.8, boss.h * 0.8);
-      triggerBigExplosion(boss.x + boss.w * 0.22, boss.y + boss.h * 0.3, boss.w * 0.32, boss.h * 0.32);
-      triggerBigExplosion(boss.x + boss.w * 0.78, boss.y + boss.h * 0.65, boss.w * 0.32, boss.h * 0.32);
-      triggerBigExplosion(boss.x + boss.w * 0.5, boss.y + boss.h * 0.15, boss.w * 0.28, boss.h * 0.28);
-      triggerShockwave(cx, cy, Math.max(boss.w, boss.h) * 0.85);
-    defeatSlowMo = true;
-    defeatSlowMoUntil = performance.now() + DEFEAT_SLOWMO_DURATION;
-    spawnDefeatDebris(boss.x + boss.w / 2, boss.y + boss.h / 2, boss.w, boss.h);
+  // Dramatic sinking death for boss 1 (balloon) — slo-mo fall with fire/smoke
+  let bossSinking = null; // visual-only corpse while rewards still process
+
+  function spawnBossBalloonFireSmoke(sink, burst) {
+    const n = burst ? 28 : 7;
+    for (let i = 0; i < n; i++) {
+      // Bias heavily onto the balloon envelope
+      const onBalloon = Math.random() < 0.88;
+      const lx = onBalloon ? (0.08 + Math.random() * 0.84) : (0.3 + Math.random() * 0.4);
+      const ly = onBalloon ? (0.02 + Math.random() * 0.62) : (0.55 + Math.random() * 0.35);
+      const roll = Math.random();
+      const kind = roll < 0.38 ? "smoke" : (roll < 0.55 ? "ember" : "fire");
+      sink.fx.push({
+        x: sink.x + sink.w * lx,
+        y: sink.y + sink.h * ly,
+        vx: (Math.random() - 0.5) * (kind === "smoke" ? 50 : 90),
+        vy: kind === "smoke" ? (-40 - Math.random() * 70)
+          : (kind === "ember" ? (20 + Math.random() * 60) : (-30 - Math.random() * 100)),
+        life: kind === "smoke" ? (1.1 + Math.random() * 1.0)
+          : (kind === "ember" ? (0.7 + Math.random() * 0.6) : (0.4 + Math.random() * 0.5)),
+        age: 0,
+        r: kind === "smoke" ? (10 + Math.random() * 18)
+          : (kind === "ember" ? (2 + Math.random() * 3.5) : (5 + Math.random() * 11)),
+        kind: kind
+      });
     }
+  }
+
+  function finishBossRewards(cfg) {
+    if (!cfg) return;
     sfxBossDefeat();
-    triggerScreenShake(6, 400);
-    triggerScreenFlash(0.2, 300);
     setMusicTheme(THEME_NORMAL);
-    const cfg = bossConfig(bossNumber);
     bossesDefeatedCount++;
-    bossActive = false;
-    boss = null;
-    bossNumber = 0;
     bombs = [];
     rockets = [];
     playerBombs = [];
@@ -316,8 +325,6 @@
     score += bonus;
     document.getElementById("scoreVal").textContent = score;
     bumpScorePop();
-
-    // instant heal — top up to a full bar (any bonus hearts already earned stay intact)
     if (health < MAX_HEALTH) {
       health = MAX_HEALTH;
       updateHealthDisplay();
@@ -325,12 +332,159 @@
       void healthMeter.offsetWidth;
       healthMeter.classList.add("hit");
     }
-
     showBanner(cfg.defeatLabel + " +" + bonus + " · FULL HEALTH!", 2200, "defeat");
-
-    // each boss is followed by its own bonus round — give the banner above
-    // a moment to be read before it kicks off
     queueBonusRound(cfg.bonusRound, 2200);
+  }
+
+  function updateBossSinking(dt) {
+    if (!bossSinking) return;
+    const s = bossSinking;
+    s.age += dt;
+    // Slow dramatic sink — starts almost hovering, then drifts down
+    const t = Math.min(1, s.age / s.duration);
+    s.vy = 28 + t * t * 160;
+    s.y += s.vy * dt;
+    s.x += Math.sin(s.age * 1.15) * 18 * dt;
+    s.tilt = Math.sin(s.age * 0.9) * 0.16 - t * 0.12;
+
+    // Continuous fire & smoke across the balloon
+    s.fxTimer += dt;
+    while (s.fxTimer > 0.028) {
+      s.fxTimer -= 0.028;
+      spawnBossBalloonFireSmoke(s, false);
+    }
+
+    s.fx.forEach(function(p) {
+      p.age += dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      if (p.kind === "smoke") {
+        p.r += 22 * dt;
+        p.vy -= 14 * dt;
+        p.vx *= 0.97;
+      } else if (p.kind === "ember") {
+        p.vy += 40 * dt;
+        p.vx *= 0.99;
+      } else {
+        p.r += 8 * dt;
+        p.vy -= 30 * dt;
+      }
+    });
+    s.fx = s.fx.filter(function(p) { return p.age < p.life; });
+
+    if (s.y > H + s.h * 0.35 || s.age >= s.duration) {
+      bossSinking = null;
+      defeatSlowMo = false;
+      if (s.pendingCfg) {
+        finishBossRewards(s.pendingCfg);
+        s.pendingCfg = null;
+      }
+    }
+  }
+
+  function drawBossSinking() {
+    if (!bossSinking) return;
+    const s = bossSinking;
+    const img = s.img;
+    ctx.save();
+    // Dim the scene slightly for drama
+    const veil = Math.min(0.28, s.age * 0.12);
+    ctx.fillStyle = "rgba(20,8,4," + veil + ")";
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.translate(s.x + s.w / 2, s.y + s.h / 2);
+    ctx.rotate(s.tilt || 0);
+    ctx.globalAlpha = Math.max(0.25, 1 - (s.age / s.duration) * 0.35);
+    if (img && img.naturalWidth) {
+      ctx.drawImage(img, -s.w / 2, -s.h / 2, s.w, s.h);
+    }
+    ctx.restore();
+
+    // Fire & smoke over the balloon (screen space)
+    s.fx.forEach(function(p) {
+      const t = 1 - p.age / p.life;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, t * (p.kind === "smoke" ? 0.55 : 0.9));
+      if (p.kind === "fire") {
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+        g.addColorStop(0, "rgba(255,245,200," + (0.95 * t) + ")");
+        g.addColorStop(0.35, "rgba(255,140,30," + (0.85 * t) + ")");
+        g.addColorStop(0.7, "rgba(220,40,10," + (0.45 * t) + ")");
+        g.addColorStop(1, "rgba(40,10,0,0)");
+        ctx.fillStyle = g;
+      } else if (p.kind === "ember") {
+        ctx.fillStyle = "rgba(255," + Math.floor(120 + 100 * t) + ",40," + (0.9 * t) + ")";
+      } else {
+        const g2 = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+        g2.addColorStop(0, "rgba(55,48,40," + (0.55 * t) + ")");
+        g2.addColorStop(1, "rgba(25,22,20,0)");
+        ctx.fillStyle = g2;
+      }
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+  }
+
+  function defeatBoss() {
+    const cfg = bossConfig(bossNumber);
+    const isBoss1Balloon = boss && (bossNumber === 1 || boss.kind === "bomber");
+
+    if (isBoss1Balloon) {
+      // Snapshot sprite — dramatic burning sink, no explosion
+      const img = (boss.kind === "bomber" && bossThrowFrame > 0)
+        ? images[`boss_throw_${String(bossThrowFrame).padStart(2, "0")}`]
+        : images[bossImgKey(boss.variant)];
+      bossSinking = {
+        x: boss.x,
+        y: boss.y,
+        w: boss.w,
+        h: boss.h,
+        img: img,
+        age: 0,
+        duration: 4.8,
+        vy: 28,
+        tilt: 0,
+        fx: [],
+        fxTimer: 0,
+        pendingCfg: cfg // rewards after the sink finishes
+      };
+      spawnBossBalloonFireSmoke(bossSinking, true);
+      spawnBossBalloonFireSmoke(bossSinking, true);
+      spawnBossBalloonFireSmoke(bossSinking, true);
+      defeatSlowMo = true;
+      defeatSlowMoUntil = performance.now() + 4800;
+      triggerScreenShake(3, 600);
+      triggerScreenFlash(0.1, 180);
+      // Soft fire SFX instead of big boom
+      if (typeof sfxExplosion === "function") sfxExplosion(0.35);
+      bossActive = false;
+      boss = null;
+      bossNumber = 0;
+      bossThrowFrame = 0;
+      // Do NOT finishBossRewards yet — wait until he sinks off-screen
+      return;
+    }
+
+    if (boss) {
+      const cx = boss.x + boss.w / 2;
+      const cy = boss.y + boss.h / 2;
+      triggerBigExplosion(cx, cy, boss.w * 0.8, boss.h * 0.8);
+      triggerBigExplosion(boss.x + boss.w * 0.22, boss.y + boss.h * 0.3, boss.w * 0.32, boss.h * 0.32);
+      triggerBigExplosion(boss.x + boss.w * 0.78, boss.y + boss.h * 0.65, boss.w * 0.32, boss.h * 0.32);
+      triggerBigExplosion(boss.x + boss.w * 0.5, boss.y + boss.h * 0.15, boss.w * 0.28, boss.h * 0.28);
+      triggerShockwave(cx, cy, Math.max(boss.w, boss.h) * 0.85);
+      defeatSlowMo = true;
+      defeatSlowMoUntil = performance.now() + DEFEAT_SLOWMO_DURATION;
+      spawnDefeatDebris(boss.x + boss.w / 2, boss.y + boss.h / 2, boss.w, boss.h);
+    }
+    triggerScreenShake(6, 400);
+    triggerScreenFlash(0.2, 300);
+    bossActive = false;
+    boss = null;
+    bossNumber = 0;
+    finishBossRewards(cfg);
   }
 
   // ---------- Firepower power-up ----------
