@@ -4,6 +4,8 @@
   const ASSET_SOURCES = {
     blimp:   "blimp.webp?cb=2",
     pirate_bomb: "pirate_bomb.webp",
+    power_icon_blimp3: "power_icon_blimp3.webp",
+    power_icon_blimp4: "power_icon_blimp4.webp",
     power_icon_blimp5: "power_icon_blimp5.webp",
     power_icon_blimp7: "power_icon_blimp7.webp",
     power_icon_blimp8: "power_icon_blimp8.webp",

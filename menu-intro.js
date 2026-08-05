@@ -120,6 +120,8 @@ function updateProfile(key) {
   const powerName = document.getElementById('bpAbilityName');
   const powerDesc = document.getElementById('bpAbilityDesc');
   const SWARM_ABILITY = {
+    blimp3: { name: "Pulse Missiles", desc: "Fires a volley of spinning energy missiles." },
+    blimp4: { name: "Scout Drones", desc: "Launches steampunk drones that streak like missiles." },
     blimp5: { name: "Fuel Barrage", desc: "Spins out volatile fuel tanks that clear the sky." },
     blimp7: { name: "Thunder Orbs", desc: "Launches spinning lightning orbs from the hull." },
     blimp8: { name: "Oil Barrels", desc: "Hurls spinning oil barrels that wipe out threats." },

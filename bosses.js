@@ -132,7 +132,17 @@
   let stormLightning = null; // { points, life, age } — the current main bolt, if any
   let stormChainBolts = []; // secondary bolts branching from the cloud to each zapped obstacle
   let nextStormLightningAt = 0;
-  let stormMode = "storm"; // "storm" | "pirate"
+  let stormMode = "storm"; // "storm" | "pirate" | "swarm" | "missile"
+  let stormSwarm = [];
+  const SHIP_POWER_ICON_KEYS = {
+    blimp3: "power_icon_blimp3",
+    blimp4: "power_icon_blimp4",
+    blimp5: "power_icon_blimp5",
+    blimp7: "power_icon_blimp7",
+    blimp8: "power_icon_blimp8",
+    blimp9: "power_icon_blimp9"
+  };
+  const SHIP_POWER_MISSILE = { blimp3: true, blimp4: true };
   let pirateBlastParticles = [];
   let pirateFireBolts = [];
   const stormMeterEl = document.getElementById("stormMeter");
@@ -193,31 +203,108 @@
     stormCharge = 0;
     updateStormMeterDisplay();
     pirateBlastParticles = [];
-
-    // Jolly Rogers (blimp9) drops the pirate bomb; everyone else gets the storm cloud
-    const isPirate = (typeof selectedBlimp !== "undefined" && selectedBlimp === "blimp9");
-    stormMode = isPirate ? "pirate" : "storm";
-
-    if (typeof sfxThunder === "function") sfxThunder();
-    if (isPirate && typeof sfxExplosion === "function") sfxExplosion(0.5);
-
-    // a single prop drops from above to screen-center, then bursts
-    stormCloud = {
-      phase: "falling", // falling -> impact -> fading
-      t: 0,
-      x: W / 2,
-      startY: -H * 0.35,
-      y: -H * 0.35,
-      targetY: H * 0.42,
-      w: isPirate ? Math.min(180, W * 0.32) : Math.min(340, W * 0.55),
-      animFrame: Math.floor(Math.random() * STORM_CLOUD_FRAME_COUNT),
-      animTimer: 0,
-      glowPhase: 0,
-      ringPhase: 0,
-      spin: 0
-    };
+    stormSwarm = [];
     stormLightning = null;
     stormChainBolts = [];
+
+    const sel = (typeof selectedBlimp !== "undefined") ? selectedBlimp : "blimp1";
+    const swarmKey = SHIP_POWER_ICON_KEYS[sel] || null;
+
+    if (swarmKey) {
+      stormCloud = null;
+      if (typeof sfxExplosion === "function") sfxExplosion(0.55);
+      if (typeof sfxThunder === "function") sfxThunder();
+      if (typeof sfxShoot === "function") sfxShoot();
+
+      if (SHIP_POWER_MISSILE[sel]) {
+        // Missile volley — forward-fanning projectiles (Aero Slicer / Steampunk)
+        stormMode = "missile";
+        const volleys = 9;
+        for (let i = 0; i < volleys; i++) {
+          const spread = (i - (volleys - 1) / 2) * 0.11;
+          const speed = 340 + Math.random() * 100;
+          stormSwarm.push({
+            x: player.x + player.w * 0.28,
+            y: player.y + (Math.random() - 0.5) * player.h * 0.3,
+            vx: Math.cos(spread) * speed,
+            vy: Math.sin(spread) * speed * 0.5 + (Math.random() - 0.5) * 30,
+            spin: spread,
+            spinVel: 10,
+            size: Math.min(48, W * 0.095) * (0.85 + Math.random() * 0.25),
+            life: 1.55,
+            age: 0,
+            iconKey: swarmKey,
+            hit: false,
+            style: "missile",
+            delay: i * 0.045
+          });
+        }
+        obstacles.forEach(function(o, idx) {
+          if (idx > 5) return;
+          const tx = o.x + o.w * 0.5, ty = o.y + o.h * 0.5;
+          const dx = tx - player.x, dy = ty - player.y;
+          const dist = Math.hypot(dx, dy) || 1;
+          const speed = 400 + Math.random() * 50;
+          stormSwarm.push({
+            x: player.x + player.w * 0.2,
+            y: player.y,
+            vx: (dx / dist) * speed,
+            vy: (dy / dist) * speed,
+            spin: Math.atan2(dy, dx),
+            spinVel: 12,
+            size: Math.min(46, W * 0.09),
+            life: 1.4,
+            age: 0,
+            iconKey: swarmKey,
+            hit: false,
+            style: "missile",
+            delay: 0.06 * idx
+          });
+        });
+      } else {
+        // Radial spinning swarm (5,7,8,9)
+        stormMode = "swarm";
+        for (let i = 0; i < 10; i++) {
+          const ang = (i / 10) * Math.PI * 2 + Math.random() * 0.2;
+          const speed = 180 + Math.random() * 160;
+          stormSwarm.push({
+            x: player.x, y: player.y,
+            vx: Math.cos(ang) * speed,
+            vy: Math.sin(ang) * speed * 0.85 - 40,
+            spin: Math.random() * Math.PI * 2,
+            spinVel: (Math.random() < 0.5 ? -1 : 1) * (6 + Math.random() * 8),
+            size: Math.min(56, W * 0.11) * (0.75 + Math.random() * 0.45),
+            life: 1.4, age: 0, iconKey: swarmKey, hit: false, style: "swarm", delay: 0
+          });
+        }
+        obstacles.forEach(function(o, idx) {
+          if (idx > 6) return;
+          const tx = o.x + o.w * 0.5, ty = o.y + o.h * 0.5;
+          const dx = tx - player.x, dy = ty - player.y;
+          const dist = Math.hypot(dx, dy) || 1;
+          const speed = 220 + Math.random() * 80;
+          stormSwarm.push({
+            x: player.x, y: player.y,
+            vx: (dx / dist) * speed, vy: (dy / dist) * speed,
+            spin: Math.random() * Math.PI * 2, spinVel: 8,
+            size: Math.min(52, W * 0.1), life: 1.5, age: 0,
+            iconKey: swarmKey, hit: false, style: "swarm", delay: 0
+          });
+        });
+      }
+      return;
+    }
+
+    // Default storm cloud
+    stormMode = "storm";
+    if (typeof sfxThunder === "function") sfxThunder();
+    stormCloud = {
+      phase: "falling", t: 0, x: W / 2,
+      startY: -H * 0.35, y: -H * 0.35, targetY: H * 0.42,
+      w: Math.min(340, W * 0.55),
+      animFrame: Math.floor(Math.random() * STORM_CLOUD_FRAME_COUNT),
+      animTimer: 0, glowPhase: 0, ringPhase: 0, spin: 0
+    };
   }
 
   function buildLightningPath(x1, y1, x2, y2, wander) {
@@ -369,13 +456,19 @@
     if (!stormActive) return;
 
     // ---- Spinning power-icon swarm (blimps 5/7/8/9) ----
-    if (stormMode === "swarm") {
+    if (stormMode === "swarm" || stormMode === "missile") {
       stormSwarm.forEach(function(p) {
+        if (p.delay && p.age + dt < p.delay) { p.age += dt; return; }
         p.age += dt;
         p.x += p.vx * dt;
         p.y += p.vy * dt;
-        p.vy += 120 * dt; // light gravity
-        p.spin += p.spinVel * dt;
+        if (p.style === "missile") {
+          p.vy += 28 * dt;
+          p.spin = Math.atan2(p.vy, p.vx);
+        } else {
+          p.vy += 120 * dt;
+          p.spin += p.spinVel * dt;
+        }
         // Destroy obstacles on contact
         if (!p.hit) {
           for (let i = obstacles.length - 1; i >= 0; i--) {
@@ -569,7 +662,7 @@
     if (!stormActive) return;
 
     // ---- Swarm of spinning power icons ----
-    if (stormMode === "swarm") {
+    if (stormMode === "swarm" || stormMode === "missile") {
       ctx.save();
       // brief warm/electric atmosphere
       const dusk = ctx.createLinearGradient(0, 0, 0, H);
@@ -579,16 +672,26 @@
       ctx.fillRect(0, 0, W, H);
 
       stormSwarm.forEach(function(p) {
+        if (p.delay && p.age < p.delay) return;
         const img = images[p.iconKey];
-        const t = 1 - p.age / p.life;
-        const fade = Math.min(1, t * 1.4);
+        const lifeT = 1 - p.age / p.life;
+        const fade = Math.min(1, lifeT * 1.4);
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(p.spin);
         ctx.globalAlpha = fade;
-        // glow
+        if (p.style === "missile") {
+          const trail = ctx.createLinearGradient(-p.size * 1.1, 0, p.size * 0.15, 0);
+          trail.addColorStop(0, "rgba(100,200,255,0)");
+          trail.addColorStop(0.55, "rgba(100,200,255,0.35)");
+          trail.addColorStop(1, "rgba(255,230,140,0.55)");
+          ctx.fillStyle = trail;
+          ctx.beginPath();
+          ctx.ellipse(-p.size * 0.5, 0, p.size * 0.6, p.size * 0.2, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
         const g = ctx.createRadialGradient(0, 0, p.size * 0.1, 0, 0, p.size * 0.75);
-        g.addColorStop(0, "rgba(255,200,100,0.45)");
+        g.addColorStop(0, p.style === "missile" ? "rgba(120,200,255,0.5)" : "rgba(255,200,100,0.45)");
         g.addColorStop(1, "rgba(255,140,40,0)");
         ctx.fillStyle = g;
         ctx.beginPath();
