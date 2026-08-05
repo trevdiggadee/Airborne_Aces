@@ -215,18 +215,19 @@ html, body {
   z-index: 5;
   font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
   font-weight: bold;
-  letter-spacing: 2px;
-  font-size: clamp(14px, 3.8vw, 17px);
-  color: #f5e6c8;
-  background: linear-gradient(#a8783f, #6b4a2b);
-  border: 2px solid #c9a66b;
-  border-radius: 10px;
-  padding: 14px 36px;
-  box-shadow: 0 3px 0 #2c1a0a, 0 8px 18px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);
+  letter-spacing: 2.5px;
+  font-size: clamp(18px, 5.2vw, 24px);
+  color: rgba(245, 230, 200, 0.88);
+  background: linear-gradient(rgba(168,120,63,0.82), rgba(107,74,43,0.78));
+  border: 2px solid rgba(201,166,107,0.75);
+  border-radius: 12px;
+  padding: 16px 42px;
+  box-shadow: 0 3px 0 rgba(44,26,10,0.7), 0 8px 18px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.2);
   cursor: pointer;
   text-transform: uppercase;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 0.08s ease;
+  transition: transform 0.08s ease, opacity 0.15s ease;
+  opacity: 0.92;
 }
 .enterHangarBtn:active,
 #splashEnterBtn.enterHangarBtn:active {
@@ -359,9 +360,9 @@ html, body {
 .heroBlimpWrap img {
   display: block;
   width: 100%;
-  /* Slight edge soften */
-  -webkit-mask-image: radial-gradient(ellipse 78% 72% at 50% 48%, #000 62%, transparent 100%);
-  mask-image: radial-gradient(ellipse 78% 72% at 50% 48%, #000 62%, transparent 100%);
+  /* Soft edge — gentler so animation frames don't flicker at the mask seam */
+  -webkit-mask-image: radial-gradient(ellipse 92% 88% at 50% 50%, #000 70%, transparent 100%);
+  mask-image: radial-gradient(ellipse 92% 88% at 50% 50%, #000 70%, transparent 100%);
 }
 
 .heroBlimpLayerB {

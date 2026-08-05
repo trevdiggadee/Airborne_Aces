@@ -131,12 +131,26 @@ function updateProfile(key) {
   if (powerName) powerName.textContent = ab.name;
   if (powerDesc) powerDesc.textContent = ab.desc;
 
-  // Power icon (placeholder: Jolly Rogers bomb art until per-ship icons arrive)
+  // Per-blimp power icon in profile
   const powerIcon = document.getElementById('bpPowerIcon');
   if (powerIcon) {
-    const iconSrc = (s.powerIcon) || 'pirate_bomb.webp';
-    powerIcon.src = iconSrc;
-    powerIcon.alt = (s.ability && s.ability.name) || 'Power up';
+    const POWER_ICON_BY_SHIP = {
+      blimp1: "storm_icon_5.webp",
+      blimp2: "storm_icon_5.webp",
+      blimp3: "power_icon_blimp3.webp",
+      blimp4: "power_icon_blimp4.webp",
+      blimp5: "power_icon_blimp5.webp",
+      blimp6: "storm_icon_5.webp",
+      blimp7: "power_icon_blimp7.webp",
+      blimp8: "power_icon_blimp8.webp",
+      blimp9: "power_icon_blimp9.webp",
+      blimp10: "storm_icon_5.webp"
+    };
+    const iconSrc = (s.powerIcon) || POWER_ICON_BY_SHIP[key] || "storm_icon_5.webp";
+    if (powerIcon.getAttribute("src") !== iconSrc) {
+      powerIcon.src = iconSrc;
+    }
+    powerIcon.alt = ab.name || "Power up";
   }
 
   const up = document.getElementById('bpUpgrade');
@@ -250,27 +264,45 @@ function startHeroAnimation(key) {
 
     const frameMs = 1000 / anim.fps;
     // Crossfade most of the frame duration so swaps never pop; loop seam uses nearly full interval
-    const fadeMs = Math.max(50, Math.floor(frameMs * 0.88));
-    const loopFadeMs = Math.max(fadeMs, Math.floor(frameMs * 0.96));
+    const fadeMs = Math.max(40, Math.floor(frameMs * 0.28));
+    const loopFadeMs = Math.max(fadeMs, Math.floor(frameMs * 0.4));
 
     heroAnimTimer = setInterval(() => {
       heroAnimFrame = (heroAnimFrame + 1) % anim.urls.length;
       const outgoing = heroBlimpLayers[heroActiveLayer];
       const incoming = heroBlimpLayers[1 - heroActiveLayer];
+      const nextUrl = anim.urls[heroAnimFrame];
 
-      incoming.src = anim.urls[heroAnimFrame];
-      incoming.style.transition = "none";
-      outgoing.style.transition = "none";
-      void incoming.offsetWidth;
+      const doCrossfade = function() {
+        // Short crossfade — long fades made the menu look like it was glitching
+        const ms = (heroAnimFrame === 0) ? Math.min(loopFadeMs, Math.floor(frameMs * 0.4)) : fadeMs;
+        incoming.style.transition = "none";
+        outgoing.style.transition = "none";
+        void incoming.offsetWidth;
+        incoming.style.transition = "opacity " + ms + "ms linear";
+        outgoing.style.transition = "opacity " + ms + "ms linear";
+        incoming.style.opacity = 1;
+        outgoing.style.opacity = 0;
+        heroActiveLayer = 1 - heroActiveLayer;
+      };
 
-      // Extra-smooth blend when wrapping last → first frame
-      const ms = (heroAnimFrame === 0) ? loopFadeMs : fadeMs;
-      incoming.style.transition = `opacity ${ms}ms ease-in-out`;
-      outgoing.style.transition = `opacity ${ms}ms ease-in-out`;
-      incoming.style.opacity = 1;
-      outgoing.style.opacity = 0;
-
-      heroActiveLayer = 1 - heroActiveLayer;
+      // Only swap src when needed; wait for decode so frames never flash empty
+      const needsSrc = !incoming.src || incoming.getAttribute("src") !== nextUrl;
+      if (needsSrc) {
+        incoming.onload = function() {
+          incoming.onload = null;
+          if (gen !== heroAnimGen) return;
+          doCrossfade();
+        };
+        incoming.src = nextUrl;
+        // Cached images may already be complete
+        if (incoming.complete && incoming.naturalWidth) {
+          incoming.onload = null;
+          doCrossfade();
+        }
+      } else {
+        doCrossfade();
+      }
     }, frameMs);
   });
 }
