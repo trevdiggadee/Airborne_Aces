@@ -73,25 +73,36 @@
     ctx.fillRect(-jx - 4, -jy - 4, W + 8, H + 8);
     ctx.restore();
 
-    // Stronger cinematic vignette (corners fall off, center stays clear)
+    // Heavy cinematic vignette — clearly visible at edges
     ctx.save();
-    const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.28, W / 2, H / 2, Math.max(W, H) * 0.72);
-    vg.addColorStop(0, "rgba(8,5,2,0)");
-    vg.addColorStop(0.55, "rgba(8,5,2,0.08)");
-    vg.addColorStop(0.82, "rgba(8,5,2,0.32)");
-    vg.addColorStop(1, "rgba(0,0,0,0.55)");
+    const vg = ctx.createRadialGradient(
+      W / 2, H / 2,
+      Math.min(W, H) * 0.22,
+      W / 2, H / 2,
+      Math.max(W, H) * 0.68
+    );
+    vg.addColorStop(0, "rgba(0,0,0,0)");
+    vg.addColorStop(0.4, "rgba(0,0,0,0.05)");
+    vg.addColorStop(0.7, "rgba(0,0,0,0.35)");
+    vg.addColorStop(0.88, "rgba(0,0,0,0.62)");
+    vg.addColorStop(1, "rgba(0,0,0,0.78)");
     ctx.fillStyle = vg;
     ctx.fillRect(0, 0, W, H);
     ctx.restore();
   }
 
   function drawVignette() {
-    // Standalone vignette so it can run even if grain is off
     ctx.save();
-    const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.75);
+    const vg = ctx.createRadialGradient(
+      W / 2, H / 2,
+      Math.min(W, H) * 0.25,
+      W / 2, H / 2,
+      Math.max(W, H) * 0.7
+    );
     vg.addColorStop(0, "rgba(0,0,0,0)");
-    vg.addColorStop(0.65, "rgba(0,0,0,0.06)");
-    vg.addColorStop(1, "rgba(0,0,0,0.42)");
+    vg.addColorStop(0.5, "rgba(0,0,0,0.08)");
+    vg.addColorStop(0.8, "rgba(0,0,0,0.45)");
+    vg.addColorStop(1, "rgba(0,0,0,0.72)");
     ctx.fillStyle = vg;
     ctx.fillRect(0, 0, W, H);
     ctx.restore();
@@ -226,7 +237,7 @@
     drawShockwaves();
     drawBonusHUD();
     drawComboPopups();
-    if (state === "playing") drawFilmGrain();
+    if (state === "playing") { drawFilmGrain(); drawVignette(); }
     } catch (err) {
       if (!loopErrorShown) {
         loopErrorShown = true;

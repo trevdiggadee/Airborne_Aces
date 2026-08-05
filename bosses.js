@@ -194,9 +194,9 @@
     updateStormMeterDisplay();
     pirateBlastParticles = [];
 
-    // All vessels share the storm cloud for now (per-ship powers come later)
-    const isPirate = false;
-    stormMode = "storm";
+    // Jolly Rogers (blimp9) drops the pirate bomb; everyone else gets the storm cloud
+    const isPirate = (typeof selectedBlimp !== "undefined" && selectedBlimp === "blimp9");
+    stormMode = isPirate ? "pirate" : "storm";
 
     if (typeof sfxThunder === "function") sfxThunder();
     if (isPirate && typeof sfxExplosion === "function") sfxExplosion(0.5);
@@ -1399,12 +1399,12 @@
       hasFirepower = false;
       hasDualFire = false;
       spawnCoinWave();
-      showBanner("★ BONUS ROUND ★  GRAB THE COINS!", 2600, "bonus");
+      // bonus counter HUD only — no banner
     } else {
       hasFirepower = true;
       hasDualFire = false;
       spawnBalloonWave();
-      showBanner("★ BONUS ROUND ★  POP THE BALLOONS!", 2600, "bonus");
+      // bonus counter HUD only — no banner
     }
   }
 

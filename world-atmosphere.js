@@ -620,6 +620,8 @@
   }
 
   function drawBossWarning() {
+    // Boss incoming banner disabled — keep internal timer for dialogue timing
+    return;
     if (!bossWarning) return;
     const elapsed = performance.now() - bossWarning.startTime;
     const progress = elapsed / bossWarning.duration;

@@ -318,7 +318,11 @@ html, body {
   transform: translateX(-50%);
   z-index: 2;
   animation: floatHero 3.2s ease-in-out infinite;
-  filter: drop-shadow(0 8px 10px rgba(0,0,0,0.45));
+  /* Darker multi-layer shadow so it sits in the hangar, not a sticker cutout */
+  filter:
+    drop-shadow(0 10px 8px rgba(0,0,0,0.55))
+    drop-shadow(0 18px 22px rgba(0,0,0,0.4))
+    drop-shadow(0 2px 3px rgba(0,0,0,0.35));
   pointer-events: none;
 }
 .heroBlimpWrap.hero-small {
@@ -330,21 +334,34 @@ html, body {
   content: "";
   position: absolute;
   left: 50%;
-  /* Sit under the main body of the blimp (not far below it) */
-  bottom: 8%;
+  bottom: 6%;
   transform: translateX(-50%);
-  width: 48%;
-  height: 9%;
+  width: 58%;
+  height: 12%;
   border-radius: 50%;
-  background: radial-gradient(ellipse at center, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.22) 42%, rgba(0,0,0,0) 70%);
-  filter: blur(2.5px);
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.28) 40%, rgba(0,0,0,0) 72%);
+  filter: blur(4px);
   pointer-events: none;
   z-index: 0;
+}
+/* Soft edge fade so sprite doesn't look hard-cut against the hangar */
+.heroBlimpWrap::before {
+  content: "";
+  position: absolute;
+  inset: -6%;
+  border-radius: 40%;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 42%, rgba(0,0,0,0.18) 68%, rgba(0,0,0,0.35) 100%);
+  pointer-events: none;
+  z-index: 3;
+  mix-blend-mode: multiply;
 }
 
 .heroBlimpWrap img {
   display: block;
   width: 100%;
+  /* Slight edge soften */
+  -webkit-mask-image: radial-gradient(ellipse 78% 72% at 50% 48%, #000 62%, transparent 100%);
+  mask-image: radial-gradient(ellipse 78% 72% at 50% 48%, #000 62%, transparent 100%);
 }
 
 .heroBlimpLayerB {
