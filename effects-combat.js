@@ -490,11 +490,11 @@
       windParticles.push({
         x: x + (Math.random() - 0.5) * w * 0.4,
         y: y + (Math.random() - 0.5) * h * 0.6,
-        vx: -140 - Math.random() * 90,
-        len: 8 + Math.random() * 12,
-        life: 0.22 + Math.random() * 0.16,
+        vx: -140 - Math.random() * 110,
+        len: 10 + Math.random() * 16,
+        life: 0.24 + Math.random() * 0.18,
         age: 0,
-        alpha: 0.25 + Math.random() * 0.25,
+        alpha: 0.28 + Math.random() * 0.28,
         source: source || "obstacle"
       });
     }
@@ -543,7 +543,7 @@
   // closer motes drift faster and glow brighter, matching the parallax speed of the scene,
   // while every mote also bobs and sways slightly on its own independent sine cycle so the
   // motion never looks mechanically synced across particles.
-  const DUST_PARTICLE_COUNT = 42;
+  const DUST_PARTICLE_COUNT = 64;
   let dustParticles = [];
   let dustInitialized = false;
 
@@ -555,7 +555,7 @@
       y: Math.random() * H,
       depth,
       size,
-      baseAlpha: 0.05 + depth * 0.14,
+      baseAlpha: 0.07 + depth * 0.18,
       driftSpeed: 9 + depth * 24, // px/s leftward at baseline scroll speed
       bobAmp: 3 + Math.random() * 9,
       bobFreq: 0.35 + Math.random() * 0.55,
@@ -626,10 +626,10 @@
         y: y + (Math.random() - 0.5) * 40,
         vx: -50 - Math.random() * 50,
         vy: (Math.random() - 0.5) * 40,
-        life: 0.5 + Math.random() * 0.45,
+        life: 0.65 + Math.random() * 0.55,
         age: 0,
-        size: 7 + Math.random() * 12,
-        alpha: 0.22 + Math.random() * 0.22
+        size: 8 + Math.random() * 14,
+        alpha: 0.28 + Math.random() * 0.25
       });
     }
   }
@@ -729,11 +729,11 @@
 
         // mist wisps kick up when the player or an obstacle flies through this cloud
         if (overlapsCloud(c, player.x - player.w / 2, player.y - player.h / 2, player.w, player.h)) {
-          maybeEmitCloudWisp(player.x, player.y, dt, 22);
+          maybeEmitCloudWisp(player.x, player.y, dt, 36);
         }
         obstacles.forEach(o => {
           if (overlapsCloud(c, o.x, o.y, o.w, o.h)) {
-            maybeEmitCloudWisp(o.x + o.w / 2, o.y + o.h / 2, dt, 10);
+            maybeEmitCloudWisp(o.x + o.w / 2, o.y + o.h / 2, dt, 16);
           }
         });
     });

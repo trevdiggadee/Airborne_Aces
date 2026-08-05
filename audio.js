@@ -158,13 +158,21 @@
   }
 
   function sfxFlap() {
-    playNoise({ duration: 0.09, vol: 0.045, filterType: "bandpass", filterFreq: 900, filterFreqEnd: 380, Q: 0.8 });
-    playTone({ freq: 230, duration: 0.09, type: "triangle", vol: 0.08, sweep: 130, attack: 0.004 });
+    // Layered whoosh + fabric snap + low body thump
+    playNoise({ duration: 0.11, vol: 0.055, filterType: "bandpass", filterFreq: 1100, filterFreqEnd: 320, Q: 0.9 });
+    playNoise({ duration: 0.07, vol: 0.03, filterType: "highpass", filterFreq: 2200, Q: 0.7 });
+    playTone({ freq: 210, duration: 0.1, type: "triangle", vol: 0.09, sweep: 160, attack: 0.003 });
+    playTone({ freq: 95, duration: 0.12, type: "sine", vol: 0.05, sweep: -25, attack: 0.005 });
+    // Exhaust puff on the peak of the flap transient
+    setTimeout(function() {
+      try { if (window.__airborneExhaustBurst) window.__airborneExhaustBurst(); } catch (e) {}
+    }, 28);
   }
 
   function sfxShoot() {
-    playTone({ freq: 920, duration: 0.05, type: "square", vol: 0.05, sweep: -520, attack: 0.002 });
-    playTone({ freq: 1500, duration: 0.02, type: "square", vol: 0.03, attack: 0.001 });
+    playNoise({ duration: 0.04, vol: 0.04, filterType: "bandpass", filterFreq: 1800, Q: 1.2 });
+    playTone({ freq: 920, duration: 0.06, type: "square", vol: 0.055, sweep: -520, attack: 0.002 });
+    playTone({ freq: 1500, duration: 0.025, type: "square", vol: 0.035, attack: 0.001 });
   }
 
   function sfxExplosion(size = 1) {
@@ -178,15 +186,18 @@
   }
 
   function sfxHit() {
-    playNoise({ duration: 0.12, vol: 0.14, filterType: "bandpass", filterFreq: 1300, Q: 1.5 });
-    playTone({ freq: 145, duration: 0.15, type: "sawtooth", vol: 0.17, sweep: -85, attack: 0.003 });
+    playNoise({ duration: 0.14, vol: 0.16, filterType: "bandpass", filterFreq: 1400, filterFreqEnd: 500, Q: 1.4 });
+    playNoise({ duration: 0.08, vol: 0.06, filterType: "highpass", filterFreq: 2800 });
+    playTone({ freq: 145, duration: 0.16, type: "sawtooth", vol: 0.18, sweep: -95, attack: 0.002 });
+    playTone({ freq: 70, duration: 0.18, type: "sine", vol: 0.08, sweep: -20, attack: 0.004 });
   }
 
   function sfxPowerup() {
-    [0, 4, 7, 12].forEach((iv, i) => {
-      playTone({ freq: noteFreq(64 + iv), duration: 0.14, type: "triangle", vol: 0.1,
-        sweep: 40, startDelay: i * 0.07, attack: 0.004, reverbSend: 0.3 });
+    [0, 4, 7, 12, 16].forEach((iv, i) => {
+      playTone({ freq: noteFreq(64 + iv), duration: 0.15, type: "triangle", vol: 0.11,
+        sweep: 50, startDelay: i * 0.06, attack: 0.004, reverbSend: 0.35 });
     });
+    playNoise({ duration: 0.2, vol: 0.04, filterType: "bandpass", filterFreq: 2400, filterFreqEnd: 800, reverbSend: 0.3 });
   }
 
   function sfxHeart() {

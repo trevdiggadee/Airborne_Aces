@@ -223,17 +223,69 @@
     exhaustParticles: [],
     propAngle: 0,
     propSpeed: 0,
-    propBlurOpacity: 0
+    propBlurOpacity: 0,
+    speedStreaks: [],
+    finLag: 0
+  };
+
+  function exhaustStyleFor(effect) {
+    // Roster-tuned exhaust look
+    switch (effect) {
+      case "flame":
+        return { color: "255,160,40", size: 3.5, alpha: 0.7, life: 0.35, rise: 4, drag: 70, mode: "flame" };
+      case "steam":
+        return { color: "230,240,250", size: 3.2, alpha: 0.45, life: 0.7, rise: 28, drag: 35, mode: "steam" };
+      case "blackSmoke":
+        return { color: "35,32,28", size: 5.5, alpha: 0.55, life: 1.1, rise: 6, drag: 45, mode: "smoke" };
+      case "smoke":
+        return { color: "200,190,180", size: 3.5, alpha: 0.4, life: 0.75, rise: 12, drag: 50, mode: "smoke" };
+      case "propeller":
+      default:
+        return { color: "190,180,165", size: 2.8, alpha: 0.32, life: 0.55, rise: 8, drag: 40, mode: "smoke" };
+    }
+  }
+
+  function emitExhaustPuff(burst) {
+    var sel = typeof selectedBlimp !== "undefined" ? selectedBlimp : "blimp1";
+    var data = (typeof BLIMP_DATA !== "undefined") ? BLIMP_DATA[sel] : null;
+    var effect = (data && data.effect) || "propeller";
+    // All ships emit something while flying; intensity follows roster effect
+    var style = exhaustStyleFor(effect);
+    var count = burst ? (8 + Math.floor(Math.random() * 5)) : 1;
+    var exhaustX = player.x - player.w * 0.38;
+    var exhaustY = player.y + player.h * 0.12;
+    for (var i = 0; i < count; i++) {
+      var speedBoost = Math.abs(player.vy) * 0.08;
+      blimpPersonality.exhaustParticles.push({
+        x: exhaustX + (Math.random() - 0.5) * 8,
+        y: exhaustY + (Math.random() - 0.5) * 6,
+        vx: -(style.drag + Math.random() * 30 + speedBoost) * (burst ? 1.35 : 1),
+        vy: (Math.random() - 0.5) * 18 - style.rise * (0.6 + Math.random() * 0.6),
+        size: style.size * (burst ? 1.4 : 1) * (0.7 + Math.random() * 0.6),
+        alpha: style.alpha * (burst ? 1.2 : 1) * (0.75 + Math.random() * 0.4),
+        life: style.life * (0.7 + Math.random() * 0.5),
+        age: 0,
+        color: style.color,
+        mode: style.mode
+      });
+    }
+  }
+  // Called from flap SFX peak so exhaust punches with the audio
+  window.__airborneExhaustBurst = function() {
+    try { emitExhaustPuff(true); } catch (e) {}
   };
 
   function updateBlimpPersonality(dt) {
-    var sel = typeof selectedBlimp !== 'undefined' ? selectedBlimp : 'blimp1';
-    var data = BLIMP_DATA[sel];
+    var sel = typeof selectedBlimp !== "undefined" ? selectedBlimp : "blimp1";
+    var data = (typeof BLIMP_DATA !== "undefined") ? BLIMP_DATA[sel] : null;
+    var effect = (data && data.effect) || null;
 
     var vNorm = player.vy / MAX_FALL_SPEED;
+    // Fin/body lag target follows pitch rate
+    blimpPersonality.finLag += (player.rotation * 0.35 - blimpPersonality.finLag) * Math.min(1, 6 * dt);
+
     blimpPersonality.squashTargetX = 1 + vNorm * 0.12;
     blimpPersonality.squashTargetY = 1 - vNorm * 0.15;
-
     blimpPersonality.squashTargetX = Math.max(0.82, Math.min(1.18, blimpPersonality.squashTargetX));
     blimpPersonality.squashTargetY = Math.max(0.78, Math.min(1.22, blimpPersonality.squashTargetY));
 
@@ -241,7 +293,7 @@
     blimpPersonality.squashX += (blimpPersonality.squashTargetX - blimpPersonality.squashX) * lerp;
     blimpPersonality.squashY += (blimpPersonality.squashTargetY - blimpPersonality.squashY) * lerp;
 
-    if (data && data.effect === 'propeller') {
+    if (effect === "propeller") {
       blimpPersonality.propSpeed = 25 + Math.abs(player.vy) * 0.04;
       blimpPersonality.propAngle += blimpPersonality.propSpeed * dt;
       blimpPersonality.propBlurOpacity = Math.min(0.9, 0.5 + Math.abs(player.vy) * 0.001);
@@ -249,48 +301,104 @@
       blimpPersonality.propBlurOpacity *= 0.95;
     }
 
-    if (data && (data.effect === 'propeller' || data.effect === 'smoke')) {
-      blimpPersonality.exhaustTimer += dt;
-      var emitRate = 0.06 + Math.abs(player.vy) * 0.0001;
-      while (blimpPersonality.exhaustTimer > emitRate) {
-        blimpPersonality.exhaustTimer -= emitRate;
-        var exhaustX = player.x - player.w * 0.38;
-        var exhaustY = player.y + player.h * 0.15;
-        blimpPersonality.exhaustParticles.push({
-          x: exhaustX + (Math.random() - 0.5) * 6,
-          y: exhaustY + (Math.random() - 0.5) * 4,
-          vx: -(40 + Math.random() * 30 + Math.abs(player.vy) * 0.05),
-          vy: (Math.random() - 0.5) * 15 - 10,
-          size: 2 + Math.random() * 4,
-          alpha: 0.35 + Math.random() * 0.25,
-          life: 0.5 + Math.random() * 0.6,
+    // Continuous exhaust for every vessel — denser when diving, thinner when climbing
+    var diveFactor = Math.max(0, player.vy) / MAX_FALL_SPEED;
+    var climbFactor = Math.max(0, -player.vy) / 400;
+    var emitRate = 0.07 - diveFactor * 0.035 + climbFactor * 0.03;
+    if (effect === "blackSmoke") emitRate *= 0.65;
+    if (effect === "flame") emitRate *= 0.55;
+    if (effect === "steam") emitRate *= 0.8;
+    blimpPersonality.exhaustTimer += dt;
+    while (blimpPersonality.exhaustTimer > emitRate) {
+      blimpPersonality.exhaustTimer -= emitRate;
+      emitExhaustPuff(false);
+    }
+
+    // Speed streaks when falling fast (motion lines)
+    if (player.vy > 220) {
+      if (Math.random() < 0.55) {
+        blimpPersonality.speedStreaks.push({
+          x: player.x - player.w * 0.2 + (Math.random() - 0.5) * player.w * 0.5,
+          y: player.y - player.h * 0.35 + Math.random() * player.h * 0.7,
+          len: 10 + Math.random() * 18 + (player.vy - 220) * 0.04,
+          life: 0.12 + Math.random() * 0.1,
           age: 0,
-          color: data.effect === 'smoke' ? '200,190,180' : '180,170,160'
+          alpha: 0.2 + Math.min(0.35, (player.vy - 220) / 900)
         });
       }
     }
+    blimpPersonality.speedStreaks.forEach(function(s) {
+      s.age += dt;
+      s.y += player.vy * 0.15 * dt;
+    });
+    blimpPersonality.speedStreaks = blimpPersonality.speedStreaks.filter(function(s) {
+      return s.age < s.life;
+    });
 
     blimpPersonality.exhaustParticles.forEach(function(p) {
       p.age += dt;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.size += 3 * dt;
-      p.vy -= 8 * dt;
+      p.size += (p.mode === "flame" ? 6 : 3) * dt;
+      p.vy -= (p.mode === "steam" ? 18 : 8) * dt;
+      if (p.mode === "flame") p.vx *= (1 - 0.8 * dt);
     });
     blimpPersonality.exhaustParticles = blimpPersonality.exhaustParticles.filter(function(p) {
       return p.age < p.life;
     });
   }
 
+  function drawPlayerShadow() {
+    // Soft oval under the blimp — anchors it in the sky
+    if (typeof levelEndPhase === "string" && levelEndPhase === "fadeOut") return;
+    var groundY = H * 0.92;
+    var heightFrac = Math.max(0.15, Math.min(1, (groundY - player.y) / (H * 0.7)));
+    var sx = player.x - player.w * 0.05;
+    var sy = player.y + player.h * 0.55;
+    var sw = player.w * (0.55 + heightFrac * 0.15);
+    var sh = player.h * 0.18 * heightFrac;
+    ctx.save();
+    ctx.globalAlpha = 0.22 * heightFrac;
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, sw * 0.5, Math.max(3, sh * 0.5), 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
   function drawBlimpPersonality() {
+    // Speed streaks (behind body)
+    blimpPersonality.speedStreaks.forEach(function(s) {
+      var t = 1 - s.age / s.life;
+      ctx.save();
+      ctx.globalAlpha = s.alpha * t;
+      ctx.strokeStyle = "rgba(255,255,255,0.75)";
+      ctx.lineWidth = 1.4;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y - s.len * 0.2);
+      ctx.lineTo(s.x, s.y + s.len * 0.8);
+      ctx.stroke();
+      ctx.restore();
+    });
+
     blimpPersonality.exhaustParticles.forEach(function(p) {
       var t = 1 - p.age / p.life;
       ctx.save();
-      ctx.globalAlpha = p.alpha * t * t;
-      var grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
-      grad.addColorStop(0, 'rgba(' + p.color + ',' + (p.alpha * t) + ')');
-      grad.addColorStop(1, 'rgba(' + p.color + ',0)');
-      ctx.fillStyle = grad;
+      ctx.globalAlpha = Math.max(0, p.alpha * t * t);
+      if (p.mode === "flame") {
+        var grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+        grad.addColorStop(0, "rgba(255,245,200," + (0.9 * t) + ")");
+        grad.addColorStop(0.35, "rgba(255,140,40," + (0.7 * t) + ")");
+        grad.addColorStop(0.7, "rgba(255,40,10," + (0.35 * t) + ")");
+        grad.addColorStop(1, "rgba(40,10,0,0)");
+        ctx.fillStyle = grad;
+      } else {
+        var grad2 = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+        grad2.addColorStop(0, "rgba(" + p.color + "," + (p.alpha * t) + ")");
+        grad2.addColorStop(1, "rgba(" + p.color + ",0)");
+        ctx.fillStyle = grad2;
+      }
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
       ctx.fill();

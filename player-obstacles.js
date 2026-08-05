@@ -121,20 +121,26 @@
       ctx.restore();
       return;
     }
-    // motion blur trail
-    drawMotionBlur(img, player.x, player.y, player.w, player.h, player.rotation, -player.vy * 0.3, player.vy);
-        drawBlimpPersonality();
-    drawBlimpPropBlur();
-ctx.save();
+    // Soft contact shadow under hull
+    if (typeof drawPlayerShadow === "function") drawPlayerShadow();
+
+    // Stronger motion blur when diving fast
+    const blurVy = player.vy > 180 ? player.vy * 1.1 : player.vy;
+    drawMotionBlur(img, player.x, player.y, player.w, player.h, player.rotation, -blurVy * 0.35, blurVy);
+
+    // Exhaust + streaks behind the body
+    if (typeof drawBlimpPersonality === "function") drawBlimpPersonality();
+    if (typeof drawBlimpPropBlur === "function") drawBlimpPropBlur();
+
+    ctx.save();
     ctx.translate(player.x, player.y);
-    ctx.rotate(player.rotation);
+    ctx.rotate(player.rotation + (blimpPersonality.finLag || 0) * 0.15);
     if (performance.now() < invulnerableUntil) {
-      // fast blink while briefly invulnerable after a hit
       ctx.globalAlpha = (Math.floor(performance.now() / 90) % 2 === 0) ? 1 : 0.35;
     }
     ctx.scale(blimpPersonality.squashX, blimpPersonality.squashY);
     ctx.drawImage(img, -player.w / 2, -player.h / 2, player.w, player.h);
-        ctx.restore();
+    ctx.restore();
   }
 
   // ---------- Obstacles ----------
@@ -148,6 +154,7 @@ ctx.save();
   const GRAZE_BONUS = 2;
   const STREAK_MILESTONE = 5;  // award a bonus every N consecutive un-hit dodges
   const STREAK_BONUS = 10;
+  const WAKE_RANGE = 48; // px — spawn turbulence when an obstacle nearly grazes the player
   let dodgeStreak = 0;
   let comboPopups = []; // floating "GRAZE!" / "5x STREAK!" text
 
@@ -270,6 +277,15 @@ ctx.save();
         o.animFrame = (o.animFrame + 1) % OBSTACLE_ANIM_FRAME_COUNT;
       }
       maybeEmitWind(o.x + o.w * 0.55, o.y + o.h / 2, o.w * 0.3, o.h, 7, dt, "obstacle");
+      // Wake turbulence when the player slices close past this flyer
+      const wakeDx = Math.abs(player.x - (o.x + o.w * 0.5));
+      const wakeDy = Math.abs(player.y - (o.y + o.h * 0.5));
+      if (wakeDx < player.w * 0.55 + WAKE_RANGE && wakeDy < player.h * 0.55 + WAKE_RANGE) {
+        maybeEmitWind(o.x + o.w * 0.2, o.y + o.h * 0.5, o.w * 0.5, o.h * 0.8, 28, dt, "obstacle");
+        maybeEmitWind(player.x - player.w * 0.4, player.y, player.w * 0.3, player.h, 12, dt, "player");
+      }
+      // Hit-flash decay
+      if (o.hitFlash) o.hitFlash = Math.max(0, o.hitFlash - dt * 4);
 
       // birds bounce off with a little upward/downward kick when hit, instead of no reaction at all
       if (o.deflectVy) {
@@ -435,6 +451,7 @@ ctx.save();
           o.hitDeflected = true;
           o.deflectVy = (Math.random() < 0.5 ? -1 : 1) * (150 + Math.random() * 90);
           spawnHitParticles(o.x + o.w / 2, drawY + o.h / 2);
+          o.hitFlash = 1;
           if (isBird && typeof spawnFeathers === "function") {
             spawnFeathers(o.x + o.w / 2, drawY + o.h / 2);
           }
@@ -453,6 +470,14 @@ ctx.save();
       const speed = obstacleSpeed * (o.speedMult || 1);
       drawMotionBlur(img, o.x + o.w / 2, drawY + o.h / 2, o.w, o.h, 0, speed, 0);
       ctx.drawImage(img, o.x, drawY, o.w, o.h);
+      // Brief white flash on impact
+      if (o.hitFlash && o.hitFlash > 0) {
+        ctx.save();
+        ctx.globalAlpha = Math.min(0.85, o.hitFlash);
+        ctx.globalCompositeOperation = "lighter";
+        ctx.drawImage(img, o.x, drawY, o.w, o.h);
+        ctx.restore();
+      }
 
       // draw jet engine flame + smoke trails behind mini blimps
       if (o.type === "mini_blimp") {
