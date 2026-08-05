@@ -194,9 +194,9 @@
     updateStormMeterDisplay();
     pirateBlastParticles = [];
 
-    // Jolly Rogers (blimp9) drops a pirate bomb; everyone else gets the storm cloud
-    const isPirate = (typeof selectedBlimp !== "undefined" && selectedBlimp === "blimp9");
-    stormMode = isPirate ? "pirate" : "storm";
+    // All vessels share the storm cloud for now (per-ship powers come later)
+    const isPirate = false;
+    stormMode = "storm";
 
     if (typeof sfxThunder === "function") sfxThunder();
     if (isPirate && typeof sfxExplosion === "function") sfxExplosion(0.5);
@@ -767,7 +767,7 @@
     if (typeof rockets !== "undefined") rockets = [];
     spawnTimer = 9999;
     startWorldWindDown(2.2);
-    showBanner("CITY CLEAR — APPROACH THE HANGAR!", 2800, "defeat");
+    showBanner("LEVEL " + bossesDefeatedCount + " CLEAR — APPROACH THE HANGAR!", 2800, "defeat");
     if (typeof sfxCityClear === "function") sfxCityClear();
   }
 
@@ -905,7 +905,10 @@
       landingBonus: landingBonus,
       bonusRound: (typeof bonusPoints !== "undefined" ? bonusPoints : 0),
       health: (typeof health !== "undefined" ? health : 3),
-      bossName: "Baron Blackpowder"
+      levelNum: bossesDefeatedCount,
+      bossName: (typeof lastBossTriggered === "number"
+        ? ((bossConfig(lastBossTriggered) || {}).name || ("BOSS " + lastBossTriggered))
+        : "BOSS")
     };
 
     triggerScreenShake(5, 500);
@@ -935,11 +938,21 @@
     levelEndFade = 0;
     levelEndStats = null;
     stopWorldWindDown();
-    // Rebuild level-2 city strip (bossesDefeatedCount already 1+)
+
+    // Put the blimp back into normal flight position for the next level
+    // (was left docked on the pad after the landing celebration)
+    if (typeof player !== "undefined" && player) {
+      player.x = W * 0.28;
+      player.y = H * 0.4;
+      player.vy = 0;
+      player.rotation = 0;
+    }
+
+    // Rebuild city strip for the new level art
     initBuildings();
     spawnTimer = 0;
 
-    // Bank checkpoint for boss 2
+    // Bank checkpoint for the upcoming boss
     const next = nextBossConfig();
     if (next) {
       spawnCheckpointPickup(next.num);
@@ -949,7 +962,13 @@
       checkpointGameplayScore = gameplayScore;
       checkpointBossesDefeated = bossesDefeatedCount;
     }
-    showBanner("LEVEL 2 — KEEP FLYING!", 2400, "level");
+
+    const nextLevelNum = bossesDefeatedCount + 1;
+    if (next) {
+      showBanner("LEVEL " + nextLevelNum + " — KEEP FLYING!", 2400, "level");
+    } else {
+      showBanner("ALL CLEAR — KEEP FLYING!", 2400, "level");
+    }
     if (typeof sfxLevel2Start === "function") sfxLevel2Start();
   }
 
@@ -1187,9 +1206,11 @@
       ctx.textAlign = "center";
       ctx.font = "bold " + Math.floor(W * 0.07) + "px system-ui, sans-serif";
       ctx.fillStyle = "rgba(0,0,0,0.45)";
-      ctx.fillText("LEVEL 1 COMPLETE!", W / 2 + 2, H * 0.18 + 2);
+      const lvlDone = (levelEndStats && levelEndStats.levelNum) ? levelEndStats.levelNum : bossesDefeatedCount;
+      const completeMsg = "LEVEL " + lvlDone + " COMPLETE!";
+      ctx.fillText(completeMsg, W / 2 + 2, H * 0.18 + 2);
       ctx.fillStyle = "#ffe9a8";
-      ctx.fillText("LEVEL 1 COMPLETE!", W / 2, H * 0.18);
+      ctx.fillText(completeMsg, W / 2, H * 0.18);
       ctx.restore();
     }
 
@@ -1217,11 +1238,12 @@
       ctx.textAlign = "center";
       ctx.fillStyle = "#ffe9a8";
       ctx.font = "bold 22px system-ui, sans-serif";
-      ctx.fillText("LEVEL 1 CLEAR", W / 2, py + 36);
+      const clearLvl = s.levelNum || bossesDefeatedCount;
+      ctx.fillText("LEVEL " + clearLvl + " CLEAR", W / 2, py + 36);
 
       ctx.font = "14px system-ui, sans-serif";
       ctx.fillStyle = "rgba(255,230,180,0.7)";
-      ctx.fillText("Baron Blackpowder defeated", W / 2, py + 58);
+      ctx.fillText((s.bossName || "Boss") + " defeated", W / 2, py + 58);
 
       // Stat rows
       const rows = [
@@ -1386,22 +1408,17 @@
     // resume the normal spawn cadence cleanly
     spawnTimer = 0;
 
-    // After boss 1's bonus round, run the hangar landing sequence before
-    // continuing into level 2. Later bosses keep the normal checkpoint flow.
-    if (bossesDefeatedCount === 1) {
+    // After every boss bonus round, run the hangar landing sequence before
+    // the next level continues (checkpoint is granted when landing finishes).
+    if (bossesDefeatedCount >= 1) {
       startLevelEndLanding();
       return;
     }
 
-    // Checkpoints are now granted after the bonus round, not before the boss —
-    // the player has just cleared both the fight and its reward round, so a
-    // token drifts by right here; grabbing it is what actually banks the
-    // checkpoint (score included) for a later resume.
     const next = nextBossConfig();
     if (next) {
       spawnCheckpointPickup(next.num);
     } else {
-      // no more bosses left — nothing to gate behind a pickup, just bank it
       checkpointReached = lastBossTriggered;
       checkpointScore = score;
       checkpointGameplayScore = gameplayScore;

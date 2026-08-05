@@ -4,10 +4,10 @@
 const BLIMP_DATA = {
   blimp1: { url: "asset_extra_06.webp?cb=2", key: "asset_extra_06", name: "Zeppelin Ace", effect: "propeller" },
   blimp2: { url: "blimp2_main.webp?cb=2", key: "blimp2_main", name: "Deco Liner", effect: null },
-  blimp3: { url: "blimp3_main.webp?cb=2", key: "blimp3_main", name: "Aero Slicer", effect: null },
-  blimp4: { url: "blimp4_main.webp?cb=2", key: "blimp4_main", name: "Steampunk", effect: null },
+  blimp3: { url: "blimp_select_02.webp", key: "blimp_select_02", name: "Aero Slicer", effect: null },
+  blimp4: { url: "blimp_select_03.webp", key: "blimp_select_03", name: "Steampunk", effect: null },
   blimp5: { url: "ship_petro.png", key: "ship_petro", name: "Petro", effect: null },
-  blimp6: { url: "ship_wood.png", key: "ship_wood", name: "Little Spy", effect: null },
+  blimp6: { url: "blimp_select_01.webp", key: "blimp_select_01", name: "Little Spy", effect: null },
   blimp7: { url: "ship_lightning.png", key: "ship_lightning", name: "Storm Chaser", effect: null },
   blimp8: { url: "ship_cargo.png", key: "ship_cargo", name: "Cargo King", effect: null },
   blimp9: { url: "ship_pirate.png", key: "ship_pirate", name: "Jolly Rogers", effect: null },
@@ -22,61 +22,61 @@ const SHIP_STATS = {
   blimp1: {
     name: "Zeppelin Ace", mk: "Mk I", cls: "Scout Airship", call: "ACE-1",
     stats: { Speed: 4, Lift: 4, Durability: 3, Maneuverability: 3, Boost: 4 },
-    ability: { icon: "☺", name: "Always Smiles", desc: "A cheerful pilot who never loses morale." },
+    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
     upgrade: "Next Rank", xp: 320, xpMax: 500, locked: false
   },
   blimp2: {
     name: "Deco Liner", mk: "Mk I", cls: "Luxury Cruiser", call: "DECO-2",
     stats: { Speed: 3, Lift: 4, Durability: 4, Maneuverability: 3, Boost: 3 },
-    ability: { icon: "✈", name: "Smooth Cruiser", desc: "Glides with extra stability in rough air." },
+    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
     upgrade: "Next Rank", xp: 150, xpMax: 400, locked: false
   },
   blimp3: {
     name: "Aero Slicer", mk: "Mk I", cls: "Speed Cutter", call: "SLICE-3",
     stats: { Speed: 5, Lift: 3, Durability: 2, Maneuverability: 5, Boost: 3 },
-    ability: { icon: "⚡", name: "Wind Cutter", desc: "Slices through headwinds for a speed edge." },
+    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
     upgrade: "Next Rank", xp: 90, xpMax: 400, locked: false
   },
   blimp4: {
     name: "Steampunk", mk: "Mk I", cls: "Armored Hauler", call: "IRON-4",
     stats: { Speed: 2, Lift: 3, Durability: 5, Maneuverability: 2, Boost: 5 },
-    ability: { icon: "⚙", name: "Iron Hull", desc: "Riveted plating shrugs off extra damage." },
+    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
     upgrade: "Next Rank", xp: 60, xpMax: 400, locked: false
   },
   blimp5: {
     name: "Petro", mk: "Mk I", cls: "Tanker", call: "PETRO-5",
     stats: { Speed: 3, Lift: 5, Durability: 4, Maneuverability: 2, Boost: 3 },
-    ability: { icon: "⛽", name: "Fuel Reserve", desc: "Extra fuel keeps the engines roaring longer." },
+    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
     upgrade: "Next Rank", xp: 0, xpMax: 450, locked: false
   },
   blimp6: {
     name: "Little Spy", mk: "Mk I", cls: "Recon Scout", call: "SPY-06",
     stats: { Speed: 3, Lift: 3, Durability: 4, Maneuverability: 3, Boost: 4 },
-    ability: { icon: "🕵", name: "Silent Watch", desc: "Slips through radar and storm fronts unseen." },
+    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
     upgrade: "Next Rank", xp: 0, xpMax: 450, locked: false
   },
   blimp7: {
     name: "Storm Chaser", mk: "Mk I", cls: "Interceptor", call: "STORM-7",
     stats: { Speed: 5, Lift: 3, Durability: 2, Maneuverability: 4, Boost: 5 },
-    ability: { icon: "☈", name: "Storm Rider", desc: "Rides lightning drafts for a burst of speed." },
+    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
   },
   blimp8: {
     name: "Cargo King", mk: "Mk I", cls: "Heavy Freighter", call: "CARGO-8",
     stats: { Speed: 2, Lift: 5, Durability: 5, Maneuverability: 2, Boost: 2 },
-    ability: { icon: "▣", name: "Heavy Hauler", desc: "Built tough to carry (and take) more." },
+    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
   },
   blimp9: {
     name: "Jolly Rogers", mk: "Mk I", cls: "Raider", call: "ROGER-9",
     stats: { Speed: 4, Lift: 3, Durability: 3, Maneuverability: 4, Boost: 3 },
-    ability: { icon: "💣", name: "Blackpowder Bomb", desc: "Drops a pirate bomb that blasts every enemy on screen." },
+    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
   },
   blimp10: {
     name: "Ivory Anchor", mk: "Mk I", cls: "Flagship", call: "IVORY-10",
     stats: { Speed: 3, Lift: 4, Durability: 4, Maneuverability: 3, Boost: 3 },
-    ability: { icon: "⚓", name: "Steady Anchor", desc: "Holds its line even in heavy turbulence." },
+    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
   }
 };
@@ -95,12 +95,15 @@ function updateProfile(key) {
   const s = SHIP_STATS[key];
   if (!s) return;
 
-  const nameEl = document.getElementById('heroName');
-  if (nameEl) {
-    nameEl.classList.remove('show');
+  // Name sits under the animated hero blimp (not in the profile card)
+  const heroName = document.getElementById('heroBlimpName');
+  if (heroName) heroName.textContent = s.name;
+  const legacyName = document.getElementById('heroName');
+  if (legacyName) {
+    legacyName.classList.remove('show');
     setTimeout(function() {
-      nameEl.textContent = s.name;
-      nameEl.classList.add('show');
+      legacyName.textContent = s.name;
+      legacyName.classList.add('show');
     }, 80);
   }
 
@@ -110,46 +113,30 @@ function updateProfile(key) {
     else heroWrap.classList.remove('locked');
   }
 
-  document.getElementById('bpName').textContent = s.name;
-  document.getElementById('bpMk').textContent = s.mk;
-  document.getElementById('bpClass').textContent = s.cls;
-  document.getElementById('bpCall').textContent = s.call;
+  const mk = document.getElementById('bpMk');
+  if (mk) mk.textContent = s.mk || 'Mk I';
 
-  const statsEl = document.getElementById('bpStats');
-  statsEl.innerHTML = '';
-  STAT_ORDER.forEach(function(statName) {
-    const val = s.stats[statName] || 0;
-    const row = document.createElement('div');
-    row.className = 'bpStat';
-    const top = document.createElement('div');
-    top.className = 'bpStatTop';
-    const icon = document.createElement('div');
-    icon.className = 'bpStatIcon';
-    icon.textContent = STAT_ICONS[statName] || '';
-    const lab = document.createElement('div');
-    lab.className = 'bpStatLabel';
-    lab.textContent = (STAT_LABELS && STAT_LABELS[statName]) ? STAT_LABELS[statName] : statName;
-    top.appendChild(icon);
-    top.appendChild(lab);
-    const seg = document.createElement('div');
-    seg.className = 'bpSeg';
-    for (var i = 1; i <= 5; i++) {
-      var pip = document.createElement('i');
-      if (i <= val) pip.className = 'on';
-      seg.appendChild(pip);
-    }
-    row.appendChild(top);
-    row.appendChild(seg);
-    statsEl.appendChild(row);
-  });
+  // Power-up block (formerly special ability) — all ships share Storm for now
+  const powerName = document.getElementById('bpAbilityName');
+  const powerDesc = document.getElementById('bpAbilityDesc');
+  if (powerName) powerName.textContent = (s.ability && s.ability.name) || 'Storm Cloud';
+  if (powerDesc) powerDesc.textContent = (s.ability && s.ability.desc) || 'Drops a storm cloud that clears the sky.';
 
-  document.getElementById('bpAbilityIcon').textContent = s.ability.icon;
-  document.getElementById('bpAbilityName').textContent = s.ability.name;
-  document.getElementById('bpAbilityDesc').textContent = s.ability.desc;
-  document.getElementById('bpUpgrade').textContent = s.upgrade;
+  // Power icon (placeholder: Jolly Rogers bomb art until per-ship icons arrive)
+  const powerIcon = document.getElementById('bpPowerIcon');
+  if (powerIcon) {
+    const iconSrc = (s.powerIcon) || 'pirate_bomb.webp';
+    powerIcon.src = iconSrc;
+    powerIcon.alt = (s.ability && s.ability.name) || 'Power up';
+  }
+
+  const up = document.getElementById('bpUpgrade');
+  if (up) up.textContent = s.upgrade || '—';
   const pct = s.xpMax ? Math.min(100, (s.xp / s.xpMax) * 100) : 0;
-  document.getElementById('bpXpFill').style.width = pct + '%';
-  document.getElementById('bpXpLabel').textContent = s.xp + ' / ' + s.xpMax + ' XP';
+  const fill = document.getElementById('bpXpFill');
+  if (fill) fill.style.width = pct + '%';
+  const xpLab = document.getElementById('bpXpLabel');
+  if (xpLab) xpLab.textContent = (s.xp || 0) + ' / ' + (s.xpMax || 0) + ' XP';
 }
 
 // blimps with a real in-game flight animation get that same animation on the
