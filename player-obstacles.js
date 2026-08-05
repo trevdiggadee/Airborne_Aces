@@ -12,11 +12,27 @@
     rotation: 0
   };
 
-  function resetPlayer() {
+  function applyPlayerBlimpSize() {
+    // Normalize on-screen size so every vessel reads about the same scale.
+    // Little Spy (blimp6) stays intentionally smaller.
+    const sel = (typeof selectedBlimp !== "undefined" && selectedBlimp) ? selectedBlimp : "blimp1";
+    const scale = (sel === "blimp6") ? 0.68 : 1.0;
     const firstFrame = currentPlayerImage();
-    const aspect = (firstFrame && firstFrame.naturalWidth && firstFrame.naturalHeight / firstFrame.naturalWidth) || 0.6;
-    player.w = Math.min(110, W * 0.22);
-    player.h = player.w * aspect;
+    const aspect = (firstFrame && firstFrame.naturalWidth && firstFrame.naturalHeight / firstFrame.naturalWidth) || 0.55;
+    // Fit inside a shared bounding box (width-capped) so large/tall sprites don't dominate
+    const boxW = Math.min(118, W * 0.24) * scale;
+    const boxH = boxW * 0.62;
+    if (aspect > (boxH / boxW)) {
+      player.h = boxH;
+      player.w = boxH / aspect;
+    } else {
+      player.w = boxW;
+      player.h = boxW * aspect;
+    }
+  }
+
+  function resetPlayer() {
+    applyPlayerBlimpSize();
     player.x = W * 0.28;
     player.y = H * 0.4;
     player.vy = 0;

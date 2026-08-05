@@ -500,8 +500,14 @@ function selectBlimp(key, el) {
   startHeroAnimation(key);
   setEffect(data.effect);
 
+  // Keep menu preview sizes consistent; Little Spy stays smaller
+  const heroWrap = document.querySelector(".heroBlimpWrap");
+  if (heroWrap) {
+    heroWrap.classList.toggle("hero-small", key === "blimp6");
+  }
+
   document.querySelectorAll(".numBtn").forEach(b => b.classList.remove("active"));
-  el.classList.add("active");
+  if (el) el.classList.add("active");
 
   updateProfile(key);
 }
@@ -509,6 +515,8 @@ function selectBlimp(key, el) {
 // initialize the default selection's effect + profile panel
 setEffect(BLIMP_DATA.blimp1.effect);
 updateProfile(selectedBlimp);
+const _hw = document.querySelector(".heroBlimpWrap");
+if (_hw) _hw.classList.toggle("hero-small", selectedBlimp === "blimp6");
 
 function enterGameplay(){
   document.getElementById("menuScreen").style.display = "none";

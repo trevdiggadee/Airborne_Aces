@@ -311,15 +311,19 @@ html, body {
    motion-blurred spin rather than a hard frame-to-frame pop. */
 .heroBlimpWrap {
   position: absolute;
-  /* On the platform, clear of the Take Flight button */
-  top: 22%;
+  /* Preview on platform — ~50% larger than prior size */
+  top: 18%;
   left: 50%;
-  width: 32%;
+  width: 48%;
   transform: translateX(-50%);
   z-index: 2;
   animation: floatHero 3.2s ease-in-out infinite;
   filter: drop-shadow(0 8px 10px rgba(0,0,0,0.45));
   pointer-events: none;
+}
+.heroBlimpWrap.hero-small {
+  width: 32%; /* Little Spy stays smaller on the platform */
+  top: 22%;
 }
 
 .heroBlimpWrap img {
@@ -404,27 +408,35 @@ html, body {
 /* TAKE FLIGHT HOTSPOT — invisible button over the baked-in circle */
 .flyBtn {
   position: absolute;
-  /* Below the hero blimp, above the berth grid */
-  top: 56.5%;
+  /* Raised ~5% vs prior; glass look with warm glow */
+  top: 51.5%;
   left: 50%;
   transform: translate(-50%, -50%);
   padding: 8px 28px;
-  background: linear-gradient(#a8783f, #6b4a2b);
-  border: 2px solid #c9a66b;
-  border-radius: 9px;
-  color: #f5e6c8;
+  background: linear-gradient(180deg, rgba(200,150,80,0.55), rgba(90,55,25,0.5));
+  border: 2px solid rgba(255, 210, 140, 0.7);
+  border-radius: 10px;
+  color: #fff6e0;
   font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
   font-size: 3.2vw;
   font-weight: bold;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  box-shadow: 0 3px 0 #2c1a0a, 0 6px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.55);
+  box-shadow:
+    0 0 12px 3px rgba(255, 190, 100, 0.45),
+    0 0 28px 6px rgba(255, 160, 60, 0.28),
+    0 3px 0 rgba(40, 22, 8, 0.35),
+    inset 0 1px 0 rgba(255,255,255,0.35);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 0.08s ease-out;
+  transition: transform 0.08s ease-out, box-shadow 0.15s ease, background 0.15s ease;
   z-index: 4;
   white-space: nowrap;
   line-height: 1.15;
+  opacity: 0.92;
 }
 
 @media (min-width: 480px) {
@@ -443,8 +455,8 @@ html, body {
   position: absolute;
   /* Measured against hangar_bg_v2 ornate frames (3×5 grid) */
   top: 66.8%;
-  width: 11.2%;
-  height: 8.4%;
+  width: 16.8%;
+  height: 12.6%;
   transform: translate(-50%, -50%);
   border-radius: 8px;
   border: none;
