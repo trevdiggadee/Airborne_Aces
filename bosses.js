@@ -750,6 +750,24 @@
   let levelEndBannerUntil = 0;
   let levelEndSavedFlap = true;
   let levelEndFade = 0; // 0..1 black overlay
+
+  function setHudFade(alpha) {
+    const a = Math.max(0, Math.min(1, alpha));
+    ["hudFrame", "stormMeter", "muteBtn"].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.style.opacity = String(a);
+      el.style.pointerEvents = a < 0.15 ? "none" : "";
+      el.style.transition = "opacity 0.12s linear";
+    });
+    const scoreFrame = document.querySelector("#gameScreen .scoreFrame");
+    if (scoreFrame) scoreFrame.style.opacity = String(a);
+    const flip = document.getElementById("flipClock");
+    if (flip) flip.style.opacity = String(a);
+    const health = document.getElementById("healthMeter");
+    if (health) health.style.opacity = String(a);
+  }
+  function resetHudFade() { setHudFade(1); }
   let levelEndStats = null; // { score, timeStr, bonus, landingBonus, health }
 
   function startLevelEndLanding() {
@@ -930,6 +948,7 @@
 
   function finishLevelEndAndResume() {
     window.__airborneWorldFrozen = false;
+    resetHudFade();
     levelEndActive = false;
     levelEndPhase = null;
     levelEndPad = null;
@@ -1105,9 +1124,14 @@
     if (levelEndPhase === "fadeOut") {
       // Fade to black, then start level 2
       levelEndFade = Math.min(1, levelEndTimer / 1.2);
+      // DOM HUD (score, power meter, gear) fades with the canvas
+      setHudFade(1 - levelEndFade);
       if (levelEndTimer > 1.5) {
         finishLevelEndAndResume();
       }
+    } else if (levelEndPhase === "stats" || levelEndPhase === "victory") {
+      // keep HUD visible until fade starts
+      setHudFade(1);
     }
   }
 

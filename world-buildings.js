@@ -130,7 +130,11 @@
 
   function obstacleSpeedScale() {
     // keep the ground scroll speed in step with the flying-obstacle speed ramp
-    return obstacleSpeed / 220;
+    // Guard against NaN/0 so retry never leaves the world crawling
+    const base = (typeof obstacleSpeed === "number" && isFinite(obstacleSpeed) && obstacleSpeed > 0)
+      ? obstacleSpeed
+      : 220;
+    return base / 220;
   }
 
   // shared ground line — raised up from the very bottom edge so there's room

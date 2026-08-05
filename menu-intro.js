@@ -306,13 +306,13 @@ let gameplayMusicMuted = false;
 try { gameplayMusicMuted = localStorage.getItem("aa_muted") === "1"; } catch (e) {}
 
 function applyGameplayMusicVolumeNow() {
+  // All MP3 music disabled — SFX only
   const el = getGameplayMusicEl();
-  if (!el) return;
-  const mutedAll = (typeof muted !== "undefined" && muted) || gameplayMusicMuted;
-  try {
-    el.volume = mutedAll ? 0 : Math.max(0, Math.min(1, musicVolumePref));
-  } catch (e) {}
+  if (el) { try { el.volume = 0; el.pause(); } catch (e) {} }
+  const menuEl = document.getElementById("menuMusic");
+  if (menuEl) { try { menuEl.volume = 0; menuEl.pause(); } catch (e) {} }
 }
+
 
 function setMusicVolumePref(v) {
   musicVolumePref = Math.max(0, Math.min(1, Number(v) || 0));
@@ -383,10 +383,9 @@ function menuMusicFadeStep() {
 if (menuMusic) menuMusic.addEventListener("timeupdate", menuMusicFadeStep);
 
 function startMenuMusic() {
+  // MP3 menu music disabled — keep silent
   if (!menuMusic) return;
-  if (menuMusic.paused) {
-    menuMusic.play().then(() => { menuMusicUnlocked = true; }).catch(() => {});
-  }
+  try { menuMusic.volume = 0; menuMusic.pause(); } catch (e) {}
 }
 
 function stopMenuMusicImmediately() {
@@ -452,12 +451,10 @@ function fadeGameplayMusicVolume(target, thenPause) {
 }
 
 function startGameplayMusic() {
+  // MP3 gameplay music disabled — SFX only
   const el = getGameplayMusicEl();
-  if (!el) return;
-  if (el.paused) el.play().catch(() => {});
-  // Jump to preferred volume (or 0 if muted) — no long fade fighting the slider
+  if (el) { try { el.volume = 0; el.pause(); } catch (e) {} }
   cancelGameplayMusicFade();
-  applyGameplayMusicVolumeNow();
 }
 
 function stopGameplayMusic() {

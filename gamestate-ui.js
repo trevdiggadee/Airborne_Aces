@@ -318,8 +318,15 @@
     bonusActive = false;
     bonusType = null;
     bonusPending = false;
-    if (typeof levelEndActive !== "undefined") { levelEndActive = false; levelEndPhase = null; levelEndPad = null; }
+    if (typeof levelEndActive !== "undefined") { levelEndActive = false; levelEndPhase = null; levelEndPad = null; levelEndFade = 0; }
     if (typeof stopWorldWindDown === "function") stopWorldWindDown();
+    window.__airborneWorldFrozen = false;
+    if (typeof resetHudFade === "function") resetHudFade();
+    if (typeof initBuildings === "function") initBuildings();
+    if (typeof initParallaxLayers === "function") initParallaxLayers();
+    // Force baseline scroll speed every fresh run (retry included)
+    obstacleSpeed = 220;
+    spawnInterval = 1.7;
     bonusPendingType = null;
     bonusItems = [];
     bonusTotal = 0;
@@ -372,6 +379,9 @@
     if (state !== "playing") return;
     state = "over";
     state = "over";
+    window.__airborneWorldFrozen = false;
+    if (typeof stopWorldWindDown === "function") stopWorldWindDown();
+    if (typeof resetHudFade === "function") resetHudFade();
     sfxCrash();
     triggerScreenShake(10, 600);
     triggerScreenFlash(0.4, 400);
@@ -420,6 +430,9 @@
     ensureAudio();
     setMusicTheme(THEME_NORMAL);
     startMusic();
+    window.__airborneWorldFrozen = false;
+    if (typeof stopWorldWindDown === "function") stopWorldWindDown();
+    if (typeof resetHudFade === "function") resetHudFade();
 
     // Restore score to checkpoint level
     score = checkpointScore;

@@ -422,7 +422,16 @@
     }
   }
 
+  // Temporary: music off so only sound effects play
+  const MUSIC_DISABLED = true;
+
   function startMusic() {
+    // MP3 + procedural music disabled — SFX only
+    if (MUSIC_DISABLED) {
+      if (window.__airborneStopGameplayMusic) window.__airborneStopGameplayMusic();
+      musicPlaying = false;
+      return;
+    }
     if (window.__airborneStartGameplayMusic) window.__airborneStartGameplayMusic();
     if (!audioCtx) return;
     buildAudioGraph();

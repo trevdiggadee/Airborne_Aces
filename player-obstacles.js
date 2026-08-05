@@ -121,9 +121,6 @@
       ctx.restore();
       return;
     }
-    // Soft contact shadow under hull
-    if (typeof drawPlayerShadow === "function") drawPlayerShadow();
-
     // Stronger motion blur when diving fast
     const blurVy = player.vy > 180 ? player.vy * 1.1 : player.vy;
     drawMotionBlur(img, player.x, player.y, player.w, player.h, player.rotation, -blurVy * 0.35, blurVy);
