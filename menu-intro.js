@@ -256,52 +256,24 @@ function startHeroAnimation(key) {
   // prime (fetch + decode) every frame of this animation before the
   // interval-driven crossfade loop is allowed to start.
   primeHeroAnimation(key).then(() => {
-    // if the user switched blimps (or the menu was re-shown with a different
-    // selection) while we were priming, abandon this stale start
     if (gen !== heroAnimGen) return;
 
-    layerB.src = anim.urls[1 % anim.urls.length];
+    // Hard frame swap on a single layer — dual-layer opacity crossfades were
+    // causing visible glitching/flicker between frames on the menu.
+    layerB.style.opacity = 0;
+    layerB.style.transition = "none";
+    layerA.style.opacity = 1;
+    layerA.style.transition = "none";
+    heroActiveLayer = 0;
 
     const frameMs = 1000 / anim.fps;
-    // Crossfade most of the frame duration so swaps never pop; loop seam uses nearly full interval
-    const fadeMs = Math.max(40, Math.floor(frameMs * 0.28));
-    const loopFadeMs = Math.max(fadeMs, Math.floor(frameMs * 0.4));
-
     heroAnimTimer = setInterval(() => {
+      if (gen !== heroAnimGen) return;
       heroAnimFrame = (heroAnimFrame + 1) % anim.urls.length;
-      const outgoing = heroBlimpLayers[heroActiveLayer];
-      const incoming = heroBlimpLayers[1 - heroActiveLayer];
-      const nextUrl = anim.urls[heroAnimFrame];
-
-      const doCrossfade = function() {
-        // Short crossfade — long fades made the menu look like it was glitching
-        const ms = (heroAnimFrame === 0) ? Math.min(loopFadeMs, Math.floor(frameMs * 0.4)) : fadeMs;
-        incoming.style.transition = "none";
-        outgoing.style.transition = "none";
-        void incoming.offsetWidth;
-        incoming.style.transition = "opacity " + ms + "ms linear";
-        outgoing.style.transition = "opacity " + ms + "ms linear";
-        incoming.style.opacity = 1;
-        outgoing.style.opacity = 0;
-        heroActiveLayer = 1 - heroActiveLayer;
-      };
-
-      // Only swap src when needed; wait for decode so frames never flash empty
-      const needsSrc = !incoming.src || incoming.getAttribute("src") !== nextUrl;
-      if (needsSrc) {
-        incoming.onload = function() {
-          incoming.onload = null;
-          if (gen !== heroAnimGen) return;
-          doCrossfade();
-        };
-        incoming.src = nextUrl;
-        // Cached images may already be complete
-        if (incoming.complete && incoming.naturalWidth) {
-          incoming.onload = null;
-          doCrossfade();
-        }
-      } else {
-        doCrossfade();
+      const url = anim.urls[heroAnimFrame];
+      // Swap only when the frame changes; cache hits are instant
+      if (layerA.getAttribute("src") !== url) {
+        layerA.src = url;
       }
     }, frameMs);
   });

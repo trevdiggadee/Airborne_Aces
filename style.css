@@ -210,29 +210,36 @@ html, body {
 #splashEnterBtn.enterHangarBtn {
   position: absolute;
   left: 50%;
-  bottom: 10%;
+  bottom: 11%;
   transform: translateX(-50%);
   z-index: 5;
-  font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
-  font-weight: bold;
-  letter-spacing: 2.5px;
-  font-size: clamp(18px, 5.2vw, 24px);
-  color: rgba(245, 230, 200, 0.88);
-  background: linear-gradient(rgba(168,120,63,0.82), rgba(107,74,43,0.78));
-  border: 2px solid rgba(201,166,107,0.75);
-  border-radius: 12px;
-  padding: 16px 42px;
-  box-shadow: 0 3px 0 rgba(44,26,10,0.7), 0 8px 18px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.2);
+  font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, 'Times New Roman', serif;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  font-size: clamp(20px, 5.8vw, 28px);
+  color: #f3ead8;
+  background: rgba(35, 24, 14, 0.38);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 2px solid rgba(240, 228, 200, 0.88);
+  border-radius: 999px;
+  padding: 14px 48px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 245, 220, 0.2),
+    0 6px 18px rgba(0, 0, 0, 0.28);
   cursor: pointer;
   text-transform: uppercase;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 0.08s ease, opacity 0.15s ease;
-  opacity: 0.92;
+  transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease;
+  opacity: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 .enterHangarBtn:active,
 #splashEnterBtn.enterHangarBtn:active {
-  transform: translateX(-50%) translateY(3px);
-  box-shadow: 0 0 0 #2c1a0a, 0 3px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);
+  transform: translateX(-50%) translateY(2px);
+  background: rgba(35, 24, 14, 0.5);
+  border-color: rgba(245, 235, 210, 0.95);
 }
 
 /* Hide old gear-based splash chrome when radar splash is active */
@@ -321,9 +328,9 @@ html, body {
   animation: floatHero 3.2s ease-in-out infinite;
   /* Darker multi-layer shadow so it sits in the hangar, not a sticker cutout */
   filter:
-    drop-shadow(0 10px 8px rgba(0,0,0,0.55))
-    drop-shadow(0 18px 22px rgba(0,0,0,0.4))
-    drop-shadow(0 2px 3px rgba(0,0,0,0.35));
+    drop-shadow(0 12px 8px rgba(0,0,0,0.55))
+    drop-shadow(0 22px 24px rgba(0,0,0,0.42))
+    drop-shadow(0 3px 4px rgba(0,0,0,0.35));
   pointer-events: none;
 }
 .heroBlimpWrap.hero-small {
@@ -335,7 +342,8 @@ html, body {
   content: "";
   position: absolute;
   left: 50%;
-  bottom: 6%;
+  /* Lowered ~15% further under the hull */
+  bottom: -4%;
   transform: translateX(-50%);
   width: 58%;
   height: 12%;
@@ -349,9 +357,9 @@ html, body {
 .heroBlimpWrap::before {
   content: "";
   position: absolute;
-  inset: -6%;
-  border-radius: 40%;
-  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 42%, rgba(0,0,0,0.18) 68%, rgba(0,0,0,0.35) 100%);
+  inset: -4%;
+  border-radius: 42%;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 48%, rgba(0,0,0,0.12) 72%, rgba(0,0,0,0.28) 100%);
   pointer-events: none;
   z-index: 3;
   mix-blend-mode: multiply;
@@ -360,9 +368,7 @@ html, body {
 .heroBlimpWrap img {
   display: block;
   width: 100%;
-  /* Soft edge — gentler so animation frames don't flicker at the mask seam */
-  -webkit-mask-image: radial-gradient(ellipse 92% 88% at 50% 50%, #000 70%, transparent 100%);
-  mask-image: radial-gradient(ellipse 92% 88% at 50% 50%, #000 70%, transparent 100%);
+  /* No mask — hard swaps stay clean without edge flicker */
 }
 
 .heroBlimpLayerB {
@@ -2279,4 +2285,7 @@ html, body {
   object-fit: contain;
   filter: drop-shadow(0 3px 6px rgba(0,0,0,0.55));
   pointer-events: none;
+  /* Soft edge fade so icons don't look like hard cutouts */
+  -webkit-mask-image: radial-gradient(ellipse 78% 78% at 50% 50%, #000 52%, rgba(0,0,0,0.85) 68%, transparent 100%);
+  mask-image: radial-gradient(ellipse 78% 78% at 50% 50%, #000 52%, rgba(0,0,0,0.85) 68%, transparent 100%);
 }
