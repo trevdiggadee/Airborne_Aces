@@ -119,8 +119,15 @@ function updateProfile(key) {
   // Power-up block (formerly special ability) — all ships share Storm for now
   const powerName = document.getElementById('bpAbilityName');
   const powerDesc = document.getElementById('bpAbilityDesc');
-  if (powerName) powerName.textContent = (s.ability && s.ability.name) || 'Storm Cloud';
-  if (powerDesc) powerDesc.textContent = (s.ability && s.ability.desc) || 'Drops a storm cloud that clears the sky.';
+  const SWARM_ABILITY = {
+    blimp5: { name: "Fuel Barrage", desc: "Spins out volatile fuel tanks that clear the sky." },
+    blimp7: { name: "Thunder Orbs", desc: "Launches spinning lightning orbs from the hull." },
+    blimp8: { name: "Oil Barrels", desc: "Hurls spinning oil barrels that wipe out threats." },
+    blimp9: { name: "Pirate Bombs", desc: "Unleashes a swarm of spinning skull bombs." }
+  };
+  const ab = SWARM_ABILITY[key] || s.ability || { name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." };
+  if (powerName) powerName.textContent = ab.name;
+  if (powerDesc) powerDesc.textContent = ab.desc;
 
   // Power icon (placeholder: Jolly Rogers bomb art until per-ship icons arrive)
   const powerIcon = document.getElementById('bpPowerIcon');

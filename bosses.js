@@ -366,7 +366,61 @@
   }
 
   function updateStorm(dt) {
-    if (!stormActive || !stormCloud) return;
+    if (!stormActive) return;
+
+    // ---- Spinning power-icon swarm (blimps 5/7/8/9) ----
+    if (stormMode === "swarm") {
+      stormSwarm.forEach(function(p) {
+        p.age += dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 120 * dt; // light gravity
+        p.spin += p.spinVel * dt;
+        // Destroy obstacles on contact
+        if (!p.hit) {
+          for (let i = obstacles.length - 1; i >= 0; i--) {
+            const o = obstacles[i];
+            const ox = o.x + o.w * 0.5;
+            const oy = o.y + o.h * 0.5;
+            if (Math.hypot(p.x - ox, p.y - oy) < p.size * 0.55 + Math.max(o.w, o.h) * 0.35) {
+              if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy);
+              if (typeof triggerBigExplosion === "function") triggerBigExplosion(ox, oy, o.w, o.h);
+              obstacles.splice(i, 1);
+              p.hit = true;
+              if (typeof score !== "undefined") {
+                score += 1;
+                if (typeof scoreVal !== "undefined") scoreVal.textContent = score;
+              }
+              break;
+            }
+          }
+        }
+      });
+      stormSwarm = stormSwarm.filter(function(p) {
+        return p.age < p.life && p.x > -80 && p.x < W + 80 && p.y > -80 && p.y < H + 80;
+      });
+      // After projectiles finish, clear remaining threats once
+      if (stormSwarm.length === 0) {
+        // final clear wave
+        if (obstacles.length) {
+          obstacles.forEach(function(o) {
+            const ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
+            if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy);
+            if (typeof triggerBigExplosion === "function") triggerBigExplosion(ox, oy, o.w * 0.8, o.h * 0.8);
+          });
+          obstacles = [];
+        }
+        bombs = [];
+        rockets = [];
+        stormActive = false;
+        stormSwarm = [];
+        if (typeof sfxExplosion === "function") sfxExplosion(0.8);
+        if (typeof triggerScreenShake === "function") triggerScreenShake(6, 280);
+      }
+      return;
+    }
+
+    if (!stormCloud) return;
     const frameDur = 1 / STORM_CLOUD_FPS;
     stormCloud.animTimer += dt;
     while (stormCloud.animTimer >= frameDur) {
@@ -512,26 +566,60 @@
   }
 
   function drawStorm() {
-    if (!stormActive || !stormCloud) return;
+    if (!stormActive) return;
+
+    // ---- Swarm of spinning power icons ----
+    if (stormMode === "swarm") {
+      ctx.save();
+      // brief warm/electric atmosphere
+      const dusk = ctx.createLinearGradient(0, 0, 0, H);
+      dusk.addColorStop(0, "rgba(40,22,10,0.28)");
+      dusk.addColorStop(1, "rgba(20,10,5,0.05)");
+      ctx.fillStyle = dusk;
+      ctx.fillRect(0, 0, W, H);
+
+      stormSwarm.forEach(function(p) {
+        const img = images[p.iconKey];
+        const t = 1 - p.age / p.life;
+        const fade = Math.min(1, t * 1.4);
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.spin);
+        ctx.globalAlpha = fade;
+        // glow
+        const g = ctx.createRadialGradient(0, 0, p.size * 0.1, 0, 0, p.size * 0.75);
+        g.addColorStop(0, "rgba(255,200,100,0.45)");
+        g.addColorStop(1, "rgba(255,140,40,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(0, 0, p.size * 0.75, 0, Math.PI * 2);
+        ctx.fill();
+        if (img && img.naturalWidth) {
+          ctx.drawImage(img, -p.size / 2, -p.size / 2, p.size, p.size);
+        } else {
+          ctx.fillStyle = "#f5c542";
+          ctx.beginPath();
+          ctx.arc(0, 0, p.size * 0.35, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      });
+      ctx.restore();
+      return;
+    }
+
+    if (!stormCloud) return;
     ctx.save();
 
-    // atmosphere — cool for storm, smoky/amber for pirate bomb
+    // atmosphere — cool for storm
     const dusk = ctx.createLinearGradient(0, 0, 0, H);
-    if (stormMode === "pirate") {
-      dusk.addColorStop(0, "rgba(40,18,8,0.38)");
-      dusk.addColorStop(0.55, "rgba(30,12,6,0.18)");
-      dusk.addColorStop(1, "rgba(20,8,4,0.05)");
-    } else {
-      dusk.addColorStop(0, "rgba(30,26,40,0.34)");
-      dusk.addColorStop(0.6, "rgba(30,26,40,0.16)");
-      dusk.addColorStop(1, "rgba(30,26,40,0.04)");
-    }
+    dusk.addColorStop(0, "rgba(30,26,40,0.34)");
+    dusk.addColorStop(0.6, "rgba(30,26,40,0.16)");
+    dusk.addColorStop(1, "rgba(30,26,40,0.04)");
     ctx.fillStyle = dusk;
     ctx.fillRect(0, 0, W, H);
 
-    const img = stormMode === "pirate"
-      ? (images.pirate_bomb || null)
-      : images[STORM_CLOUD_KEYS[stormCloud.animFrame]];
+    const img = images[STORM_CLOUD_KEYS[stormCloud.animFrame]];
     const aspect = (img && img.naturalWidth) ? img.naturalHeight / img.naturalWidth : 0.72;
     const w = stormCloud.w;
     const h = w * aspect;
