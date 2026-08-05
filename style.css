@@ -330,15 +330,16 @@ html, body {
   content: "";
   position: absolute;
   left: 50%;
-  bottom: -6%;
+  /* Sit under the main body of the blimp (not far below it) */
+  bottom: 8%;
   transform: translateX(-50%);
-  width: 55%;
-  height: 10%;
+  width: 48%;
+  height: 9%;
   border-radius: 50%;
-  background: radial-gradient(ellipse at center, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.18) 45%, rgba(0,0,0,0) 72%);
-  filter: blur(3px);
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.22) 42%, rgba(0,0,0,0) 70%);
+  filter: blur(2.5px);
   pointer-events: none;
-  z-index: -1;
+  z-index: 0;
 }
 
 .heroBlimpWrap img {
@@ -415,6 +416,61 @@ html, body {
   100% { transform: translate(-75%, -95%) scale(1.9); opacity: 0; }
 }
 
+
+/* Exhaust mode variants (menu hero) */
+.smokeParticles[data-mode="smoke"] { left: 14%; top: 52%; }
+.smokeParticles[data-mode="smoke"] .puff {
+  background: radial-gradient(circle, rgba(210,205,195,0.7) 0%, rgba(180,175,165,0.3) 55%, transparent 75%);
+  width: 30px; height: 30px; margin-left: -15px; margin-top: -15px;
+}
+.smokeParticles[data-mode="steam"] { left: 22%; top: 38%; }
+.smokeParticles[data-mode="steam"] .puff {
+  background: radial-gradient(circle, rgba(245,250,255,0.75) 0%, rgba(200,220,230,0.28) 50%, transparent 72%);
+  width: 28px; height: 28px; margin-left: -14px; margin-top: -14px;
+  filter: blur(2px);
+}
+.smokeParticles[data-mode="steam"] .puff {
+  animation-name: puffSteam;
+}
+@keyframes puffSteam {
+  0% { transform: translate(0, 0) scale(0.3); opacity: 0; }
+  15% { opacity: 0.75; }
+  100% { transform: translate(-20%, -110%) scale(1.7); opacity: 0; }
+}
+.smokeParticles[data-mode="flame"] { left: 12%; top: 55%; }
+.smokeParticles[data-mode="flame"] .puff {
+  background: radial-gradient(circle, rgba(255,240,180,0.95) 0%, rgba(255,140,40,0.7) 35%, rgba(255,60,10,0.35) 60%, transparent 78%);
+  width: 22px; height: 22px; margin-left: -11px; margin-top: -11px;
+  filter: blur(0.8px);
+  animation-name: puffFlame;
+  animation-duration: 0.55s;
+}
+.smokeParticles[data-mode="flame"] .p1 { animation-delay: 0s; }
+.smokeParticles[data-mode="flame"] .p2 { animation-delay: 0.1s; }
+.smokeParticles[data-mode="flame"] .p3 { animation-delay: 0.2s; }
+.smokeParticles[data-mode="flame"] .p4 { animation-delay: 0.3s; }
+.smokeParticles[data-mode="flame"] .p5 { animation-delay: 0.4s; }
+@keyframes puffFlame {
+  0% { transform: translate(0, 0) scale(0.4); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translate(-90%, 10%) scale(1.4); opacity: 0; }
+}
+.smokeParticles[data-mode="blackSmoke"] { left: 12%; top: 54%; }
+.smokeParticles[data-mode="blackSmoke"] .puff {
+  background: radial-gradient(circle, rgba(40,38,35,0.85) 0%, rgba(30,28,26,0.45) 50%, transparent 75%);
+  width: 40px; height: 40px; margin-left: -20px; margin-top: -20px;
+  filter: blur(2px);
+  animation-duration: 2.6s;
+}
+.smokeParticles[data-mode="blackSmoke"] .puff {
+  animation-name: puffBlack;
+}
+@keyframes puffBlack {
+  0% { transform: translate(0, 0) scale(0.4); opacity: 0; }
+  12% { opacity: 0.85; }
+  100% { transform: translate(-85%, -70%) scale(2.2); opacity: 0; }
+}
+
 @keyframes floatHero {
   0%,100% { transform: translate(-50%, 0px); }
   50% { transform: translate(-50%, -8px); }
@@ -427,11 +483,12 @@ html, body {
   top: 53.5%;
   left: 50%;
   transform: translate(-50%, -50%);
-  padding: 9px 32px;
+  padding: 11px 32px 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
+  line-height: 1.05;
   background: linear-gradient(180deg, rgba(200,150,80,0.55), rgba(90,55,25,0.5));
   border: 2px solid rgba(255, 210, 140, 0.7);
   border-radius: 10px;

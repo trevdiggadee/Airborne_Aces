@@ -3,13 +3,13 @@
 
 const BLIMP_DATA = {
   blimp1: { url: "asset_extra_06.webp?cb=2", key: "asset_extra_06", name: "Zeppelin Ace", effect: "propeller" },
-  blimp2: { url: "blimp2_main.webp?cb=2", key: "blimp2_main", name: "Deco Liner", effect: null },
-  blimp3: { url: "blimp_select_02.webp", key: "blimp_select_02", name: "Aero Slicer", effect: null },
-  blimp4: { url: "blimp_select_03.webp", key: "blimp_select_03", name: "Steampunk", effect: null },
+  blimp2: { url: "blimp2_main.webp?cb=2", key: "blimp2_main", name: "Deco Liner", effect: "smoke" },
+  blimp3: { url: "blimp3_flight_01.webp?cb=2", key: "blimp3_flight_01", name: "Aero Slicer", effect: null },
+  blimp4: { url: "blimp4_flight_01.webp?cb=2", key: "blimp4_flight_01", name: "Steampunk", effect: "steam" },
   blimp5: { url: "ship_petro.png", key: "ship_petro", name: "Petro", effect: null },
-  blimp6: { url: "blimp_select_01.webp", key: "blimp_select_01", name: "Little Spy", effect: null },
-  blimp7: { url: "ship_lightning.png", key: "ship_lightning", name: "Storm Chaser", effect: null },
-  blimp8: { url: "ship_cargo.png", key: "ship_cargo", name: "Cargo King", effect: null },
+  blimp6: { url: "ship_wood_01.webp?cb=2", key: "ship_wood_01", name: "Little Spy", effect: null },
+  blimp7: { url: "ship_lightning.png", key: "ship_lightning", name: "Storm Chaser", effect: "flame" },
+  blimp8: { url: "ship_cargo.png", key: "ship_cargo", name: "Cargo King", effect: "blackSmoke" },
   blimp9: { url: "ship_pirate.png", key: "ship_pirate", name: "Jolly Rogers", effect: null },
   blimp10: { url: "ship_ivory.png", key: "ship_ivory", name: "Ivory Anchor", effect: null }
 };
@@ -479,8 +479,17 @@ window.__airborneSetMusicVolume = setMusicVolumePref;
 window.__airborneApplyGameplayMusicVolume = applyGameplayMusicVolumeNow;
 
 function setEffect(effect) {
+  if (!propBlur || !smokeParticles) return;
   propBlur.style.display = effect === "propeller" ? "block" : "none";
-  smokeParticles.style.display = effect === "smoke" ? "block" : "none";
+  // Exhaust modes: smoke | steam | flame | blackSmoke
+  const exhaustModes = ["smoke", "steam", "flame", "blackSmoke"];
+  if (exhaustModes.indexOf(effect) >= 0) {
+    smokeParticles.style.display = "block";
+    smokeParticles.dataset.mode = effect;
+  } else {
+    smokeParticles.style.display = "none";
+    smokeParticles.dataset.mode = "";
+  }
 }
 
 function selectBlimp(key, el) {

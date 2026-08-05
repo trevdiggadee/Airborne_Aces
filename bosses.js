@@ -1149,7 +1149,7 @@
 
       // "LAND HERE" just above the deck
       if (levelEndPhase === "landing" || levelEndPhase === "approach") {
-        ctx.font = "bold 15px system-ui, sans-serif";
+        ctx.font = "bold 15px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
         ctx.textAlign = "center";
         ctx.fillStyle = `rgba(255,235,180,${0.75 + Math.sin(p.glowPhase * 3) * 0.25})`;
         ctx.fillText("▼ LAND HERE ▼", deckCx, deckCy - 22);
@@ -1204,7 +1204,7 @@
     if (levelEndPhase === "victory") {
       ctx.save();
       ctx.textAlign = "center";
-      ctx.font = "bold " + Math.floor(W * 0.07) + "px system-ui, sans-serif";
+      ctx.font = "bold " + Math.floor(W * 0.07) + "px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
       ctx.fillStyle = "rgba(0,0,0,0.45)";
       const lvlDone = (levelEndStats && levelEndStats.levelNum) ? levelEndStats.levelNum : bossesDefeatedCount;
       const completeMsg = "LEVEL " + lvlDone + " COMPLETE!";
@@ -1237,11 +1237,11 @@
 
       ctx.textAlign = "center";
       ctx.fillStyle = "#ffe9a8";
-      ctx.font = "bold 22px system-ui, sans-serif";
+      ctx.font = "bold 22px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
       const clearLvl = s.levelNum || bossesDefeatedCount;
       ctx.fillText("LEVEL " + clearLvl + " CLEAR", W / 2, py + 36);
 
-      ctx.font = "14px system-ui, sans-serif";
+      ctx.font = "14px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
       ctx.fillStyle = "rgba(255,230,180,0.7)";
       ctx.fillText((s.bossName || "Boss") + " defeated", W / 2, py + 58);
 
@@ -1252,7 +1252,7 @@
         ["LANDING BONUS", "+" + s.landingBonus],
         ["HEALTH LEFT", String(s.health)]
       ];
-      ctx.font = "15px system-ui, sans-serif";
+      ctx.font = "15px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
       rows.forEach((row, i) => {
         const ry = py + 90 + i * 28;
         ctx.textAlign = "left";
@@ -1260,9 +1260,9 @@
         ctx.fillText(row[0], px + 28, ry);
         ctx.textAlign = "right";
         ctx.fillStyle = "#fff4d0";
-        ctx.font = "bold 15px system-ui, sans-serif";
+        ctx.font = "bold 15px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
         ctx.fillText(row[1], px + panelW - 28, ry);
-        ctx.font = "15px system-ui, sans-serif";
+        ctx.font = "15px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
       });
 
       ctx.restore();

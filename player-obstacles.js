@@ -98,6 +98,8 @@
     updateBlimpPersonality(dt);}
 
   function drawPlayer() {
+    // Hide blimp during the end-of-level black fade (overlay draws after player)
+    if (typeof levelEndPhase === "string" && levelEndPhase === "fadeOut") return;
     const img = currentPlayerImage();
     if (!img || !img.naturalWidth) {
       // Never let the player silently vanish — draw a simple visible
