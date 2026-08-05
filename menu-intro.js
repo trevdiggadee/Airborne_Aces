@@ -240,7 +240,9 @@ function startHeroAnimation(key) {
     layerB.src = anim.urls[1 % anim.urls.length];
 
     const frameMs = 1000 / anim.fps;
-    const fadeMs = Math.max(40, frameMs * 0.7); // smooth blend, still shorter than the frame interval
+    // Crossfade most of the frame duration so swaps never pop; loop seam uses nearly full interval
+    const fadeMs = Math.max(50, Math.floor(frameMs * 0.88));
+    const loopFadeMs = Math.max(fadeMs, Math.floor(frameMs * 0.96));
 
     heroAnimTimer = setInterval(() => {
       heroAnimFrame = (heroAnimFrame + 1) % anim.urls.length;
@@ -250,11 +252,12 @@ function startHeroAnimation(key) {
       incoming.src = anim.urls[heroAnimFrame];
       incoming.style.transition = "none";
       outgoing.style.transition = "none";
-      // force layout so the browser commits the "none" transition before we re-enable it below
       void incoming.offsetWidth;
 
-      incoming.style.transition = `opacity ${fadeMs}ms linear`;
-      outgoing.style.transition = `opacity ${fadeMs}ms linear`;
+      // Extra-smooth blend when wrapping last → first frame
+      const ms = (heroAnimFrame === 0) ? loopFadeMs : fadeMs;
+      incoming.style.transition = `opacity ${ms}ms ease-in-out`;
+      outgoing.style.transition = `opacity ${ms}ms ease-in-out`;
       incoming.style.opacity = 1;
       outgoing.style.opacity = 0;
 

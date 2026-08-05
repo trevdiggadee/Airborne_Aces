@@ -311,10 +311,10 @@ html, body {
    motion-blurred spin rather than a hard frame-to-frame pop. */
 .heroBlimpWrap {
   position: absolute;
-  /* Preview on platform — ~50% larger than prior size */
-  top: 18%;
+  /* Lowered 5%, size +5% vs prior */
+  top: 23%;
   left: 50%;
-  width: 48%;
+  width: 50.4%;
   transform: translateX(-50%);
   z-index: 2;
   animation: floatHero 3.2s ease-in-out infinite;
@@ -322,8 +322,23 @@ html, body {
   pointer-events: none;
 }
 .heroBlimpWrap.hero-small {
-  width: 32%; /* Little Spy stays smaller on the platform */
-  top: 22%;
+  width: 33.6%; /* Little Spy stays smaller on the platform */
+  top: 27%;
+}
+/* Soft contact shadow on the hangar platform under the hovering blimp */
+.heroBlimpWrap::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -6%;
+  transform: translateX(-50%);
+  width: 55%;
+  height: 10%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.18) 45%, rgba(0,0,0,0) 72%);
+  filter: blur(3px);
+  pointer-events: none;
+  z-index: -1;
 }
 
 .heroBlimpWrap img {
@@ -409,16 +424,20 @@ html, body {
 .flyBtn {
   position: absolute;
   /* Raised ~5% vs prior; glass look with warm glow */
-  top: 51.5%;
+  top: 53.5%;
   left: 50%;
   transform: translate(-50%, -50%);
-  padding: 8px 28px;
+  padding: 9px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   background: linear-gradient(180deg, rgba(200,150,80,0.55), rgba(90,55,25,0.5));
   border: 2px solid rgba(255, 210, 140, 0.7);
   border-radius: 10px;
   color: #fff6e0;
   font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
-  font-size: 3.2vw;
+  font-size: 3.7vw; /* +15% */
   font-weight: bold;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -440,7 +459,7 @@ html, body {
 }
 
 @media (min-width: 480px) {
-  .flyBtn { font-size: 15px; padding: 9px 32px; }
+  .flyBtn { font-size: 17px; padding: 10px 36px; }
 }
 
 .flyBtn.pressed {
@@ -2146,27 +2165,27 @@ html, body {
 /* Name under animated hangar blimp */
 .heroBlimpName {
   position: absolute;
-  top: 48%;
+  top: 45%;
   left: 50%;
   transform: translateX(-50%);
   z-index: 3;
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 3.4vw;
+  font-size: 6.8vw; /* ~2x prior */
   font-weight: bold;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: #f5ecd8;
+  color: #ffffff;
   text-shadow:
-    0 1px 0 #2a1a0a,
-    0 2px 6px rgba(0,0,0,0.65),
-    0 0 12px rgba(255,200,120,0.35);
+    0 1px 0 rgba(0,0,0,0.55),
+    0 2px 8px rgba(0,0,0,0.7),
+    0 0 14px rgba(255,255,255,0.25);
   pointer-events: none;
   white-space: nowrap;
   text-align: center;
-  max-width: 70%;
+  max-width: 80%;
 }
 @media (min-width: 480px) {
-  .heroBlimpName { font-size: 16px; }
+  .heroBlimpName { font-size: 32px; }
 }
 
 /* Power-up icon under the Power Up text in the profile card */
@@ -2175,14 +2194,14 @@ html, body {
   align-items: center;
   justify-content: center;
   width: 100%;
-  margin: 6px 0 4px;
+  margin: -2px 0 6px; /* raised ~3% visually in the card */
   flex-shrink: 0;
 }
 .bpPowerIcon {
-  width: 72%;
-  max-width: 72px;
+  width: 100%;
+  max-width: 140px; /* ~2x prior icon */
   height: auto;
   object-fit: contain;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.55));
   pointer-events: none;
 }
