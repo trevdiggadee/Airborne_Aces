@@ -397,39 +397,39 @@
     const mode = s.mode || "fire_sink";
 
     if (mode === "fire_sink") {
-      s.vy = 28 + t * t * 160;
+      s.vy = 45 + t * t * 220;
       s.y += s.vy * dt;
       s.x += Math.sin(s.age * 1.15) * 18 * dt;
       s.tilt = Math.sin(s.age * 0.9) * 0.16 - t * 0.12;
     } else if (mode === "rocket_blast") {
-      s.vy = 20 + t * 220;
+      s.vy = 40 + t * 280;
       s.vx = (s.vx || 0) + (Math.random() - 0.5) * 40 * dt;
       s.x += (s.vx || 0) * dt;
       s.y += s.vy * dt;
-      s.tilt = (s.tilt || 0) + dt * 1.8;
+      s.tilt = (s.tilt || 0) + dt * 2.2;
     } else if (mode === "tank_crumble") {
-      s.vy = 40 + t * 180;
+      s.vy = 60 + t * 240;
       s.y += s.vy * dt;
       s.x += Math.sin(s.age * 2.2) * 8 * dt;
       s.tilt = Math.sin(s.age * 3) * 0.05 * (1 - t);
       s.squash = 1 + t * 0.25;
     } else if (mode === "heli_spin") {
-      s.spin = (s.spin || 0) + dt * (8 + t * 14);
-      s.vx = (s.vx || 60) + 20 * dt;
-      s.vy = 50 + t * 200;
+      s.spin = (s.spin || 0) + dt * (10 + t * 16);
+      s.vx = (s.vx || 80) + 30 * dt;
+      s.vy = 70 + t * 260;
       s.x += s.vx * dt;
       s.y += s.vy * dt;
       s.tilt = s.spin;
     } else if (mode === "ink_dissolve") {
-      s.vy = 35 + t * 90;
+      s.vy = 55 + t * 140;
       s.y += s.vy * dt;
       s.x += Math.sin(s.age * 2) * 22 * dt;
-      s.alpha = Math.max(0, 1 - t * 1.1);
+      s.alpha = Math.max(0, 1 - t * 1.25);
       s.tilt = Math.sin(s.age * 1.5) * 0.2;
     }
 
     s.fxTimer += dt;
-    const fxRate = mode === "heli_spin" ? 0.02 : 0.028;
+    const fxRate = mode === "heli_spin" ? 0.035 : 0.045;
     while (s.fxTimer > fxRate) {
       s.fxTimer -= fxRate;
       if (mode === "fire_sink") spawnBossBalloonFireSmoke(s, false);
@@ -557,7 +557,7 @@
         h: boss.h,
         img: img,
         age: 0,
-        duration: mode === "heli_spin" ? 3.6 : (mode === "ink_dissolve" ? 4.2 : 4.5),
+        duration: mode === "heli_spin" ? 2.2 : (mode === "ink_dissolve" ? 2.5 : 2.6),
         vy: 30,
         vx: mode === "heli_spin" ? 70 : 0,
         tilt: 0,
