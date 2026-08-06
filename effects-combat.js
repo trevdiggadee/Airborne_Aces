@@ -336,43 +336,128 @@
     queueBonusRound(cfg.bonusRound, 2200);
   }
 
+  function spawnBossDeathFx(s, burst) {
+    const mode = s.mode || "fire_sink";
+    const n = burst ? 24 : 6;
+    for (let i = 0; i < n; i++) {
+      const lx = 0.1 + Math.random() * 0.8;
+      const ly = 0.05 + Math.random() * 0.7;
+      const x = s.x + s.w * lx;
+      const y = s.y + s.h * ly;
+      if (mode === "fire_sink") {
+        spawnBossBalloonFireSmoke(s, false);
+        continue;
+      }
+      if (mode === "rocket_blast") {
+        const ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.2;
+        s.fx.push({
+          x: x, y: y,
+          vx: Math.cos(ang) * (80 + Math.random() * 160),
+          vy: Math.sin(ang) * (80 + Math.random() * 160),
+          life: 0.5 + Math.random() * 0.5, age: 0,
+          r: 3 + Math.random() * 6,
+          kind: Math.random() < 0.4 ? "spark" : "fire"
+        });
+      } else if (mode === "tank_crumble") {
+        s.fx.push({
+          x: x, y: y,
+          vx: (Math.random() - 0.5) * 180,
+          vy: -40 - Math.random() * 120,
+          life: 0.6 + Math.random() * 0.7, age: 0,
+          r: 2 + Math.random() * 5,
+          kind: Math.random() < 0.5 ? "spark" : "dust"
+        });
+      } else if (mode === "heli_spin") {
+        s.fx.push({
+          x: x, y: y,
+          vx: (Math.random() - 0.5) * 220,
+          vy: (Math.random() - 0.5) * 160,
+          life: 0.4 + Math.random() * 0.5, age: 0,
+          r: 2 + Math.random() * 4,
+          kind: "spark"
+        });
+      } else if (mode === "ink_dissolve") {
+        s.fx.push({
+          x: x, y: y,
+          vx: (Math.random() - 0.5) * 90,
+          vy: 30 + Math.random() * 80,
+          life: 0.8 + Math.random() * 0.9, age: 0,
+          r: 6 + Math.random() * 14,
+          kind: Math.random() < 0.35 ? "ink" : "smoke"
+        });
+      }
+    }
+  }
+
   function updateBossSinking(dt) {
     if (!bossSinking) return;
     const s = bossSinking;
     s.age += dt;
-    // Slow dramatic sink — starts almost hovering, then drifts down
     const t = Math.min(1, s.age / s.duration);
-    s.vy = 28 + t * t * 160;
-    s.y += s.vy * dt;
-    s.x += Math.sin(s.age * 1.15) * 18 * dt;
-    s.tilt = Math.sin(s.age * 0.9) * 0.16 - t * 0.12;
+    const mode = s.mode || "fire_sink";
 
-    // Continuous fire & smoke across the balloon
+    if (mode === "fire_sink") {
+      s.vy = 28 + t * t * 160;
+      s.y += s.vy * dt;
+      s.x += Math.sin(s.age * 1.15) * 18 * dt;
+      s.tilt = Math.sin(s.age * 0.9) * 0.16 - t * 0.12;
+    } else if (mode === "rocket_blast") {
+      s.vy = 20 + t * 220;
+      s.vx = (s.vx || 0) + (Math.random() - 0.5) * 40 * dt;
+      s.x += (s.vx || 0) * dt;
+      s.y += s.vy * dt;
+      s.tilt = (s.tilt || 0) + dt * 1.8;
+    } else if (mode === "tank_crumble") {
+      s.vy = 40 + t * 180;
+      s.y += s.vy * dt;
+      s.x += Math.sin(s.age * 2.2) * 8 * dt;
+      s.tilt = Math.sin(s.age * 3) * 0.05 * (1 - t);
+      s.squash = 1 + t * 0.25;
+    } else if (mode === "heli_spin") {
+      s.spin = (s.spin || 0) + dt * (8 + t * 14);
+      s.vx = (s.vx || 60) + 20 * dt;
+      s.vy = 50 + t * 200;
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      s.tilt = s.spin;
+    } else if (mode === "ink_dissolve") {
+      s.vy = 35 + t * 90;
+      s.y += s.vy * dt;
+      s.x += Math.sin(s.age * 2) * 22 * dt;
+      s.alpha = Math.max(0, 1 - t * 1.1);
+      s.tilt = Math.sin(s.age * 1.5) * 0.2;
+    }
+
     s.fxTimer += dt;
-    while (s.fxTimer > 0.028) {
-      s.fxTimer -= 0.028;
-      spawnBossBalloonFireSmoke(s, false);
+    const fxRate = mode === "heli_spin" ? 0.02 : 0.028;
+    while (s.fxTimer > fxRate) {
+      s.fxTimer -= fxRate;
+      if (mode === "fire_sink") spawnBossBalloonFireSmoke(s, false);
+      else spawnBossDeathFx(s, false);
     }
 
     s.fx.forEach(function(p) {
       p.age += dt;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      if (p.kind === "smoke") {
-        p.r += 22 * dt;
-        p.vy -= 14 * dt;
+      if (p.kind === "smoke" || p.kind === "ink") {
+        p.r += 20 * dt;
+        p.vy -= (p.kind === "ink" ? -10 : 12) * dt;
         p.vx *= 0.97;
-      } else if (p.kind === "ember") {
-        p.vy += 40 * dt;
-        p.vx *= 0.99;
+      } else if (p.kind === "ember" || p.kind === "dust") {
+        p.vy += 50 * dt;
+        p.vx *= 0.98;
+      } else if (p.kind === "spark") {
+        p.vy += 30 * dt;
+        p.r = Math.max(0.5, p.r - 3 * dt);
       } else {
         p.r += 8 * dt;
-        p.vy -= 30 * dt;
+        p.vy -= 25 * dt;
       }
     });
     s.fx = s.fx.filter(function(p) { return p.age < p.life; });
 
-    if (s.y > H + s.h * 0.35 || s.age >= s.duration) {
+    if (s.y > H + s.h * 0.4 || s.age >= s.duration || (s.alpha != null && s.alpha <= 0.02)) {
       bossSinking = null;
       defeatSlowMo = false;
       if (s.pendingCfg) {
@@ -386,42 +471,61 @@
     if (!bossSinking) return;
     const s = bossSinking;
     const img = s.img;
+    const mode = s.mode || "fire_sink";
+    const progress = Math.min(1, s.age / s.duration);
+
     ctx.save();
-    // Dim the scene slightly for drama
-    const veil = Math.min(0.28, s.age * 0.12);
-    ctx.fillStyle = "rgba(20,8,4," + veil + ")";
+    let veil = Math.min(0.32, s.age * 0.1);
+    if (mode === "ink_dissolve") {
+      ctx.fillStyle = "rgba(12,8,28," + Math.min(0.4, s.age * 0.14) + ")";
+    } else if (mode === "rocket_blast") {
+      ctx.fillStyle = "rgba(40,12,4," + veil + ")";
+    } else if (mode === "heli_spin") {
+      ctx.fillStyle = "rgba(20,24,30," + veil + ")";
+    } else {
+      ctx.fillStyle = "rgba(20,8,4," + veil + ")";
+    }
     ctx.fillRect(0, 0, W, H);
 
     ctx.translate(s.x + s.w / 2, s.y + s.h / 2);
     ctx.rotate(s.tilt || 0);
-    ctx.globalAlpha = Math.max(0.25, 1 - (s.age / s.duration) * 0.35);
+    const sq = s.squash || 1;
+    ctx.scale(1 / Math.sqrt(sq), sq);
+    let alpha = s.alpha != null ? s.alpha : Math.max(0.2, 1 - progress * 0.4);
+    ctx.globalAlpha = alpha;
     if (img && img.naturalWidth) {
       ctx.drawImage(img, -s.w / 2, -s.h / 2, s.w, s.h);
     }
     ctx.restore();
 
-    // Fire & smoke over the balloon (screen space)
     s.fx.forEach(function(p) {
-      const t = 1 - p.age / p.life;
+      const pt = 1 - p.age / p.life;
       ctx.save();
-      ctx.globalAlpha = Math.max(0, t * (p.kind === "smoke" ? 0.55 : 0.9));
+      ctx.globalAlpha = Math.max(0, pt * (p.kind === "smoke" || p.kind === "ink" ? 0.55 : 0.92));
       if (p.kind === "fire") {
         const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        g.addColorStop(0, "rgba(255,245,200," + (0.95 * t) + ")");
-        g.addColorStop(0.35, "rgba(255,140,30," + (0.85 * t) + ")");
-        g.addColorStop(0.7, "rgba(220,40,10," + (0.45 * t) + ")");
+        g.addColorStop(0, "rgba(255,245,200," + (0.95 * pt) + ")");
+        g.addColorStop(0.35, "rgba(255,140,30," + (0.85 * pt) + ")");
+        g.addColorStop(0.7, "rgba(220,40,10," + (0.45 * pt) + ")");
         g.addColorStop(1, "rgba(40,10,0,0)");
         ctx.fillStyle = g;
-      } else if (p.kind === "ember") {
-        ctx.fillStyle = "rgba(255," + Math.floor(120 + 100 * t) + ",40," + (0.9 * t) + ")";
+      } else if (p.kind === "ember" || p.kind === "spark") {
+        ctx.fillStyle = "rgba(255," + Math.floor(140 + 90 * pt) + ",40," + (0.95 * pt) + ")";
+      } else if (p.kind === "dust") {
+        ctx.fillStyle = "rgba(140,120,90," + (0.5 * pt) + ")";
+      } else if (p.kind === "ink") {
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+        g.addColorStop(0, "rgba(60,20,90," + (0.7 * pt) + ")");
+        g.addColorStop(1, "rgba(20,5,40,0)");
+        ctx.fillStyle = g;
       } else {
         const g2 = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        g2.addColorStop(0, "rgba(55,48,40," + (0.55 * t) + ")");
+        g2.addColorStop(0, "rgba(55,48,40," + (0.55 * pt) + ")");
         g2.addColorStop(1, "rgba(25,22,20,0)");
         ctx.fillStyle = g2;
       }
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, Math.max(0.5, p.r), 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     });
@@ -429,62 +533,57 @@
 
   function defeatBoss() {
     const cfg = bossConfig(bossNumber);
-    const isBoss1Balloon = boss && (bossNumber === 1 || boss.kind === "bomber");
-
-    if (isBoss1Balloon) {
-      // Snapshot sprite — dramatic burning sink, no explosion
-      const img = (boss.kind === "bomber" && bossThrowFrame > 0)
+    const kind = boss ? boss.kind : null;
+    const img = boss ? (
+      (kind === "bomber" && bossThrowFrame > 0)
         ? images[`boss_throw_${String(bossThrowFrame).padStart(2, "0")}`]
-        : images[bossImgKey(boss.variant)];
+        : images[bossImgKey(boss.variant)]
+    ) : null;
+
+    // Map each boss to a unique dramatic death
+    let mode = "rocket_blast";
+    if (kind === "bomber" || bossNumber === 1) mode = "fire_sink";
+    else if (kind === "rocket") mode = "rocket_blast";
+    else if (kind === "tank") mode = "tank_crumble";
+    else if (kind === "heli") mode = "heli_spin";
+    else if (kind === "octopus") mode = "ink_dissolve";
+
+    if (boss) {
       bossSinking = {
+        mode: mode,
         x: boss.x,
         y: boss.y,
         w: boss.w,
         h: boss.h,
         img: img,
         age: 0,
-        duration: 4.8,
-        vy: 28,
+        duration: mode === "heli_spin" ? 3.6 : (mode === "ink_dissolve" ? 4.2 : 4.5),
+        vy: 30,
+        vx: mode === "heli_spin" ? 70 : 0,
         tilt: 0,
+        spin: 0,
+        squash: 1,
+        alpha: 1,
         fx: [],
         fxTimer: 0,
-        pendingCfg: cfg // rewards after the sink finishes
+        pendingCfg: cfg
       };
-      spawnBossBalloonFireSmoke(bossSinking, true);
-      spawnBossBalloonFireSmoke(bossSinking, true);
-      spawnBossBalloonFireSmoke(bossSinking, true);
+      for (let i = 0; i < 3; i++) {
+        if (mode === "fire_sink") spawnBossBalloonFireSmoke(bossSinking, true);
+        else spawnBossDeathFx(bossSinking, true);
+      }
       defeatSlowMo = true;
-      defeatSlowMoUntil = performance.now() + 4800;
-      triggerScreenShake(3, 600);
-      triggerScreenFlash(0.1, 180);
-      // Soft fire SFX instead of big boom
-      if (typeof sfxExplosion === "function") sfxExplosion(0.35);
-      bossActive = false;
-      boss = null;
-      bossNumber = 0;
-      bossThrowFrame = 0;
-      // Do NOT finishBossRewards yet — wait until he sinks off-screen
-      return;
+      defeatSlowMoUntil = performance.now() + bossSinking.duration * 1000;
+      triggerScreenShake(mode === "tank_crumble" ? 7 : 4, 550);
+      triggerScreenFlash(mode === "ink_dissolve" ? 0.18 : 0.1, 200);
+      if (typeof sfxExplosion === "function") sfxExplosion(mode === "rocket_blast" ? 0.9 : 0.4);
     }
 
-    if (boss) {
-      const cx = boss.x + boss.w / 2;
-      const cy = boss.y + boss.h / 2;
-      triggerBigExplosion(cx, cy, boss.w * 0.8, boss.h * 0.8);
-      triggerBigExplosion(boss.x + boss.w * 0.22, boss.y + boss.h * 0.3, boss.w * 0.32, boss.h * 0.32);
-      triggerBigExplosion(boss.x + boss.w * 0.78, boss.y + boss.h * 0.65, boss.w * 0.32, boss.h * 0.32);
-      triggerBigExplosion(boss.x + boss.w * 0.5, boss.y + boss.h * 0.15, boss.w * 0.28, boss.h * 0.28);
-      triggerShockwave(cx, cy, Math.max(boss.w, boss.h) * 0.85);
-      defeatSlowMo = true;
-      defeatSlowMoUntil = performance.now() + DEFEAT_SLOWMO_DURATION;
-      spawnDefeatDebris(boss.x + boss.w / 2, boss.y + boss.h / 2, boss.w, boss.h);
-    }
-    triggerScreenShake(6, 400);
-    triggerScreenFlash(0.2, 300);
     bossActive = false;
     boss = null;
     bossNumber = 0;
-    finishBossRewards(cfg);
+    bossThrowFrame = 0;
+    // Rewards fire when the death sequence finishes
   }
 
   // ---------- Firepower power-up ----------
@@ -548,6 +647,7 @@
   }
 
   function drawPowerup() {
+    if (typeof levelEndPhase === "string" && levelEndPhase === "fadeOut") return;
     if (!powerup || powerup.collected) return;
     const drawY = powerup.y + Math.sin(powerup.bobPhase) * 6;
     const pulse = 1 + Math.sin(performance.now() / 140) * 0.08;
@@ -818,9 +918,14 @@
 
   function isRainLevel() {
     if (state !== "playing") return false;
+    // Never during landing, bonus, or black fade
+    if (typeof levelEndActive !== "undefined" && levelEndActive) return false;
+    if (typeof bonusActive !== "undefined" && bonusActive) return false;
+    if (typeof levelEndPhase === "string" && levelEndPhase === "fadeOut") return false;
     if (bossActive) return !!(boss && boss.kind === "tank");
+    // Only between boss 2 clear and boss 3 start (not earlier landings)
     const next = nextBossConfig();
-    return !!(next && next.num === 3);
+    return !!(next && next.num === 3 && typeof bossesDefeatedCount !== "undefined" && bossesDefeatedCount === 2);
   }
 
   // Storm cloud animation - 36 frames for floating decorative cloud during rain
@@ -830,6 +935,12 @@
 
   function updateRain(dt) {
     const raining = isRainLevel();
+    if (!raining && stormCloudsDecorative.length) {
+      // Sweep leftover level-3 clouds off during landing / other levels
+      stormCloudsDecorative.forEach(c => { c.x -= 220 * dt; c.alpha = Math.max(0, (c.alpha || 0.28) - dt * 0.6); });
+      stormCloudsDecorative = stormCloudsDecorative.filter(c => c.x + c.w > -80 && (c.alpha == null || c.alpha > 0.02));
+      rainDrops = [];
+    }
     if (raining) {
         rainSpawnAccum += dt;
         while (rainSpawnAccum > 1 / 60) {
@@ -900,6 +1011,7 @@
   }
 
   function drawRain() {
+    if (typeof levelEndPhase === "string" && levelEndPhase === "fadeOut") return;
     const raining = isRainLevel();
     if (!raining && rainDrops.length === 0 && stormCloudsDecorative.length === 0) return;
     if (raining) {

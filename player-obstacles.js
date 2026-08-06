@@ -608,6 +608,7 @@
   }
 
   function drawHealPickup() {
+    if (typeof levelEndPhase === "string" && levelEndPhase === "fadeOut") return;
     if (!healPickup) return;
     const img = images.heartPickup;
     if (!img.naturalWidth) return;
@@ -715,6 +716,7 @@
   }
 
   function drawShieldPickup() {
+    if (typeof levelEndPhase === "string" && levelEndPhase === "fadeOut") return;
     if (!shieldPickup) return;
     const img = images.shieldPickup;
     if (!img || !img.naturalWidth) return;

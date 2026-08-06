@@ -143,6 +143,39 @@
     blimp9: "power_icon_blimp9"
   };
   const SHIP_POWER_MISSILE = { blimp3: true, blimp4: true };
+
+  function makePowerTrailParticle(p) {
+    const key = p.iconKey || "";
+    // Unique trail colors / behaviors per power icon
+    let color, kind, grow, life;
+    if (key.indexOf("blimp3") >= 0) {
+      color = "100,200,255"; kind = "pulse"; grow = 12; life = 0.35;
+    } else if (key.indexOf("blimp4") >= 0) {
+      color = "210,170,90"; kind = "gear"; grow = 6; life = 0.4;
+    } else if (key.indexOf("blimp5") >= 0) {
+      color = "255,140,40"; kind = "flame"; grow = 14; life = 0.45;
+    } else if (key.indexOf("blimp7") >= 0) {
+      color = "180,220,255"; kind = "spark"; grow = 4; life = 0.3;
+    } else if (key.indexOf("blimp8") >= 0) {
+      color = "40,35,30"; kind = "oil"; grow = 10; life = 0.55;
+    } else if (key.indexOf("blimp9") >= 0) {
+      color = "255,80,40"; kind = "ember"; grow = 8; life = 0.4;
+    } else {
+      color = "200,200,220"; kind = "mist"; grow = 10; life = 0.35;
+    }
+    return {
+      x: p.x - p.vx * 0.02,
+      y: p.y - p.vy * 0.02,
+      vx: -p.vx * 0.15 + (Math.random() - 0.5) * 40,
+      vy: -p.vy * 0.15 + (Math.random() - 0.5) * 40,
+      r: 3 + Math.random() * 5,
+      grow: grow,
+      life: life * (0.7 + Math.random() * 0.5),
+      age: 0,
+      color: color,
+      kind: kind
+    };
+  }
   let pirateBlastParticles = [];
   let pirateFireBolts = [];
   const stormMeterEl = document.getElementById("stormMeter");
@@ -469,6 +502,20 @@
           p.vy += 120 * dt;
           p.spin += p.spinVel * dt;
         }
+        // Unique trail particles per power
+        if (!p.trails) p.trails = [];
+        if (Math.random() < 0.55) {
+          p.trails.push(makePowerTrailParticle(p));
+        }
+        if (p.trails) {
+          p.trails.forEach(function(tr) {
+            tr.age += dt;
+            tr.x += tr.vx * dt;
+            tr.y += tr.vy * dt;
+            tr.r += tr.grow * dt;
+          });
+          p.trails = p.trails.filter(function(tr) { return tr.age < tr.life; });
+        }
         // Destroy obstacles on contact
         if (!p.hit) {
           for (let i = obstacles.length - 1; i >= 0; i--) {
@@ -673,6 +720,41 @@
 
       stormSwarm.forEach(function(p) {
         if (p.delay && p.age < p.delay) return;
+        // Trail particles behind projectile
+        if (p.trails) {
+          p.trails.forEach(function(tr) {
+            const tt = 1 - tr.age / tr.life;
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, tt * 0.75);
+            if (tr.kind === "flame" || tr.kind === "ember") {
+              const g = ctx.createRadialGradient(tr.x, tr.y, 0, tr.x, tr.y, tr.r);
+              g.addColorStop(0, "rgba(255,230,150," + (0.9 * tt) + ")");
+              g.addColorStop(0.5, "rgba(" + tr.color + "," + (0.6 * tt) + ")");
+              g.addColorStop(1, "rgba(40,10,0,0)");
+              ctx.fillStyle = g;
+            } else if (tr.kind === "spark") {
+              ctx.strokeStyle = "rgba(" + tr.color + "," + tt + ")";
+              ctx.lineWidth = 1.5;
+              ctx.beginPath();
+              ctx.moveTo(tr.x, tr.y);
+              ctx.lineTo(tr.x - tr.vx * 0.03, tr.y - tr.vy * 0.03);
+              ctx.stroke();
+              ctx.restore();
+              return;
+            } else if (tr.kind === "oil") {
+              ctx.fillStyle = "rgba(" + tr.color + "," + (0.55 * tt) + ")";
+            } else {
+              const g = ctx.createRadialGradient(tr.x, tr.y, 0, tr.x, tr.y, tr.r);
+              g.addColorStop(0, "rgba(" + tr.color + "," + (0.55 * tt) + ")");
+              g.addColorStop(1, "rgba(" + tr.color + ",0)");
+              ctx.fillStyle = g;
+            }
+            ctx.beginPath();
+            ctx.arc(tr.x, tr.y, Math.max(0.5, tr.r), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          });
+        }
         const img = images[p.iconKey];
         const lifeT = 1 - p.age / p.life;
         const fade = Math.min(1, lifeT * 1.4);
@@ -964,6 +1046,12 @@
   function startLevelEndLanding() {
     levelEndActive = true;
     levelEndPhase = "windDown";
+    // Clear weather leftovers so level-3 rain/clouds don't show on the pad
+    if (typeof stormCloudsDecorative !== "undefined") stormCloudsDecorative = [];
+    if (typeof rainDrops !== "undefined") rainDrops = [];
+    if (typeof healPickup !== "undefined") healPickup = null;
+    if (typeof shieldPickup !== "undefined") shieldPickup = null;
+    if (typeof powerup !== "undefined") powerup = null;
     window.__airborneWorldFrozen = false;
     levelEndTimer = 0;
     levelEndPad = null;
