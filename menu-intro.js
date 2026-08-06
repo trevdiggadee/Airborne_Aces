@@ -11,7 +11,12 @@ const BLIMP_DATA = {
   blimp7: { url: "ship_lightning.png", key: "ship_lightning", name: "Storm Chaser", effect: "flame" },
   blimp8: { url: "ship_cargo.png", key: "ship_cargo", name: "Cargo King", effect: "blackSmoke" },
   blimp9: { url: "ship_pirate.png", key: "ship_pirate", name: "Jolly Rogers", effect: null },
-  blimp10: { url: "ship_ivory.png", key: "ship_ivory", name: "Ivory Anchor", effect: null }
+  blimp10: { url: "ship_ivory.png", key: "ship_ivory", name: "Ivory Anchor", effect: null },
+  blimp11: { url: "ship_pirate_rocket.webp", key: "ship_pirate_rocket", name: "Pirate Rocket", effect: "flame" },
+  blimp12: { url: "ship_military_shark.webp", key: "ship_military_shark", name: "War Shark", effect: "smoke" },
+  blimp13: { url: "ship_steel_industrial.webp", key: "ship_steel_industrial", name: "Iron Lattice", effect: "steam" },
+  blimp14: { url: "ship_red_royal.webp", key: "ship_red_royal", name: "Royal Stripe", effect: null },
+  blimp15: { url: "ship_navy_rocket.webp", key: "ship_navy_rocket", name: "Sky Rocket", effect: "flame" }
 };
 
 // ---------- Blimp Profile Panel data ----------
@@ -76,6 +81,36 @@ const SHIP_STATS = {
   blimp10: {
     name: "Ivory Anchor", mk: "Mk I", cls: "Flagship", call: "IVORY-10",
     stats: { Speed: 3, Lift: 4, Durability: 4, Maneuverability: 3, Boost: 3 },
+    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
+    upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
+  },
+  blimp11: {
+    name: "Pirate Rocket", mk: "Mk I", cls: "Raider Rocket", call: "SKULL-11",
+    stats: { Speed: 5, Lift: 2, Durability: 3, Maneuverability: 4, Boost: 5 },
+    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
+    upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
+  },
+  blimp12: {
+    name: "War Shark", mk: "Mk I", cls: "Military Attack", call: "SHARK-12",
+    stats: { Speed: 4, Lift: 3, Durability: 4, Maneuverability: 3, Boost: 4 },
+    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
+    upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
+  },
+  blimp13: {
+    name: "Iron Lattice", mk: "Mk I", cls: "Industrial", call: "FORGE-13",
+    stats: { Speed: 2, Lift: 4, Durability: 5, Maneuverability: 2, Boost: 2 },
+    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
+    upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
+  },
+  blimp14: {
+    name: "Royal Stripe", mk: "Mk I", cls: "Luxury Liner", call: "CROWN-14",
+    stats: { Speed: 3, Lift: 4, Durability: 3, Maneuverability: 3, Boost: 3 },
+    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
+    upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
+  },
+  blimp15: {
+    name: "Sky Rocket", mk: "Mk I", cls: "Navy Rocket", call: "NAVY-15",
+    stats: { Speed: 5, Lift: 2, Durability: 3, Maneuverability: 4, Boost: 5 },
     ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
   }
@@ -144,7 +179,12 @@ function updateProfile(key) {
       blimp7: "power_icon_blimp7.webp",
       blimp8: "power_icon_blimp8.webp",
       blimp9: "power_icon_blimp9.webp",
-      blimp10: "storm_icon_5.webp"
+      blimp10: "storm_icon_5.webp",
+      blimp11: "storm_icon_5.webp",
+      blimp12: "storm_icon_5.webp",
+      blimp13: "storm_icon_5.webp",
+      blimp14: "storm_icon_5.webp",
+      blimp15: "storm_icon_5.webp"
     };
     const iconSrc = (s.powerIcon) || POWER_ICON_BY_SHIP[key] || "storm_icon_5.webp";
     if (powerIcon.getAttribute("src") !== iconSrc) {

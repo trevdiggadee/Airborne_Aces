@@ -512,6 +512,11 @@
     ship_petro:     "ship_petro.png",
     landing_pad:    "landing_pad.webp",
     medal_badge:   "medal_badge.webp",
+    ship_pirate_rocket: "ship_pirate_rocket.webp",
+    ship_military_shark: "ship_military_shark.webp",
+    ship_steel_industrial: "ship_steel_industrial.webp",
+    ship_red_royal: "ship_red_royal.webp",
+    ship_navy_rocket: "ship_navy_rocket.webp",
     ship_wood:      "ship_wood.png",
     ship_cargo:     "ship_cargo.png",
     ship_ivory:     "ship_ivory.png",
@@ -912,7 +917,13 @@
     blimp7: { keys: SHIP_LIGHTNING_KEYS, fps: SHIP_LIGHTNING_FPS, frameCount: SHIP_LIGHTNING_FRAME_COUNT },
     blimp8: { keys: SHIP_CARGO_KEYS, fps: SHIP_CARGO_FPS, frameCount: SHIP_CARGO_FRAME_COUNT },
     blimp9: { keys: SHIP_PIRATE_KEYS, fps: SHIP_PIRATE_FPS, frameCount: SHIP_PIRATE_FRAME_COUNT },
-    blimp10: { keys: SHIP_IVORY_KEYS, fps: SHIP_IVORY_FPS, frameCount: SHIP_IVORY_FRAME_COUNT }
+    blimp10: { keys: SHIP_IVORY_KEYS, fps: SHIP_IVORY_FPS, frameCount: SHIP_IVORY_FRAME_COUNT },
+    // Static placeholders until flight animations arrive (single frame loop)
+    blimp11: { keys: ["ship_pirate_rocket"], fps: 1, frameCount: 1 },
+    blimp12: { keys: ["ship_military_shark"], fps: 1, frameCount: 1 },
+    blimp13: { keys: ["ship_steel_industrial"], fps: 1, frameCount: 1 },
+    blimp14: { keys: ["ship_red_royal"], fps: 1, frameCount: 1 },
+    blimp15: { keys: ["ship_navy_rocket"], fps: 1, frameCount: 1 }
   };
 
   // blimp1, blimp2, blimp5, blimp6, blimp7, blimp9 and blimp10 have their own flight animations;
@@ -928,7 +939,12 @@
     blimp7: "ship_lightning_01",
     blimp8: "ship_cargo_01",
     blimp9: "ship_pirate_01",
-    blimp10: "ship_ivory_01"
+    blimp10: "ship_ivory_01",
+    blimp11: "ship_pirate_rocket",
+    blimp12: "ship_military_shark",
+    blimp13: "ship_steel_industrial",
+    blimp14: "ship_red_royal",
+    blimp15: "ship_navy_rocket"
   };
 
   // ---------- Animation frame validation — detect and skip near-blank frames ----------
