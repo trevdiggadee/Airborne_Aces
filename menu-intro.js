@@ -689,8 +689,16 @@ function endCutscene() {
   cutsceneSkipBtn.removeEventListener("click", endCutscene);
   stopTutorSpriteAnim();
   cutsceneScreen.style.display = "none";
-  enterGameplay();
+  // World map before first level
+  if (window.__airborneShowWorldMap) {
+    window.__airborneShowWorldMap({ mode: "start" });
+  } else {
+    enterGameplay();
+  }
 }
+
+// Exposed for world-map continue
+window.__airborneEnterGameplay = enterGameplay;
 
 
 

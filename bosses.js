@@ -1235,6 +1235,20 @@
   }
 
   function finishLevelEndAndResume() {
+    // Show world map between levels, then resume
+    if (window.__airborneShowWorldMap) {
+      window.__airborneShowWorldMap({
+        mode: "between",
+        onContinue: function () {
+          resumeAfterMapSelect();
+        }
+      });
+      return;
+    }
+    resumeAfterMapSelect();
+  }
+
+  function resumeAfterMapSelect() {
     window.__airborneWorldFrozen = false;
     resetHudFade();
     levelEndActive = false;
@@ -1246,8 +1260,6 @@
     levelEndStats = null;
     stopWorldWindDown();
 
-    // Put the blimp back into normal flight position for the next level
-    // (was left docked on the pad after the landing celebration)
     if (typeof player !== "undefined" && player) {
       player.x = W * 0.28;
       player.y = H * 0.4;
@@ -1255,11 +1267,9 @@
       player.rotation = 0;
     }
 
-    // Rebuild city strip for the new level art
     initBuildings();
     spawnTimer = 0;
 
-    // Bank checkpoint for the upcoming boss
     const next = nextBossConfig();
     if (next) {
       spawnCheckpointPickup(next.num);
@@ -1277,6 +1287,12 @@
       showBanner("ALL CLEAR — KEEP FLYING!", 2400, "level");
     }
     if (typeof sfxLevel2Start === "function") sfxLevel2Start();
+
+    // Ensure game screen is visible after map
+    const gs = document.getElementById("gameScreen");
+    if (gs) gs.style.display = "block";
+    const ms = document.getElementById("worldMapScreen");
+    if (ms) ms.style.display = "none";
   }
 
   function updateLevelEnd(dt) {

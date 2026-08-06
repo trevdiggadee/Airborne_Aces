@@ -2289,3 +2289,120 @@ html, body {
   -webkit-mask-image: radial-gradient(ellipse 78% 78% at 50% 50%, #000 52%, rgba(0,0,0,0.85) 68%, transparent 100%);
   mask-image: radial-gradient(ellipse 78% 78% at 50% 50%, #000 52%, rgba(0,0,0,0.85) 68%, transparent 100%);
 }
+
+
+/* ========== WORLD MAP ========== */
+#worldMapScreen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: #0d0a08;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+#worldMapScreen.wm-enter {
+  animation: wmFadeIn 0.55s ease-out;
+}
+@keyframes wmFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.wm-chrome {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 20;
+  pointer-events: none;
+  text-align: center;
+  padding: 10px 12px 0;
+}
+.wm-title {
+  font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  font-size: clamp(14px, 4.2vw, 22px);
+  color: #f0e0b8;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.75);
+}
+.wm-hint {
+  margin-top: 4px;
+  font-family: Georgia, serif;
+  font-size: clamp(11px, 3vw, 14px);
+  color: rgba(240, 224, 184, 0.8);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+}
+#worldMapContainer {
+  position: relative;
+  width: 100%;
+  max-width: 100vw;
+  max-height: 100vh;
+  aspect-ratio: 1024 / 1536;
+  margin: 0 auto;
+  overflow: hidden;
+  background: #0d0a08 url('airborne_aces_map.jpg') center top / 100% 100% no-repeat;
+}
+.wm-player-blimp {
+  position: absolute;
+  width: 78px;
+  height: 48px;
+  transform: translate(-50%, -50%);
+  z-index: 15;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.55));
+  pointer-events: none;
+}
+.wm-player-blimp img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.wm-level {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  z-index: 10;
+  border: none;
+  box-shadow: 0 0 0 3px #d4af37, 0 0 12px rgba(212,175,55,0.45);
+  background: rgba(212, 175, 55, 0.12);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.wm-level:hover, .wm-level:focus {
+  transform: translate(-50%, -50%) scale(1.12);
+  box-shadow: 0 0 0 4px #ffd700, 0 0 18px rgba(255,215,0,0.65);
+  outline: none;
+}
+.wm-level.completed {
+  box-shadow: 0 0 0 3px #4caf50, 0 0 10px rgba(76,175,80,0.45);
+  background: rgba(76, 175, 80, 0.15);
+}
+.wm-level.locked {
+  cursor: not-allowed;
+  opacity: 0.4;
+  box-shadow: 0 0 0 2px #666;
+  background: rgba(60,60,60,0.25);
+  pointer-events: none;
+}
+.wm-trail {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  background: #ffd700;
+  border-radius: 50%;
+  opacity: 0.65;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 5;
+  animation: wmTrail 0.7s forwards;
+}
+@keyframes wmTrail {
+  to { opacity: 0; transform: translate(-50%, -50%) scale(0.25); }
+}
+@media (max-width: 600px) {
+  .wm-player-blimp { width: 56px; height: 34px; }
+  .wm-level { width: 36px; height: 36px; }
+}

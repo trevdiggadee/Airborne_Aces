@@ -184,6 +184,19 @@
 </div>
 </div>
 
+<!-- World Map (after cutscene / between levels) -->
+<div id="worldMapScreen" style="display:none;">
+  <div class="wm-chrome">
+    <div class="wm-title" id="worldMapTitle">CHART YOUR COURSE</div>
+    <div class="wm-hint" id="worldMapHint">Tap an unlocked post to take flight.</div>
+  </div>
+  <div id="worldMapContainer">
+    <div class="wm-player-blimp" id="worldMapBlimp">
+      <img src="player_blimp.png" alt="" />
+    </div>
+  </div>
+</div>
+
 <div id="cutsceneScreen" class="cutsceneScreen" style="display:none;">
   <div class="cutsceneStage">
     <div class="cutsceneBg"></div>
@@ -351,6 +364,7 @@
 <script src="assets-placeholders.js"></script>
 <script src="blimp-profile.js"></script>
 <script src="menu-intro.js"></script>
+<script src="world-map.js"></script>
 <script src="audio.js"></script>
 <script src="asset-loading.js"></script>
 <script src="world-buildings.js"></script>
