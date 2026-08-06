@@ -286,15 +286,15 @@
   // Visual reaction on every flap — shared by all blimps
   window.__airborneFlapPulse = function() {
     try {
-      blimpPersonality.flapKickY = -Math.min(14, player.h * 0.12);
-      blimpPersonality.flapSquashT = 0.18;
-      // Tall stretch on flap (bag inflates / kicks)
-      blimpPersonality.squashTargetX = 0.86;
-      blimpPersonality.squashTargetY = 1.22;
-      blimpPersonality.squashX = 0.86;
-      blimpPersonality.squashY = 1.22;
-      // Snap fin lag opposite the climb
-      blimpPersonality.finLag = -0.22;
+      blimpPersonality.flapKickY = -Math.min(10, player.h * 0.09);
+      blimpPersonality.flapSquashT = 0.14;
+      // Light stretch on flap (just a bit more than idle)
+      blimpPersonality.squashTargetX = 0.92;
+      blimpPersonality.squashTargetY = 1.12;
+      blimpPersonality.squashX = 0.92;
+      blimpPersonality.squashY = 1.12;
+      // Mild fin lag snap
+      blimpPersonality.finLag = -0.14;
       emitExhaustPuff(true);
       emitExhaustPuff(true);
     } catch (e) {}
@@ -318,12 +318,12 @@
     var finTarget = player.rotation * 0.55 + (player.vy > 0 ? 0.08 : -0.06);
     blimpPersonality.finLag += (finTarget - blimpPersonality.finLag) * Math.min(1, 5 * dt);
 
-    // Harder continuous squash from climb/dive
+    // Mild continuous squash from climb/dive (slightly more than original)
     if (blimpPersonality.flapSquashT <= 0) {
-      blimpPersonality.squashTargetX = 1 + vNorm * 0.2;
-      blimpPersonality.squashTargetY = 1 - vNorm * 0.26;
-      blimpPersonality.squashTargetX = Math.max(0.78, Math.min(1.24, blimpPersonality.squashTargetX));
-      blimpPersonality.squashTargetY = Math.max(0.72, Math.min(1.28, blimpPersonality.squashTargetY));
+      blimpPersonality.squashTargetX = 1 + vNorm * 0.14;
+      blimpPersonality.squashTargetY = 1 - vNorm * 0.17;
+      blimpPersonality.squashTargetX = Math.max(0.80, Math.min(1.20, blimpPersonality.squashTargetX));
+      blimpPersonality.squashTargetY = Math.max(0.76, Math.min(1.24, blimpPersonality.squashTargetY));
     }
 
     var lerp = (blimpPersonality.flapSquashT > 0 ? 14 : 9) * dt;
