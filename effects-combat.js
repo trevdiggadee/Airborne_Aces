@@ -313,11 +313,15 @@
     sfxBossDefeat();
     setMusicTheme(THEME_NORMAL);
     bossesDefeatedCount++;
+    // Clear all air threats after the boss falls
+    if (typeof obstacles !== "undefined") obstacles = [];
     bombs = [];
     rockets = [];
     playerBombs = [];
     playerBombTrailParticles = [];
     powerup = null;
+    if (typeof healPickup !== "undefined") healPickup = null;
+    if (typeof shieldPickup !== "undefined") shieldPickup = null;
     hasFirepower = false;
     hasDualFire = false;
     hasArcBomb = false;
@@ -583,6 +587,9 @@
     boss = null;
     bossNumber = 0;
     bossThrowFrame = 0;
+    if (typeof obstacles !== "undefined") obstacles = [];
+    bombs = [];
+    rockets = [];
     // Rewards fire when the death sequence finishes
   }
 

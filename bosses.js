@@ -1178,9 +1178,18 @@
     window.__airborneWorldFrozen = true;
     player.vy = 0;
     player.rotation = 0;
-    // Snap solidly onto the deck (slightly lower rest)
+    // Snap solidly onto the deck — calm rest pose
     player.y = levelEndPad.surfaceY - player.h * 0.42;
     player.x = levelEndPad.x + levelEndPad.w * (levelEndPad.deckCenterFrac || 0.42);
+    if (typeof obstacles !== "undefined") obstacles = [];
+    if (typeof blimpPersonality !== "undefined" && blimpPersonality) {
+      blimpPersonality.exhaustParticles = [];
+      blimpPersonality.speedStreaks = [];
+      blimpPersonality.flapKickY = 0;
+      blimpPersonality.finLag = 0;
+      blimpPersonality.squashX = 1;
+      blimpPersonality.squashY = 1;
+    }
     spawnLandingDust(
       levelEndPad.x + levelEndPad.w * (levelEndPad.deckCenterFrac || 0.42),
       levelEndPad.surfaceY + 2

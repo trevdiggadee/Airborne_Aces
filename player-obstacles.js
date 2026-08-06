@@ -63,14 +63,24 @@
   }
 
   function updatePlayer(dt) {
-    // Fully freeze the blimp once it has docked on the landing pad
+    // Calm rest on the landing pad — no animation cycle, no exhaust, no squash
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) {
       player.vy = 0;
       player.rotation = 0;
-      player.y = levelEndPad.surfaceY - player.h * 0.45;
-      player.x = levelEndPad.x + levelEndPad.w * (levelEndPad.deckCenterFrac || 0.38);
-      updatePlayerBlimpAnimation(dt);
-      updateBlimpPersonality(dt);
+      player.y = levelEndPad.surfaceY - player.h * 0.42;
+      player.x = levelEndPad.x + levelEndPad.w * (levelEndPad.deckCenterFrac || 0.42);
+      // Freeze personality so frames/exhaust don't glitch
+      if (typeof blimpPersonality !== "undefined" && blimpPersonality) {
+        blimpPersonality.squashX = 1;
+        blimpPersonality.squashY = 1;
+        blimpPersonality.squashTargetX = 1;
+        blimpPersonality.squashTargetY = 1;
+        blimpPersonality.flapKickY = 0;
+        blimpPersonality.finLag = 0;
+        blimpPersonality.exhaustParticles = [];
+        blimpPersonality.speedStreaks = [];
+      }
+      // Do NOT advance frame animation while resting
       return;
     }
 
@@ -134,14 +144,19 @@
     if (typeof drawBlimpPropBlur === "function") drawBlimpPropBlur();
 
     ctx.save();
-    const kickY = (blimpPersonality && blimpPersonality.flapKickY) ? blimpPersonality.flapKickY : 0;
+    const docked = (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked);
+    const kickY = (!docked && blimpPersonality && blimpPersonality.flapKickY) ? blimpPersonality.flapKickY : 0;
+    const fin = (!docked && blimpPersonality) ? (blimpPersonality.finLag || 0) * 0.28 : 0;
     ctx.translate(player.x, player.y + kickY);
-    // Stronger fin lag so the body reads as flexible on every ship
-    ctx.rotate(player.rotation + (blimpPersonality.finLag || 0) * 0.28);
-    if (performance.now() < invulnerableUntil) {
+    ctx.rotate(player.rotation + fin);
+    if (!docked && performance.now() < invulnerableUntil) {
       ctx.globalAlpha = (Math.floor(performance.now() / 90) % 2 === 0) ? 1 : 0.35;
     }
-    ctx.scale(blimpPersonality.squashX, blimpPersonality.squashY);
+    if (docked) {
+      ctx.scale(1, 1);
+    } else {
+      ctx.scale(blimpPersonality.squashX, blimpPersonality.squashY);
+    }
     ctx.drawImage(img, -player.w / 2, -player.h / 2, player.w, player.h);
     ctx.restore();
   }

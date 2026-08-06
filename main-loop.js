@@ -232,7 +232,7 @@
     drawShockwaves();
     drawBonusHUD();
     drawComboPopups();
-    if (state === "playing") { drawFilmGrain(); drawVignette(); }
+    // Vignette + film grain removed — were causing uneven dimming and lag
     } catch (err) {
       if (!loopErrorShown) {
         loopErrorShown = true;
