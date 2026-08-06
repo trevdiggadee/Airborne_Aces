@@ -1526,16 +1526,15 @@
       ctx.restore();
     }
 
-    // Stats celebration panel (~5s) with count-up numbers
+    // Stats celebration panel (~5s) with medal behind + count-up numbers
     if ((levelEndPhase === "stats" || levelEndPhase === "fadeOut") && levelEndStats) {
       const s = levelEndStats;
-      const panelW = Math.min(W * 0.82, 340);
-      const panelH = 228;
+      const panelW = Math.min(W * 0.78, 320);
+      const panelH = 210;
       const px = (W - panelW) / 2;
-      const py = H * 0.22;
+      const py = H * 0.28;
       const alpha = levelEndPhase === "fadeOut" ? Math.max(0, 1 - levelEndFade) : Math.min(1, levelEndTimer * 2);
 
-      // Ease-out count-up over ~3.2s of the 5s stats hold
       const countT = levelEndPhase === "fadeOut" ? 1 : Math.min(1, levelEndTimer / 3.2);
       const ease = 1 - Math.pow(1 - countT, 3);
       function countInt(target) {
@@ -1545,45 +1544,63 @@
       ctx.save();
       ctx.globalAlpha = alpha;
 
-      // Panel background + gold glow edge
-      ctx.fillStyle = "rgba(20, 14, 8, 0.9)";
-      roundRect(ctx, px, py, panelW, panelH, 14);
+      // Medal badge BEHIND the score box — larger than the panel
+      const medal = images.medal_badge;
+      if (medal && medal.naturalWidth) {
+        const medalW = panelW * 1.55;
+        const medalH = medalW * (medal.naturalHeight / medal.naturalWidth);
+        const mx = W / 2 - medalW / 2;
+        const my = py + panelH / 2 - medalH / 2 - 8;
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.95;
+        ctx.drawImage(medal, mx, my, medalW, medalH);
+        ctx.restore();
+      }
+
+      // Semi-transparent glass panel matching medal gold / navy / red
+      ctx.fillStyle = "rgba(18, 28, 55, 0.42)"; // navy-blue glass
+      roundRect(ctx, px, py, panelW, panelH, 16);
       ctx.fill();
-      ctx.strokeStyle = "rgba(255, 210, 120, 0.95)";
+      // Gold rim
+      ctx.strokeStyle = "rgba(212, 170, 70, 0.9)";
       ctx.lineWidth = 2.5;
-      roundRect(ctx, px, py, panelW, panelH, 14);
+      roundRect(ctx, px, py, panelW, panelH, 16);
       ctx.stroke();
-      ctx.strokeStyle = "rgba(201, 166, 107, 0.35)";
-      ctx.lineWidth = 6;
-      roundRect(ctx, px - 1, py - 1, panelW + 2, panelH + 2, 15);
+      // Soft red inner accent (ribbon colors)
+      ctx.strokeStyle = "rgba(180, 40, 40, 0.35)";
+      ctx.lineWidth = 5;
+      roundRect(ctx, px + 3, py + 3, panelW - 6, panelH - 6, 13);
       ctx.stroke();
 
       ctx.textAlign = "center";
-      ctx.fillStyle = "#ffe9a8";
+      ctx.fillStyle = "#f5e6b8"; // soft gold
       ctx.font = "bold 22px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
+      ctx.shadowColor = "rgba(0,0,0,0.55)";
+      ctx.shadowBlur = 6;
       const clearLvl = s.levelNum || bossesDefeatedCount;
-      ctx.fillText("LEVEL " + clearLvl + " CLEAR", W / 2, py + 36);
+      ctx.fillText("LEVEL " + clearLvl + " CLEAR", W / 2, py + 34);
+      ctx.shadowBlur = 0;
 
       ctx.font = "14px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
-      ctx.fillStyle = "rgba(255,230,180,0.75)";
-      ctx.fillText((s.bossName || "Boss") + " defeated", W / 2, py + 58);
+      ctx.fillStyle = "rgba(245, 230, 190, 0.85)";
+      ctx.fillText((s.bossName || "Boss") + " defeated", W / 2, py + 56);
 
       const rows = [
         ["SCORE", countInt(s.score).toLocaleString(), false],
-        ["TIME", s.timeStr, true], // time string shown as-is
+        ["TIME", s.timeStr, true],
         ["LANDING BONUS", "+" + countInt(s.landingBonus), false],
         ["HEALTH LEFT", String(countInt(s.health)), false]
       ];
       rows.forEach((row, i) => {
-        const ry = py + 92 + i * 28;
+        const ry = py + 88 + i * 26;
         ctx.textAlign = "left";
-        ctx.fillStyle = "rgba(255,235,200,0.75)";
+        ctx.fillStyle = "rgba(245, 230, 190, 0.8)";
         ctx.font = "15px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
-        ctx.fillText(row[0], px + 28, ry);
+        ctx.fillText(row[0], px + 26, ry);
         ctx.textAlign = "right";
-        ctx.fillStyle = "#fff4d0";
+        ctx.fillStyle = "#ffe9a8";
         ctx.font = "bold 16px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
-        ctx.fillText(row[1], px + panelW - 28, ry);
+        ctx.fillText(row[1], px + panelW - 26, ry);
       });
 
       ctx.restore();
