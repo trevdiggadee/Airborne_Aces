@@ -341,7 +341,7 @@
     // Continuous exhaust for every vessel — denser when diving, thinner when climbing
     var diveFactor = Math.max(0, player.vy) / MAX_FALL_SPEED;
     var climbFactor = Math.max(0, -player.vy) / 400;
-    var emitRate = 0.07 - diveFactor * 0.035 + climbFactor * 0.03;
+    var emitRate = 0.1 - diveFactor * 0.03 + climbFactor * 0.04;
     if (effect === "blackSmoke") emitRate *= 0.65;
     if (effect === "flame") emitRate *= 0.55;
     if (effect === "steam") emitRate *= 0.8;

@@ -5,14 +5,17 @@
 
   // ---------- Day/night sky cycle — tied to gameplayScore so it advances with real dodging skill ----------
   function getSkyColors(gpScore) {
+    // Longer day stretch so brightness stays consistent through early bosses
+    // (boss 1 @50, boss 2 @100 no longer drop into heavy dusk/night)
     const stops = [
       { at: 0,   top: [245, 230, 200], bottom: [139, 111, 71] },  // day
-      { at: 70,  top: [255, 178, 110], bottom: [120, 70, 60] },   // dusk
-      { at: 120, top: [40, 40, 80],    bottom: [25, 20, 45] },    // night
-      { at: 190, top: [255, 200, 140], bottom: [130, 90, 70] },   // dawn
-      { at: 240, top: [245, 230, 200], bottom: [139, 111, 71] }   // back to day
+      { at: 130, top: [245, 230, 200], bottom: [139, 111, 71] },  // hold day
+      { at: 170, top: [255, 190, 130], bottom: [130, 85, 65] },   // soft dusk
+      { at: 210, top: [55, 55, 95],    bottom: [35, 30, 55] },    // milder night
+      { at: 250, top: [255, 205, 150], bottom: [135, 95, 75] },   // dawn
+      { at: 280, top: [245, 230, 200], bottom: [139, 111, 71] }   // day
     ];
-    const cycle = ((gpScore % 240) + 240) % 240;
+    const cycle = ((gpScore % 280) + 280) % 280;
     let a = stops[0], b = stops[1];
     for (let i = 0; i < stops.length - 1; i++) {
       if (cycle >= stops[i].at && cycle <= stops[i + 1].at) { a = stops[i]; b = stops[i + 1]; break; }
@@ -65,44 +68,25 @@
     if (!filmGrainPattern) buildFilmGrainPattern();
     ctx.save();
     ctx.globalCompositeOperation = "overlay";
-    ctx.globalAlpha = 0.05 + Math.random() * 0.025; // slight flicker frame to frame
-    const jx = (Math.random() - 0.5) * 10;
-    const jy = (Math.random() - 0.5) * 10;
-    ctx.translate(jx, jy);
+    // Stable alpha — random flicker felt like lag/dimming
+    ctx.globalAlpha = 0.04;
     ctx.fillStyle = filmGrainPattern;
-    ctx.fillRect(-jx - 4, -jy - 4, W + 8, H + 8);
-    ctx.restore();
-
-    // Heavy cinematic vignette — clearly visible at edges
-    ctx.save();
-    const vg = ctx.createRadialGradient(
-      W / 2, H / 2,
-      Math.min(W, H) * 0.22,
-      W / 2, H / 2,
-      Math.max(W, H) * 0.68
-    );
-    vg.addColorStop(0, "rgba(0,0,0,0)");
-    vg.addColorStop(0.4, "rgba(0,0,0,0.05)");
-    vg.addColorStop(0.7, "rgba(0,0,0,0.35)");
-    vg.addColorStop(0.88, "rgba(0,0,0,0.62)");
-    vg.addColorStop(1, "rgba(0,0,0,0.78)");
-    ctx.fillStyle = vg;
     ctx.fillRect(0, 0, W, H);
     ctx.restore();
   }
 
   function drawVignette() {
+    // One soft vignette only (was drawn twice and very heavy → dim + lag)
     ctx.save();
     const vg = ctx.createRadialGradient(
       W / 2, H / 2,
-      Math.min(W, H) * 0.25,
+      Math.min(W, H) * 0.4,
       W / 2, H / 2,
-      Math.max(W, H) * 0.7
+      Math.max(W, H) * 0.75
     );
     vg.addColorStop(0, "rgba(0,0,0,0)");
-    vg.addColorStop(0.5, "rgba(0,0,0,0.08)");
-    vg.addColorStop(0.8, "rgba(0,0,0,0.45)");
-    vg.addColorStop(1, "rgba(0,0,0,0.72)");
+    vg.addColorStop(0.65, "rgba(0,0,0,0.04)");
+    vg.addColorStop(1, "rgba(0,0,0,0.28)");
     ctx.fillStyle = vg;
     ctx.fillRect(0, 0, W, H);
     ctx.restore();
