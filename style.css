@@ -2406,3 +2406,35 @@ html, body {
   .wm-player-blimp { width: 56px; height: 34px; }
   .wm-level { width: 36px; height: 36px; }
 }
+
+
+.wm-level.current {
+  box-shadow: 0 0 0 4px #ffd700, 0 0 22px rgba(255, 215, 0, 0.75);
+  background: rgba(255, 215, 0, 0.22);
+  animation: wmPulse 1.4s ease-in-out infinite;
+  z-index: 12;
+}
+@keyframes wmPulse {
+  0%, 100% { box-shadow: 0 0 0 4px #ffd700, 0 0 18px rgba(255,215,0,0.6); }
+  50% { box-shadow: 0 0 0 8px #ffd700, 0 0 28px rgba(255,215,0,0.85); }
+}
+.wm-level-num {
+  font-family: 'Rockwell', Georgia, serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+  text-shadow: 0 1px 3px #000;
+  pointer-events: none;
+}
+.wm-level {
+  width: 56px;
+  height: 56px;
+}
+.wm-player-blimp {
+  pointer-events: auto !important;
+  cursor: pointer;
+}
+@media (max-width: 600px) {
+  .wm-level { width: 44px; height: 44px; }
+  .wm-level-num { font-size: 12px; }
+}

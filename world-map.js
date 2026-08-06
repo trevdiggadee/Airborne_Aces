@@ -27,10 +27,10 @@
     "6-5": [{x:52,y:11},{x:62,y:18},{x:72,y:26},{x:82,y:32}]
   };
 
-  let mapCurrent = 1; // pin on Beginner's Airfield
-  let mapMaxUnlocked = 1; // highest playable level index
+  let mapCurrent = 1;
+  let mapMaxUnlocked = 1;
   let mapFlying = false;
-  let mapMode = "start"; // "start" | "between"
+  let mapMode = "start";
   let mapPendingResume = null;
 
   function getEls() {
@@ -44,7 +44,6 @@
   }
 
   function syncProgressFromGame() {
-    // bossesDefeatedCount 0 → level 1 current, 1 → can go to 2, etc.
     const defeated = (typeof bossesDefeatedCount === "number") ? bossesDefeatedCount : 0;
     mapMaxUnlocked = Math.min(6, Math.max(1, defeated + 1));
     mapCurrent = Math.min(6, Math.max(1, defeated + 1));
@@ -64,46 +63,79 @@
     els.container.querySelectorAll(".wm-level").forEach(function (n) { n.remove(); });
 
     MAP_LEVELS.forEach(function (lvl) {
-      if (lvl.id === 0) return; // hangar is visual only on map
-      if (lvl.id === mapCurrent) return; // blimp sits here
+      if (lvl.id === 0) return; // hangar visual only
 
       const el = document.createElement("button");
       el.type = "button";
       el.className = "wm-level";
+      if (lvl.id === mapCurrent) el.classList.add("current");
       if (lvl.id < mapCurrent) el.classList.add("completed");
       if (lvl.id > mapMaxUnlocked) el.classList.add("locked");
+
       el.style.left = lvl.x + "%";
       el.style.top = lvl.y + "%";
-      el.setAttribute("aria-label", lvl.name);
-      el.title = lvl.name;
-      el.addEventListener("click", function () { onLevelClick(lvl.id); });
+      el.dataset.id = String(lvl.id);
+      el.setAttribute("aria-label", lvl.name + (lvl.id === mapCurrent ? " — tap to play" : ""));
+      el.title = lvl.name + (lvl.id <= mapMaxUnlocked ? " (tap to play)" : " (locked)");
+
+      // Number badge for clarity
+      const num = document.createElement("span");
+      num.className = "wm-level-num";
+      num.textContent = String(lvl.id);
+      el.appendChild(num);
+
+      if (lvl.id <= mapMaxUnlocked) {
+        el.addEventListener("click", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          onLevelClick(lvl.id);
+        });
+      }
+
       els.container.appendChild(el);
     });
+
+    // Tapping the player blimp also starts the current level
+    if (els.blimp) {
+      els.blimp.style.pointerEvents = "auto";
+      els.blimp.style.cursor = "pointer";
+      els.blimp.onclick = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        onLevelClick(mapCurrent);
+      };
+    }
   }
 
   function onLevelClick(targetId) {
     if (mapFlying) return;
+    if (targetId < 1 || targetId > 6) return;
     if (targetId > mapMaxUnlocked) return;
-    // Allow adjacent or any completed / current unlocked forward
-    if (targetId > mapCurrent + 1) return;
 
+    // Already here — start playing immediately
     if (targetId === mapCurrent) {
-      confirmSelection(targetId);
+      startPlaying(targetId);
       return;
     }
+
+    // Fly along the route, then start
     flyTo(targetId, function () {
-      confirmSelection(targetId);
+      startPlaying(targetId);
     });
   }
 
-  function confirmSelection(levelId) {
+  function startPlaying(levelId) {
     const els = getEls();
-    if (els.screen) els.screen.style.display = "none";
     mapFlying = false;
+    if (els.screen) els.screen.style.display = "none";
 
     if (mapMode === "start") {
-      if (window.__airborneEnterGameplay) window.__airborneEnterGameplay();
-      else if (typeof enterGameplay === "function") enterGameplay();
+      // First flight from hangar flow
+      if (typeof window.__airborneEnterGameplay === "function") {
+        window.__airborneEnterGameplay();
+      } else if (typeof enterGameplay === "function") {
+        enterGameplay();
+      }
     } else if (mapMode === "between") {
       if (typeof mapPendingResume === "function") {
         const fn = mapPendingResume;
@@ -131,7 +163,7 @@
 
   function animateAlongPath(points, onComplete) {
     const els = getEls();
-    const duration = 1600;
+    const duration = 1400;
     const startTime = performance.now();
     let lastTrail = 0;
     const goingUp = points[points.length - 1].y < points[0].y;
@@ -146,10 +178,10 @@
       const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
       const segCount = points.length - 1;
       const segT = ease * segCount;
-      const segIdx = Math.min(Math.floor(segT), segCount - 1);
+      const segIdx = Math.min(Math.floor(segT), Math.max(0, segCount - 1));
       const localT = segT - segIdx;
       const p0 = points[segIdx];
-      const p1 = points[segIdx + 1];
+      const p1 = points[Math.min(segIdx + 1, points.length - 1)];
       const x = p0.x + (p1.x - p0.x) * localT;
       const y = p0.y + (p1.y - p0.y) * localT;
       if (els.blimp) {
@@ -183,17 +215,19 @@
     mapPendingResume = opts.onContinue || null;
     syncProgressFromGame();
 
-    // After a level clear, pin on the level just finished and unlock next
     if (mapMode === "between" && typeof bossesDefeatedCount === "number") {
       const finished = Math.max(1, bossesDefeatedCount);
       mapCurrent = finished;
       mapMaxUnlocked = Math.min(6, finished + 1);
     }
+    if (mapMode === "start") {
+      mapCurrent = 1;
+      mapMaxUnlocked = 1;
+    }
 
     const els = getEls();
     if (!els.screen) return;
 
-    // Hide other screens
     const menu = document.getElementById("menuScreen");
     const game = document.getElementById("gameScreen");
     const cut = document.getElementById("cutsceneScreen");
@@ -205,17 +239,15 @@
       els.title.textContent = mapMode === "between" ? "COURSE PLOTTED" : "CHART YOUR COURSE";
     }
     if (els.hint) {
-      const nextName = (MAP_LEVELS[mapMaxUnlocked] && MAP_LEVELS[mapMaxUnlocked].name) || "next post";
-      els.hint.textContent = mapMode === "between"
-        ? ("Tap " + nextName + " to continue — or revisit a cleared post.")
-        : "Tap an unlocked post to take flight.";
+      const cur = MAP_LEVELS[mapCurrent];
+      els.hint.textContent = cur
+        ? ("Tap " + cur.name + " (or the blimp) to take flight")
+        : "Tap an unlocked post to take flight";
     }
 
     placeBlimp(mapCurrent);
     createMarkers();
     els.screen.style.display = "flex";
-
-    // Soft entrance
     els.screen.classList.remove("wm-enter");
     void els.screen.offsetWidth;
     els.screen.classList.add("wm-enter");
