@@ -45,7 +45,8 @@
 
   function syncProgressFromGame() {
     const defeated = (typeof bossesDefeatedCount === "number") ? bossesDefeatedCount : 0;
-    mapMaxUnlocked = Math.min(6, Math.max(1, defeated + 1));
+    // TEST MODE: all levels unlocked so any post can be flown to
+    mapMaxUnlocked = 6;
     mapCurrent = Math.min(6, Math.max(1, defeated + 1));
   }
 
@@ -118,7 +119,7 @@
       return;
     }
 
-    // Fly along the route, then start
+    // TEST MODE: fly even if not adjacent (chain path via intermediates if needed)
     flyTo(targetId, function () {
       startPlaying(targetId);
     });
@@ -147,11 +148,21 @@
 
   function flyTo(targetId, onDone) {
     mapFlying = true;
-    const key = mapCurrent + "-" + targetId;
-    const waypoints = PATHS[key] || [
-      { x: MAP_LEVELS[mapCurrent].x, y: MAP_LEVELS[mapCurrent].y },
-      { x: MAP_LEVELS[targetId].x, y: MAP_LEVELS[targetId].y }
-    ];
+    // Build path: use direct route if listed, else step through intermediate posts
+    let waypoints = PATHS[mapCurrent + "-" + targetId];
+    if (!waypoints) {
+      waypoints = [{ x: MAP_LEVELS[mapCurrent].x, y: MAP_LEVELS[mapCurrent].y }];
+      const step = targetId > mapCurrent ? 1 : -1;
+      for (let id = mapCurrent; id !== targetId; id += step) {
+        const next = id + step;
+        const leg = PATHS[id + "-" + next];
+        if (leg && leg.length > 1) {
+          for (let i = 1; i < leg.length; i++) waypoints.push(leg[i]);
+        } else if (MAP_LEVELS[next]) {
+          waypoints.push({ x: MAP_LEVELS[next].x, y: MAP_LEVELS[next].y });
+        }
+      }
+    }
     animateAlongPath(waypoints, function () {
       mapCurrent = targetId;
       placeBlimp(mapCurrent);
@@ -218,11 +229,11 @@
     if (mapMode === "between" && typeof bossesDefeatedCount === "number") {
       const finished = Math.max(1, bossesDefeatedCount);
       mapCurrent = finished;
-      mapMaxUnlocked = Math.min(6, finished + 1);
+      mapMaxUnlocked = 6; // TEST MODE: all open
     }
     if (mapMode === "start") {
       mapCurrent = 1;
-      mapMaxUnlocked = 1;
+      mapMaxUnlocked = 6; // TEST MODE: all open
     }
 
     const els = getEls();
