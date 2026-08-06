@@ -12,11 +12,11 @@ const BLIMP_DATA = {
   blimp8: { url: "ship_cargo.png", key: "ship_cargo", name: "Cargo King", effect: "blackSmoke" },
   blimp9: { url: "ship_pirate.png", key: "ship_pirate", name: "Jolly Rogers", effect: null },
   blimp10: { url: "ship_ivory.png", key: "ship_ivory", name: "Ivory Anchor", effect: null },
-  blimp11: { url: "ship_pirate_rocket.webp", key: "ship_pirate_rocket", name: "Pirate Rocket", effect: "flame" },
-  blimp12: { url: "ship_military_shark.webp", key: "ship_military_shark", name: "War Shark", effect: "smoke" },
-  blimp13: { url: "ship_steel_industrial.webp", key: "ship_steel_industrial", name: "Iron Lattice", effect: "steam" },
-  blimp14: { url: "ship_red_royal.webp", key: "ship_red_royal", name: "Royal Stripe", effect: null },
-  blimp15: { url: "ship_navy_rocket.webp", key: "ship_navy_rocket", name: "Sky Rocket", effect: "flame" }
+  blimp11: { url: "blimp11_flight_01.webp", key: "blimp11_flight_01", name: "Pirate Rocket", effect: "flame" },
+  blimp12: { url: "blimp12_flight_01.webp", key: "blimp12_flight_01", name: "War Shark", effect: "smoke" },
+  blimp13: { url: "blimp13_flight_01.webp", key: "blimp13_flight_01", name: "Iron Lattice", effect: "steam" },
+  blimp14: { url: "blimp14_flight_01.webp", key: "blimp14_flight_01", name: "Royal Stripe", effect: null },
+  blimp15: { url: "blimp15_flight_01.webp", key: "blimp15_flight_01", name: "Sky Rocket", effect: "flame" }
 };
 
 // ---------- Blimp Profile Panel data ----------
@@ -222,7 +222,12 @@ const HERO_ANIM = {
   blimp7: { urls: heroFramesFor(25, "ship_lightning_"), fps: 20 },
   blimp8: { urls: heroFramesFor(36, "ship_cargo_"), fps: 20 },
   blimp9: { urls: heroFramesFor(36, "ship_pirate_"), fps: 20 },
-  blimp10: { urls: heroFramesFor(36, "ship_ivory_"), fps: 20 }
+  blimp10: { urls: heroFramesFor(36, "ship_ivory_"), fps: 20 },
+  blimp11: { urls: heroFramesFor(36, "blimp11_flight_"), fps: 20 },
+  blimp12: { urls: heroFramesFor(36, "blimp12_flight_"), fps: 20 },
+  blimp13: { urls: heroFramesFor(36, "blimp13_flight_"), fps: 20 },
+  blimp14: { urls: heroFramesFor(36, "blimp14_flight_"), fps: 20 },
+  blimp15: { urls: heroFramesFor(36, "blimp15_flight_"), fps: 20 }
 };
 
 function blimpSrc(data) {
