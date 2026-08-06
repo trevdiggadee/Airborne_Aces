@@ -253,9 +253,13 @@
     var sel = typeof selectedBlimp !== "undefined" ? selectedBlimp : "blimp1";
     var data = (typeof BLIMP_DATA !== "undefined") ? BLIMP_DATA[sel] : null;
     var effect = (data && data.effect) || "propeller";
-    // All ships emit something while flying; intensity follows roster effect
     var style = exhaustStyleFor(effect);
-    var count = burst ? (8 + Math.floor(Math.random() * 5)) : 1;
+    // Keep bursts small — large bursts on every tap caused frame hitching
+    var count = burst ? 3 : 1;
+    // Cap total particles so rapid tapping can't stack hundreds of draws
+    if (blimpPersonality.exhaustParticles.length > 36) {
+      blimpPersonality.exhaustParticles.splice(0, blimpPersonality.exhaustParticles.length - 30);
+    }
     var exhaustX = player.x - player.w * 0.38;
     var exhaustY = player.y + player.h * 0.12;
     for (var i = 0; i < count; i++) {
@@ -263,39 +267,32 @@
       blimpPersonality.exhaustParticles.push({
         x: exhaustX + (Math.random() - 0.5) * 8,
         y: exhaustY + (Math.random() - 0.5) * 6,
-        vx: -(style.drag + Math.random() * 30 + speedBoost) * (burst ? 1.35 : 1),
+        vx: -(style.drag + Math.random() * 30 + speedBoost) * (burst ? 1.25 : 1),
         vy: (Math.random() - 0.5) * 18 - style.rise * (0.6 + Math.random() * 0.6),
-        size: style.size * (burst ? 1.4 : 1) * (0.7 + Math.random() * 0.6),
-        alpha: style.alpha * (burst ? 1.2 : 1) * (0.75 + Math.random() * 0.4),
-        life: style.life * (0.7 + Math.random() * 0.5),
+        size: style.size * (burst ? 1.25 : 1) * (0.7 + Math.random() * 0.6),
+        alpha: style.alpha * (burst ? 1.1 : 1) * (0.75 + Math.random() * 0.4),
+        life: style.life * (0.65 + Math.random() * 0.4),
         age: 0,
         color: style.color,
         mode: style.mode
       });
     }
   }
-  // Called from flap SFX peak so exhaust punches with the audio
+  // Light audio-synced puff (optional) — one small burst only
   window.__airborneExhaustBurst = function() {
-    try {
-      emitExhaustPuff(true);
-      emitExhaustPuff(true);
-      emitExhaustPuff(true);
-    } catch (e) {}
+    try { emitExhaustPuff(true); } catch (e) {}
   };
 
-  // Visual reaction on every flap — shared by all blimps
+  // Visual reaction on every flap — cheap: squash/kick only, one small puff
   window.__airborneFlapPulse = function() {
     try {
       blimpPersonality.flapKickY = -Math.min(10, player.h * 0.09);
       blimpPersonality.flapSquashT = 0.14;
-      // Light stretch on flap (just a bit more than idle)
       blimpPersonality.squashTargetX = 0.92;
       blimpPersonality.squashTargetY = 1.12;
       blimpPersonality.squashX = 0.92;
       blimpPersonality.squashY = 1.12;
-      // Mild fin lag snap
       blimpPersonality.finLag = -0.14;
-      emitExhaustPuff(true);
       emitExhaustPuff(true);
     } catch (e) {}
   };

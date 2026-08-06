@@ -158,15 +158,9 @@
   }
 
   function sfxFlap() {
-    // Layered whoosh + fabric snap + low body thump
-    playNoise({ duration: 0.11, vol: 0.055, filterType: "bandpass", filterFreq: 1100, filterFreqEnd: 320, Q: 0.9 });
-    playNoise({ duration: 0.07, vol: 0.03, filterType: "highpass", filterFreq: 2200, Q: 0.7 });
-    playTone({ freq: 210, duration: 0.1, type: "triangle", vol: 0.09, sweep: 160, attack: 0.003 });
-    playTone({ freq: 95, duration: 0.12, type: "sine", vol: 0.05, sweep: -25, attack: 0.005 });
-    // Exhaust puff on the peak of the flap transient
-    setTimeout(function() {
-      try { if (window.__airborneExhaustBurst) window.__airborneExhaustBurst(); } catch (e) {}
-    }, 28);
+    // Lean flap SFX — 2 nodes only (was 4 + delayed particle burst → tap lag)
+    playNoise({ duration: 0.08, vol: 0.05, filterType: "bandpass", filterFreq: 1000, filterFreqEnd: 360, Q: 0.85 });
+    playTone({ freq: 200, duration: 0.09, type: "triangle", vol: 0.08, sweep: 140, attack: 0.003 });
   }
 
   function sfxShoot() {
