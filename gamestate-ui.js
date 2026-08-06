@@ -368,12 +368,46 @@
     birdFlocks = [];
     birdFlockTimer = 6 + Math.random() * 8;
     initParallaxLayers();
-    showBanner("LEVEL 1", 2000, "level");
-    
+
+    // Map level select — jump progress so you're actually on that stage
+    const mapLvl = window.__airbornePendingMapLevel;
+    window.__airbornePendingMapLevel = null;
+    if (mapLvl && mapLvl >= 1) {
+      applyMapLevelProgress(mapLvl);
+    } else {
+      showBanner("LEVEL 1", 2000, "level");
+    }
+
     state = "playing";
     startOverlay.classList.add("hidden");
     gameOverOverlay.classList.add("hidden");
   }
+
+  // Map post 1..6 → bosses already cleared, score at that stage's floor
+  function applyMapLevelProgress(mapLevelId) {
+    const lvl = Math.max(1, Math.min(6, mapLevelId | 0));
+    // Level N means N-1 bosses already defeated (level 1 = fresh start)
+    const defeated = Math.min(5, lvl - 1);
+    const thresholds = [0, 50, 100, 150, 200, 250];
+    bossesDefeatedCount = defeated;
+    lastBossTriggered = defeated;
+    bossNumber = 0;
+    bossActive = false;
+    boss = null;
+    gameplayScore = thresholds[defeated] || 0;
+    score = gameplayScore;
+    if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
+    checkpointReached = defeated;
+    checkpointScore = score;
+    checkpointGameplayScore = gameplayScore;
+    checkpointBossesDefeated = defeated;
+    // Refresh world art for this stage
+    if (typeof initBuildings === "function") initBuildings();
+    if (typeof initParallaxLayers === "function") initParallaxLayers();
+    if (typeof initClouds === "function") initClouds();
+    showBanner("LEVEL " + lvl, 2200, "level");
+  }
+  window.__airborneApplyMapLevel = applyMapLevelProgress;
 
   function crash() {
     if (state !== "playing") return;
@@ -685,7 +719,12 @@
   let pendingStart = false;
   function bridgeStart() {
     if (assetsLoaded === assetKeys.length) {
-      startTutorial();
+      // Skip tutorial when jumping to a map level for testing
+      if (window.__airbornePendingMapLevel && window.__airbornePendingMapLevel >= 1) {
+        startGame();
+      } else {
+        startTutorial();
+      }
     } else {
       pendingStart = true;
     }

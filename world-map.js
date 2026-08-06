@@ -130,19 +130,27 @@
     mapFlying = false;
     if (els.screen) els.screen.style.display = "none";
 
+    // Tell the game which map post we're entering (1–6)
+    window.__airbornePendingMapLevel = levelId;
+
     if (mapMode === "start") {
-      // First flight from hangar flow
       if (typeof window.__airborneEnterGameplay === "function") {
         window.__airborneEnterGameplay();
       } else if (typeof enterGameplay === "function") {
         enterGameplay();
       }
     } else if (mapMode === "between") {
+      // Mid-run jump: apply progress then resume
+      if (typeof window.__airborneApplyMapLevel === "function") {
+        window.__airborneApplyMapLevel(levelId);
+      }
       if (typeof mapPendingResume === "function") {
         const fn = mapPendingResume;
         mapPendingResume = null;
         fn();
       }
+      const gs = document.getElementById("gameScreen");
+      if (gs) gs.style.display = "block";
     }
   }
 
