@@ -1526,84 +1526,104 @@
       ctx.restore();
     }
 
-    // Stats celebration panel (~5s) with medal behind + count-up numbers
+    // Stats celebration panel with bronze medal + staged fade-in
     if ((levelEndPhase === "stats" || levelEndPhase === "fadeOut") && levelEndStats) {
       const s = levelEndStats;
       const panelW = Math.min(W * 0.78, 320);
       const panelH = 210;
       const px = (W - panelW) / 2;
       const py = H * 0.28;
-      const alpha = levelEndPhase === "fadeOut" ? Math.max(0, 1 - levelEndFade) : Math.min(1, levelEndTimer * 2);
+      const fadeOutA = levelEndPhase === "fadeOut" ? Math.max(0, 1 - levelEndFade) : 1;
 
-      const countT = levelEndPhase === "fadeOut" ? 1 : Math.min(1, levelEndTimer / 3.2);
+      // Staged reveal: medal first, then panel, then text
+      const tMedal = levelEndPhase === "fadeOut" ? 1 : Math.min(1, levelEndTimer / 0.55);
+      const tPanel = levelEndPhase === "fadeOut" ? 1 : Math.max(0, Math.min(1, (levelEndTimer - 0.25) / 0.5));
+      const tText  = levelEndPhase === "fadeOut" ? 1 : Math.max(0, Math.min(1, (levelEndTimer - 0.55) / 0.45));
+      const easeIn = function(u) { return 1 - Math.pow(1 - u, 3); };
+      const eMedal = easeIn(tMedal);
+      const ePanel = easeIn(tPanel);
+      const eText  = easeIn(tText);
+
+      const countT = levelEndPhase === "fadeOut" ? 1 : Math.min(1, Math.max(0, (levelEndTimer - 0.6) / 3.0));
       const ease = 1 - Math.pow(1 - countT, 3);
       function countInt(target) {
         return Math.round((Number(target) || 0) * ease);
       }
 
-      ctx.save();
-      ctx.globalAlpha = alpha;
-
-      // Medal badge BEHIND the score box — larger than the panel
+      // --- Medal (behind) — scale + fade in from center ---
       const medal = images.medal_badge;
-      if (medal && medal.naturalWidth) {
+      if (medal && medal.naturalWidth && eMedal > 0.01) {
         const medalW = panelW * 1.55;
         const medalH = medalW * (medal.naturalHeight / medal.naturalWidth);
-        const mx = W / 2 - medalW / 2;
-        const my = py + panelH / 2 - medalH / 2 - 8;
+        const scale = 0.72 + 0.28 * eMedal;
+        const mw = medalW * scale;
+        const mh = medalH * scale;
+        const mx = W / 2 - mw / 2;
+        const my = py + panelH / 2 - mh / 2 - 8;
         ctx.save();
-        ctx.globalAlpha = alpha * 0.95;
-        ctx.drawImage(medal, mx, my, medalW, medalH);
+        ctx.globalAlpha = fadeOutA * eMedal;
+        ctx.drawImage(medal, mx, my, mw, mh);
         ctx.restore();
       }
 
-      // Semi-transparent glass panel matching medal gold / navy / red
-      ctx.fillStyle = "rgba(18, 28, 55, 0.42)"; // navy-blue glass
-      roundRect(ctx, px, py, panelW, panelH, 16);
-      ctx.fill();
-      // Gold rim
-      ctx.strokeStyle = "rgba(212, 170, 70, 0.9)";
-      ctx.lineWidth = 2.5;
-      roundRect(ctx, px, py, panelW, panelH, 16);
-      ctx.stroke();
-      // Soft red inner accent (ribbon colors)
-      ctx.strokeStyle = "rgba(180, 40, 40, 0.35)";
-      ctx.lineWidth = 5;
-      roundRect(ctx, px + 3, py + 3, panelW - 6, panelH - 6, 13);
-      ctx.stroke();
+      // --- Glass panel (bronze / patina tones) ---
+      if (ePanel > 0.01) {
+        ctx.save();
+        ctx.globalAlpha = fadeOutA * ePanel * 0.95;
+        // Slight rise as it appears
+        const yOff = (1 - ePanel) * 18;
+        const ppx = px;
+        const ppy = py + yOff;
 
-      ctx.textAlign = "center";
-      ctx.fillStyle = "#f5e6b8"; // soft gold
-      ctx.font = "bold 22px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
-      ctx.shadowColor = "rgba(0,0,0,0.55)";
-      ctx.shadowBlur = 6;
-      const clearLvl = s.levelNum || bossesDefeatedCount;
-      ctx.fillText("LEVEL " + clearLvl + " CLEAR", W / 2, py + 34);
-      ctx.shadowBlur = 0;
+        ctx.fillStyle = "rgba(42, 32, 22, 0.48)"; // aged bronze glass
+        roundRect(ctx, ppx, ppy, panelW, panelH, 16);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(180, 140, 75, 0.85)"; // bronze rim
+        ctx.lineWidth = 2.5;
+        roundRect(ctx, ppx, ppy, panelW, panelH, 16);
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(120, 55, 40, 0.4)"; // ribbon rust accent
+        ctx.lineWidth = 5;
+        roundRect(ctx, ppx + 3, ppy + 3, panelW - 6, panelH - 6, 13);
+        ctx.stroke();
 
-      ctx.font = "14px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
-      ctx.fillStyle = "rgba(245, 230, 190, 0.85)";
-      ctx.fillText((s.bossName || "Boss") + " defeated", W / 2, py + 56);
+        if (eText > 0.01) {
+          ctx.globalAlpha = fadeOutA * eText;
+          ctx.textAlign = "center";
+          ctx.fillStyle = "#e8d4a8";
+          ctx.font = "bold 22px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
+          ctx.shadowColor = "rgba(0,0,0,0.55)";
+          ctx.shadowBlur = 6;
+          const clearLvl = s.levelNum || bossesDefeatedCount;
+          ctx.fillText("LEVEL " + clearLvl + " CLEAR", W / 2, ppy + 34);
+          ctx.shadowBlur = 0;
 
-      const rows = [
-        ["SCORE", countInt(s.score).toLocaleString(), false],
-        ["TIME", s.timeStr, true],
-        ["LANDING BONUS", "+" + countInt(s.landingBonus), false],
-        ["HEALTH LEFT", String(countInt(s.health)), false]
-      ];
-      rows.forEach((row, i) => {
-        const ry = py + 88 + i * 26;
-        ctx.textAlign = "left";
-        ctx.fillStyle = "rgba(245, 230, 190, 0.8)";
-        ctx.font = "15px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
-        ctx.fillText(row[0], px + 26, ry);
-        ctx.textAlign = "right";
-        ctx.fillStyle = "#ffe9a8";
-        ctx.font = "bold 16px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
-        ctx.fillText(row[1], px + panelW - 26, ry);
-      });
+          ctx.font = "14px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
+          ctx.fillStyle = "rgba(230, 210, 170, 0.88)";
+          ctx.fillText((s.bossName || "Boss") + " defeated", W / 2, ppy + 56);
 
-      ctx.restore();
+          const rows = [
+            ["SCORE", countInt(s.score).toLocaleString(), false],
+            ["TIME", s.timeStr, true],
+            ["LANDING BONUS", "+" + countInt(s.landingBonus), false],
+            ["HEALTH LEFT", String(countInt(s.health)), false]
+          ];
+          rows.forEach((row, i) => {
+            const ry = ppy + 88 + i * 26;
+            const rowA = Math.max(0, Math.min(1, (eText * 1.4) - i * 0.12));
+            ctx.globalAlpha = fadeOutA * rowA;
+            ctx.textAlign = "left";
+            ctx.fillStyle = "rgba(230, 210, 170, 0.82)";
+            ctx.font = "15px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
+            ctx.fillText(row[0], ppx + 26, ry);
+            ctx.textAlign = "right";
+            ctx.fillStyle = "#f0e0b8";
+            ctx.font = "bold 16px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
+            ctx.fillText(row[1], ppx + panelW - 26, ry);
+          });
+        }
+        ctx.restore();
+      }
     }
 
     // Fade to black
