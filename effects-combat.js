@@ -141,10 +141,84 @@
     });
   }
 
+  // Exhaust / ember trail behind every rocket
+  let rocketTrailParticles = [];
+
+  function spawnRocketTrail(r) {
+    const speed = Math.hypot(r.vx, r.vy) || 1;
+    const backX = r.x - (r.vx / speed) * (r.r * 1.2);
+    const backY = r.y - (r.vy / speed) * (r.r * 1.2);
+    const count = 2 + (Math.random() < 0.5 ? 1 : 0);
+    for (let i = 0; i < count; i++) {
+      const isSmoke = Math.random() < 0.35;
+      rocketTrailParticles.push({
+        x: backX + (Math.random() - 0.5) * r.r * 0.6,
+        y: backY + (Math.random() - 0.5) * r.r * 0.6,
+        vx: -(r.vx / speed) * (20 + Math.random() * 40) + (Math.random() - 0.5) * 30,
+        vy: -(r.vy / speed) * (20 + Math.random() * 40) + (Math.random() - 0.5) * 30,
+        life: isSmoke ? 0.35 + Math.random() * 0.25 : 0.18 + Math.random() * 0.18,
+        age: 0,
+        size: isSmoke ? 4 + Math.random() * 5 : 2 + Math.random() * 3,
+        isSmoke: isSmoke
+      });
+    }
+    // Cap trail particles for performance
+    if (rocketTrailParticles.length > 120) {
+      rocketTrailParticles.splice(0, rocketTrailParticles.length - 120);
+    }
+  }
+
+  function updateRocketTrail(dt) {
+    rocketTrailParticles.forEach(function(p) {
+      p.age += dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vx *= 0.96;
+      p.vy *= 0.96;
+      if (p.isSmoke) p.size += 18 * dt;
+      else p.size *= 0.97;
+    });
+    rocketTrailParticles = rocketTrailParticles.filter(function(p) {
+      return p.age < p.life;
+    });
+  }
+
+  function drawRocketTrail() {
+    rocketTrailParticles.forEach(function(p) {
+      const t = 1 - p.age / p.life;
+      ctx.save();
+      if (p.isSmoke) {
+        ctx.globalAlpha = t * 0.35;
+        ctx.fillStyle = "rgba(90, 85, 80, 1)";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        // hot ember
+        ctx.globalAlpha = t * 0.9;
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+        g.addColorStop(0, "rgba(255, 250, 200, 1)");
+        g.addColorStop(0.4, "rgba(255, 160, 40, 0.95)");
+        g.addColorStop(1, "rgba(220, 40, 10, 0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+  }
+
   function updateRockets(dt) {
     rockets.forEach(r => {
       r.x += r.vx * dt;
       r.y += r.vy * dt;
+
+      r.trailTimer = (r.trailTimer || 0) - dt;
+      if (r.trailTimer <= 0) {
+        r.trailTimer = 0.028;
+        spawnRocketTrail(r);
+      }
 
       r.animTimer += dt;
       const frameDur = 1 / ROCKET_ANIM_FPS;
@@ -154,6 +228,7 @@
         r.animFrame = (r.animFrame + 1) % frames.length;
       }
     });
+    updateRocketTrail(dt);
     rockets = rockets.filter(r => r.x > -40 && r.x < W + 40 && r.y > -40 && r.y < H + 40);
 
     rockets = rockets.filter(r => {
@@ -169,6 +244,7 @@
   }
 
   function drawRockets() {
+    drawRocketTrail();
     rockets.forEach(r => {
       const frames = r.frameKeys || ROCKET_FLIGHT_KEYS;
       const img = images[frames[r.animFrame]] || images.rocket;
@@ -317,6 +393,7 @@
     if (typeof obstacles !== "undefined") obstacles = [];
     bombs = [];
     rockets = [];
+if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     playerBombs = [];
     playerBombTrailParticles = [];
     powerup = null;
