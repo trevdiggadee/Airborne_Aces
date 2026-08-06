@@ -103,6 +103,18 @@
   // a tone with a proper little attack/decay envelope, optional pitch sweep,
   // optional detune (for a thicker/metallic double-oscillator feel), and an
   // optional send to the reverb bus
+  let sharedNoiseBuffer = null;
+  function getSharedNoiseBuffer() {
+    if (!audioCtx) return null;
+    if (sharedNoiseBuffer && sharedNoiseBuffer.sampleRate === audioCtx.sampleRate) return sharedNoiseBuffer;
+    const len = Math.ceil(audioCtx.sampleRate * 0.25);
+    const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+    sharedNoiseBuffer = buf;
+    return buf;
+  }
+
   function playTone({ freq = 440, duration = 0.1, type = "sine", vol = 0.2, sweep = 0,
                        startDelay = 0, attack = 0.006, detune = 0, reverbSend = 0 }) {
     if (muted || !audioCtx) return;
@@ -133,10 +145,8 @@
                         filterFreq = 2000, filterFreqEnd = null, Q = 1, reverbSend = 0 }) {
     if (muted || !audioCtx) return;
     const t0 = audioCtx.currentTime + Math.max(0, startDelay);
-    const bufferSize = Math.max(1, Math.floor(audioCtx.sampleRate * duration));
-    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    const buffer = getSharedNoiseBuffer();
+    if (!buffer) return;
     const src = audioCtx.createBufferSource();
     src.buffer = buffer;
     const filter = audioCtx.createBiquadFilter();
@@ -157,10 +167,13 @@
     src.start(t0);
   }
 
+  let lastFlapSfxAt = 0;
   function sfxFlap() {
-    // Lean flap SFX — 2 nodes only (was 4 + delayed particle burst → tap lag)
-    playNoise({ duration: 0.08, vol: 0.05, filterType: "bandpass", filterFreq: 1000, filterFreqEnd: 360, Q: 0.85 });
-    playTone({ freq: 200, duration: 0.09, type: "triangle", vol: 0.08, sweep: 140, attack: 0.003 });
+    // Throttle + single tone — multi-tap was stacking Web Audio nodes every frame
+    const now = performance.now();
+    if (now - lastFlapSfxAt < 55) return;
+    lastFlapSfxAt = now;
+    playTone({ freq: 200, duration: 0.07, type: "triangle", vol: 0.07, sweep: 120, attack: 0.002 });
   }
 
   function sfxShoot() {

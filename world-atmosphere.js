@@ -256,9 +256,8 @@
     var style = exhaustStyleFor(effect);
     // Keep bursts small — large bursts on every tap caused frame hitching
     var count = burst ? 3 : 1;
-    // Cap total particles so rapid tapping can't stack hundreds of draws
-    if (blimpPersonality.exhaustParticles.length > 36) {
-      blimpPersonality.exhaustParticles.splice(0, blimpPersonality.exhaustParticles.length - 30);
+    if (blimpPersonality.exhaustParticles.length > 16) {
+      blimpPersonality.exhaustParticles.splice(0, blimpPersonality.exhaustParticles.length - 12);
     }
     var exhaustX = player.x - player.w * 0.38;
     var exhaustY = player.y + player.h * 0.12;
@@ -283,17 +282,16 @@
     try { emitExhaustPuff(true); } catch (e) {}
   };
 
-  // Visual reaction on every flap — cheap: squash/kick only, one small puff
+  // Visual reaction on every flap — squash/kick only (NO particles — particles lag on multi-tap)
   window.__airborneFlapPulse = function() {
     try {
-      blimpPersonality.flapKickY = -Math.min(10, player.h * 0.09);
-      blimpPersonality.flapSquashT = 0.14;
+      blimpPersonality.flapKickY = -Math.min(8, player.h * 0.07);
+      blimpPersonality.flapSquashT = 0.12;
       blimpPersonality.squashTargetX = 0.92;
       blimpPersonality.squashTargetY = 1.12;
       blimpPersonality.squashX = 0.92;
       blimpPersonality.squashY = 1.12;
-      blimpPersonality.finLag = -0.14;
-      emitExhaustPuff(true);
+      blimpPersonality.finLag = -0.12;
     } catch (e) {}
   };
 
@@ -338,7 +336,7 @@
     // Continuous exhaust for every vessel — denser when diving, thinner when climbing
     var diveFactor = Math.max(0, player.vy) / MAX_FALL_SPEED;
     var climbFactor = Math.max(0, -player.vy) / 400;
-    var emitRate = 0.1 - diveFactor * 0.03 + climbFactor * 0.04;
+    var emitRate = 0.16 - diveFactor * 0.03 + climbFactor * 0.03;
     if (effect === "blackSmoke") emitRate *= 0.65;
     if (effect === "flame") emitRate *= 0.55;
     if (effect === "steam") emitRate *= 0.8;
@@ -416,27 +414,19 @@
       ctx.restore();
     });
 
+    // Flat fills only — radial gradients per particle were a major multi-tap hitch
     blimpPersonality.exhaustParticles.forEach(function(p) {
-      var t = 1 - p.age / p.life;
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, p.alpha * t * t);
-      if (p.mode === "flame") {
-        var grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
-        grad.addColorStop(0, "rgba(255,245,200," + (0.9 * t) + ")");
-        grad.addColorStop(0.35, "rgba(255,140,40," + (0.7 * t) + ")");
-        grad.addColorStop(0.7, "rgba(255,40,10," + (0.35 * t) + ")");
-        grad.addColorStop(1, "rgba(40,10,0,0)");
-        ctx.fillStyle = grad;
-      } else {
-        var grad2 = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
-        grad2.addColorStop(0, "rgba(" + p.color + "," + (p.alpha * t) + ")");
-        grad2.addColorStop(1, "rgba(" + p.color + ",0)");
-        ctx.fillStyle = grad2;
-      }
+      var tt = 1 - p.age / p.life;
+      var a = Math.max(0, p.alpha * tt * tt);
+      if (a < 0.02) return;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      if (p.mode === "flame") {
+        ctx.fillStyle = "rgba(255,150,40," + a + ")";
+      } else {
+        ctx.fillStyle = "rgba(" + p.color + "," + a + ")";
+      }
       ctx.fill();
-      ctx.restore();
     });
   }
 
