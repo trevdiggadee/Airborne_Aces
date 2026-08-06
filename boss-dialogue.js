@@ -38,11 +38,37 @@ function startBossDialogue(num) {
   dlgBossImgEl.style.visibility = "visible";
   dlgBossImgEl.src = (bossImg && bossImg.naturalWidth) ? bossImg.src : "";
   document.getElementById("dlgBossName").textContent = (cfg && cfg.name) ? cfg.name : "BOSS " + num;
-  const playerImg = currentPlayerImage();
+  // Prefer the static hero portrait so the dialogue VS screen always shows the
+  // selected blimp (animated frames can be blank/failed and were hiding the img).
   const dlgPlayerImgEl = document.getElementById("dlgPlayerImg");
-  dlgPlayerImgEl.onerror = () => { dlgPlayerImgEl.style.visibility = "hidden"; };
+  dlgPlayerImgEl.onerror = () => {
+    // one retry with the live gameplay frame before giving up
+    const fallback = (typeof currentPlayerImage === "function") ? currentPlayerImage() : null;
+    if (fallback && fallback.src && dlgPlayerImgEl.dataset.retried !== "1") {
+      dlgPlayerImgEl.dataset.retried = "1";
+      dlgPlayerImgEl.src = fallback.src;
+    }
+  };
+  dlgPlayerImgEl.dataset.retried = "";
   dlgPlayerImgEl.style.visibility = "visible";
-  dlgPlayerImgEl.src = (playerImg && playerImg.naturalWidth) ? playerImg.src : "";
+  dlgPlayerImgEl.style.opacity = "1";
+  dlgPlayerImgEl.style.display = "block";
+
+  let portraitSrc = "";
+  const sel = (typeof selectedBlimp !== "undefined") ? selectedBlimp : "blimp1";
+  if (typeof BLIMP_HERO_KEYS !== "undefined" && BLIMP_HERO_KEYS[sel] && images[BLIMP_HERO_KEYS[sel]]) {
+    const hero = images[BLIMP_HERO_KEYS[sel]];
+    if (hero && hero.naturalWidth) portraitSrc = hero.src;
+  }
+  if (!portraitSrc && typeof BLIMP_DATA !== "undefined" && BLIMP_DATA[sel]) {
+    // Menu static url (e.g. ship_wood.png)
+    portraitSrc = BLIMP_DATA[sel].url || "";
+  }
+  if (!portraitSrc) {
+    const playerImg = (typeof currentPlayerImage === "function") ? currentPlayerImage() : null;
+    if (playerImg && playerImg.src) portraitSrc = playerImg.src;
+  }
+  dlgPlayerImgEl.src = portraitSrc || "";
 
   const tauntPool = (cfg && cfg.taunts && cfg.taunts.length) ? cfg.taunts : BOSS_TAUNTS;
   const retortPool = (cfg && cfg.retorts && cfg.retorts.length) ? cfg.retorts : PLAYER_RETORTS;
@@ -191,7 +217,13 @@ function triggerBoss(num) {
       targetX: (function () {
         const edgeMargin = W * 0.02;
         const paddedTarget = W - dispW * 0.55;
-        return num === 2 ? paddedTarget : Math.min(paddedTarget, W - dispW - edgeMargin);
+        if (num === 2) return paddedTarget;
+        // Boss 3 (tank) sits ~25% further back (toward the right edge)
+        if (num === 3 || cfg.kind === "tank") {
+          const back = W - dispW * 0.22;
+          return Math.min(back, W - dispW * 0.06 - edgeMargin);
+        }
+        return Math.min(paddedTarget, W - dispW - edgeMargin);
       })(),
       groundBaseY: isGround ? groundY - dispH + dispH * 0.1 : null,
       health: cfg.maxHealth,
@@ -258,9 +290,30 @@ function triggerBoss(num) {
       boss.attackTimer -= dt;
       if (boss.attackTimer <= 0) {
         boss.attackTimer = 1.7 + Math.random() * 0.9;
-        const startX = boss.x + boss.w * 0.5;
-        const startY = boss.y + boss.h * 0.12;
+        // Cannon muzzle (upper center of the tank turret)
+        const startX = boss.x + boss.w * 0.42;
+        const startY = boss.y + boss.h * 0.18;
+        // Arcing shell
         spawnArcBomb(bombs, startX, startY, player.x, player.y, 360, 1.0, 1.3, "boss3_shell");
+        // Boss-2 style rocket, scaled down
+        const dx = player.x - startX;
+        const dy = player.y - startY;
+        const dist = Math.max(1, Math.hypot(dx, dy));
+        const spd = (typeof ROCKET_SPEED !== "undefined" ? ROCKET_SPEED : 280) * 0.85;
+        rockets.push({
+          x: startX,
+          y: startY,
+          vx: (dx / dist) * spd,
+          vy: (dy / dist) * spd,
+          r: Math.min(11, W * 0.028), // ~60% of boss-2 rocket size
+          health: 2,
+          maxHealth: 2,
+          angle: Math.atan2(dy, dx),
+          animFrame: 0,
+          animTimer: Math.random() * 0.05,
+          frameKeys: (typeof ROCKET_FLIGHT_KEYS !== "undefined") ? ROCKET_FLIGHT_KEYS : null
+        });
+        if (typeof sfxShoot === "function") sfxShoot();
       }
     } else if (boss.kind === "rocket" || boss.kind === "heli") {
       // floating villain blimp / helicopter — both fire straight-line homing rockets

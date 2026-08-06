@@ -1577,7 +1577,7 @@
         return Math.round((Number(target) || 0) * ease);
       }
 
-      // --- Medal (behind) — scale + fade in from center ---
+      // --- Medal (behind) — scale + fade + glow + sparkles ---
       const medal = images.medal_badge;
       if (medal && medal.naturalWidth && eMedal > 0.01) {
         const medalW = panelW * 1.55;
@@ -1587,9 +1587,54 @@
         const mh = medalH * scale;
         const mx = W / 2 - mw / 2;
         const my = py + panelH / 2 - mh / 2 - 8;
+        const cx = W / 2;
+        const cy = my + mh * 0.42;
+
         ctx.save();
         ctx.globalAlpha = fadeOutA * eMedal;
-        ctx.drawImage(medal, mx, my, mw, mh);
+
+        // Soft golden halo
+        const pulse = 0.55 + 0.45 * Math.sin(levelEndTimer * 4.2);
+        const glowR = mw * (0.42 + 0.06 * pulse);
+        const halo = ctx.createRadialGradient(cx, cy, glowR * 0.15, cx, cy, glowR);
+        halo.addColorStop(0, "rgba(255, 220, 120, " + (0.45 * eMedal * pulse) + ")");
+        halo.addColorStop(0.45, "rgba(212, 160, 60, " + (0.22 * eMedal) + ")");
+        halo.addColorStop(1, "rgba(120, 70, 20, 0)");
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(cx, cy, glowR, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Medal with slight settle rotation
+        const rot = (1 - eMedal) * 0.12;
+        ctx.translate(cx, cy);
+        ctx.rotate(rot);
+        ctx.drawImage(medal, -mw / 2, -mh / 2, mw, mh);
+        ctx.rotate(-rot);
+        ctx.translate(-cx, -cy);
+
+        // Sparkle bursts during the first second of the reveal
+        if (eMedal > 0.2 && levelEndTimer < 2.2) {
+          const n = 10;
+          for (let i = 0; i < n; i++) {
+            const ang = (i / n) * Math.PI * 2 + levelEndTimer * 1.8;
+            const rad = mw * (0.28 + 0.12 * Math.sin(levelEndTimer * 5 + i));
+            const sx = cx + Math.cos(ang) * rad;
+            const sy = cy + Math.sin(ang) * rad * 0.85;
+            const twinkle = 0.35 + 0.65 * Math.abs(Math.sin(levelEndTimer * 8 + i * 1.3));
+            ctx.globalAlpha = fadeOutA * eMedal * twinkle * 0.9;
+            ctx.fillStyle = i % 2 === 0 ? "#ffe9a8" : "#fff8e0";
+            ctx.beginPath();
+            // 4-point star
+            const s = 2.2 + twinkle * 2.5;
+            ctx.moveTo(sx, sy - s);
+            ctx.lineTo(sx + s * 0.35, sy);
+            ctx.lineTo(sx, sy + s);
+            ctx.lineTo(sx - s * 0.35, sy);
+            ctx.closePath();
+            ctx.fill();
+          }
+        }
         ctx.restore();
       }
 
