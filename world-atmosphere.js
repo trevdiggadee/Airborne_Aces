@@ -8,19 +8,27 @@
   // boss threshold (i.e. the level changes) the two backgrounds blend into
   // each other over a couple of seconds instead of popping.
   function currentLevelBgKey() {
-    // Hold level-1 far background through boss-1 bonus + landing sequence
-    if (bossesDefeatedCount < 1) return 'skylineFar';
-    if (bossesDefeatedCount === 1) {
-      const stillInL1Outro =
-        (typeof bonusActive !== "undefined" && bonusActive) ||
-        (typeof bonusPending !== "undefined" && bonusPending) ||
-        (typeof levelEndActive !== "undefined" && levelEndActive) ||
-        (typeof worldWindDown !== "undefined" && worldWindDown);
-      if (stillInL1Outro) return 'skylineFar';
-      return 'skylineFarL2';
+    function hasImg(key) {
+      const img = (typeof images !== "undefined") ? images[key] : null;
+      return !!(img && img.naturalWidth);
     }
-    if (bossesDefeatedCount < 2) return 'skylineFarL2';
-    return 'skylineFarL3'; // level 3 and beyond, until more art is added
+    let key = "skylineFar";
+    if (typeof bossesDefeatedCount === "number") {
+      if (bossesDefeatedCount >= 2) key = "skylineFarL3";
+      else if (bossesDefeatedCount >= 1) {
+        const stillInL1Outro =
+          (typeof bonusActive !== "undefined" && bonusActive) ||
+          (typeof bonusPending !== "undefined" && bonusPending) ||
+          (typeof levelEndActive !== "undefined" && levelEndActive);
+        key = stillInL1Outro ? "skylineFar" : "skylineFarL2";
+      }
+    }
+    // Fall back if that level's art isn't in the repo / failed to load
+    if (!hasImg(key)) {
+      if (key === "skylineFarL3" && hasImg("skylineFarL2")) return "skylineFarL2";
+      if (hasImg("skylineFar")) return "skylineFar";
+    }
+    return key;
   }
   let bgTransition = null; // { from, to, t } while crossfading between two level backgrounds
 

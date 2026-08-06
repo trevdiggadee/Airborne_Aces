@@ -86,6 +86,17 @@
   function nextBossConfig() { return BOSSES.find(b => b.num > lastBossTriggered); }
   function bossImgKey(num) { return num === 1 ? "boss" : "boss" + num; }
 
+  // Called from map level select — must live here so it writes the real lets
+  window.__airborneSetRunProgress = function(defeated, gpScore) {
+    const d = Math.max(0, Math.min(5, defeated | 0));
+    bossesDefeatedCount = d;
+    lastBossTriggered = d;
+    bossNumber = 0;
+    bossActive = false;
+    boss = null;
+    if (typeof gameplayScore !== "undefined") gameplayScore = gpScore | 0;
+  };
+
   let lastBossTriggered = 0;   // 0 = none yet; highest boss number triggered so far
   let bossNumber = 0;          // 0 = none active, else the boss currently on screen
   let bossActive = false;

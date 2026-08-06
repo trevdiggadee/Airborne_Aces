@@ -385,27 +385,31 @@
 
   // Map post 1..6 → bosses already cleared, score at that stage's floor
   function applyMapLevelProgress(mapLevelId) {
-    const lvl = Math.max(1, Math.min(6, mapLevelId | 0));
-    // Level N means N-1 bosses already defeated (level 1 = fresh start)
+    const lvl = Math.max(1, Math.min(6, Number(mapLevelId) || 1));
     const defeated = Math.min(5, lvl - 1);
     const thresholds = [0, 50, 100, 150, 200, 250];
-    bossesDefeatedCount = defeated;
-    lastBossTriggered = defeated;
-    bossNumber = 0;
-    bossActive = false;
-    boss = null;
-    gameplayScore = thresholds[defeated] || 0;
-    score = gameplayScore;
+    const gp = thresholds[defeated] || 0;
+
+    // Write progress in bosses.js scope (shared lets), not a phantom global
+    if (typeof window.__airborneSetRunProgress === "function") {
+      window.__airborneSetRunProgress(defeated, gp);
+    } else {
+      bossesDefeatedCount = defeated;
+      lastBossTriggered = defeated;
+    }
+    gameplayScore = gp;
+    score = gp;
     if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
     checkpointReached = defeated;
     checkpointScore = score;
     checkpointGameplayScore = gameplayScore;
     checkpointBossesDefeated = defeated;
-    // Refresh world art for this stage
+
     if (typeof initBuildings === "function") initBuildings();
     if (typeof initParallaxLayers === "function") initParallaxLayers();
     if (typeof initClouds === "function") initClouds();
-    showBanner("LEVEL " + lvl, 2200, "level");
+    // Banner after art refresh so it isn't overwritten by LEVEL 1
+    showBanner("LEVEL " + lvl, 2400, "level");
   }
   window.__airborneApplyMapLevel = applyMapLevelProgress;
 
@@ -719,8 +723,7 @@
   let pendingStart = false;
   function bridgeStart() {
     if (assetsLoaded === assetKeys.length) {
-      // Skip tutorial when jumping to a map level for testing
-      if (window.__airbornePendingMapLevel && window.__airbornePendingMapLevel >= 1) {
+      if (window.__airbornePendingMapLevel && Number(window.__airbornePendingMapLevel) >= 1) {
         startGame();
       } else {
         startTutorial();
@@ -730,6 +733,17 @@
     }
   }
   window.__airborneGameStart = bridgeStart;
+
+  // When assets finish loading after a map-start was queued
+  window.__airborneOnAssetsReady = function() {
+    if (!pendingStart) return;
+    pendingStart = false;
+    if (window.__airbornePendingMapLevel && Number(window.__airbornePendingMapLevel) >= 1) {
+      startGame();
+    } else {
+      startTutorial();
+    }
+  };
 
   function handleInput(e) {
     if (e.cancelable) e.preventDefault();

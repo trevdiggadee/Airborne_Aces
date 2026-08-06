@@ -1109,6 +1109,9 @@
         if (assetsLoaded === assetKeys.length) {
           validateAnimationFrames();
           onDone();
+          if (typeof window.__airborneOnAssetsReady === "function") {
+            try { window.__airborneOnAssetsReady(); } catch (e) {}
+          }
           if (failedAssetKeys.length) {
             console.warn("Airborne Aces: " + failedAssetKeys.length + " asset(s) missing from the repo, using placeholder art:", failedAssetKeys);
             // on-screen banner disabled for now — check the console list above if something's missing

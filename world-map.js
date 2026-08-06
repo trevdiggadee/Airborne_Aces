@@ -131,7 +131,7 @@
     if (els.screen) els.screen.style.display = "none";
 
     // Tell the game which map post we're entering (1–6)
-    window.__airbornePendingMapLevel = levelId;
+    window.__airbornePendingMapLevel = Number(levelId) || 1;
 
     if (mapMode === "start") {
       if (typeof window.__airborneEnterGameplay === "function") {

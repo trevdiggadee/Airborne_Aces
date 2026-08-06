@@ -49,16 +49,19 @@
 
   function currentBuildingRowKey() {
     // Keep level-1 buildings through boss-1 defeat, bonus round, and landing.
-    // Switch to level-2 only after finishLevelEndAndResume re-inits the strip.
     if (bossesDefeatedCount === 1) {
       const holdL1 =
         (typeof bonusActive !== "undefined" && bonusActive) ||
         (typeof bonusPending !== "undefined" && bonusPending) ||
         (typeof levelEndActive !== "undefined" && levelEndActive) ||
         worldWindDown;
-      if (holdL1) return BUILDING_ROW_KEYS[0]; // streetrow1
+      if (holdL1) return BUILDING_ROW_KEYS[0];
     }
-    return BUILDING_ROW_KEYS[bossesDefeatedCount % BUILDING_ROW_KEYS.length];
+    let key = BUILDING_ROW_KEYS[bossesDefeatedCount % BUILDING_ROW_KEYS.length];
+    // Fall back to level-1 strip if level-2 art is missing
+    const img = (typeof images !== "undefined") ? images[key] : null;
+    if (!img || !img.naturalWidth) key = BUILDING_ROW_KEYS[0];
+    return key;
   }
 
   function makeBuildingRowTile(xStart, key) {
