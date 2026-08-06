@@ -225,7 +225,11 @@
     propSpeed: 0,
     propBlurOpacity: 0,
     speedStreaks: [],
-    finLag: 0
+    finLag: 0,
+    // Tap / dive reaction (all ships)
+    flapKickY: 0,       // temporary upward visual offset on flap
+    flapSquashT: 0,     // timer for flap squash pulse
+    diveSquashT: 0
   };
 
   function exhaustStyleFor(effect) {
@@ -272,7 +276,28 @@
   }
   // Called from flap SFX peak so exhaust punches with the audio
   window.__airborneExhaustBurst = function() {
-    try { emitExhaustPuff(true); } catch (e) {}
+    try {
+      emitExhaustPuff(true);
+      emitExhaustPuff(true);
+      emitExhaustPuff(true);
+    } catch (e) {}
+  };
+
+  // Visual reaction on every flap — shared by all blimps
+  window.__airborneFlapPulse = function() {
+    try {
+      blimpPersonality.flapKickY = -Math.min(14, player.h * 0.12);
+      blimpPersonality.flapSquashT = 0.18;
+      // Tall stretch on flap (bag inflates / kicks)
+      blimpPersonality.squashTargetX = 0.86;
+      blimpPersonality.squashTargetY = 1.22;
+      blimpPersonality.squashX = 0.86;
+      blimpPersonality.squashY = 1.22;
+      // Snap fin lag opposite the climb
+      blimpPersonality.finLag = -0.22;
+      emitExhaustPuff(true);
+      emitExhaustPuff(true);
+    } catch (e) {}
   };
 
   function updateBlimpPersonality(dt) {
@@ -281,15 +306,27 @@
     var effect = (data && data.effect) || null;
 
     var vNorm = player.vy / MAX_FALL_SPEED;
-    // Fin/body lag target follows pitch rate
-    blimpPersonality.finLag += (player.rotation * 0.35 - blimpPersonality.finLag) * Math.min(1, 6 * dt);
 
-    blimpPersonality.squashTargetX = 1 + vNorm * 0.12;
-    blimpPersonality.squashTargetY = 1 - vNorm * 0.15;
-    blimpPersonality.squashTargetX = Math.max(0.82, Math.min(1.18, blimpPersonality.squashTargetX));
-    blimpPersonality.squashTargetY = Math.max(0.78, Math.min(1.22, blimpPersonality.squashTargetY));
+    // Decay flap kick (visual only — not physics)
+    if (blimpPersonality.flapKickY) {
+      blimpPersonality.flapKickY *= Math.max(0, 1 - 10 * dt);
+      if (Math.abs(blimpPersonality.flapKickY) < 0.4) blimpPersonality.flapKickY = 0;
+    }
+    if (blimpPersonality.flapSquashT > 0) blimpPersonality.flapSquashT -= dt;
 
-    var lerp = 8 * dt;
+    // Stronger fin lag — bag leads, fins trail
+    var finTarget = player.rotation * 0.55 + (player.vy > 0 ? 0.08 : -0.06);
+    blimpPersonality.finLag += (finTarget - blimpPersonality.finLag) * Math.min(1, 5 * dt);
+
+    // Harder continuous squash from climb/dive
+    if (blimpPersonality.flapSquashT <= 0) {
+      blimpPersonality.squashTargetX = 1 + vNorm * 0.2;
+      blimpPersonality.squashTargetY = 1 - vNorm * 0.26;
+      blimpPersonality.squashTargetX = Math.max(0.78, Math.min(1.24, blimpPersonality.squashTargetX));
+      blimpPersonality.squashTargetY = Math.max(0.72, Math.min(1.28, blimpPersonality.squashTargetY));
+    }
+
+    var lerp = (blimpPersonality.flapSquashT > 0 ? 14 : 9) * dt;
     blimpPersonality.squashX += (blimpPersonality.squashTargetX - blimpPersonality.squashX) * lerp;
     blimpPersonality.squashY += (blimpPersonality.squashTargetY - blimpPersonality.squashY) * lerp;
 

@@ -54,8 +54,12 @@
 
   function flap() {
     if (state !== "playing") return;
+    // Don't flap-react while docked on the pad
+    if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) return;
     player.vy = FLAP_VELOCITY;
     sfxFlap();
+    // Visual pulse on every ship (squash kick, fin lag, exhaust)
+    if (window.__airborneFlapPulse) window.__airborneFlapPulse();
   }
 
   function updatePlayer(dt) {
@@ -130,8 +134,10 @@
     if (typeof drawBlimpPropBlur === "function") drawBlimpPropBlur();
 
     ctx.save();
-    ctx.translate(player.x, player.y);
-    ctx.rotate(player.rotation + (blimpPersonality.finLag || 0) * 0.15);
+    const kickY = (blimpPersonality && blimpPersonality.flapKickY) ? blimpPersonality.flapKickY : 0;
+    ctx.translate(player.x, player.y + kickY);
+    // Stronger fin lag so the body reads as flexible on every ship
+    ctx.rotate(player.rotation + (blimpPersonality.finLag || 0) * 0.28);
     if (performance.now() < invulnerableUntil) {
       ctx.globalAlpha = (Math.floor(performance.now() / 90) % 2 === 0) ? 1 : 0.35;
     }
