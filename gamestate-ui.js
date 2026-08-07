@@ -757,8 +757,15 @@
     if (state === "playing") flap();
     // ignore input while paused
   }
+  function handleInputUp(e) {
+    window.__airborneAirfieldHold = false;
+  }
   canvas.addEventListener("touchstart", handleInput, { passive: false });
   canvas.addEventListener("mousedown", handleInput);
+  canvas.addEventListener("touchend", handleInputUp, { passive: true });
+  canvas.addEventListener("touchcancel", handleInputUp, { passive: true });
+  canvas.addEventListener("mouseup", handleInputUp);
+  window.addEventListener("mouseup", handleInputUp);
   window.addEventListener("keydown", (e) => {
     if (e.code === "Space") {
       e.preventDefault();

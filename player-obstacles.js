@@ -56,6 +56,15 @@
     if (state !== "playing") return;
     // Don't flap-react while docked on the pad
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) return;
+    // Airfield runway: holding/tapping powers acceleration instead of flapping
+    if (window.__airborneAirfield &&
+        (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel")) {
+      window.__airborneAirfieldHold = true;
+      return;
+    }
+    if (window.__airborneAirfield && window.__airborneAirfieldPhase === "climb") {
+      return; // scripted climb — no player flap
+    }
     player.vy = FLAP_VELOCITY;
     sfxFlap();
     // Visual pulse on every ship (squash kick, fin lag, exhaust)
@@ -100,11 +109,12 @@
     const groundY = groundLevelY();
     if (player.y + player.h / 2 > groundY) {
       player.y = groundY - player.h / 2;
-      // During level-end landing, the pad handles the floor — don't punish ground contact
-      if (!(typeof isLevelEndActive === "function" && isLevelEndActive())) {
-        takeHit();
-      } else {
+      // Airfield takeoff / level-end pad: never punish ground contact
+      if (window.__airborneAirfieldInvuln ||
+          (typeof isLevelEndActive === "function" && isLevelEndActive())) {
         player.vy = Math.min(player.vy, 0);
+      } else {
+        takeHit();
       }
     }
     if (player.y - player.h / 2 < 0) {
