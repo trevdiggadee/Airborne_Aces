@@ -326,10 +326,7 @@ html, body {
   transform: translateX(-50%);
   z-index: 2;
   animation: floatHero 3.2s ease-in-out infinite;
-  /* Soft hull shadow — contact ellipse below carries most of the weight */
-  filter:
-    drop-shadow(0 6px 4px rgba(0,0,0,0.35))
-    drop-shadow(0 14px 16px rgba(0,0,0,0.28));
+  filter: none;
   pointer-events: none;
 }
 .heroBlimpWrap.hero-small {
@@ -338,29 +335,13 @@ html, body {
 }
 /* Contact shadow lowered toward Take Flight button / platform */
 .heroBlimpWrap::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: -18%;
-  transform: translateX(-50%);
-  width: 62%;
-  height: 14%;
-  border-radius: 50%;
-  background: radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.22) 42%, rgba(0,0,0,0) 74%);
-  filter: blur(5px);
-  pointer-events: none;
-  z-index: 0;
+  display: none;
+  content: none;
 }
 /* Soft edge fade so sprite doesn't look hard-cut against the hangar */
 .heroBlimpWrap::before {
-  content: "";
-  position: absolute;
-  inset: -4%;
-  border-radius: 42%;
-  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 48%, rgba(0,0,0,0.12) 72%, rgba(0,0,0,0.28) 100%);
-  pointer-events: none;
-  z-index: 3;
-  mix-blend-mode: multiply;
+  display: none;
+  content: none;
 }
 
 .heroBlimpWrap img {
@@ -610,7 +591,7 @@ html, body {
   object-fit: contain;
   display: block;
   pointer-events: none;
-  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));
+  filter: none;
 }
 
 .numBtn.active {
