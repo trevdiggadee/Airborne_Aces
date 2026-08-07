@@ -36,6 +36,7 @@
     bldg_l3_minetower:   "IMG_0769.png",
     bldg_l3_pipeworks:   "IMG_0770.png",
     streetrow1: "streetrow1.webp",
+    airfield_strip: "airfield_strip.webp",
     streetrow2: "level2_buildings_strip.png",
     streetlamp1:     "IMG_0734.png",
     boss:            "boss_throw_01.webp?cb=2",

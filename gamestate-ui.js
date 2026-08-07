@@ -372,15 +372,21 @@
     // Map level select — jump progress so you're actually on that stage
     const mapLvl = window.__airbornePendingMapLevel;
     window.__airbornePendingMapLevel = null;
-    if (mapLvl && mapLvl >= 1) {
-      applyMapLevelProgress(mapLvl);
-    } else {
-      showBanner("LEVEL 1", 2000, "level");
-    }
-
     state = "playing";
     startOverlay.classList.add("hidden");
     gameOverOverlay.classList.add("hidden");
+
+    if (mapLvl && mapLvl >= 2) {
+      applyMapLevelProgress(mapLvl);
+    } else {
+      // Pre–Level-1 airfield training (takeoff + mechanics)
+      if (typeof beginAirfieldTraining === "function") {
+        beginAirfieldTraining();
+        showBanner("AIRFIELD TRAINING", 2400, "level");
+      } else {
+        showBanner("LEVEL 1", 2000, "level");
+      }
+    }
   }
 
   // Map post 1..6 → bosses already cleared, score at that stage's floor

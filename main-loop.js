@@ -126,6 +126,7 @@
     
     drawClouds();
     drawBirdFlocks();
+    if (typeof drawAirfieldStrip === "function") drawAirfieldStrip();
     
     updateDustParticles(dt);
     
@@ -134,6 +135,7 @@
     if (state === "playing") {
       elapsedMs = performance.now() - runStartTime;
       updateFlipClock(elapsedMs);
+      if (typeof updateAirfield === "function") updateAirfield(dt);
       updateBuildings(dtScale);
       updatePowerlines(dtScale);
       updateSketchSkyline(dtScale);
@@ -228,6 +230,7 @@
     drawCheckpointPickup();
     drawBossWarning();
     drawBossBanner();
+    if (typeof drawAirfieldTip === "function") drawAirfieldTip();
     drawDefeatDebris();
     drawShockwaves();
     drawBonusHUD();

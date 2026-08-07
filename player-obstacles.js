@@ -86,6 +86,11 @@
 
     player.vy += GRAVITY * dt;
     if (player.vy > MAX_FALL_SPEED) player.vy = MAX_FALL_SPEED;
+    // Airfield taxi/accel: stay on runway until climb phase
+    if (window.__airborneAirfield &&
+        (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel")) {
+      player.vy = 0;
+    }
     player.y += player.vy * dt;
 
     // rotation follows velocity, clamped

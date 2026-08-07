@@ -88,6 +88,7 @@
   }
 
   function updateBuildings(dtScale) {
+    if (airfieldMode) return;
     // Keep scrolling during approach; freeze only once the blimp has landed
     if (worldScrollFrozen()) {
       return;
@@ -147,7 +148,230 @@
     return H - Math.max(58, H * 0.088);
   }
 
+  // ---------- Pre–Level-1 Airfield training strip ----------
+  let airfieldMode = false;
+  let airfieldPhase = null; // taxi | accel | climb | lesson | done
+  let airfieldTiles = [];
+  let airfieldTip = "";
+  let airfieldTipAge = 0;
+  let airfieldPhaseT = 0;
+  let airfieldTakeoffSpeed = 0;
+
+  function isAirfieldMode() { return !!airfieldMode; }
+  function syncAirfieldGlobals() {
+    window.__airborneAirfield = airfieldMode;
+    window.__airborneAirfieldPhase = airfieldPhase;
+  }
+
+  function initAirfieldStrip() {
+    airfieldTiles = [];
+    const img = images.airfield_strip;
+    const aspect = (img && img.naturalWidth) ? img.naturalWidth / img.naturalHeight : 5;
+    const groundY = groundLevelY();
+    // Fill bottom ~28% of screen with the runway panorama
+    const h = Math.min(H * 0.32, groundY * 0.95);
+    const w = h * aspect;
+    let x = -w * 0.15;
+    while (x < W + w) {
+      airfieldTiles.push({ x: x, w: w, h: h });
+      x += w - 2;
+    }
+  }
+
+  function beginAirfieldTraining() {
+    airfieldMode = true;
+    airfieldPhase = "taxi";
+    airfieldPhaseT = 0;
+    airfieldTakeoffSpeed = 40;
+    airfieldTip = "TAP to flap — keep your blimp in the air!";
+    airfieldTipAge = 0;
+    syncAirfieldGlobals();
+    initAirfieldStrip();
+    // Clear city layers
+    buildings = [];
+    if (typeof initClouds === "function") initClouds();
+    // Park blimp on the runway
+    if (typeof player !== "undefined" && player) {
+      const gy = groundLevelY();
+      player.x = W * 0.22;
+      player.y = gy - player.h * 0.42;
+      player.vy = 0;
+      player.rotation = 0;
+    }
+    if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 40;
+    if (typeof spawnInterval !== "undefined") spawnInterval = 999; // no obstacles during taxi
+    if (typeof obstacles !== "undefined") obstacles = [];
+  }
+
+  function endAirfieldTraining() {
+    airfieldMode = false;
+    airfieldPhase = "done";
+    airfieldTip = "";
+    syncAirfieldGlobals();
+    if (typeof spawnInterval !== "undefined") spawnInterval = 1.7;
+    if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 220;
+    if (typeof initBuildings === "function") initBuildings();
+    if (typeof initParallaxLayers === "function") initParallaxLayers();
+    if (typeof showBanner === "function") showBanner("LEVEL 1", 2200, "level");
+  }
+
+  function updateAirfield(dt) {
+    if (!airfieldMode) return;
+    airfieldPhaseT += dt;
+    airfieldTipAge += dt;
+    syncAirfieldGlobals();
+
+    const speed = airfieldTakeoffSpeed;
+    // Scroll strip
+    airfieldTiles.forEach(function(tile) {
+      tile.x -= speed * dt;
+    });
+    // Recycle tiles
+    if (airfieldTiles.length) {
+      const img = images.airfield_strip;
+      const aspect = (img && img.naturalWidth) ? img.naturalWidth / img.naturalHeight : 5;
+      const groundY = groundLevelY();
+      const h = Math.min(H * 0.32, groundY * 0.95);
+      const w = h * aspect;
+      airfieldTiles = airfieldTiles.filter(function(t) { return t.x + t.w > -20; });
+      while (airfieldTiles.length && airfieldTiles[airfieldTiles.length - 1].x + airfieldTiles[airfieldTiles.length - 1].w < W + w) {
+        const last = airfieldTiles[airfieldTiles.length - 1];
+        airfieldTiles.push({ x: last.x + last.w - 2, w: w, h: h });
+      }
+      if (!airfieldTiles.length) initAirfieldStrip();
+    }
+
+    if (airfieldPhase === "taxi") {
+      // Hold on ground, slow roll
+      airfieldTakeoffSpeed = 55 + Math.min(80, airfieldPhaseT * 25);
+      if (typeof player !== "undefined" && player) {
+        const gy = groundLevelY();
+        player.y = gy - player.h * 0.42;
+        player.vy = 0;
+        player.rotation = 0;
+      }
+      airfieldTip = "Rolling down the runway… get ready!";
+      if (airfieldPhaseT > 2.2) {
+        airfieldPhase = "accel";
+        airfieldPhaseT = 0;
+      }
+    } else if (airfieldPhase === "accel") {
+      airfieldTakeoffSpeed = 140 + airfieldPhaseT * 90;
+      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = airfieldTakeoffSpeed;
+      if (typeof player !== "undefined" && player) {
+        const gy = groundLevelY();
+        // Nose-up pitch as speed builds
+        player.rotation = -Math.min(0.28, airfieldPhaseT * 0.12);
+        player.y = gy - player.h * 0.42 - airfieldPhaseT * 8;
+        player.vy = 0;
+      }
+      airfieldTip = "Accelerating — takeoff in 3… 2… 1…";
+      if (airfieldPhaseT > 2.4) {
+        airfieldPhase = "climb";
+        airfieldPhaseT = 0;
+        if (typeof player !== "undefined" && player) player.vy = -220;
+        if (typeof sfxFlap === "function") sfxFlap();
+      }
+    } else if (airfieldPhase === "climb") {
+      airfieldTakeoffSpeed = Math.min(220, 200 + airfieldPhaseT * 20);
+      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = airfieldTakeoffSpeed;
+      airfieldTip = "You're airborne! TAP to climb, release to sink.";
+      if (airfieldPhaseT > 2.5) {
+        airfieldPhase = "lesson";
+        airfieldPhaseT = 0;
+        if (typeof spawnInterval !== "undefined") spawnInterval = 2.4;
+        airfieldTip = "Dodge obstacles — fly through gaps!";
+      }
+    } else if (airfieldPhase === "lesson") {
+      if (typeof obstacleSpeed !== "undefined") {
+        obstacleSpeed = Math.min(240, 200 + airfieldPhaseT * 4);
+      }
+      // Rotate tips
+      if (airfieldPhaseT < 6) {
+        airfieldTip = "Dodge obstacles — fly through gaps!";
+      } else if (airfieldPhaseT < 12) {
+        airfieldTip = "Collect HEARTS to restore health.";
+        if (typeof spawnInterval !== "undefined") spawnInterval = 2.0;
+      } else if (airfieldPhaseT < 18) {
+        airfieldTip = "Fill the POWER meter — use your special!";
+      } else {
+        airfieldTip = "Great flying! Entering the city…";
+        if (airfieldPhaseT > 21) {
+          endAirfieldTraining();
+        }
+      }
+    }
+  }
+
+  function drawAirfieldStrip() {
+    if (!airfieldMode) return;
+    const img = images.airfield_strip;
+    if (!img || !img.naturalWidth) return;
+    const groundY = groundLevelY();
+    airfieldTiles.forEach(function(tile) {
+      // Sit strip so runway aligns near ground line
+      const y = groundY - tile.h * 0.72;
+      ctx.drawImage(img, tile.x, y, tile.w, tile.h);
+    });
+  }
+
+  function drawAirfieldTip() {
+    if (!airfieldMode || !airfieldTip) return;
+    // Upper-right box under typical HUD
+    const boxW = Math.min(260, W * 0.42);
+    const boxH = 64;
+    const x = W - boxW - 12;
+    const y = 52;
+    ctx.save();
+    ctx.globalAlpha = 0.88;
+    ctx.fillStyle = "rgba(18, 28, 42, 0.72)";
+    roundRectPath(ctx, x, y, boxW, boxH, 10);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(212, 175, 55, 0.75)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "#f5e6c8";
+    ctx.font = "bold 11px 'Rockwell', Georgia, serif";
+    ctx.textAlign = "left";
+    ctx.fillText("TRAINING", x + 12, y + 18);
+    ctx.font = "12px 'Rockwell', Georgia, serif";
+    ctx.fillStyle = "rgba(245, 230, 200, 0.95)";
+    wrapText(ctx, airfieldTip, x + 12, y + 36, boxW - 22, 14);
+    ctx.restore();
+  }
+
+  function roundRectPath(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function wrapText(ctx, text, x, y, maxW, lineH) {
+    const words = String(text).split(" ");
+    let line = "";
+    let ly = y;
+    for (let i = 0; i < words.length; i++) {
+      const test = line ? line + " " + words[i] : words[i];
+      if (ctx.measureText(test).width > maxW && line) {
+        ctx.fillText(line, x, ly);
+        line = words[i];
+        ly += lineH;
+      } else {
+        line = test;
+      }
+    }
+    if (line) ctx.fillText(line, x, ly);
+  }
+
+
+
   function drawBuildings() {
+    if (airfieldMode) return;
     const groundY = groundLevelY();
     const img = images[buildingRowKey];
     if (!img || !img.naturalWidth) return;
@@ -193,6 +417,7 @@
   }
 
   function drawSketchSkyline() {
+    if (typeof airfieldMode !== "undefined" && airfieldMode) return;
     const img = images.sketchSkyline;
     if (!img || !img.naturalWidth) return;
     const groundY = groundLevelY();
@@ -246,6 +471,7 @@
   }
 
   function drawPowerlines() {
+    if (typeof airfieldMode !== "undefined" && airfieldMode) return;
     const img = images.powerlines;
     if (!img || !img.naturalWidth) return;
     const groundY = groundLevelY();
@@ -299,6 +525,7 @@
   }
 
   function drawStreet() {
+    if (typeof airfieldMode !== "undefined" && airfieldMode) return;
     const img = images.streetTexture;
     if (!img || !img.naturalWidth) return;
     streetTiles.forEach(t => {
@@ -356,6 +583,7 @@
   }
 
   function drawBuildingSmoke() {
+    if (typeof airfieldMode !== "undefined" && airfieldMode) return;
     buildingSmokeParticles.forEach(p => {
       const t = p.age / p.life;
       const alpha = (1 - t) * 0.32;
@@ -422,6 +650,7 @@
   }
 
   function drawStreetlamps() {
+    if (typeof airfieldMode !== "undefined" && airfieldMode) return;
     if (!isStreetlampLevel()) return;
     const img = images.streetlamp1;
     if (!img || !img.naturalWidth) return;
@@ -476,6 +705,7 @@
   }
 
   function drawGroundVehicles() {
+    if (typeof airfieldMode !== "undefined" && airfieldMode) return;
     // anchored toward the bottom of the street band (where the road portion
     // of the texture is expected to be) rather than the top edge, which
     // sits right against the buildings/sidewalk
@@ -520,6 +750,7 @@
     skylineX -= speed;
   }
   function drawSkyline() {
+    if (typeof airfieldMode !== "undefined" && airfieldMode) return;
     // The Far_Bg.jpg asset was shipping with its transparent areas baked in
     // as a literal checkerboard (instead of being flattened onto a solid/sky
     // color before export), so drawing it here was punching a checkerboard
