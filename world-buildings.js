@@ -223,7 +223,7 @@
       const gy = groundLevelY();
       player.x = W * 0.22;
       // Lower on runway (+5% lower than previous)
-      player.y = gy - player.h * 0.22;
+      player.y = gy - player.h * 0.12;
       player.vy = 0;
       player.rotation = 0;
     }
@@ -265,10 +265,10 @@
 
   // Each lesson: fly/practice first (~20s), THEN pause for explanation tip
   const AIRFIELD_LESSONS = [
-    { tip: "TAP to climb, release to sink. Feel the lift!", practice: 20, spawn: 999, obstacles: false },
-    { tip: "Dodge obstacles — fly through the gaps!", practice: 22, spawn: 2.4, obstacles: true },
-    { tip: "Collect HEARTS to restore health.", practice: 20, spawn: 2.2, obstacles: true },
-    { tip: "Fill the POWER meter — then use your special!", practice: 22, spawn: 2.1, obstacles: true }
+    { tip: "Fly through the GOLD RINGS for bonus points!", practice: 20, spawn: 1.6, obstacles: false, rings: true },
+    { tip: "Dodge obstacles — fly through the gaps!", practice: 22, spawn: 2.4, obstacles: true, rings: true },
+    { tip: "Collect HEARTS to restore health.", practice: 20, spawn: 2.2, obstacles: true, rings: false },
+    { tip: "Fill the POWER meter — then use your special!", practice: 22, spawn: 2.1, obstacles: true, rings: false }
   ];
 
   function updateAirfield(dt) {
@@ -290,7 +290,8 @@
       });
     } else if (airfieldPhase === "lesson" && !window.__airborneAirfieldPaused) {
       airfieldTiles.forEach(function(tile) {
-        tile.x -= (typeof obstacleSpeed !== "undefined" ? obstacleSpeed * 0.3 : 60) * dt;
+        // Match obstacle scroll so ground doesn't lag behind flight speed
+        tile.x -= (typeof obstacleSpeed !== "undefined" ? obstacleSpeed : 210) * dt;
       });
     }
 
@@ -309,7 +310,7 @@
         player.vy = 0;
         const speedFrac = engFrac;
         player.rotation = -0.02 - speedFrac * 0.16;
-        player.y = gy - player.h * 0.22 - speedFrac * 14;
+        player.y = gy - player.h * 0.12 - speedFrac * 10;
       }
 
       if (airfieldPhase === "taxi") {
@@ -343,7 +344,7 @@
         const targetY = H * 0.4;
         const targetX = W * 0.28;
         const gy = groundLevelY();
-        const startY = gy - player.h * 0.22 - 14;
+        const startY = gy - player.h * 0.12 - 10;
         const climbDur = 3.6; // more gradual arc
         const u = Math.min(1, airfieldPhaseT / climbDur);
         // smoother ease — very gradual
@@ -370,8 +371,11 @@
         }
         if (typeof obstacles !== "undefined") obstacles = [];
         const L0 = AIRFIELD_LESSONS[0];
-        if (typeof spawnInterval !== "undefined") spawnInterval = L0.obstacles ? L0.spawn : 999;
-        if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 185;
+        if (typeof spawnInterval !== "undefined") spawnInterval = (L0.obstacles || L0.rings) ? L0.spawn : 999;
+        window.__airborneAirfieldRings = !!L0.rings;
+        window.__airborneAirfieldObstacles = !!L0.obstacles;
+        // Keep world speed consistent with takeoff peak so BG doesn't "slow down"
+        if (typeof obstacleSpeed !== "undefined") obstacleSpeed = Math.max(210, airfieldTakeoffSpeed || 210);
         const sm = document.getElementById("stormMeter");
         if (sm) sm.style.visibility = "";
         airfieldTip = "You're flying! Get a feel for the controls…";
@@ -404,11 +408,14 @@
         if (typeof sfxAirfieldBirdTick === "function") sfxAirfieldBirdTick(dt);
         if (typeof sfxAirfieldEngineSetSpeed === "function") sfxAirfieldEngineSetSpeed(0.55);
         if (typeof obstacleSpeed !== "undefined") {
-          obstacleSpeed = Math.min(220, 180 + airfieldLessonT * 1.2);
+          // Hold steady cruise — same feel as takeoff, no slowdown
+          obstacleSpeed = Math.max(210, airfieldTakeoffSpeed || 210);
         }
         if (typeof spawnInterval !== "undefined") {
-          spawnInterval = L.obstacles ? L.spawn : 999;
+          spawnInterval = (L.obstacles || L.rings) ? L.spawn : 999;
         }
+        window.__airborneAirfieldRings = !!L.rings;
+        window.__airborneAirfieldObstacles = !!L.obstacles;
         const left = Math.max(0, Math.ceil(L.practice - airfieldLessonT));
         airfieldTip = left > 0
           ? ("Flying… tip in " + left + "s")
@@ -447,8 +454,10 @@
           if (typeof obstacles !== "undefined") obstacles = [];
           if (airfieldLesson < lessons.length) {
             const Ln = lessons[airfieldLesson];
-            if (typeof spawnInterval !== "undefined") spawnInterval = Ln.obstacles ? Ln.spawn : 999;
-            if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 185;
+            if (typeof spawnInterval !== "undefined") spawnInterval = (Ln.obstacles || Ln.rings) ? Ln.spawn : 999;
+            window.__airborneAirfieldRings = !!Ln.rings;
+            window.__airborneAirfieldObstacles = !!Ln.obstacles;
+            if (typeof obstacleSpeed !== "undefined") obstacleSpeed = Math.max(210, airfieldTakeoffSpeed || 210);
             window.__airborneAirfieldPaused = false;
             window.__airborneAirfieldInvuln = false;
             airfieldTip = "Flying… tip in " + Ln.practice + "s";
@@ -471,7 +480,7 @@
 
       if (typeof player !== "undefined" && player) {
         const gy = groundLevelY();
-        const landY = gy - player.h * 0.22;
+        const landY = gy - player.h * 0.12;
         const landX = W * 0.28;
         const landDur = 3.2;
         const u = Math.min(1, airfieldLandT / landDur);
@@ -502,7 +511,7 @@
       airfieldScoreT += dt;
       if (typeof player !== "undefined" && player) {
         const gy = groundLevelY();
-        player.y = gy - player.h * 0.22;
+        player.y = gy - player.h * 0.12;
         player.x = W * 0.28;
         player.vy = 0;
         player.rotation = 0;

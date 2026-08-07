@@ -239,7 +239,43 @@
     return Math.random() < 0.5 ? "bird_a" : "bird_b";
   }
 
+  function spawnGoldRing() {
+    const r = Math.min(48, W * 0.11);
+    const groundY = groundLevelY();
+    const minY = H * 0.12;
+    const maxY = groundY - H * 0.22;
+    const y = minY + Math.random() * Math.max(40, maxY - minY);
+    obstacles.push({
+      type: "gold_ring",
+      x: W + r * 2,
+      y: y,
+      w: r * 2,
+      h: r * 2,
+      r: r,
+      vx: 0,
+      scored: false,
+      collected: false,
+      spin: Math.random() * Math.PI * 2,
+      bobPhase: Math.random() * Math.PI * 2,
+      bobAmount: 8,
+      speedMult: 1,
+      isRing: true
+    });
+  }
+
   function spawnObstacle() {
+    // Airfield training rings
+    if (window.__airborneAirfield && window.__airborneAirfieldRings && !window.__airborneAirfieldObstacles) {
+      spawnGoldRing();
+      return;
+    }
+    if (window.__airborneAirfield && window.__airborneAirfieldRings && Math.random() < 0.45) {
+      spawnGoldRing();
+      return;
+    }
+    if (window.__airborneAirfield && !window.__airborneAirfieldObstacles && !window.__airborneAirfieldRings) {
+      return;
+    }
     const type = pickObstacleType();
     const frames = OBSTACLE_ANIM_SETS[type];
     const img = images[frames[0]];
@@ -312,6 +348,27 @@
     const frameDuration = 1 / OBSTACLE_ANIM_FPS;
     obstacles.forEach(o => {
       o.x -= obstacleSpeed * (o.speedMult || 1) * dt;
+      if (o.isRing || o.type === "gold_ring") {
+        o.spin = (o.spin || 0) + dt * 2.2;
+        o.bobPhase = (o.bobPhase || 0) + dt * 1.6;
+        // Collect ring by flying through center
+        if (!o.collected) {
+          const cx = o.x + o.w / 2;
+          const cy = o.y + o.h / 2 + Math.sin(o.bobPhase) * (o.bobAmount || 8);
+          const dx = player.x - cx;
+          const dy = player.y - cy;
+          if (Math.hypot(dx, dy) < (o.r || o.w / 2) * 0.72 + player.w * 0.25) {
+            o.collected = true;
+            o.scored = true;
+            score += 5;
+            if (document.getElementById("scoreVal")) document.getElementById("scoreVal").textContent = score;
+            if (typeof bumpScorePop === "function") bumpScorePop();
+            if (typeof sfxPowerup === "function") sfxPowerup();
+            if (typeof spawnComboPopup === "function") spawnComboPopup(cx, cy, "+5 RING!", "#ffd700");
+          }
+        }
+        return; // rings skip bird damage / anim
+      }
       o.bobPhase += o.bobSpeed * dt;
       o.animTimer += dt;
       while (o.animTimer >= frameDuration) {
@@ -507,6 +564,36 @@
 
   function drawObstacles() {
     obstacles.forEach(o => {
+      if (o.isRing || o.type === "gold_ring") {
+        if (o.collected) return;
+        const cx = o.x + o.w / 2;
+        const cy = o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8);
+        const r = o.r || o.w / 2;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(o.spin || 0);
+        // Outer gold ring
+        ctx.strokeStyle = "#e8c84a";
+        ctx.lineWidth = Math.max(4, r * 0.14);
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.stroke();
+        // Inner highlight
+        ctx.strokeStyle = "rgba(255, 245, 180, 0.85)";
+        ctx.lineWidth = Math.max(2, r * 0.06);
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.82, 0, Math.PI * 2);
+        ctx.stroke();
+        // Soft glow
+        ctx.globalAlpha = 0.25;
+        ctx.strokeStyle = "#ffd700";
+        ctx.lineWidth = Math.max(6, r * 0.2);
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 1.05, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+        return;
+      }
       const frames = OBSTACLE_ANIM_SETS[o.type];
       const img = images[frames[o.animFrame]];
       if (!img || !img.naturalWidth) return;
