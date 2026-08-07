@@ -254,7 +254,14 @@
       requestAnimationFrame(loop);
       if (pendingStart) {
         pendingStart = false;
-        startGame();
+        if (typeof window.__airborneOnAssetsReady === "function") {
+          // Re-queue so map-level / tutorial logic runs
+          window.__airbornePendingMapLevel = window.__airbornePendingMapLevel || null;
+          pendingStart = true;
+          try { window.__airborneOnAssetsReady(); } catch (e) { startGame(); }
+        } else {
+          startGame();
+        }
       }
     } catch (err) {
       showRuntimeError(err);

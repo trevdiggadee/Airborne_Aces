@@ -1151,6 +1151,12 @@
   const FRAME_OPACITY_THRESHOLD = 0.03; // minimum ratio of opaque pixels to total pixels
 
   function validateAnimationFrames() {
+    // Skip full-frame opacity scan when the roster is huge — it was blocking
+    // load for seconds. Good-frame lists stay empty → runtime uses all frames.
+    try {
+      const animCount = Object.keys(BLIMP_ANIM || {}).length;
+      if (animCount > 12) return;
+    } catch (e) {}
     const validateCanvas = document.createElement("canvas");
     const validateCtx = validateCanvas.getContext("2d");
 
@@ -1314,7 +1320,20 @@
           }
         }
       };
-      img.onload = () => featherSpriteEdges(key, img, settle);
+      img.onload = () => {
+        // Skip expensive edge-feather for animation strips / large bg art —
+        // feathering 1000+ frames freezes load on mobile and can make the
+        // game appear stuck.
+        const skipFeather =
+          /_flight_|player_blimp_|boss_throw_|boss\d+_|rocket_flight_|ship_(pirate|wood|ivory|purple|cargo|lightning)_\d/.test(key) ||
+          /skylineFar|streetrow|Far_Bg|hangar_bg|airborne_aces_map|medal_badge/.test(key);
+        if (skipFeather) {
+          images[key] = img;
+          settle();
+        } else {
+          featherSpriteEdges(key, img, settle);
+        }
+      };
       img.onerror = () => {
         failedAssetKeys.push(key);
         if (!PLACEHOLDER_MODE) {
