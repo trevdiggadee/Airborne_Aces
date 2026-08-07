@@ -65,6 +65,11 @@
     if (window.__airborneAirfield && window.__airborneAirfieldPhase === "climb") {
       return; // scripted climb — no player flap
     }
+    if (window.__airborneAirfieldPaused) {
+      // Soft hover flap during tip pause only
+      player.vy = Math.min(player.vy, FLAP_VELOCITY * 0.45);
+      return;
+    }
     player.vy = FLAP_VELOCITY;
     sfxFlap();
     // Visual pulse on every ship (squash kick, fin lag, exhaust)
