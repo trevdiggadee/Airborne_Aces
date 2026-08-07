@@ -373,8 +373,6 @@ html, body {
 .heroBlimpLayer {
   position: relative;
   z-index: 1;
-  transition: opacity 0.12s linear;
-  will-change: opacity;
   backface-visibility: hidden;
 }
 
@@ -385,8 +383,6 @@ html, body {
   width: 100%;
   opacity: 0;
   z-index: 1;
-  transition: opacity 0.12s linear;
-  will-change: opacity;
   backface-visibility: hidden;
 }
 

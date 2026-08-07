@@ -246,9 +246,9 @@ const smokeParticles = document.getElementById("smokeParticles");
 
 let heroAnimRaf = null;
 let heroAnimFrame = 0;
-let heroActiveLayer = 0;
 let heroAnimGen = 0;
 let heroLastTick = 0;
+let heroActiveLayer = 0; // 0 = layerA visible, 1 = layerB visible (only for ship switches)
 
 function preloadImages(sources) {
   return Promise.all(sources.map(src => new Promise(resolve => {
@@ -282,67 +282,76 @@ function startHeroAnimation(key) {
   if (!layerA || !layerB) return;
   const anim = (typeof PLACEHOLDER_MODE !== "undefined" && PLACEHOLDER_MODE) ? null : HERO_ANIM[key];
 
-  // Soft switch: keep current image visible while we load the new first frame
-  const fadeMs = 140;
-  function showFirst(url) {
-    const front = heroActiveLayer === 0 ? layerA : layerB;
-    const back = heroActiveLayer === 0 ? layerB : layerA;
+  // Visible layer for hard frame swaps (no per-frame opacity crossfade — that caused glitches)
+  function visibleLayer() {
+    return heroActiveLayer === 0 ? layerA : layerB;
+  }
+  function hiddenLayer() {
+    return heroActiveLayer === 0 ? layerB : layerA;
+  }
+
+  // Soft crossfade ONLY when switching ships (not every frame)
+  function crossfadeTo(url, done) {
+    const front = visibleLayer();
+    const back = hiddenLayer();
     back.style.transition = "none";
     back.style.opacity = "0";
     back.src = url;
-    // force reflow then crossfade
-    void back.offsetWidth;
-    back.style.transition = "opacity " + fadeMs + "ms ease-out";
-    front.style.transition = "opacity " + fadeMs + "ms ease-out";
-    back.style.opacity = "1";
-    front.style.opacity = "0";
-    heroActiveLayer = heroActiveLayer === 0 ? 1 : 0;
+    const finish = () => {
+      void back.offsetWidth;
+      back.style.transition = "opacity 0.18s ease-out";
+      front.style.transition = "opacity 0.18s ease-out";
+      back.style.opacity = "1";
+      front.style.opacity = "0";
+      heroActiveLayer = heroActiveLayer === 0 ? 1 : 0;
+      setTimeout(() => { if (done) done(); }, 190);
+    };
+    if (back.decode) {
+      back.decode().then(finish).catch(finish);
+    } else {
+      finish();
+    }
   }
 
   if (!anim) {
-    showFirst(blimpSrc(BLIMP_DATA[key]));
+    crossfadeTo(blimpSrc(BLIMP_DATA[key]));
     return;
   }
 
   heroAnimFrame = 0;
-  // Show frame 0 immediately on the back layer with a soft crossfade
-  const firstUrl = anim.urls[0];
-  showFirst(firstUrl);
-
-  // Bump effective playback slightly for smoother feel; still driven by rAF
-  const fps = Math.min(30, (anim.fps || 20) * 1.15);
+  const urls = anim.urls;
+  const fps = Math.max(12, Math.min(24, anim.fps || 20));
   const frameMs = 1000 / fps;
 
-  primeHeroAnimation(key).then(() => {
+  // Crossfade to first frame of the new ship, then hard-swap frames on the visible layer
+  crossfadeTo(urls[0], () => {
     if (gen !== heroAnimGen) return;
-    heroLastTick = performance.now();
-
-    function tick(now) {
+    primeHeroAnimation(key).then(() => {
       if (gen !== heroAnimGen) return;
-      const elapsed = now - heroLastTick;
-      if (elapsed >= frameMs) {
-        // catch up at most one frame to avoid skipping (keeps loop smooth)
-        heroLastTick = now - (elapsed % frameMs);
-        heroAnimFrame = (heroAnimFrame + 1) % anim.urls.length;
-        const url = anim.urls[heroAnimFrame];
-        const front = heroActiveLayer === 0 ? layerA : layerB;
-        const back = heroActiveLayer === 0 ? layerB : layerA;
+      heroLastTick = performance.now();
+      const layer = visibleLayer();
+      // Ensure hidden layer stays invisible during loop
+      const hid = hiddenLayer();
+      hid.style.transition = "none";
+      hid.style.opacity = "0";
+      layer.style.transition = "none";
+      layer.style.opacity = "1";
 
-        back.style.transition = "none";
-        back.style.opacity = "0";
-        if (back.getAttribute("src") !== url) back.src = url;
-        void back.offsetWidth;
-        // Short dissolve between consecutive frames
-        const cross = Math.min(90, frameMs * 0.55);
-        back.style.transition = "opacity " + cross + "ms linear";
-        front.style.transition = "opacity " + cross + "ms linear";
-        back.style.opacity = "1";
-        front.style.opacity = "0";
-        heroActiveLayer = heroActiveLayer === 0 ? 1 : 0;
+      function tick(now) {
+        if (gen !== heroAnimGen) return;
+        if (now - heroLastTick >= frameMs) {
+          heroLastTick = now;
+          heroAnimFrame = (heroAnimFrame + 1) % urls.length;
+          const url = urls[heroAnimFrame];
+          // Hard swap on the already-visible layer — frames are pre-decoded
+          if (layer.getAttribute("src") !== url) {
+            layer.src = url;
+          }
+        }
+        heroAnimRaf = requestAnimationFrame(tick);
       }
       heroAnimRaf = requestAnimationFrame(tick);
-    }
-    heroAnimRaf = requestAnimationFrame(tick);
+    });
   });
 }
 
