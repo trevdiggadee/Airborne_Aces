@@ -2,16 +2,17 @@
 
 
 const BLIMP_DATA = {
-  blimp1: { url: "asset_extra_06.webp?cb=2", key: "asset_extra_06", name: "Zeppelin Ace", effect: "propeller" },
-  blimp2: { url: "blimp2_main.webp?cb=2", key: "blimp2_main", name: "Deco Liner", effect: "smoke" },
-  blimp3: { url: "blimp3_flight_01.webp?cb=2", key: "blimp3_flight_01", name: "Aero Slicer", effect: null },
-  blimp4: { url: "blimp4_flight_01.webp?cb=2", key: "blimp4_flight_01", name: "Steampunk", effect: "steam" },
-  blimp5: { url: "ship_petro.png", key: "ship_petro", name: "Petro", effect: null },
-  blimp6: { url: "ship_wood_01.webp?cb=2", key: "ship_wood_01", name: "Little Spy", effect: null },
-  blimp7: { url: "ship_lightning.png", key: "ship_lightning", name: "Storm Chaser", effect: "flame" },
-  blimp8: { url: "ship_cargo.png", key: "ship_cargo", name: "Cargo King", effect: "blackSmoke" },
-  blimp9: { url: "ship_pirate.png", key: "ship_pirate", name: "Jolly Rogers", effect: null },
-  blimp10: { url: "ship_ivory.png", key: "ship_ivory", name: "Ivory Anchor", effect: null },
+  // Menu/static preview = first flight frame (no separate _main / .png stills needed)
+  blimp1: { url: "player_blimp_01.webp", key: "player_blimp_01", name: "Zeppelin Ace", effect: "propeller" },
+  blimp2: { url: "blimp2_flight_01.webp", key: "blimp2_flight_01", name: "Deco Liner", effect: "smoke" },
+  blimp3: { url: "blimp3_flight_01.webp", key: "blimp3_flight_01", name: "Aero Slicer", effect: null },
+  blimp4: { url: "blimp4_flight_01.webp", key: "blimp4_flight_01", name: "Steampunk", effect: "steam" },
+  blimp5: { url: "ship_purple_01.webp", key: "ship_purple_01", name: "Petro", effect: null },
+  blimp6: { url: "ship_wood_01.webp", key: "ship_wood_01", name: "Little Spy", effect: null },
+  blimp7: { url: "ship_lightning_01.webp", key: "ship_lightning_01", name: "Storm Chaser", effect: "flame" },
+  blimp8: { url: "ship_cargo_01.webp", key: "ship_cargo_01", name: "Cargo King", effect: "blackSmoke" },
+  blimp9: { url: "ship_pirate_01.webp", key: "ship_pirate_01", name: "Jolly Rogers", effect: null },
+  blimp10: { url: "ship_ivory_01.webp", key: "ship_ivory_01", name: "Ivory Anchor", effect: null },
   blimp11: { url: "blimp11_flight_01.webp", key: "blimp11_flight_01", name: "Pirate Rocket", effect: "flame" },
   blimp12: { url: "blimp12_flight_01.webp", key: "blimp12_flight_01", name: "War Shark", effect: "smoke" },
   blimp13: { url: "blimp13_flight_01.webp", key: "blimp13_flight_01", name: "Iron Lattice", effect: "steam" },

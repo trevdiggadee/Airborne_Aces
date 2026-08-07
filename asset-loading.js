@@ -1126,10 +1126,10 @@
   // everything else only has a single static hero image so far, so gameplay
   // falls back to that
   const BLIMP_HERO_KEYS = {
-    blimp1: "asset_extra_06",
-    blimp2: "blimp2_main",
-    blimp3: "blimp3_main",
-    blimp4: "blimp4_main",
+    blimp1: "player_blimp_01",
+    blimp2: "blimp2_flight_01",
+    blimp3: "blimp3_flight_01",
+    blimp4: "blimp4_flight_01",
     blimp5: "ship_purple_01",
     blimp6: "ship_wood_01",
     blimp7: "ship_lightning_01",
