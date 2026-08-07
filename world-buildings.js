@@ -235,6 +235,8 @@
     if (typeof rockets !== "undefined") rockets = [];
     const sm = document.getElementById("stormMeter");
     if (sm) sm.style.visibility = "hidden";
+    if (typeof sfxAirfieldEngineStart === "function") sfxAirfieldEngineStart();
+    if (typeof sfxAirfieldWindStart === "function") sfxAirfieldWindStart();
   }
 
   function endAirfieldTrainingToMap() {
@@ -250,6 +252,8 @@
     if (sm) sm.style.visibility = "";
     if (typeof obstacles !== "undefined") obstacles = [];
     if (typeof spawnInterval !== "undefined") spawnInterval = 1.7;
+    if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
+    if (typeof sfxAirfieldWindStop === "function") sfxAirfieldWindStop();
     // Return to map — do NOT start city Level 1 from here
     if (typeof state !== "undefined") state = "start";
     if (window.__airborneShowWorldMap) {
@@ -259,11 +263,12 @@
     }
   }
 
+  // Each lesson: fly/practice first (~20s), THEN pause for explanation tip
   const AIRFIELD_LESSONS = [
-    { tip: "TAP to climb, release to sink. Feel the lift!", practice: 22, spawn: 999, obstacles: false },
-    { tip: "Dodge obstacles — fly through the gaps!", practice: 24, spawn: 2.4, obstacles: true },
-    { tip: "Collect HEARTS to restore health.", practice: 22, spawn: 2.2, obstacles: true },
-    { tip: "Fill the POWER meter — then use your special!", practice: 24, spawn: 2.1, obstacles: true }
+    { tip: "TAP to climb, release to sink. Feel the lift!", practice: 20, spawn: 999, obstacles: false },
+    { tip: "Dodge obstacles — fly through the gaps!", practice: 22, spawn: 2.4, obstacles: true },
+    { tip: "Collect HEARTS to restore health.", practice: 20, spawn: 2.2, obstacles: true },
+    { tip: "Fill the POWER meter — then use your special!", practice: 22, spawn: 2.1, obstacles: true }
   ];
 
   function updateAirfield(dt) {
@@ -295,11 +300,14 @@
       const accel = holding ? 62 : 14;
       airfieldTakeoffSpeed = Math.min(230, airfieldTakeoffSpeed + accel * dt);
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = airfieldTakeoffSpeed;
+      const engFrac = Math.min(1, (airfieldTakeoffSpeed - 28) / 180);
+      if (typeof sfxAirfieldEngineSetSpeed === "function") sfxAirfieldEngineSetSpeed(engFrac);
+      if (typeof sfxAirfieldBirdTick === "function") sfxAirfieldBirdTick(dt);
 
       if (typeof player !== "undefined" && player) {
         const gy = groundLevelY();
         player.vy = 0;
-        const speedFrac = Math.min(1, (airfieldTakeoffSpeed - 28) / 180);
+        const speedFrac = engFrac;
         player.rotation = -0.02 - speedFrac * 0.16;
         player.y = gy - player.h * 0.22 - speedFrac * 14;
       }
@@ -319,7 +327,9 @@
         if (airfieldTakeoffSpeed >= 190 || airfieldPhaseT > 7.0) {
           airfieldPhase = "climb";
           airfieldPhaseT = 0;
-          if (typeof sfxFlap === "function") sfxFlap();
+          if (typeof sfxAirfieldTakeoff === "function") sfxAirfieldTakeoff();
+          else if (typeof sfxFlap === "function") sfxFlap();
+          if (typeof sfxAirfieldEngineSetSpeed === "function") sfxAirfieldEngineSetSpeed(1);
         }
       }
     } else if (airfieldPhase === "climb") {
@@ -345,13 +355,13 @@
         player.vy = 0;
       }
 
-      // Hand off immediately when arc completes — no extra idle delay
+      // Hand off immediately — start PRACTICE first (tip after ~20s)
       if (airfieldPhaseT >= 3.6) {
         airfieldPhase = "lesson";
         airfieldPhaseT = 0;
         airfieldLesson = 0;
         airfieldLessonT = 0;
-        airfieldSub = "tip";
+        airfieldSub = "practice";
         if (typeof player !== "undefined" && player) {
           player.x = W * 0.28;
           player.y = H * 0.4;
@@ -359,14 +369,14 @@
           player.rotation = 0;
         }
         if (typeof obstacles !== "undefined") obstacles = [];
-        if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-        if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 0;
+        const L0 = AIRFIELD_LESSONS[0];
+        if (typeof spawnInterval !== "undefined") spawnInterval = L0.obstacles ? L0.spawn : 999;
+        if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 185;
         const sm = document.getElementById("stormMeter");
         if (sm) sm.style.visibility = "";
-        airfieldTip = AIRFIELD_LESSONS[0].tip;
-        // Start tip pause immediately
-        window.__airborneAirfieldPaused = true;
-        window.__airborneAirfieldInvuln = true;
+        airfieldTip = "You're flying! Get a feel for the controls…";
+        window.__airborneAirfieldPaused = false;
+        window.__airborneAirfieldInvuln = false;
       }
     } else if (airfieldPhase === "lesson") {
       const lessons = AIRFIELD_LESSONS;
@@ -387,41 +397,62 @@
       const L = lessons[airfieldLesson];
       airfieldLessonT += dt;
 
-      if (airfieldSub === "tip") {
+      if (airfieldSub === "practice") {
+        // Fly first ~20s, then pause for the tip
+        window.__airborneAirfieldPaused = false;
+        window.__airborneAirfieldInvuln = false;
+        if (typeof sfxAirfieldBirdTick === "function") sfxAirfieldBirdTick(dt);
+        if (typeof sfxAirfieldEngineSetSpeed === "function") sfxAirfieldEngineSetSpeed(0.55);
+        if (typeof obstacleSpeed !== "undefined") {
+          obstacleSpeed = Math.min(220, 180 + airfieldLessonT * 1.2);
+        }
+        if (typeof spawnInterval !== "undefined") {
+          spawnInterval = L.obstacles ? L.spawn : 999;
+        }
+        const left = Math.max(0, Math.ceil(L.practice - airfieldLessonT));
+        airfieldTip = left > 0
+          ? ("Flying… tip in " + left + "s")
+          : L.tip;
+        if (airfieldLessonT >= L.practice) {
+          airfieldSub = "tip";
+          airfieldLessonT = 0;
+          window.__airborneAirfieldPaused = true;
+          window.__airborneAirfieldInvuln = true;
+          if (typeof obstacles !== "undefined") obstacles = [];
+          if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+          if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 0;
+          airfieldTip = L.tip;
+          if (typeof player !== "undefined" && player) {
+            player.vy = 0;
+            player.x = W * 0.28;
+            player.y = H * 0.4;
+            player.rotation = 0;
+          }
+        }
+      } else {
+        // Tip pause — suspended, no input
         window.__airborneAirfieldPaused = true;
         window.__airborneAirfieldInvuln = true;
         airfieldTip = L.tip;
-        if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-        if (typeof obstacles !== "undefined") obstacles = [];
         if (typeof player !== "undefined" && player) {
           player.vy = 0;
           player.x = W * 0.28;
           player.y = H * 0.4;
           player.rotation = 0;
         }
-        if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 0;
-        if (airfieldLessonT > 3.0) {
-          airfieldSub = "practice";
-          airfieldLessonT = 0;
-          window.__airborneAirfieldPaused = false;
-          window.__airborneAirfieldInvuln = false;
-          if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 190;
-          if (typeof spawnInterval !== "undefined") {
-            spawnInterval = L.obstacles ? L.spawn : 999;
-          }
-          airfieldTip = L.tip;
-        }
-      } else {
-        window.__airborneAirfieldPaused = false;
-        if (typeof obstacleSpeed !== "undefined") {
-          obstacleSpeed = Math.min(220, 180 + airfieldLessonT * 1.2);
-        }
-        airfieldTip = L.tip + "  (" + Math.max(0, Math.ceil(L.practice - airfieldLessonT)) + "s)";
-        if (airfieldLessonT >= L.practice) {
+        if (airfieldLessonT > 3.2) {
           airfieldLesson++;
           airfieldLessonT = 0;
-          airfieldSub = "tip";
+          airfieldSub = "practice";
           if (typeof obstacles !== "undefined") obstacles = [];
+          if (airfieldLesson < lessons.length) {
+            const Ln = lessons[airfieldLesson];
+            if (typeof spawnInterval !== "undefined") spawnInterval = Ln.obstacles ? Ln.spawn : 999;
+            if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 185;
+            window.__airborneAirfieldPaused = false;
+            window.__airborneAirfieldInvuln = false;
+            airfieldTip = "Flying… tip in " + Ln.practice + "s";
+          }
         }
       }
     } else if (airfieldPhase === "land") {
@@ -462,6 +493,8 @@
         airfieldPhaseT = 0;
         airfieldScoreT = 0;
         airfieldTip = "";
+        if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
+        if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
       }
     } else if (airfieldPhase === "score") {
       window.__airborneAirfieldPaused = true;

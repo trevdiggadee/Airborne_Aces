@@ -300,7 +300,130 @@
     playTone({ freq: 55, duration: 0.5, type: "sine", vol: 0.12, startDelay: 0.05 });
   }
 
+  // ---------- Airfield training ambience ----------
+  let airfieldEngineNodes = null;
+  let airfieldWindNodes = null;
+  let airfieldBirdTimer = 0;
+
+  function sfxAirfieldEngineStart() {
+    if (muted || !audioCtx) return;
+    sfxAirfieldEngineStop();
+    const t0 = audioCtx.currentTime;
+    // Low rumble + mid prop whir
+    const osc1 = audioCtx.createOscillator();
+    osc1.type = "sawtooth";
+    osc1.frequency.setValueAtTime(48, t0);
+    const osc2 = audioCtx.createOscillator();
+    osc2.type = "triangle";
+    osc2.frequency.setValueAtTime(92, t0);
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(280, t0);
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.06, t0 + 0.4);
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gain);
+    gain.connect(sfxGainNode);
+    osc1.start(t0);
+    osc2.start(t0);
+    airfieldEngineNodes = { osc1, osc2, filter, gain };
+  }
+
+  function sfxAirfieldEngineSetSpeed(frac) {
+    // frac 0..1 — pitch/volume rises with runway speed
+    if (!airfieldEngineNodes || !audioCtx) return;
+    const f = Math.max(0, Math.min(1, frac));
+    const t0 = audioCtx.currentTime;
+    try {
+      airfieldEngineNodes.osc1.frequency.setTargetAtTime(48 + f * 40, t0, 0.15);
+      airfieldEngineNodes.osc2.frequency.setTargetAtTime(92 + f * 70, t0, 0.15);
+      airfieldEngineNodes.filter.frequency.setTargetAtTime(280 + f * 900, t0, 0.2);
+      airfieldEngineNodes.gain.gain.setTargetAtTime(0.04 + f * 0.08, t0, 0.12);
+    } catch (e) {}
+  }
+
+  function sfxAirfieldEngineStop() {
+    if (!airfieldEngineNodes || !audioCtx) return;
+    const t0 = audioCtx.currentTime;
+    try {
+      airfieldEngineNodes.gain.gain.cancelScheduledValues(t0);
+      airfieldEngineNodes.gain.gain.setValueAtTime(airfieldEngineNodes.gain.gain.value, t0);
+      airfieldEngineNodes.gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.35);
+      airfieldEngineNodes.osc1.stop(t0 + 0.4);
+      airfieldEngineNodes.osc2.stop(t0 + 0.4);
+    } catch (e) {}
+    airfieldEngineNodes = null;
+  }
+
+  function sfxAirfieldTakeoff() {
+    if (muted || !audioCtx) return;
+    // Rising whoosh + engine surge
+    playNoise({ duration: 1.4, vol: 0.14, filterType: "lowpass", filterFreq: 2400, filterFreqEnd: 400, Q: 0.7, reverbSend: 0.25 });
+    playTone({ freq: 110, duration: 0.9, type: "sawtooth", vol: 0.08, sweep: 80, attack: 0.05, reverbSend: 0.15 });
+    playTone({ freq: 220, duration: 0.6, type: "triangle", vol: 0.05, sweep: 120, attack: 0.08 });
+  }
+
+  function sfxAirfieldWindStart() {
+    if (muted || !audioCtx) return;
+    sfxAirfieldWindStop();
+    const t0 = audioCtx.currentTime;
+    const buffer = getSharedNoiseBuffer();
+    if (!buffer) return;
+    const src = audioCtx.createBufferSource();
+    src.buffer = buffer;
+    src.loop = true;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(900, t0);
+    filter.Q.value = 0.6;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.035, t0 + 0.8);
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(sfxGainNode);
+    src.start(t0);
+    airfieldWindNodes = { src, filter, gain };
+  }
+
+  function sfxAirfieldWindStop() {
+    if (!airfieldWindNodes || !audioCtx) return;
+    const t0 = audioCtx.currentTime;
+    try {
+      airfieldWindNodes.gain.gain.cancelScheduledValues(t0);
+      airfieldWindNodes.gain.gain.setValueAtTime(Math.max(0.001, airfieldWindNodes.gain.gain.value), t0);
+      airfieldWindNodes.gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.5);
+      airfieldWindNodes.src.stop(t0 + 0.55);
+    } catch (e) {}
+    airfieldWindNodes = null;
+  }
+
+  function sfxAirfieldBird() {
+    if (muted || !audioCtx) return;
+    // Short chirp pair
+    const base = 1400 + Math.random() * 800;
+    playTone({ freq: base, duration: 0.07, type: "sine", vol: 0.035, sweep: 200, attack: 0.005 });
+    playTone({ freq: base * 1.12, duration: 0.05, type: "sine", vol: 0.025, sweep: -150, attack: 0.002, startDelay: 0.06 });
+  }
+
+  function sfxAirfieldBirdTick(dt) {
+    airfieldBirdTimer -= dt;
+    if (airfieldBirdTimer <= 0) {
+      airfieldBirdTimer = 2.5 + Math.random() * 4.5;
+      if (Math.random() < 0.7) sfxAirfieldBird();
+    }
+  }
+
+  function sfxAirfieldLand() {
+    if (muted || !audioCtx) return;
+    playNoise({ duration: 0.35, vol: 0.08, filterType: "lowpass", filterFreq: 600, filterFreqEnd: 120, Q: 0.8 });
+    playTone({ freq: 90, duration: 0.25, type: "triangle", vol: 0.05, sweep: -30, attack: 0.01 });
+  }
+
   function sfxClick() {
+
     playTone({ freq: 900, duration: 0.035, type: "square", vol: 0.07, attack: 0.001 });
     playNoise({ duration: 0.02, vol: 0.03, filterType: "highpass", filterFreq: 3200 });
   }
