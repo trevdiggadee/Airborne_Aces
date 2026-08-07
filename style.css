@@ -326,30 +326,28 @@ html, body {
   transform: translateX(-50%);
   z-index: 2;
   animation: floatHero 3.2s ease-in-out infinite;
-  /* Darker multi-layer shadow so it sits in the hangar, not a sticker cutout */
+  /* Soft hull shadow — contact ellipse below carries most of the weight */
   filter:
-    drop-shadow(0 12px 8px rgba(0,0,0,0.55))
-    drop-shadow(0 22px 24px rgba(0,0,0,0.42))
-    drop-shadow(0 3px 4px rgba(0,0,0,0.35));
+    drop-shadow(0 6px 4px rgba(0,0,0,0.35))
+    drop-shadow(0 14px 16px rgba(0,0,0,0.28));
   pointer-events: none;
 }
 .heroBlimpWrap.hero-small {
   width: 33.6%; /* Little Spy stays smaller on the platform */
   top: 27%;
 }
-/* Soft contact shadow on the hangar platform under the hovering blimp */
+/* Contact shadow lowered toward Take Flight button / platform */
 .heroBlimpWrap::after {
   content: "";
   position: absolute;
   left: 50%;
-  /* Lowered ~15% further under the hull */
-  bottom: -4%;
+  bottom: -18%;
   transform: translateX(-50%);
-  width: 58%;
-  height: 12%;
+  width: 62%;
+  height: 14%;
   border-radius: 50%;
-  background: radial-gradient(ellipse at center, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.28) 40%, rgba(0,0,0,0) 72%);
-  filter: blur(4px);
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.22) 42%, rgba(0,0,0,0) 74%);
+  filter: blur(5px);
   pointer-events: none;
   z-index: 0;
 }
@@ -368,15 +366,28 @@ html, body {
 .heroBlimpWrap img {
   display: block;
   width: 100%;
-  /* No mask — hard swaps stay clean without edge flicker */
+  height: auto;
+  object-fit: contain;
+}
+
+.heroBlimpLayer {
+  position: relative;
+  z-index: 1;
+  transition: opacity 0.12s linear;
+  will-change: opacity;
+  backface-visibility: hidden;
 }
 
 .heroBlimpLayerB {
   position: absolute;
   top: 0;
   left: 0;
+  width: 100%;
   opacity: 0;
+  z-index: 1;
+  transition: opacity 0.12s linear;
   will-change: opacity;
+  backface-visibility: hidden;
 }
 
 /* PROPELLER SPIN BLUR — a soft rotating fan-blur disc over the propeller hub */

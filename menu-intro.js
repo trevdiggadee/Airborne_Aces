@@ -244,11 +244,11 @@ const heroBlimpLayers = [
 const propBlur = document.getElementById("propBlur");
 const smokeParticles = document.getElementById("smokeParticles");
 
-let heroAnimTimer = null;
+let heroAnimRaf = null;
 let heroAnimFrame = 0;
 let heroActiveLayer = 0;
-let heroAnimGen = 0; // bumped every time startHeroAnimation runs, so a stale
-                      // in-flight priming pass can never clobber a newer one
+let heroAnimGen = 0;
+let heroLastTick = 0;
 
 function preloadImages(sources) {
   return Promise.all(sources.map(src => new Promise(resolve => {
@@ -260,8 +260,6 @@ function preloadImages(sources) {
   })));
 }
 
-// Cache of animation keys whose full frame set has already been decoded, so
-// re-selecting a blimp (or re-showing the menu) never re-primes needlessly
 const heroAnimPrimed = {};
 function primeHeroAnimation(key) {
   const anim = HERO_ANIM[key];
@@ -270,58 +268,81 @@ function primeHeroAnimation(key) {
   return preloadImages(anim.urls).then(() => { heroAnimPrimed[key] = true; });
 }
 
+function stopHeroAnimation() {
+  if (heroAnimRaf) {
+    cancelAnimationFrame(heroAnimRaf);
+    heroAnimRaf = null;
+  }
+}
+
 function startHeroAnimation(key) {
   const gen = ++heroAnimGen;
-  if (heroAnimTimer) {
-    clearInterval(heroAnimTimer);
-    heroAnimTimer = null;
-  }
+  stopHeroAnimation();
   const [layerA, layerB] = heroBlimpLayers;
+  if (!layerA || !layerB) return;
   const anim = (typeof PLACEHOLDER_MODE !== "undefined" && PLACEHOLDER_MODE) ? null : HERO_ANIM[key];
 
-  // reset both layers to a clean, non-animated state before (re)starting
-  layerA.style.transition = "none";
-  layerB.style.transition = "none";
-  layerB.style.opacity = 0;
-  layerA.style.opacity = 1;
-  heroActiveLayer = 0;
+  // Soft switch: keep current image visible while we load the new first frame
+  const fadeMs = 140;
+  function showFirst(url) {
+    const front = heroActiveLayer === 0 ? layerA : layerB;
+    const back = heroActiveLayer === 0 ? layerB : layerA;
+    back.style.transition = "none";
+    back.style.opacity = "0";
+    back.src = url;
+    // force reflow then crossfade
+    void back.offsetWidth;
+    back.style.transition = "opacity " + fadeMs + "ms ease-out";
+    front.style.transition = "opacity " + fadeMs + "ms ease-out";
+    back.style.opacity = "1";
+    front.style.opacity = "0";
+    heroActiveLayer = heroActiveLayer === 0 ? 1 : 0;
+  }
 
   if (!anim) {
-    layerA.src = blimpSrc(BLIMP_DATA[key]);
+    showFirst(blimpSrc(BLIMP_DATA[key]));
     return;
   }
 
   heroAnimFrame = 0;
-  // show the first frame immediately so there's never a blank hero card,
-  // even while the rest of the animation's frames are still being primed
-  layerA.src = anim.urls[0];
+  // Show frame 0 immediately on the back layer with a soft crossfade
+  const firstUrl = anim.urls[0];
+  showFirst(firstUrl);
 
-  // Every frame swap in the crossfade below assumes the image is already
-  // downloaded AND decoded, otherwise the browser can briefly show nothing
-  // while it fetches/decodes mid-fade, which reads as blinking. So we fully
-  // prime (fetch + decode) every frame of this animation before the
-  // interval-driven crossfade loop is allowed to start.
+  // Bump effective playback slightly for smoother feel; still driven by rAF
+  const fps = Math.min(30, (anim.fps || 20) * 1.15);
+  const frameMs = 1000 / fps;
+
   primeHeroAnimation(key).then(() => {
     if (gen !== heroAnimGen) return;
+    heroLastTick = performance.now();
 
-    // Hard frame swap on a single layer — dual-layer opacity crossfades were
-    // causing visible glitching/flicker between frames on the menu.
-    layerB.style.opacity = 0;
-    layerB.style.transition = "none";
-    layerA.style.opacity = 1;
-    layerA.style.transition = "none";
-    heroActiveLayer = 0;
-
-    const frameMs = 1000 / anim.fps;
-    heroAnimTimer = setInterval(() => {
+    function tick(now) {
       if (gen !== heroAnimGen) return;
-      heroAnimFrame = (heroAnimFrame + 1) % anim.urls.length;
-      const url = anim.urls[heroAnimFrame];
-      // Swap only when the frame changes; cache hits are instant
-      if (layerA.getAttribute("src") !== url) {
-        layerA.src = url;
+      const elapsed = now - heroLastTick;
+      if (elapsed >= frameMs) {
+        // catch up at most one frame to avoid skipping (keeps loop smooth)
+        heroLastTick = now - (elapsed % frameMs);
+        heroAnimFrame = (heroAnimFrame + 1) % anim.urls.length;
+        const url = anim.urls[heroAnimFrame];
+        const front = heroActiveLayer === 0 ? layerA : layerB;
+        const back = heroActiveLayer === 0 ? layerB : layerA;
+
+        back.style.transition = "none";
+        back.style.opacity = "0";
+        if (back.getAttribute("src") !== url) back.src = url;
+        void back.offsetWidth;
+        // Short dissolve between consecutive frames
+        const cross = Math.min(90, frameMs * 0.55);
+        back.style.transition = "opacity " + cross + "ms linear";
+        front.style.transition = "opacity " + cross + "ms linear";
+        back.style.opacity = "1";
+        front.style.opacity = "0";
+        heroActiveLayer = heroActiveLayer === 0 ? 1 : 0;
       }
-    }, frameMs);
+      heroAnimRaf = requestAnimationFrame(tick);
+    }
+    heroAnimRaf = requestAnimationFrame(tick);
   });
 }
 
