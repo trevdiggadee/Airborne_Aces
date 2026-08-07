@@ -197,8 +197,9 @@
     if (typeof initClouds === "function") initClouds();
     if (typeof player !== "undefined" && player) {
       const gy = groundLevelY();
+      // Sit lower on the asphalt (hull closer to runway surface)
       player.x = W * 0.22;
-      player.y = gy - player.h * 0.42;
+      player.y = gy - player.h * 0.28;
       player.vy = 0;
       player.rotation = 0;
     }
@@ -271,8 +272,9 @@
         const gy = groundLevelY();
         player.vy = 0;
         const speedFrac = Math.min(1, (airfieldTakeoffSpeed - 30) / 190);
-        player.rotation = -0.04 - speedFrac * 0.24;
-        player.y = gy - player.h * 0.42 - speedFrac * 12;
+        // Gradual nose-up as speed builds; stay low on the runway
+        player.rotation = -0.02 - speedFrac * 0.18;
+        player.y = gy - player.h * 0.28 - speedFrac * 18;
       }
 
       if (airfieldPhase === "taxi") {
@@ -302,17 +304,26 @@
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = airfieldTakeoffSpeed;
       airfieldTip = "Liftoff! Climbing to cruise altitude…";
 
+      // Smooth takeoff arc: ease-out from runway up to cruise over ~2.4s
+      // (no sudden snap to final position)
       if (typeof player !== "undefined" && player) {
         const targetY = H * 0.4;
         const targetX = W * 0.28;
-        player.y += (targetY - player.y) * Math.min(1, dt * 1.6);
-        player.x += (targetX - player.x) * Math.min(1, dt * 1.2);
-        player.vy = (targetY - player.y) * 1.6;
-        player.rotation += (-0.06 - player.rotation) * 0.1;
+        const gy = groundLevelY();
+        const startY = gy - player.h * 0.28 - 18;
+        const climbDur = 2.4;
+        const u = Math.min(1, airfieldPhaseT / climbDur);
+        // ease-out cubic — fast lift early, settles gently into cruise
+        const e = 1 - Math.pow(1 - u, 3);
+        player.y = startY + (targetY - startY) * e;
+        player.x = W * 0.22 + (targetX - W * 0.22) * e;
+        // Nose follows the arc: pitch up mid-climb, level out near top
+        const pitch = -0.28 * Math.sin(u * Math.PI) - 0.04 * (1 - u);
+        player.rotation = pitch;
+        player.vy = 0;
       }
 
-      // Slightly longer climb
-      if (airfieldPhaseT > 3.2) {
+      if (airfieldPhaseT > 2.5) {
         airfieldPhase = "lesson";
         airfieldPhaseT = 0;
         airfieldLesson = 0;
@@ -358,8 +369,8 @@
           player.x = W * 0.28;
         }
         if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 0;
-        // ~4s pause to read
-        if (airfieldLessonT > 4.0) {
+        // Short pause to read tip
+        if (airfieldLessonT > 2.8) {
           airfieldSub = "practice";
           airfieldLessonT = 0;
           window.__airborneAirfieldPaused = false;

@@ -194,8 +194,10 @@
       updateScreenEffects(dt);
     }
 
-    drawParallaxLayers();
-    drawSketchSkyline();
+    if (!(typeof isAirfieldMode === "function" && isAirfieldMode()) && !window.__airborneAirfield) {
+      drawParallaxLayers();
+      drawSketchSkyline();
+    }
     drawPowerlines();
     drawBuildings();
     drawBuildingSmoke();
