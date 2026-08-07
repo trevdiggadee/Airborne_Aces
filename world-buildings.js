@@ -162,7 +162,11 @@
 
   function isAirfieldMode() { return !!airfieldMode; }
   function syncAirfieldGlobals() {
-    window.__airborneAi  function initAirfieldStrip() {
+    window.__airborneAirfield = airfieldMode;
+    window.__airborneAirfieldPhase = airfieldPhase;
+  }
+
+  function initAirfieldStrip() {
     airfieldTiles = [];
     const img = images.airfield_strip;
     const aspect = (img && img.naturalWidth) ? img.naturalWidth / img.naturalHeight : 5;
@@ -382,13 +386,6 @@
           if (airfieldLesson >= lessons.length) {
             airfieldTip = "Great flying! Entering the city…";
           }
-        }
-      }
-    }
-  }
-
-eldPhaseT > 21) {
-          endAirfieldTraining();
         }
       }
     }
