@@ -517,6 +517,42 @@
     ship_steel_industrial: "ship_steel_industrial.webp",
     ship_red_royal: "ship_red_royal.webp",
     ship_navy_rocket: "ship_navy_rocket.webp",
+    blimp5_flight_01: "blimp5_flight_01.webp",
+    blimp5_flight_02: "blimp5_flight_02.webp",
+    blimp5_flight_03: "blimp5_flight_03.webp",
+    blimp5_flight_04: "blimp5_flight_04.webp",
+    blimp5_flight_05: "blimp5_flight_05.webp",
+    blimp5_flight_06: "blimp5_flight_06.webp",
+    blimp5_flight_07: "blimp5_flight_07.webp",
+    blimp5_flight_08: "blimp5_flight_08.webp",
+    blimp5_flight_09: "blimp5_flight_09.webp",
+    blimp5_flight_10: "blimp5_flight_10.webp",
+    blimp5_flight_11: "blimp5_flight_11.webp",
+    blimp5_flight_12: "blimp5_flight_12.webp",
+    blimp5_flight_13: "blimp5_flight_13.webp",
+    blimp5_flight_14: "blimp5_flight_14.webp",
+    blimp5_flight_15: "blimp5_flight_15.webp",
+    blimp5_flight_16: "blimp5_flight_16.webp",
+    blimp5_flight_17: "blimp5_flight_17.webp",
+    blimp5_flight_18: "blimp5_flight_18.webp",
+    blimp5_flight_19: "blimp5_flight_19.webp",
+    blimp5_flight_20: "blimp5_flight_20.webp",
+    blimp5_flight_21: "blimp5_flight_21.webp",
+    blimp5_flight_22: "blimp5_flight_22.webp",
+    blimp5_flight_23: "blimp5_flight_23.webp",
+    blimp5_flight_24: "blimp5_flight_24.webp",
+    blimp5_flight_25: "blimp5_flight_25.webp",
+    blimp5_flight_26: "blimp5_flight_26.webp",
+    blimp5_flight_27: "blimp5_flight_27.webp",
+    blimp5_flight_28: "blimp5_flight_28.webp",
+    blimp5_flight_29: "blimp5_flight_29.webp",
+    blimp5_flight_30: "blimp5_flight_30.webp",
+    blimp5_flight_31: "blimp5_flight_31.webp",
+    blimp5_flight_32: "blimp5_flight_32.webp",
+    blimp5_flight_33: "blimp5_flight_33.webp",
+    blimp5_flight_34: "blimp5_flight_34.webp",
+    blimp5_flight_35: "blimp5_flight_35.webp",
+    blimp5_flight_36: "blimp5_flight_36.webp",
     blimp11_flight_01: "blimp11_flight_01.webp",
     blimp11_flight_02: "blimp11_flight_02.webp",
     blimp11_flight_03: "blimp11_flight_03.webp",
@@ -1074,6 +1110,11 @@
   const SHIP_WOOD_KEYS = Array.from({ length: SHIP_WOOD_FRAME_COUNT }, (_, i) => `ship_wood_${String(i + 1).padStart(2, "0")}`);
 
   
+  
+  const BLIMP5_FLIGHT_FRAME_COUNT = 36;
+  const BLIMP5_FLIGHT_FPS = 20;
+  const BLIMP5_FLIGHT_KEYS = Array.from({ length: BLIMP5_FLIGHT_FRAME_COUNT }, (_, i) => `blimp5_flight_${String(i + 1).padStart(2, "0")}`);
+
   const BLIMP11_FLIGHT_FRAME_COUNT = 36;
   const BLIMP11_FLIGHT_FPS = 20;
   const BLIMP11_FLIGHT_KEYS = Array.from({ length: BLIMP11_FLIGHT_FRAME_COUNT }, (_, i) => `blimp11_flight_${String(i + 1).padStart(2, "0")}`);
@@ -1109,7 +1150,7 @@
     blimp2: { keys: BLIMP2_FLIGHT_KEYS, fps: BLIMP2_FLIGHT_FPS, frameCount: BLIMP2_FLIGHT_FRAME_COUNT },
     blimp3: { keys: BLIMP3_FLIGHT_KEYS, fps: BLIMP3_FLIGHT_FPS, frameCount: BLIMP3_FLIGHT_FRAME_COUNT },
     blimp4: { keys: BLIMP4_FLIGHT_KEYS, fps: BLIMP4_FLIGHT_FPS, frameCount: BLIMP4_FLIGHT_FRAME_COUNT },
-    blimp5: { keys: SHIP_PURPLE_KEYS, fps: SHIP_PURPLE_FPS, frameCount: SHIP_PURPLE_FRAME_COUNT },
+    blimp5: { keys: BLIMP5_FLIGHT_KEYS, fps: BLIMP5_FLIGHT_FPS, frameCount: BLIMP5_FLIGHT_FRAME_COUNT },
     blimp6: { keys: SHIP_WOOD_KEYS, fps: SHIP_WOOD_FPS, frameCount: SHIP_WOOD_FRAME_COUNT },
     blimp7: { keys: SHIP_LIGHTNING_KEYS, fps: SHIP_LIGHTNING_FPS, frameCount: SHIP_LIGHTNING_FRAME_COUNT },
     blimp8: { keys: SHIP_CARGO_KEYS, fps: SHIP_CARGO_FPS, frameCount: SHIP_CARGO_FRAME_COUNT },
@@ -1130,7 +1171,7 @@
     blimp2: "blimp2_flight_01",
     blimp3: "blimp3_flight_01",
     blimp4: "blimp4_flight_01",
-    blimp5: "ship_purple_01",
+    blimp5: "blimp5_flight_01",
     blimp6: "ship_wood_01",
     blimp7: "ship_lightning_01",
     blimp8: "ship_cargo_01",
