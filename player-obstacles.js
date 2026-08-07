@@ -66,8 +66,7 @@
       return; // scripted climb — no player flap
     }
     if (window.__airborneAirfieldPaused) {
-      // Soft hover flap during tip pause only
-      player.vy = Math.min(player.vy, FLAP_VELOCITY * 0.45);
+      // Fully suspended — no flap during tip / land / score
       return;
     }
     player.vy = FLAP_VELOCITY;
@@ -104,6 +103,11 @@
     if (window.__airborneAirfield &&
         (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel")) {
       player.vy = 0;
+    }
+    // Tip / land / score: fully suspended
+    if (window.__airborneAirfieldPaused) {
+      player.vy = 0;
+      return;
     }
     player.y += player.vy * dt;
 
@@ -458,7 +462,9 @@
         spawnInterval = Math.max(0.95, 1.7 - score * 0.03);
         if (!bossActive) {
           const next = nextBossConfig();
-          if (next && gameplayScore >= next.threshold) {
+          if (window.__airborneAirfieldBlockBoss) {
+            // Airfield training — never start a boss or bonus chain
+          } else if (next && gameplayScore >= next.threshold) {
             triggerBossWarning(next.num);
           setTimeout(function() { if (state === 'playing' && !bossActive) startBossDialogue(next.num); }, BOSS_WARNING_DURATION);
           }

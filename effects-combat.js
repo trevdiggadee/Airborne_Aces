@@ -1008,7 +1008,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     if (typeof levelEndPhase === "string" && levelEndPhase === "fadeOut") return false;
     if (bossActive) return !!(boss && boss.kind === "tank");
     // Only between boss 2 clear and boss 3 start (not earlier landings)
-    const next = nextBossConfig();
+    const next = window.__airborneAirfieldBlockBoss ? null : nextBossConfig();
     return !!(next && next.num === 3 && typeof bossesDefeatedCount !== "undefined" && bossesDefeatedCount === 2);
   }
 
