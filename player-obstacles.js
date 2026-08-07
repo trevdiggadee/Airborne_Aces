@@ -97,12 +97,25 @@
       return;
     }
 
+    // Airfield scripted phases: no gravity at all
+    if (window.__airborneAirfield &&
+        (window.__airborneAirfieldPhase === "taxi" ||
+         window.__airborneAirfieldPhase === "accel" ||
+         window.__airborneAirfieldPhase === "climb" ||
+         window.__airborneAirfieldPaused)) {
+      player.vy = 0;
+      return;
+    }
     player.vy += GRAVITY * dt;
     if (player.vy > MAX_FALL_SPEED) player.vy = MAX_FALL_SPEED;
-    // Airfield taxi/accel: stay on runway until climb phase
+    // Airfield taxi/accel/climb: scripted motion — no gravity fight
     if (window.__airborneAirfield &&
-        (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel")) {
+        (window.__airborneAirfieldPhase === "taxi" ||
+         window.__airborneAirfieldPhase === "accel" ||
+         window.__airborneAirfieldPhase === "climb")) {
       player.vy = 0;
+      // Don't apply gravity displacement during scripted takeoff
+      return;
     }
     // Tip / land / score: fully suspended
     if (window.__airborneAirfieldPaused) {
@@ -355,9 +368,11 @@
         if (!o.collected) {
           const cx = o.x + o.w / 2;
           const cy = o.y + o.h / 2 + Math.sin(o.bobPhase) * (o.bobAmount || 8);
-          const dx = player.x - cx;
-          const dy = player.y - cy;
-          if (Math.hypot(dx, dy) < (o.r || o.w / 2) * 0.72 + player.w * 0.25) {
+          const rx = (o.r || o.w / 2) * 0.45 + player.w * 0.2;
+          const ry = (o.r || o.w / 2) * 1.0 + player.h * 0.2;
+          const dx = (player.x - cx) / rx;
+          const dy = (player.y - cy) / ry;
+          if (dx * dx + dy * dy < 1) {
             o.collected = true;
             o.scored = true;
             score += 5;
@@ -557,7 +572,11 @@
             spawnFeathers(o.x + o.w / 2, drawY + o.h / 2);
           }
         }
-        takeHit();
+        if (o.isRing || o.type === "gold_ring") {
+          // never damage from rings
+        } else {
+          takeHit();
+        }
       }
     });
   }
@@ -571,26 +590,37 @@
         const r = o.r || o.w / 2;
         ctx.save();
         ctx.translate(cx, cy);
-        ctx.rotate(o.spin || 0);
-        // Outer gold ring
+        // Sideways hoop (vertical ellipse) — fly through the opening
+        const rx = r * 0.28; // thin depth
+        const ry = r * 1.05; // full height
+        // Outer gold
         ctx.strokeStyle = "#e8c84a";
-        ctx.lineWidth = Math.max(4, r * 0.14);
+        ctx.lineWidth = Math.max(5, r * 0.16);
         ctx.beginPath();
-        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
         ctx.stroke();
-        // Inner highlight
-        ctx.strokeStyle = "rgba(255, 245, 180, 0.85)";
-        ctx.lineWidth = Math.max(2, r * 0.06);
+        // Inner rim highlight
+        ctx.strokeStyle = "rgba(255, 245, 180, 0.9)";
+        ctx.lineWidth = Math.max(2.5, r * 0.07);
         ctx.beginPath();
-        ctx.arc(0, 0, r * 0.82, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, rx * 0.72, ry * 0.88, 0, 0, Math.PI * 2);
         ctx.stroke();
-        // Soft glow
-        ctx.globalAlpha = 0.25;
+        // Glow
+        ctx.globalAlpha = 0.3;
         ctx.strokeStyle = "#ffd700";
-        ctx.lineWidth = Math.max(6, r * 0.2);
+        ctx.lineWidth = Math.max(7, r * 0.22);
         ctx.beginPath();
-        ctx.arc(0, 0, r * 1.05, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, rx * 1.15, ry * 1.08, 0, 0, Math.PI * 2);
         ctx.stroke();
+        // Sparkle at top/bottom
+        ctx.globalAlpha = 0.7 + 0.3 * Math.sin((o.spin || 0) * 3);
+        ctx.fillStyle = "#fff6c0";
+        ctx.beginPath();
+        ctx.arc(0, -ry * 0.92, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(0, ry * 0.92, 2.5, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
         return;
       }

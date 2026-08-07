@@ -240,6 +240,16 @@
   function takeHit() {
     if (state !== "playing") return;
     if (bonusActive) return; // invincible during the bonus round
+    // Airfield takeoff / landing / tip pauses — never damage
+    if (window.__airborneAirfieldInvuln ||
+        (window.__airborneAirfield &&
+         (window.__airborneAirfieldPhase === "taxi" ||
+          window.__airborneAirfieldPhase === "accel" ||
+          window.__airborneAirfieldPhase === "climb" ||
+          window.__airborneAirfieldPhase === "land" ||
+          window.__airborneAirfieldPhase === "score"))) {
+      return;
+    }
     if (shieldActive) {
       // the shield absorbs the hit — a spark, a soft chime, and a bright ripple on the bubble itself
       spawnHitParticles(player.x, player.y);

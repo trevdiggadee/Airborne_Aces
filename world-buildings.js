@@ -218,7 +218,11 @@
     syncAirfieldGlobals();
     initAirfieldStrip();
     buildings = [];
+    if (typeof sketchSkylineTiles !== "undefined") sketchSkylineTiles = [];
+    if (typeof powerlineTiles !== "undefined") powerlineTiles = [];
+    if (typeof streetTiles !== "undefined") streetTiles = [];
     if (typeof initClouds === "function") initClouds();
+    window.__airborneAirfieldInvuln = true;
     if (typeof player !== "undefined" && player) {
       const gy = groundLevelY();
       player.x = W * 0.22;
@@ -974,6 +978,8 @@
 
   function checkBuildingCollision() {
     if (bonusActive) return; // invincible during the bonus round
+    if (window.__airborneAirfield || (typeof airfieldMode !== "undefined" && airfieldMode)) return;
+    if (window.__airborneAirfieldInvuln) return;
     const groundY = groundLevelY();
     const px1 = player.x - (player.w / 2) * 0.7;
     const px2 = player.x + (player.w / 2) * 0.7;
