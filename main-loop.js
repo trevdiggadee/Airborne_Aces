@@ -243,7 +243,9 @@
       if (!loopErrorShown) {
         loopErrorShown = true;
         showRuntimeError(err);
+        console.error(err);
       }
+      // keep looping so a single draw glitch does not freeze a blank screen
     }
 
     requestAnimationFrame(loop);

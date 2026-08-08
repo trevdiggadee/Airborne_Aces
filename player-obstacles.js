@@ -145,6 +145,7 @@
     updateBlimpPersonality(dt);}
 
   function drawPlayer() {
+    try {
     // Hide blimp during the end-of-level black fade (overlay draws after player)
     if (typeof levelEndPhase === "string" && levelEndPhase === "fadeOut") return;
     const img = currentPlayerImage();
@@ -162,7 +163,10 @@
       ctx.strokeStyle = "#3a2410";
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.ellipse(0, 0, player.w / 2, player.h / 2, 0, 0, Math.PI * 2);
+      const rw = Math.max(4, (player.w || 40) / 2);
+      const rh = Math.max(4, (player.h || 24) / 2);
+      ctx.scale(1, rh / rw);
+      ctx.arc(0, 0, rw, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
       ctx.restore();
@@ -192,6 +196,7 @@
     }
     ctx.drawImage(img, -player.w / 2, -player.h / 2, player.w, player.h);
     ctx.restore();
+    } catch (e) { console.warn("drawPlayer", e); }
   }
 
   // ---------- Obstacles ----------
@@ -208,7 +213,6 @@
   const WAKE_RANGE = 48; // px — spawn turbulence when an obstacle nearly grazes the player
   let dodgeStreak = 0;
   let comboPopups = []; // floating "GRAZE!" / "5x STREAK!" text
-
   function spawnComboPopup(x, y, text, color) {
     comboPopups.push({ x, y, text, color, born: performance.now(), life: 900 });
   }

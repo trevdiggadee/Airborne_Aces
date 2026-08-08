@@ -230,13 +230,15 @@
     if (typeof streetTiles !== "undefined") streetTiles = [];
     if (typeof initClouds === "function") initClouds();
     window.__airborneAirfieldInvuln = true;
+    if (typeof applyPlayerBlimpSize === "function") applyPlayerBlimpSize();
     if (typeof player !== "undefined" && player) {
       const gy = groundLevelY();
+      const ph = player.h > 0 ? player.h : 40;
       player.x = W * 0.22;
-      // Lower on runway (+5% lower than previous)
-      player.y = gy - player.h * 0.12;
+      player.y = gy - ph * 0.12;
       player.vy = 0;
       player.rotation = 0;
+      window.__airborneScriptedPose = { x: player.x, y: player.y, rotation: 0 };
     }
     if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 28;
     if (typeof spawnInterval !== "undefined") spawnInterval = 999;
