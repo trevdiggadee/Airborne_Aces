@@ -590,28 +590,23 @@
         const r = o.r || o.w / 2;
         ctx.save();
         ctx.translate(cx, cy);
-        // Sideways hoop (vertical ellipse) — fly through the opening
-        const rx = r * 0.28; // thin depth
-        const ry = r * 1.05; // full height
-        // Outer gold
-        ctx.strokeStyle = "#e8c84a";
-        ctx.lineWidth = Math.max(5, r * 0.16);
-        ctx.beginPath();
-        ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        // Inner rim highlight
-        ctx.strokeStyle = "rgba(255, 245, 180, 0.9)";
-        ctx.lineWidth = Math.max(2.5, r * 0.07);
-        ctx.beginPath();
-        ctx.ellipse(0, 0, rx * 0.72, ry * 0.88, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        // Glow
-        ctx.globalAlpha = 0.3;
-        ctx.strokeStyle = "#ffd700";
-        ctx.lineWidth = Math.max(7, r * 0.22);
-        ctx.beginPath();
-        ctx.ellipse(0, 0, rx * 1.15, ry * 1.08, 0, 0, Math.PI * 2);
-        ctx.stroke();
+        // Sideways hoop (vertical ellipse via scale+arc) — Safari safe
+        const rx = r * 0.28;
+        const ry = r * 1.05;
+        function strokeOval(rx_, ry_, lw, color, a) {
+          ctx.save();
+          ctx.globalAlpha = a != null ? a : 1;
+          ctx.strokeStyle = color;
+          ctx.lineWidth = lw;
+          ctx.beginPath();
+          ctx.scale(rx_ / ry_, 1);
+          ctx.arc(0, 0, ry_, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+        strokeOval(rx, ry, Math.max(5, r * 0.16), "#e8c84a", 1);
+        strokeOval(rx * 0.72, ry * 0.88, Math.max(2.5, r * 0.07), "rgba(255, 245, 180, 0.9)", 1);
+        strokeOval(rx * 1.15, ry * 1.08, Math.max(7, r * 0.22), "#ffd700", 0.3);
         // Sparkle at top/bottom
         ctx.globalAlpha = 0.7 + 0.3 * Math.sin((o.spin || 0) * 3);
         ctx.fillStyle = "#fff6c0";

@@ -604,35 +604,42 @@
   }
 
   function drawAirfieldShadow() {
+    try {
     if (!airfieldMode || typeof player === "undefined" || !player) return;
     if (airfieldPhase === "score") return;
     const gy = groundLevelY();
-    // Shadow sits on ground plane; shrinks as altitude rises
-    const alt = Math.max(0, Math.min(1, airfieldAltFrac || 0));
-    // During taxi/accel alt is ~0
-    let frac = alt;
-    if (airfieldPhase === "taxi" || airfieldPhase === "accel") frac = 0;
-    if (airfieldPhase === "lesson" || airfieldPhase === "land") {
-      // Live altitude from player vs ground
+    let frac = 0;
+    if (airfieldPhase === "climb") {
+      frac = Math.max(0, Math.min(1, airfieldAltFrac || 0));
+    } else if (airfieldPhase === "lesson" || airfieldPhase === "land") {
       const maxLift = gy - H * 0.4;
-      frac = maxLift > 10 ? Math.max(0, Math.min(1, (gy - player.y) / maxLift)) : 1;
+      frac = maxLift > 10 ? Math.max(0, Math.min(1, (gy - (player.y || 0)) / maxLift)) : 1;
     }
-    const scale = 1 - frac * 0.78; // shrinks a lot at altitude
+    // taxi/accel: frac stays 0 (full shadow on ground)
+    const scale = 1 - frac * 0.78;
     const alpha = 0.38 * (1 - frac * 0.7);
-    if (scale < 0.12 || alpha < 0.04) return;
-    const sw = player.w * 0.85 * scale;
-    const sh = player.h * 0.18 * scale;
-    const sx = player.x;
-    // Shadow on ground, slight lag under ship
-    const sy = gy - 2 + (airfieldStripY || 0) * 0.15;
+    if (!(scale > 0.12) || !(alpha > 0.04)) return;
+    const pw = (player.w > 0) ? player.w : 50;
+    const ph = (player.h > 0) ? player.h : 30;
+    const sw = pw * 0.85 * scale;
+    const sh = Math.max(4, ph * 0.18 * scale);
+    const sx = player.x || W * 0.22;
+    const sy = gy - 2 + ((typeof airfieldStripY === "number" && isFinite(airfieldStripY)) ? airfieldStripY * 0.15 : 0);
+    if (!isFinite(sx) || !isFinite(sy) || !isFinite(sw) || !isFinite(sh)) return;
     if (sy > H + 10) return;
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.fillStyle = "rgba(20, 16, 10, 1)";
+    // scale+arc instead of ellipse — wider Safari support
     ctx.beginPath();
-    ctx.ellipse(sx, sy, sw / 2, Math.max(3, sh / 2), 0, 0, Math.PI * 2);
+    ctx.translate(sx, sy);
+    ctx.scale(1, Math.max(0.15, sh / Math.max(1, sw)));
+    ctx.arc(0, 0, Math.max(2, sw / 2), 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+    } catch (e) {
+      // never crash the game loop for a shadow
+    }
   }
 
   function drawAirfieldTip() {
