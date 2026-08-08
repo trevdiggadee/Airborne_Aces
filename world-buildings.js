@@ -306,7 +306,7 @@
     const holding = !!window.__airborneAirfieldHold;
     if (!(airfieldTakeoffSpeed > 0)) airfieldTakeoffSpeed = 50;
 
-    // Scroll the strip during runway, climb, and free-flight until it's fully off-screen
+    // Scroll strip left; during climb also sink it downward for lift-off feel
     if (airfieldPhase === "taxi" || airfieldPhase === "accel" || airfieldPhase === "climb" ||
         airfieldPhase === "lesson") {
       const scrollSpd = Math.max(airfieldTakeoffSpeed || 0, (airfieldPhase === "lesson" ? 210 : 0));
@@ -315,11 +315,23 @@
           if (!tile) return;
           tile.x -= scrollSpd * dt;
         });
-        // Drop tiles that have fully scrolled off the left
         airfieldTiles = (airfieldTiles || []).filter(function(tile) {
           return tile && tile.x + (tile.w || 0) > -40;
         });
       }
+    }
+    // Sink strip as we climb (looks like gaining altitude)
+    if (airfieldPhase === "climb") {
+      const climbDur = 2.0;
+      const u = Math.min(1, (airfieldPhaseT || 0) / climbDur);
+      airfieldStripY = u * (H * 0.55 + 60);
+      airfieldAltFrac = u;
+    } else if (airfieldPhase === "taxi" || airfieldPhase === "accel") {
+      airfieldStripY = 0;
+      airfieldAltFrac = 0;
+    } else if (airfieldPhase === "lesson") {
+      // Keep strip sunk / gone during free flight
+      airfieldStripY = Math.max(airfieldStripY || 0, H * 0.6);
     }
 
     // ---- RUNWAY ----
@@ -433,56 +445,32 @@
       const L = lessons[airfieldLesson];
       airfieldLessonT = (airfieldLessonT || 0) + dt;
 
-      if (airfieldSub === "practice") {
-        window.__airborneAirfieldPaused = false;
-        window.__airborneAirfieldInvuln = false;
-        if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 210;
-        if (typeof spawnInterval !== "undefined") spawnInterval = (L.rings || L.obstacles) ? L.spawn : 999;
-        window.__airborneAirfieldRings = !!L.rings;
-        window.__airborneAirfieldObstacles = !!L.obstacles;
+      // Continuous practice — no freeze pauses; tips show as overlay only
+      window.__airborneAirfieldPaused = false;
+      window.__airborneAirfieldInvuln = false;
+      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 210;
+      if (typeof spawnInterval !== "undefined") spawnInterval = (L.rings || L.obstacles) ? L.spawn : 999;
+      window.__airborneAirfieldRings = !!L.rings;
+      window.__airborneAirfieldObstacles = !!L.obstacles;
+
+      // Show tip for last ~4s of each practice segment
+      const showTipAt = Math.max(0, L.practice - 4);
+      if (airfieldLessonT >= showTipAt) {
+        airfieldTip = L.tip;
+      } else {
         const left = Math.max(0, Math.ceil(L.practice - airfieldLessonT));
         airfieldTip = left > 0 ? ("Flying… " + left + "s") : L.tip;
-        if (airfieldLessonT >= L.practice) {
-          airfieldSub = "tip";
-          airfieldLessonT = 0;
-          window.__airborneAirfieldPaused = true;
-          window.__airborneAirfieldInvuln = true;
-          if (typeof obstacles !== "undefined") obstacles = [];
-          if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-          airfieldTip = L.tip;
-          if (typeof player !== "undefined" && player) {
-            player.x = W * 0.28;
-            player.y = H * 0.4;
-            player.vy = 0;
-            player.rotation = 0;
-          }
-        }
-      } else {
-        // tip pause
-        window.__airborneAirfieldPaused = true;
-        window.__airborneAirfieldInvuln = true;
-        airfieldTip = L.tip;
-        if (typeof player !== "undefined" && player) {
-          player.x = W * 0.28;
-          player.y = H * 0.4;
-          player.vy = 0;
-          player.rotation = 0;
-        }
-        if (airfieldLessonT > 3) {
-          airfieldLesson++;
-          airfieldLessonT = 0;
-          airfieldSub = "practice";
-          if (typeof obstacles !== "undefined") obstacles = [];
-          if (airfieldLesson < lessons.length) {
-            const Ln = lessons[airfieldLesson];
-            if (typeof spawnInterval !== "undefined") spawnInterval = (Ln.rings || Ln.obstacles) ? Ln.spawn : 999;
-            window.__airborneAirfieldRings = !!Ln.rings;
-            window.__airborneAirfieldObstacles = !!Ln.obstacles;
-            window.__airborneAirfieldPaused = false;
-            window.__airborneAirfieldInvuln = false;
-            if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 210;
-            airfieldTip = "Flying…";
-          }
+      }
+
+      if (airfieldLessonT >= L.practice) {
+        airfieldLesson++;
+        airfieldLessonT = 0;
+        if (airfieldLesson < lessons.length) {
+          const Ln = lessons[airfieldLesson];
+          if (typeof spawnInterval !== "undefined") spawnInterval = (Ln.rings || Ln.obstacles) ? Ln.spawn : 999;
+          window.__airborneAirfieldRings = !!Ln.rings;
+          window.__airborneAirfieldObstacles = !!Ln.obstacles;
+          airfieldTip = "Flying…";
         }
       }
       syncAirfieldGlobals();
@@ -558,6 +546,7 @@
       if (!airfieldTiles || !airfieldTiles.length) return;
     }
     const groundY = groundLevelY();
+    const sink = (typeof airfieldStripY === "number" && isFinite(airfieldStripY)) ? airfieldStripY : 0;
     airfieldTiles.forEach(function(tile) {
       if (!tile) return;
       let tw = tile.w, th = tile.h, tx = tile.x;
@@ -568,8 +557,8 @@
         tile.w = tw; tile.h = th;
         if (!isFinite(tx)) { tx = 0; tile.x = 0; }
       }
-      const y = groundY - th * 0.72;
-      if (!isFinite(y) || y > H + 20) return;
+      const y = groundY - th * 0.72 + sink;
+      if (!isFinite(y) || y > H + 40) return;
       try { ctx.drawImage(img, tx, y, tw, th); } catch (e) {}
     });
   }
