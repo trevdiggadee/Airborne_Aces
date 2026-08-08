@@ -162,6 +162,10 @@
   let airfieldLandT = 0;
   let airfieldScoreT = 0;
   let airfieldStartScore = 0;
+  let airfieldClimbStartY = 0;
+  let airfieldRunwayT = 0;
+  let airfieldAltFrac = 0;
+  let airfieldStripY = 0;
 
   function isAirfieldMode() { return !!airfieldMode; }
   function syncAirfieldGlobals() {
@@ -292,6 +296,7 @@
 
   function updateAirfield(dt) {
     if (!airfieldMode) return;
+    try {
     if (!(dt > 0) || !isFinite(dt)) dt = 0.016;
 
     airfieldPhaseT = (airfieldPhaseT || 0) + dt;
@@ -523,6 +528,9 @@
         endAirfieldTrainingToMap();
       }
       syncAirfieldGlobals();
+    }
+    } catch (err) {
+      console.warn("updateAirfield", err);
     }
   }
 
