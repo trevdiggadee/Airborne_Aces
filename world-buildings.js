@@ -285,43 +285,30 @@
     const holding = !!window.__airborneAirfieldHold;
 
     if (airfieldPhase === "taxi" || airfieldPhase === "accel") {
-      airfieldTiles.forEach(function(tile) {
-        tile.x -= airfieldTakeoffSpeed * dt;
-      });
-    } else if (airfieldPhase === "climb") {
-      airfieldTiles.forEach(function(tile) {
-        tile.x -= airfieldTakeoffSpeed * 0.55 * dt;
-      });
-    } else if (airfieldPhase === "lesson" && !window.__airborneAirfieldPaused) {
-      airfieldTiles.forEach(function(tile) {
-        // Match obstacle scroll so ground doesn't lag behind flight speed
-        tile.x -= (typeof obstacleSpeed !== "undefined" ? obstacleSpeed : 210) * dt;
-      });
-    }
-
-    if (airfieldPhase === "taxi" || airfieldPhase === "accel") {
       window.__airborneAirfieldInvuln = true;
       window.__airborneAirfieldPaused = false;
-      const accel = holding ? 62 : 14;
-      airfieldTakeoffSpeed = Math.min(230, airfieldTakeoffSpeed + accel * dt);
+      airfieldStripY = 0;
+      airfieldAltFrac = 0;
+      // Slow start, strong ramp when holding — peaks near liftoff speed
+      const accel = holding ? 48 : 10;
+      airfieldTakeoffSpeed = Math.min(215, airfieldTakeoffSpeed + accel * dt);
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = airfieldTakeoffSpeed;
-      const engFrac = Math.min(1, (airfieldTakeoffSpeed - 28) / 180);
-      if (typeof sfxAirfieldEngineSetSpeed === "function") sfxAirfieldEngineSetSpeed(engFrac);
+      const engFrac = Math.min(1, (airfieldTakeoffSpeed - 28) / 185);
+      if (typeof sfxAirfieldEngineSetSpeed === "function") sfxAirfieldEngineSetSpeed(engFrac, 0);
       if (typeof sfxAirfieldBirdTick === "function") sfxAirfieldBirdTick(dt);
 
       if (typeof player !== "undefined" && player) {
         const gy = groundLevelY();
         player.vy = 0;
-        const speedFrac = engFrac;
-        player.rotation = -0.02 - speedFrac * 0.16;
-        player.y = gy - player.h * 0.12 - speedFrac * 10;
+        player.rotation = -0.015 - engFrac * 0.14;
+        player.y = gy - player.h * 0.12 - engFrac * 8;
       }
 
       if (airfieldPhase === "taxi") {
         airfieldTip = holding
           ? "Accelerating… keep holding!"
           : "HOLD anywhere to accelerate down the runway!";
-        if (airfieldTakeoffSpeed > 50 || airfieldPhaseT > 0.5) {
+        if (airfieldTakeoffSpeed > 48 || airfieldPhaseT > 0.55) {
           airfieldPhase = "accel";
           airfieldPhaseT = 0;
         }
@@ -329,39 +316,60 @@
         airfieldTip = holding
           ? "Building speed — almost ready for liftoff!"
           : "HOLD to power up — auto takeoff if you wait…";
-        if (airfieldTakeoffSpeed >= 190 || airfieldPhaseT > 7.0) {
+        // Liftoff when speed is high enough (or auto)
+        if (airfieldTakeoffSpeed >= 175 || airfieldPhaseT > 6.5) {
           airfieldPhase = "climb";
           airfieldPhaseT = 0;
           if (typeof sfxAirfieldTakeoff === "function") sfxAirfieldTakeoff();
           else if (typeof sfxFlap === "function") sfxFlap();
-          if (typeof sfxAirfieldEngineSetSpeed === "function") sfxAirfieldEngineSetSpeed(1);
         }
       }
     } else if (airfieldPhase === "climb") {
       window.__airborneAirfieldInvuln = true;
       window.__airborneAirfieldPaused = false;
-      airfieldTakeoffSpeed = Math.min(220, 185 + airfieldPhaseT * 10);
+      // Climb duration timed so speed + altitude peak together
+      const climbDur = 4.2;
+      const u = Math.min(1, airfieldPhaseT / climbDur);
+      // Ease-in speed: starts from runway speed, ends at full cruise
+      const startSpd = Math.max(160, airfieldTakeoffSpeed);
+      const endSpd = 220;
+      const speedEase = u * u; // accelerate hard mid-climb
+      airfieldTakeoffSpeed = startSpd + (endSpd - startSpd) * speedEase;
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = airfieldTakeoffSpeed;
+
+      const gy = groundLevelY();
+      const targetY = H * 0.4;
+      const startY = gy - (typeof player !== "undefined" && player ? player.h * 0.12 : 20) - 8;
+      // Stronger arch: rises faster mid-way, settles at top (smoothstep + arc lift)
+      const e = u * u * (3 - 2 * u);
+      const arch = Math.sin(u * Math.PI) * 0.18; // extra arch bulge
+      const alt = Math.min(1, e + arch * (1 - e));
+      airfieldAltFrac = alt;
+      // Climb rate for engine (-1..1)
+      const prevAlt = airfieldClimbRate;
+      airfieldClimbRate = (u < 0.95) ? (0.35 + Math.sin(u * Math.PI) * 0.65) : 0.05;
+      if (typeof sfxAirfieldEngineSetSpeed === "function") {
+        sfxAirfieldEngineSetSpeed(0.5 + 0.5 * speedEase, airfieldClimbRate);
+      }
+      if (typeof sfxAirfieldBirdTick === "function") sfxAirfieldBirdTick(dt);
+
       airfieldTip = "Liftoff! Climbing to cruise altitude…";
 
       if (typeof player !== "undefined" && player) {
-        const targetY = H * 0.4;
         const targetX = W * 0.28;
-        const gy = groundLevelY();
-        const startY = gy - player.h * 0.12 - 10;
-        const climbDur = 3.6; // more gradual arc
-        const u = Math.min(1, airfieldPhaseT / climbDur);
-        // smoother ease — very gradual
-        const e = u * u * (3 - 2 * u); // smoothstep
-        player.y = startY + (targetY - startY) * e;
+        player.y = startY + (targetY - startY) * alt;
         player.x = W * 0.22 + (targetX - W * 0.22) * e;
-        const pitch = -0.22 * Math.sin(u * Math.PI) * (1 - u * 0.3);
-        player.rotation = pitch;
+        // Stronger nose-up arch through the climb
+        player.rotation = -0.38 * Math.sin(u * Math.PI) * (1 - u * 0.25) - 0.04 * (1 - u);
         player.vy = 0;
       }
 
-      // Hand off immediately — start PRACTICE first (tip after ~20s)
-      if (airfieldPhaseT >= 3.6) {
+      // Strip scrolls left AND sinks down as altitude rises —
+      // gone before the last graphic is fully under the player
+      airfieldStripY = alt * (H * 0.55 + 40);
+
+      // Hand off when climb completes — PRACTICE first
+      if (airfieldPhaseT >= climbDur) {
         airfieldPhase = "lesson";
         airfieldPhaseT = 0;
         airfieldLesson = 0;
@@ -410,7 +418,15 @@
         window.__airborneAirfieldPaused = false;
         window.__airborneAirfieldInvuln = false;
         if (typeof sfxAirfieldBirdTick === "function") sfxAirfieldBirdTick(dt);
-        if (typeof sfxAirfieldEngineSetSpeed === "function") sfxAirfieldEngineSetSpeed(0.55);
+        // Engine fluctuates with climb/dive
+        let climbR = 0;
+        if (typeof player !== "undefined" && player) {
+          climbR = Math.max(-1, Math.min(1, -(player.vy || 0) / 350));
+        }
+        if (typeof sfxAirfieldEngineSetSpeed === "function") sfxAirfieldEngineSetSpeed(0.55, climbR);
+        airfieldAltFrac = 1;
+        // Keep strip sunk away during lessons
+        airfieldStripY = Math.max(airfieldStripY, H * 0.6);
         if (typeof obstacleSpeed !== "undefined") {
           // Hold steady cruise — same feel as takeoff, no slowdown
           obstacleSpeed = Math.max(210, airfieldTakeoffSpeed || 210);
@@ -475,8 +491,10 @@
       if (typeof obstacles !== "undefined") obstacles = [];
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
 
-      // Ease strip under player; slow horizontal scroll to a stop
+      // Ease strip back up under player and stop horizontal scroll
       ensureAirfieldStripVisible();
+      airfieldStripY += (0 - airfieldStripY) * Math.min(1, dt * 2.2);
+      airfieldAltFrac = Math.max(0, 1 - airfieldLandT / 3.2);
       airfieldTiles.forEach(function(tile) {
         const targetX = W * 0.12 - tile.w * 0.08;
         tile.x += (targetX - tile.x) * Math.min(1, dt * 1.4);
@@ -537,11 +555,45 @@
     const img = images.airfield_strip;
     if (!img || !img.naturalWidth) return;
     const groundY = groundLevelY();
+    const sink = airfieldStripY || 0;
     airfieldTiles.forEach(function(tile) {
-      // Sit strip so runway aligns near ground line
-      const y = groundY - tile.h * 0.72;
+      // Sit strip on ground, then sink downward as blimp climbs
+      const y = groundY - tile.h * 0.72 + sink;
+      if (y > H + 20) return; // fully off-screen below
       ctx.drawImage(img, tile.x, y, tile.w, tile.h);
     });
+  }
+
+  function drawAirfieldShadow() {
+    if (!airfieldMode || typeof player === "undefined" || !player) return;
+    if (airfieldPhase === "score") return;
+    const gy = groundLevelY();
+    // Shadow sits on ground plane; shrinks as altitude rises
+    const alt = Math.max(0, Math.min(1, airfieldAltFrac || 0));
+    // During taxi/accel alt is ~0
+    let frac = alt;
+    if (airfieldPhase === "taxi" || airfieldPhase === "accel") frac = 0;
+    if (airfieldPhase === "lesson" || airfieldPhase === "land") {
+      // Live altitude from player vs ground
+      const maxLift = gy - H * 0.4;
+      frac = maxLift > 10 ? Math.max(0, Math.min(1, (gy - player.y) / maxLift)) : 1;
+    }
+    const scale = 1 - frac * 0.78; // shrinks a lot at altitude
+    const alpha = 0.38 * (1 - frac * 0.7);
+    if (scale < 0.12 || alpha < 0.04) return;
+    const sw = player.w * 0.85 * scale;
+    const sh = player.h * 0.18 * scale;
+    const sx = player.x;
+    // Shadow on ground, slight lag under ship
+    const sy = gy - 2 + (airfieldStripY || 0) * 0.15;
+    if (sy > H + 10) return;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "rgba(20, 16, 10, 1)";
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, sw / 2, Math.max(3, sh / 2), 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 
   function drawAirfieldTip() {

@@ -222,6 +222,7 @@
     drawHealPickup();
     drawShieldPickup();
     drawBlimpHeadlight();
+    if (typeof drawAirfieldShadow === "function") drawAirfieldShadow();
     drawPlayer();
     drawWindParticlesFront();
     drawShieldEffect();

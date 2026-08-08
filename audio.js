@@ -331,17 +331,23 @@
     airfieldEngineNodes = { osc1, osc2, filter, gain };
   }
 
-  function sfxAirfieldEngineSetSpeed(frac) {
-    // frac 0..1 — pitch/volume rises with runway speed
+  function sfxAirfieldEngineSetSpeed(frac, climbRate) {
+    // frac 0..1 — pitch/volume with airspeed
+    // climbRate -1..1 — ascending raises pitch, descending lowers it
     if (!airfieldEngineNodes || !audioCtx) return;
     const f = Math.max(0, Math.min(1, frac));
+    const c = Math.max(-1, Math.min(1, climbRate || 0));
     const t0 = audioCtx.currentTime;
     try {
-      airfieldEngineNodes.osc1.frequency.setTargetAtTime(48 + f * 40, t0, 0.15);
-      airfieldEngineNodes.osc2.frequency.setTargetAtTime(92 + f * 70, t0, 0.15);
-      airfieldEngineNodes.filter.frequency.setTargetAtTime(280 + f * 900, t0, 0.2);
-      airfieldEngineNodes.gain.gain.setTargetAtTime(0.04 + f * 0.08, t0, 0.12);
+      const pitchBoost = c * 28; // Hz swing with climb/dive
+      airfieldEngineNodes.osc1.frequency.setTargetAtTime(48 + f * 40 + pitchBoost * 0.5, t0, 0.12);
+      airfieldEngineNodes.osc2.frequency.setTargetAtTime(92 + f * 70 + pitchBoost, t0, 0.12);
+      airfieldEngineNodes.filter.frequency.setTargetAtTime(280 + f * 900 + c * 200, t0, 0.15);
+      airfieldEngineNodes.gain.gain.setTargetAtTime(0.04 + f * 0.08 + Math.abs(c) * 0.02, t0, 0.1);
     } catch (e) {}
+  }
+  function sfxAirfieldEngineSetClimb(climbRate) {
+    sfxAirfieldEngineSetSpeed(0.55, climbRate);
   }
 
   function sfxAirfieldEngineStop() {
