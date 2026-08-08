@@ -37,6 +37,7 @@
     bldg_l3_pipeworks:   "IMG_0770.png",
     streetrow1: "streetrow1.webp",
     airfield_strip: "airfield_strip.webp",
+    landing_field: "landing_field.webp",
     ruff_01: "ruff_01.webp",
     ruff_02: "ruff_02.webp",
     ruff_03: "ruff_03.webp",

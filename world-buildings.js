@@ -166,6 +166,8 @@
   let airfieldRunwayT = 0;
   let airfieldAltFrac = 0;
   let airfieldStripY = 0;
+  let airfieldStripGone = false;
+  let airfieldUseLandingArt = false;
 
   function isAirfieldMode() { return !!airfieldMode; }
   function syncAirfieldGlobals() {
@@ -184,11 +186,13 @@
   function initAirfieldStrip() {
     airfieldTiles = [];
     airfieldStripY = 0;
+    airfieldStripGone = false;
+    airfieldUseLandingArt = false;
     const img = (typeof images !== "undefined" && images) ? images.airfield_strip : null;
     const aspect = (img && img.naturalWidth && img.naturalHeight) ? (img.naturalWidth / img.naturalHeight) : 5;
     // Size: fit bottom band, then +3%
-    let hh = Math.max(50, Math.min(H * 0.36, H * 0.42));
-    hh = hh * 1.03;
+    let hh = Math.max(50, Math.min(H * 0.38, H * 0.46));
+    hh = hh * 1.07; // +~4% larger
     let ww = Math.max(120, hh * aspect);
     // Single image, no loop — start slightly left so runway is under blimp
     const startX = (W || 300) * 0.05 - ww * 0.08;
@@ -196,22 +200,19 @@
   }
 
   function ensureAirfieldStripVisible() {
-    // Bring strip back under the player for landing (single image, no loop)
-    const img = (typeof images !== "undefined" && images) ? images.airfield_strip : null;
-    const aspect = (img && img.naturalWidth && img.naturalHeight) ? (img.naturalWidth / img.naturalHeight) : 5;
-    let h = Math.max(50, Math.min(H * 0.36, H * 0.42)) * 1.03;
-    let w = Math.max(120, h * aspect);
+    // Landing field art — approaches from the right like a normal level pad
+    airfieldUseLandingArt = true;
+    airfieldStripGone = false;
     airfieldStripY = 0;
-    const startX = W * 0.12 - w * 0.08;
-    if (!airfieldTiles.length) {
-      airfieldTiles.push({ x: startX, w: w, h: h, startX: startX });
-    } else {
-      airfieldTiles[0].x = startX;
-      airfieldTiles[0].w = w;
-      airfieldTiles[0].h = h;
-      airfieldTiles[0].startX = startX;
-      airfieldTiles = [airfieldTiles[0]];
-    }
+    const img = (typeof images !== "undefined" && images)
+      ? (images.landing_field || images.airfield_strip)
+      : null;
+    const aspect = (img && img.naturalWidth && img.naturalHeight) ? (img.naturalWidth / img.naturalHeight) : 4.5;
+    let h = Math.max(55, Math.min(H * 0.4, H * 0.48)) * 1.07;
+    let w = Math.max(140, h * aspect);
+    // Start off-screen right so it scrolls in for approach
+    const startX = W * 0.55;
+    airfieldTiles = [{ x: startX, w: w, h: h, startX: startX }];
   }
 
   function beginAirfieldTraining() {
@@ -222,6 +223,9 @@
     airfieldClimbStartY = 0;
     airfieldAltFrac = 0;
     airfieldTakeoffSpeed = 50;
+    airfieldStripGone = false;
+    airfieldUseLandingArt = false;
+    airfieldStripY = 0;
     airfieldLesson = 0;
     airfieldLessonT = 0;
     airfieldSub = "practice";
@@ -328,6 +332,7 @@
         airfieldTiles = (airfieldTiles || []).filter(function(tile) {
           return tile && tile.x + (tile.w || 0) > -20;
         });
+        if (!airfieldTiles.length) airfieldStripGone = true;
       }
 
       // Progress through the one image (0 = start, 1 = fully scrolled past)
@@ -528,24 +533,36 @@
       window.__airborneAirfieldInvuln = true;
       airfieldLandT = (airfieldLandT || 0) + dt;
       if (typeof obstacles !== "undefined") obstacles = [];
-      ensureAirfieldStripVisible();
+      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      // Spawn landing field once (from the right), then scroll it left like a level
+      if (!airfieldUseLandingArt || !airfieldTiles.length) {
+        ensureAirfieldStripVisible();
+      }
+      airfieldStripY = 0;
+      const approachSpd = 120;
       (airfieldTiles || []).forEach(function(tile) {
         if (!tile) return;
-        tile.x += ((W * 0.1) - tile.x) * Math.min(1, dt * 1.5);
+        // Scroll left until pad sits under player
+        const targetX = W * 0.08;
+        if (tile.x > targetX) {
+          tile.x -= approachSpd * dt;
+          if (tile.x < targetX) tile.x = targetX;
+        }
       });
       if (typeof player !== "undefined" && player) {
-        const gy = groundLevelY();
+        const gy = H - ((airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h * 0.22 : 40);
         const ph = player.h > 0 ? player.h : 40;
-        const landY = gy - ph * 0.15;
-        const u = Math.min(1, airfieldLandT / 2.5);
+        const landY = Math.min(groundLevelY(), gy) - ph * 0.12;
+        // Start descent after field has moved in a bit
+        const u = Math.min(1, Math.max(0, (airfieldLandT - 0.8) / 3.0));
         const e = u * u * (3 - 2 * u);
         player.y = H * 0.4 + (landY - H * 0.4) * e;
         player.x = W * 0.28;
         player.vy = 0;
-        player.rotation = 0;
+        player.rotation = -0.08 * (1 - u) * Math.sin(Math.min(1, u * 1.2) * Math.PI);
       }
-      airfieldTip = airfieldLandT > 2.5 ? "Touchdown!" : "Landing…";
-      if (airfieldLandT >= 2.8) {
+      airfieldTip = airfieldLandT > 3.5 ? "Touchdown!" : "Line up… ease her down…";
+      if (airfieldLandT >= 4.2) {
         airfieldPhase = "score";
         airfieldScoreT = 0;
         try {
@@ -591,9 +608,13 @@
   function drawAirfieldStrip() {
     if (!airfieldMode) return;
     if (typeof images === "undefined" || !images) return;
-    const img = images.airfield_strip;
+    // Never loop: once scrolled off, stay gone until landing art is requested
+    if (airfieldStripGone && !airfieldUseLandingArt) return;
+    const imgKey = airfieldUseLandingArt ? "landing_field" : "airfield_strip";
+    const img = images[imgKey] || images.airfield_strip;
     if (!img || !img.naturalWidth || !img.naturalHeight) return;
     if (!airfieldTiles || !airfieldTiles.length) {
+      if (airfieldStripGone && !airfieldUseLandingArt) return;
       try { initAirfieldStrip(); } catch (e) { return; }
       if (!airfieldTiles || !airfieldTiles.length) return;
     }
@@ -603,12 +624,12 @@
       let tw = tile.w, th = tile.h, tx = tile.x;
       if (!(tw > 0) || !(th > 0) || !isFinite(tx)) {
         const aspect = img.naturalWidth / img.naturalHeight;
-        th = Math.max(50, Math.min(H * 0.36, H * 0.42)) * 1.03;
+        th = Math.max(50, Math.min(H * 0.38, H * 0.45)) * 1.07; // +4% height-ish
         tw = th * aspect;
         tile.w = tw; tile.h = th;
         if (!isFinite(tx)) { tx = 0; tile.x = 0; }
       }
-      // Anchor to bottom of screen, then apply sink (end-of-strip only)
+      // Anchor firmly to bottom of canvas
       const y = H - th + sink;
       if (!isFinite(y) || y > H + 40) return;
       try { ctx.drawImage(img, tx, y, tw, th); } catch (e) {}

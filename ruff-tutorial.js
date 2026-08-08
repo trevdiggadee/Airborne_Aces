@@ -39,6 +39,7 @@
   let ruffCombo = 0;
   let ruffSkipAll = false;
   let ruffIntroDone = false;
+  let ruffSparkles = [];
 
   // Stage order
   const STAGE_ORDER = [
@@ -139,8 +140,9 @@
       if (!window.speechSynthesis) return;
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
-      u.rate = 0.92;
-      u.pitch = 0.78;
+      u.rate = 0.84;  // slower, more natural
+      u.pitch = 0.82;
+      u.rate = Math.max(0.75, Math.min(0.95, u.rate));
       u.volume = (typeof sfxVolume === "number" ? sfxVolume : 0.7);
       // Prefer a lower male-ish voice if available
       const voices = window.speechSynthesis.getVoices() || [];
@@ -167,7 +169,8 @@
     ruffSpeakClose = 1;
     speakLine(text);
     ruffLineT = 0;
-    ruffLineDuration = duration || Math.max(2.4, text.length * 0.055);
+    // Natural pacing — longer beats between thoughts
+    ruffLineDuration = duration || Math.max(3.8, text.length * 0.09 + 1.2);
   }
   let ruffLineDuration = 3;
 
@@ -205,7 +208,7 @@
     syncStageFlags();
 
     if (name === "intro") {
-      if (ruffLines.length) showRadio(ruffLines[0], 3.2);
+      if (ruffLines.length) showRadio(ruffLines[0], 4.5);
     } else if (name === "takeoff") {
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
       ruffWaitingInput = true;
@@ -330,13 +333,60 @@
         if (typeof score === "number") score += CRYSTAL_SCORE;
         if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
         if (ruffWaitingCollect > 0) ruffWaitingCollect--;
-        // occasional reaction
-        if (ruffStats.crystals === 1) showRadio("That's one.", 1.8);
-        else if (ruffStats.crystals % 5 === 0) showRadio("Now you're getting greedy. I like it.", 2.2);
+        // Sparkle burst
+        for (let s = 0; s < 14; s++) {
+          const ang = Math.random() * Math.PI * 2;
+          const spd = 40 + Math.random() * 120;
+          ruffSparkles.push({
+            x: c.x, y: c.y,
+            vx: Math.cos(ang) * spd,
+            vy: Math.sin(ang) * spd - 30,
+            life: 0.45 + Math.random() * 0.35,
+            age: 0,
+            r: 2 + Math.random() * 3,
+            color: Math.random() > 0.4 ? "#7ecbff" : "#fff8e0"
+          });
+        }
+        if (ruffStats.crystals === 1) showRadio("That's one.", 2.2);
+        else if (ruffStats.crystals % 5 === 0) showRadio("Now you're getting greedy. I like it.", 2.6);
         try { if (typeof sfxCollect === "function") sfxCollect(); } catch (e) {}
       }
     });
     ruffCrystals = ruffCrystals.filter(c => !c.collected && c.x > -40);
+  }
+
+  function updateSparkles(dt) {
+    ruffSparkles.forEach(function (s) {
+      s.age += dt;
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      s.vy += 80 * dt;
+      s.vx *= 0.98;
+    });
+    ruffSparkles = ruffSparkles.filter(s => s.age < s.life);
+  }
+
+  function drawSparkles() {
+    if (!ruffSparkles.length || typeof ctx === "undefined") return;
+    ruffSparkles.forEach(function (s) {
+      const t = 1 - s.age / s.life;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, t);
+      ctx.fillStyle = s.color;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r * t, 0, Math.PI * 2);
+      ctx.fill();
+      // star glint
+      ctx.strokeStyle = s.color;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(s.x - s.r * 2, s.y);
+      ctx.lineTo(s.x + s.r * 2, s.y);
+      ctx.moveTo(s.x, s.y - s.r * 2);
+      ctx.lineTo(s.x, s.y + s.r * 2);
+      ctx.stroke();
+      ctx.restore();
+    });
   }
 
   function drawCrystals() {
@@ -496,6 +546,7 @@
     ruffStageT += dt;
     ruffLineT += dt;
     updateRuffCompanion(dt);
+    updateSparkles(dt);
 
     // Auto-advance dialogue lines
     if (ruffLines.length && ruffLineIdx < ruffLines.length && ruffLineT >= ruffLineDuration) {
@@ -533,41 +584,40 @@
       }
     } else if (ruffStage === "altitude") {
       updateMarkers(dt);
-      if (ruffStageT > 12 || (ruffMarkers.length === 0 && ruffStageT > 5)) {
-        showRadio("Good control.", 2.0);
+      if (ruffStageT > 15) {
+        showRadio("Good control.", 2.4);
         nextStage();
       }
     } else if (ruffStage === "crystals") {
       updateCrystals(dt);
       if (ruffCrystals.length < 2) spawnCrystals(3);
-      if (ruffWaitingCollect <= 0 && ruffStats.crystals >= 3) {
-        showRadio("Crystals increase your score. Keep your eyes open.", 2.6);
+      if ((ruffWaitingCollect <= 0 && ruffStats.crystals >= 3 && ruffStageT > 8) || ruffStageT > 15) {
+        showRadio("Crystals increase your score. Keep your eyes open.", 3.0);
         nextStage();
       }
-      if (ruffStageT > 28) nextStage();
     } else if (ruffStage === "obstacles") {
-      if (ruffStageT > 16) {
-        showRadio("Excellent.", 1.8);
+      if (ruffStageT > 15) {
+        showRadio("Excellent.", 2.2);
         ruffStats.obstaclesAvoided += 3;
         nextStage();
       }
     } else if (ruffStage === "powerup") {
-      if (ruffStageT > 12) nextStage();
+      if (ruffStageT > 15) nextStage();
     } else if (ruffStage === "rings") {
       // rings collected via existing system — track via window hook
       if (typeof window.__airborneRingCollects === "number") {
         ruffStats.rings = window.__airborneRingCollects;
         if (ruffStats.rings > ruffStats.bestCombo) ruffStats.bestCombo = ruffStats.rings;
       }
-      if (ruffStageT > 18 || ruffStats.rings >= 3) {
-        showRadio("That's a combo. Keep the chain going!", 2.5);
+      if (ruffStageT > 15 || (ruffStats.rings >= 3 && ruffStageT > 10)) {
+        showRadio("That's a combo. Keep the chain going!", 3.0);
         nextStage();
       }
     } else if (ruffStage === "combined") {
       updateCrystals(dt);
       if (ruffCrystals.length < 1 && ruffStageT > 5) spawnCrystals(2);
-      if (ruffStageT > 36) {
-        showRadio("Alright, pilot. Time to bring her home.", 2.8);
+      if (ruffStageT > 20) {
+        showRadio("Alright, pilot. Time to bring her home.", 3.2);
         nextStage();
       }
     } else if (ruffStage === "landing") {
@@ -585,6 +635,7 @@
     if (!ruffActive) return;
     drawMarkers();
     drawCrystals();
+    drawSparkles();
     drawRuffCompanion();
   }
 
