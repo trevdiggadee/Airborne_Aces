@@ -277,12 +277,24 @@
 
   function updateAirfield(dt) {
     if (!airfieldMode) return;
-    airfieldPhaseT += dt;
-    airfieldTipAge += dt;
+    try {
+    if (!(dt > 0) || !isFinite(dt)) dt = 0.016;
+    airfieldPhaseT = (airfieldPhaseT || 0) + dt;
+    airfieldTipAge = (airfieldTipAge || 0) + dt;
     window.__airborneAirfieldBlockBoss = true;
     syncAirfieldGlobals();
 
     const holding = !!window.__airborneAirfieldHold;
+    if (!(airfieldTakeoffSpeed > 0)) airfieldTakeoffSpeed = 28;
+    if (!airfieldTiles) airfieldTiles = [];
+
+    // Scroll strip left during taxi/accel/climb
+    if (airfieldPhase === "taxi" || airfieldPhase === "accel" || airfieldPhase === "climb") {
+      const scrollSpd = airfieldTakeoffSpeed || 40;
+      airfieldTiles.forEach(function(tile) {
+        if (tile) tile.x -= scrollSpd * dt * (airfieldPhase === "climb" ? 0.55 : 1);
+      });
+    }
 
     if (airfieldPhase === "taxi" || airfieldPhase === "accel") {
       window.__airborneAirfieldInvuln = true;
@@ -291,17 +303,20 @@
       airfieldAltFrac = 0;
       // Slow start, strong ramp when holding — peaks near liftoff speed
       const accel = holding ? 48 : 10;
-      airfieldTakeoffSpeed = Math.min(215, airfieldTakeoffSpeed + accel * dt);
+      airfieldTakeoffSpeed = Math.min(215, (airfieldTakeoffSpeed || 28) + accel * dt);
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = airfieldTakeoffSpeed;
-      const engFrac = Math.min(1, (airfieldTakeoffSpeed - 28) / 185);
-      if (typeof sfxAirfieldEngineSetSpeed === "function") sfxAirfieldEngineSetSpeed(engFrac, 0);
-      if (typeof sfxAirfieldBirdTick === "function") sfxAirfieldBirdTick(dt);
+      const engFrac = Math.max(0, Math.min(1, ((airfieldTakeoffSpeed || 28) - 28) / 185));
+      try {
+        if (typeof sfxAirfieldEngineSetSpeed === "function") sfxAirfieldEngineSetSpeed(engFrac, 0);
+        if (typeof sfxAirfieldBirdTick === "function") sfxAirfieldBirdTick(dt);
+      } catch (e) {}
 
       if (typeof player !== "undefined" && player) {
         const gy = groundLevelY();
+        const ph = (player.h > 0) ? player.h : 40;
         player.vy = 0;
         player.rotation = -0.015 - engFrac * 0.14;
-        player.y = gy - player.h * 0.12 - engFrac * 8;
+        player.y = gy - ph * 0.12 - engFrac * 8;
       }
 
       if (airfieldPhase === "taxi") {
@@ -320,8 +335,10 @@
         if (airfieldTakeoffSpeed >= 175 || airfieldPhaseT > 6.5) {
           airfieldPhase = "climb";
           airfieldPhaseT = 0;
-          if (typeof sfxAirfieldTakeoff === "function") sfxAirfieldTakeoff();
-          else if (typeof sfxFlap === "function") sfxFlap();
+          try {
+            if (typeof sfxAirfieldTakeoff === "function") sfxAirfieldTakeoff();
+            else if (typeof sfxFlap === "function") sfxFlap();
+          } catch (e) {}
         }
       }
     } else if (airfieldPhase === "climb") {
@@ -542,6 +559,9 @@
       if (airfieldScoreT >= 4.5) {
         endAirfieldTrainingToMap();
       }
+    }
+    } catch (err) {
+      console.warn("updateAirfield", err);
     }
   }
 

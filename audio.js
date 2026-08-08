@@ -335,15 +335,21 @@
     // frac 0..1 — pitch/volume with airspeed
     // climbRate -1..1 — ascending raises pitch, descending lowers it
     if (!airfieldEngineNodes || !audioCtx) return;
-    const f = Math.max(0, Math.min(1, frac));
-    const c = Math.max(-1, Math.min(1, climbRate || 0));
+    let f = Number(frac); if (!isFinite(f)) f = 0;
+    f = Math.max(0, Math.min(1, f));
+    let c = Number(climbRate); if (!isFinite(c)) c = 0;
+    c = Math.max(-1, Math.min(1, c));
     const t0 = audioCtx.currentTime;
     try {
-      const pitchBoost = c * 28; // Hz swing with climb/dive
-      airfieldEngineNodes.osc1.frequency.setTargetAtTime(48 + f * 40 + pitchBoost * 0.5, t0, 0.12);
-      airfieldEngineNodes.osc2.frequency.setTargetAtTime(92 + f * 70 + pitchBoost, t0, 0.12);
-      airfieldEngineNodes.filter.frequency.setTargetAtTime(280 + f * 900 + c * 200, t0, 0.15);
-      airfieldEngineNodes.gain.gain.setTargetAtTime(0.04 + f * 0.08 + Math.abs(c) * 0.02, t0, 0.1);
+      const pitchBoost = c * 28;
+      const f1 = 48 + f * 40 + pitchBoost * 0.5;
+      const f2 = 92 + f * 70 + pitchBoost;
+      const ff = 280 + f * 900 + c * 200;
+      const gv = 0.04 + f * 0.08 + Math.abs(c) * 0.02;
+      if (isFinite(f1)) airfieldEngineNodes.osc1.frequency.setTargetAtTime(f1, t0, 0.12);
+      if (isFinite(f2)) airfieldEngineNodes.osc2.frequency.setTargetAtTime(f2, t0, 0.12);
+      if (isFinite(ff)) airfieldEngineNodes.filter.frequency.setTargetAtTime(ff, t0, 0.15);
+      if (isFinite(gv) && gv > 0) airfieldEngineNodes.gain.gain.setTargetAtTime(gv, t0, 0.1);
     } catch (e) {}
   }
   function sfxAirfieldEngineSetClimb(climbRate) {
