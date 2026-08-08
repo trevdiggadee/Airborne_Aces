@@ -150,8 +150,13 @@
         || voices.find(v => /en/i.test(v.lang))
         || null;
       if (pick) u.voice = pick;
+      u.onend = function () { ruffSpeechDone = true; };
+      u.onerror = function () { ruffSpeechDone = true; };
       window.speechSynthesis.speak(u);
-    } catch (e) {}
+      // Safety: force done after estimated speak time
+      const safe = Math.max(5, text.length * 0.08 + 2.5);
+      setTimeout(function () { ruffSpeechDone = true; }, safe * 1000);
+    } catch (e) { ruffSpeechDone = true; }
   }
 
   function stopSpeak() {
@@ -167,12 +172,15 @@
     tx.textContent = text;
     el.classList.add("visible");
     ruffSpeakClose = 1;
-    speakLine(text);
     ruffLineT = 0;
-    // Natural pacing — longer beats between thoughts
-    ruffLineDuration = duration || Math.max(3.8, text.length * 0.09 + 1.2);
+    ruffSpeechDone = false;
+    // Hold long enough to finish the full sentence (+ pause after)
+    const est = Math.max(4.5, text.length * 0.075 + 2.0);
+    ruffLineDuration = duration || est;
+    speakLine(text);
   }
-  let ruffLineDuration = 3;
+  let ruffLineDuration = 5;
+  let ruffSpeechDone = true;
 
   function hideRadio() {
     const el = radioEl();
@@ -252,21 +260,36 @@
   }
 
   function syncStageFlags() {
-    // During early stages, keep obstacles/rings off
-    if (ruffStage === "intro" || ruffStage === "takeoff" || ruffStage === "altitude" || ruffStage === "crystals") {
-      window.__airborneAirfieldObstacles = (ruffStage === "crystals" ? false : false);
-      if (ruffStage !== "rings" && ruffStage !== "combined" && ruffStage !== "obstacles") {
-        if (ruffStage === "crystals" || ruffStage === "altitude" || ruffStage === "takeoff" || ruffStage === "intro") {
-          window.__airborneAirfieldRings = false;
-        }
+    // Keep flight speed alive so nothing freezes on screen
+    if (typeof obstacleSpeed !== "undefined") {
+      obstacleSpeed = Math.max(obstacleSpeed || 0, 200);
+    }
+    window.__airborneAirfieldPaused = false;
+
+    // Early stages: no obstacles/rings; only hearts (and later crystals via R.U.F.F.)
+    if (ruffStage === "intro" || ruffStage === "takeoff" || ruffStage === "altitude") {
+      window.__airborneAirfieldObstacles = false;
+      window.__airborneAirfieldRings = false;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      // Clear any frozen powerups / bombs sitting on screen
+      if (typeof powerup !== "undefined") powerup = null;
+      if (typeof obstacles !== "undefined" && obstacles) {
+        obstacles = obstacles.filter(function (o) {
+          return o && (o.type === "heart" || o.isHeart);
+        });
       }
+    } else if (ruffStage === "crystals") {
+      window.__airborneAirfieldObstacles = false;
+      window.__airborneAirfieldRings = false;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      if (typeof powerup !== "undefined") powerup = null;
     }
   }
 
   function advanceLine() {
     ruffLineIdx++;
     if (ruffLineIdx < ruffLines.length) {
-      showRadio(ruffLines[ruffLineIdx], Math.max(2.4, ruffLines[ruffLineIdx].length * 0.055));
+      showRadio(ruffLines[ruffLineIdx]); // full natural duration
       return false;
     }
     hideRadio();
@@ -445,11 +468,12 @@
       ruffFrame = (ruffFrame + 1) % RUFF_FRAME_COUNT;
     }
     if (typeof player === "undefined" || !player) return;
-    const targetX = player.x - player.w * 0.55 - 10;
-    const targetY = player.y - player.h * 0.35 + Math.sin(ruffBob) * 6;
-    const close = ruffSpeakClose > 0 ? 12 : 0;
-    ruffX += (targetX + close - ruffX) * Math.min(1, dt * 4);
-    ruffY += (targetY - ruffY) * Math.min(1, dt * 4);
+    // Behind and above the blimp
+    const targetX = player.x - player.w * 0.7 - 8;
+    const targetY = player.y - player.h * 0.95 - 12 + Math.sin(ruffBob) * 8;
+    const close = ruffSpeakClose > 0 ? 10 : 0;
+    ruffX += (targetX + close - ruffX) * Math.min(1, dt * 3.5);
+    ruffY += (targetY - ruffY) * Math.min(1, dt * 3.5);
     if (ruffSpeakClose > 0) ruffSpeakClose = Math.max(0, ruffSpeakClose - dt * 0.5);
   }
 
@@ -458,7 +482,8 @@
     if (ruffStage === "report") return;
     const key = "ruff_" + String(ruffFrame + 1).padStart(2, "0");
     const img = (typeof images !== "undefined") ? images[key] : null;
-    const size = Math.max(28, (typeof player !== "undefined" && player ? player.h * 0.55 : 36));
+    // ~3× previous companion size
+    const size = Math.max(84, (typeof player !== "undefined" && player ? player.h * 1.65 : 96));
     ctx.save();
     if (img && img.naturalWidth) {
       ctx.drawImage(img, ruffX - size / 2, ruffY - size / 2, size, size);
@@ -545,11 +570,17 @@
     if (!ruffActive) return;
     ruffStageT += dt;
     ruffLineT += dt;
+    // Never let training world freeze
+    if (typeof obstacleSpeed !== "undefined" && !(obstacleSpeed > 50)) {
+      obstacleSpeed = 210;
+    }
+    window.__airborneAirfieldPaused = false;
     updateRuffCompanion(dt);
     updateSparkles(dt);
 
     // Auto-advance dialogue lines
-    if (ruffLines.length && ruffLineIdx < ruffLines.length && ruffLineT >= ruffLineDuration) {
+    if (ruffLines.length && ruffLineIdx < ruffLines.length &&
+        ruffLineT >= ruffLineDuration && ruffSpeechDone) {
       const done = advanceLine();
       if (done) {
         // Stage-specific after dialogue

@@ -470,11 +470,20 @@
       if (window.__airborneRuffActive) {
         window.__airborneAirfieldPaused = false;
         window.__airborneAirfieldInvuln = false;
-        if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 210;
-        // Flags set by R.U.F.F. stages
+        if (typeof obstacleSpeed !== "undefined") obstacleSpeed = Math.max(210, obstacleSpeed || 210);
         if (typeof spawnInterval !== "undefined") {
           const needSpawn = window.__airborneAirfieldRings || window.__airborneAirfieldObstacles;
           spawnInterval = needSpawn ? 1.9 : 999;
+        }
+        // Keep only hearts floating until obstacle stages
+        const st = window.__airborneRuffStage;
+        if (st === "intro" || st === "takeoff" || st === "altitude" || st === "crystals") {
+          if (typeof powerup !== "undefined") powerup = null;
+          if (typeof obstacles !== "undefined" && obstacles && obstacles.length) {
+            obstacles = obstacles.filter(function (o) {
+              return o && (o.type === "heart" || o.isHeart || o.isRing || o.type === "gold_ring");
+            });
+          }
         }
         airfieldTip = "";
         syncAirfieldGlobals();
