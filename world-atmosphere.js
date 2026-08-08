@@ -65,18 +65,16 @@
     for (var li = 1; li < parallaxLayers.length; li++) {
       var layer = parallaxLayers[li];
       if (layer.mountain || layer.imgKey === "parallax_mountains") {
-        var mImg = images.parallax_mountains;
+        var mImg = (typeof images !== "undefined") ? images.parallax_mountains : null;
         if (mImg && mImg.naturalWidth) {
           var mAspect = mImg.naturalHeight / mImg.naturalWidth;
-          // Wide tiles; height so mountains fill lower band — bottom of art pushed below canvas
-          var mTileW = Math.max(W * 1.05, H * 0.55 / mAspect);
-          var mDispH = mTileW * mAspect;
-          // Stretch a bit taller so we can crop the bottom of the graphic
-          mDispH = mDispH * 1.15;
-          var mx = 0;
+          // Tile width ~ full screen; height from aspect
+          var mTileW = W * 1.2;
+          var mDispH = mTileW * mAspect * 1.25; // slightly taller so we crop bottom
+          var mx = -20;
           while (mx < W + mTileW * 2) {
             layer.items.push({ x: mx, w: mTileW, h: mDispH });
-            mx += mTileW - 1;
+            mx += mTileW - 2;
           }
         }
         continue;
@@ -132,17 +130,27 @@
     parallaxLayers.forEach(function(layer, li) {
       if ((li === 0 && layer.imgKey) || layer.mountain) {
         // Image layer (far skyline or mountains): scroll tiles, wrap
+        // Mountains scroll independently of airfield strip logic
         var img = images[layer.imgKey];
         if (!img || !img.naturalWidth) return;
+        if (layer.mountain && !layer.items.length) {
+          var ma = img.naturalHeight / img.naturalWidth;
+          var tw0 = W * 1.2, th0 = tw0 * ma * 1.25, mx0 = -20;
+          while (mx0 < W + tw0 * 2) {
+            layer.items.push({ x: mx0, w: tw0, h: th0 });
+            mx0 += tw0 - 2;
+          }
+        }
         var aspect = img.naturalHeight / img.naturalWidth;
         var tileW = layer.mountain
-          ? Math.max(W * 1.05, (layer.items[0] ? layer.items[0].w : H * 0.55 / aspect))
+          ? (layer.items[0] ? layer.items[0].w : W * 1.2)
           : H / aspect;
         var tileH = layer.mountain
-          ? (layer.items[0] && layer.items[0].h ? layer.items[0].h : tileW * aspect * 1.15)
+          ? (layer.items[0] && layer.items[0].h ? layer.items[0].h : tileW * aspect * 1.25)
           : H;
+        var scrollSpd = layer.mountain ? Math.max(speed, 180) : speed;
         layer.items.forEach(function(item) {
-          item.x -= layer.depth * dtScale * speed;
+          item.x -= layer.depth * dtScale * scrollSpd;
         });
         while (layer.items.length && layer.items[0].x + layer.items[0].w < -50) {
           layer.items.shift();
@@ -215,15 +223,30 @@
         }
         ctx.restore();
       } else if (layer.mountain || layer.imgKey === "parallax_mountains") {
-        // Mountains: bottom of range at screen bottom; crop lower graphic off-canvas
-        var mImg = images.parallax_mountains;
-        if (!mImg || !mImg.naturalWidth) return;
+        var mImg = (typeof images !== "undefined") ? images.parallax_mountains : null;
+        if (!mImg || !mImg.naturalWidth) {
+          // Image may load late — try to seed tiles once available
+          if (!layer.items.length && typeof initParallaxLayers === "function") {
+            /* seeded on next init */
+          }
+          return;
+        }
+        if (!layer.items.length) {
+          var mAspect = mImg.naturalHeight / mImg.naturalWidth;
+          var mTileW = W * 1.2;
+          var mDispH = mTileW * mAspect * 1.25;
+          var mx = -20;
+          while (mx < W + mTileW * 2) {
+            layer.items.push({ x: mx, w: mTileW, h: mDispH });
+            mx += mTileW - 2;
+          }
+        }
         ctx.save();
-        ctx.globalAlpha = 0.9;
+        ctx.globalAlpha = 1;
         layer.items.forEach(function(item) {
-          // Anchor so mountain foothills sit at bottom; extra image height hangs below H
-          var y = H - item.h * 0.72;
-          ctx.drawImage(mImg, item.x, y, item.w, item.h);
+          // Bottom of mountains at bottom of screen; crop lower graphic below H
+          var y = H - item.h * 0.68;
+          try { ctx.drawImage(mImg, item.x, y, item.w, item.h); } catch (e) {}
         });
         ctx.restore();
       } else {

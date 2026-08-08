@@ -42,6 +42,7 @@
   let ruffSkipAll = false;
   let ruffIntroDone = false;
   let ruffSparkles = [];
+  let ruffPowerOrb = null;
 
   // Stage order
   const STAGE_ORDER = [
@@ -215,6 +216,10 @@
     ruffWaitingAvoid = false;
     ruffWaitingRing = 0;
     window.__airborneRuffStage = name;
+    window.__airborneAirfieldAllowPowerup = (name === "powerup" || name === "combined");
+    if (!window.__airborneAirfieldAllowPowerup && typeof powerup !== "undefined") powerup = null;
+    if (name !== "powerup") ruffPowerOrb = null;
+    if (typeof powerup !== "undefined" && name !== "powerup" && name !== "combined") powerup = null;
     syncStageFlags();
 
     if (name === "intro") {
@@ -237,8 +242,18 @@
       ruffWaitingAvoid = true;
     } else if (name === "powerup") {
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
-      // allow normal powerup spawn
-      if (typeof spawnInterval !== "undefined") spawnInterval = 2.2;
+      window.__airborneAirfieldAllowPowerup = true;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      if (typeof powerup !== "undefined") powerup = null;
+      // Spawn one floating power-up symbol for the player to collect
+      ruffPowerOrb = {
+        x: (typeof W !== "undefined" ? W : 400) + 60,
+        y: (typeof H !== "undefined" ? H : 600) * 0.42,
+        r: 22,
+        bob: 0,
+        collected: false,
+        pulse: 0
+      };
     } else if (name === "rings") {
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
       window.__airborneAirfieldRings = true;
@@ -660,7 +675,45 @@
     } else if (ruffStage === "powerup") {
       ruffCrystals = [];
       if (typeof obstacles !== "undefined") obstacles = [];
-      if (ruffStageT > 15) nextStage();
+      if (typeof powerup !== "undefined") powerup = null;
+      // Move floating power symbol
+      if (ruffPowerOrb && !ruffPowerOrb.collected) {
+        const spd = Math.max(180, (typeof obstacleSpeed === "number" ? obstacleSpeed : 200));
+        ruffPowerOrb.x -= spd * dt;
+        ruffPowerOrb.bob += dt * 3;
+        ruffPowerOrb.pulse += dt * 5;
+        const px = player ? player.x : 0, py = player ? player.y : 0;
+        const dy = ruffPowerOrb.y + Math.sin(ruffPowerOrb.bob) * 12;
+        if (Math.hypot((player ? player.x : 0) - ruffPowerOrb.x, (player ? player.y : 0) - dy) < 40) {
+          ruffPowerOrb.collected = true;
+          ruffStats.powerups++;
+          // Activate storm / default power briefly
+          if (typeof activateStorm === "function") {
+            try { activateStorm(); } catch (e) {}
+          } else if (typeof stormActive !== "undefined") {
+            stormActive = true;
+          }
+          showRadio("You've got a storm charge! Use it wisely.", 3.0);
+          if (typeof window.__airborneRuffReact === "function") window.__airborneRuffReact("powerup");
+          for (let s = 0; s < 18; s++) {
+            const ang = Math.random() * Math.PI * 2;
+            const sp = 50 + Math.random() * 100;
+            ruffSparkles.push({
+              x: ruffPowerOrb.x, y: dy,
+              vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 20,
+              life: 0.5 + Math.random() * 0.3, age: 0, r: 2 + Math.random() * 3,
+              color: Math.random() > 0.5 ? "#a0e8ff" : "#ffe566"
+            });
+          }
+        }
+        if (ruffPowerOrb.x < -40 && !ruffPowerOrb.collected) {
+          // Respawn another
+          ruffPowerOrb.x = W + 80;
+          ruffPowerOrb.y = H * (0.3 + Math.random() * 0.3);
+          ruffPowerOrb.collected = false;
+        }
+      }
+      if (ruffStageT > 15 || (ruffPowerOrb && ruffPowerOrb.collected && ruffStageT > 6)) nextStage();
     } else if (ruffStage === "rings") {
       ruffCrystals = [];
       // rings only
@@ -694,8 +747,47 @@
     if (!ruffActive) return;
     drawMarkers();
     drawCrystals();
+    drawPowerOrb();
     drawSparkles();
     drawRuffCompanion();
+  }
+
+  function drawPowerOrb() {
+    if (!ruffPowerOrb || ruffPowerOrb.collected || typeof ctx === "undefined") return;
+    const o = ruffPowerOrb;
+    const y = o.y + Math.sin(o.bob || 0) * 12;
+    const pulse = 1 + Math.sin(o.pulse || 0) * 0.12;
+    ctx.save();
+    // Aura
+    const grd = ctx.createRadialGradient(o.x, y, 4, o.x, y, o.r * 2.2 * pulse);
+    grd.addColorStop(0, "rgba(160,230,255,0.55)");
+    grd.addColorStop(0.5, "rgba(100,180,255,0.2)");
+    grd.addColorStop(1, "rgba(100,180,255,0)");
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(o.x, y, o.r * 2.2 * pulse, 0, Math.PI * 2);
+    ctx.fill();
+    // Icon image if available
+    const img = (typeof images !== "undefined") ? (images.power_icon_blimp1 || images.cloud || images.pirate_bomb) : null;
+    const s = o.r * 2 * pulse;
+    if (img && img.naturalWidth) {
+      ctx.drawImage(img, o.x - s / 2, y - s / 2, s, s);
+    } else {
+      ctx.fillStyle = "#7ecbff";
+      ctx.beginPath();
+      ctx.arc(o.x, y, o.r * pulse, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    // Spark ring
+    ctx.strokeStyle = "rgba(255,230,120,0.7)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(o.x, y, o.r * 1.35 * pulse, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
   }
 
   // Contextual reactions (called from elsewhere)

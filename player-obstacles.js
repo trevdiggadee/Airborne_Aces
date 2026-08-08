@@ -66,7 +66,8 @@
     if (window.__airborneAirfield && window.__airborneAirfieldPhase === "climb") {
       return;
     }
-    if (window.__airborneAirfieldPaused && window.__airborneAirfieldPhase !== "land") {
+    // land: allow flap (vy set here; position integrated in updateAirfield)
+    if (window.__airborneAirfieldPaused) {
       return;
     }
     player.vy = FLAP_VELOCITY;

@@ -2432,7 +2432,7 @@ html, body {
 #ruffRadio {
   position: absolute;
   right: 10px;
-  top: 58px; /* below HUD */
+  top: calc(58px + 1vh); /* below HUD, +1% lower */
   left: auto;
   bottom: auto;
   max-width: min(300px, 78vw);
@@ -2497,17 +2497,7 @@ html, body {
   text-shadow: 0 1px 2px rgba(0,0,0,0.35);
 }
 #ruffRadio .ruffSkip {
-  margin-top: 8px;
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  color: rgba(224,192,96,0.95);
-  background: rgba(212,175,55,0.12);
-  border: 1px solid rgba(212,175,55,0.5);
-  border-radius: 5px;
-  padding: 4px 10px;
-  pointer-events: auto;
-  cursor: pointer;
-  font-family: 'Rockwell', Georgia, serif;
+  display: none !important;
 }
 #ruffTitleBanner {
   position: absolute;
