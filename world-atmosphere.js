@@ -35,9 +35,10 @@
   function initParallaxLayers() {
     parallaxLayers = [
       { depth: 0.03, items: [], imgKey: currentLevelBgKey(), imgX: 0 },
-      { depth: 0.08, items: [], color: 'rgba(100,80,55,0.35)', itemH: H * 0.242, density: 0.012 }, // +10%
-      { depth: 0.18, items: [], color: 'rgba(70,55,35,0.45)', itemH: H * 0.154, density: 0.018 }, // +10%
-      { depth: 0.28, items: [], color: 'rgba(50,40,25,0.55)', itemH: H * 0.088, density: 0.025 } // +10% height; depth lowered from 0.35 so it still scrolls slower than the sketch skyline drawn in front of it (see below)
+      { depth: 0.08, items: [], color: 'rgba(100,80,55,0.35)', itemH: H * 0.242, density: 0.012 },
+      { depth: 0.18, items: [], color: 'rgba(70,55,35,0.45)', itemH: H * 0.154, density: 0.018 },
+      // Layer 3: mountain range image — bottom of peaks at screen bottom, lower graphic cropped
+      { depth: 0.22, items: [], imgKey: "parallax_mountains", mountain: true }
     ];
     bgTransition = null;
     // Layer 0: skylineFar image - tile across screen, 25% taller than full
@@ -60,9 +61,26 @@
         x += tileW - 1; // slight overlap to prevent gaps
       }
     }
-    // Layers 1-3: procedural shapes
+    // Layers 1-2: procedural shapes; layer 3: mountain image tiles
     for (var li = 1; li < parallaxLayers.length; li++) {
       var layer = parallaxLayers[li];
+      if (layer.mountain || layer.imgKey === "parallax_mountains") {
+        var mImg = images.parallax_mountains;
+        if (mImg && mImg.naturalWidth) {
+          var mAspect = mImg.naturalHeight / mImg.naturalWidth;
+          // Wide tiles; height so mountains fill lower band — bottom of art pushed below canvas
+          var mTileW = Math.max(W * 1.05, H * 0.55 / mAspect);
+          var mDispH = mTileW * mAspect;
+          // Stretch a bit taller so we can crop the bottom of the graphic
+          mDispH = mDispH * 1.15;
+          var mx = 0;
+          while (mx < W + mTileW * 2) {
+            layer.items.push({ x: mx, w: mTileW, h: mDispH });
+            mx += mTileW - 1;
+          }
+        }
+        continue;
+      }
       var x = 0;
       while (x < W + 400) {
         var w = 40 + Math.random() * 80;
@@ -112,27 +130,30 @@
     }
 
     parallaxLayers.forEach(function(layer, li) {
-      if (li === 0 && layer.imgKey) {
-        // Image layer: scroll all tiles, wrap around
+      if ((li === 0 && layer.imgKey) || layer.mountain) {
+        // Image layer (far skyline or mountains): scroll tiles, wrap
         var img = images[layer.imgKey];
         if (!img || !img.naturalWidth) return;
         var aspect = img.naturalHeight / img.naturalWidth;
-        var tileW = H / aspect;
+        var tileW = layer.mountain
+          ? Math.max(W * 1.05, (layer.items[0] ? layer.items[0].w : H * 0.55 / aspect))
+          : H / aspect;
+        var tileH = layer.mountain
+          ? (layer.items[0] && layer.items[0].h ? layer.items[0].h : tileW * aspect * 1.15)
+          : H;
         layer.items.forEach(function(item) {
           item.x -= layer.depth * dtScale * speed;
         });
         while (layer.items.length && layer.items[0].x + layer.items[0].w < -50) {
           layer.items.shift();
         }
-        // Spawn new tiles on the right
         var last = layer.items[layer.items.length - 1];
         if (last && last.x + last.w < W + 100) {
-          layer.items.push({ x: last.x + last.w - 1, w: tileW, h: H });
+          layer.items.push({ x: last.x + last.w - 1, w: tileW, h: tileH });
         }
-        // Ensure we always have enough tiles
         if (layer.items.length < 3) {
           var rightmost = layer.items.length > 0 ? layer.items[layer.items.length - 1] : { x: 0, w: 0 };
-          layer.items.push({ x: rightmost.x + rightmost.w - 1, w: tileW, h: H });
+          layer.items.push({ x: rightmost.x + rightmost.w - 1, w: tileW, h: tileH });
         }
       } else {
         // Procedural shape layers
@@ -192,6 +213,18 @@
             });
           }
         }
+        ctx.restore();
+      } else if (layer.mountain || layer.imgKey === "parallax_mountains") {
+        // Mountains: bottom of range at screen bottom; crop lower graphic off-canvas
+        var mImg = images.parallax_mountains;
+        if (!mImg || !mImg.naturalWidth) return;
+        ctx.save();
+        ctx.globalAlpha = 0.9;
+        layer.items.forEach(function(item) {
+          // Anchor so mountain foothills sit at bottom; extra image height hangs below H
+          var y = H - item.h * 0.72;
+          ctx.drawImage(mImg, item.x, y, item.w, item.h);
+        });
         ctx.restore();
       } else {
         // Procedural shape layers

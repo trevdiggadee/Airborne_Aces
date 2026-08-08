@@ -63,8 +63,10 @@
       window.__airborneAirfieldBoostPending = true;
       return;
     }
-    if (window.__airborneAirfield &&
-        (window.__airborneAirfieldPhase === "climb" || window.__airborneAirfieldPaused)) {
+    if (window.__airborneAirfield && window.__airborneAirfieldPhase === "climb") {
+      return;
+    }
+    if (window.__airborneAirfieldPaused && window.__airborneAirfieldPhase !== "land") {
       return;
     }
     player.vy = FLAP_VELOCITY;
@@ -95,10 +97,16 @@
 
     // During airfield runway / climb / tip pause: updateAirfield owns position
     const afPhase = window.__airborneAirfieldPhase;
+    // Land phase: player controls descent (don't freeze)
     if (window.__airborneAirfield &&
         (afPhase === "taxi" || afPhase === "accel" || afPhase === "climb" ||
-         afPhase === "land" || afPhase === "score" || window.__airborneAirfieldPaused)) {
+         afPhase === "score" || window.__airborneAirfieldPaused)) {
       player.vy = 0;
+      return;
+    }
+    if (window.__airborneAirfield && afPhase === "land") {
+      // Landing physics handled in updateAirfield — skip normal gravity here
+      // but allow flap() to set vy
       return;
     }
 
@@ -697,6 +705,7 @@
   let healSpawnTimer = 6 + Math.random() * 5; // first one arrives a little sooner
 
   function spawnHealPickup() {
+    if (window.__airborneAirfield) return; // no hearts during training
     const img = images.heartPickup;
     let aspect = imgAspect(img);
     const dispW = Math.min(50, W * 0.12);

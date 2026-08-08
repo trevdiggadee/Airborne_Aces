@@ -482,9 +482,7 @@
           if (st === "intro" || st === "takeoff" || st === "altitude") {
             obstacles = []; // clean sky
           } else if (st === "crystals") {
-            obstacles = obstacles.filter(function (o) {
-              return o && (o.type === "heart" || o.isHeart);
-            });
+            obstacles = [];
           } else if (st === "obstacles") {
             obstacles = obstacles.filter(function (o) {
               return o && !o.isRing && o.type !== "gold_ring";
@@ -550,7 +548,6 @@
 
     // ---- LAND ----
     } else if (airfieldPhase === "land") {
-      window.__airborneAirfieldPaused = true;
       window.__airborneAirfieldInvuln = true;
       airfieldLandT = (airfieldLandT || 0) + dt;
       if (typeof obstacles !== "undefined") obstacles = [];
@@ -579,27 +576,50 @@
           if (tile.x < targetX) tile.x = targetX;
         }
       });
+      // Player-controlled approach — flap to stay up, ease down onto the strip
+      window.__airborneAirfieldPaused = false; // allow flap
+      window.__airborneAirfieldInvuln = true;
+      const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 80;
+      const surfaceY = H - th * 0.28 + (airfieldStripY || 0) * 0.08;
       if (typeof player !== "undefined" && player) {
-        const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 80;
-        // Runway surface near bottom after rise
-        const gy = H - th * 0.28 + airfieldStripY * 0.1;
         const ph = player.h > 0 ? player.h : 40;
-        const landY = gy - ph * 0.12;
-        const u = Math.min(1, Math.max(0, (airfieldLandT - 0.6) / 3.2));
-        const e = u * u * (3 - 2 * u);
-        player.y = H * 0.4 + (landY - H * 0.4) * e;
+        const landY = surfaceY - ph * 0.12;
+        // Soft gravity during landing (player can flap)
+        player.vy += 420 * dt; // gentler than full GRAVITY
+        if (player.vy > 280) player.vy = 280;
+        player.y += player.vy * dt;
         player.x = W * 0.28;
-        player.vy = 0;
-        player.rotation = -0.1 * (1 - u) * Math.sin(Math.min(1, u * 1.2) * Math.PI);
-      }
-      airfieldTip = airfieldLandT > 3.6 ? "Touchdown!" : "Line up… ease her down…";
-      if (airfieldLandT >= 4.4) {
-        airfieldPhase = "score";
-        airfieldScoreT = 0;
-        try {
-          if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
-          if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
-        } catch (e) {}
+        // Clamp top
+        if (player.y < ph * 0.5) { player.y = ph * 0.5; player.vy = 0; }
+        // Touchdown when low enough and field mostly risen
+        const fieldReady = (airfieldStripY || 0) < H * 0.12;
+        if (fieldReady && player.y >= landY - 4) {
+          player.y = landY;
+          player.vy = 0;
+          player.rotation = 0;
+          airfieldPhase = "score";
+          airfieldScoreT = 0;
+          airfieldTip = "Touchdown!";
+          try {
+            if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
+            if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
+          } catch (e) {}
+        } else {
+          // Visual pitch from vertical speed
+          player.rotation = Math.max(-0.25, Math.min(0.35, player.vy / 500));
+          airfieldTip = "Tap to flare… ease her onto the strip!";
+        }
+        // Assist if taking too long
+        if (airfieldLandT > 12 && fieldReady) {
+          player.y = landY;
+          player.vy = 0;
+          airfieldPhase = "score";
+          airfieldScoreT = 0;
+          try {
+            if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
+            if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
+          } catch (e) {}
+        }
       }
       syncAirfieldGlobals();
 

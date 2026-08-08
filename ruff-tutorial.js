@@ -232,7 +232,8 @@
     } else if (name === "obstacles") {
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
       window.__airborneAirfieldObstacles = true;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 2.6;
+      window.__airborneAirfieldRings = false;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 1.15; // more obstacles
       ruffWaitingAvoid = true;
     } else if (name === "powerup") {
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
@@ -241,13 +242,15 @@
     } else if (name === "rings") {
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
       window.__airborneAirfieldRings = true;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 1.8;
-      ruffWaitingRing = 3;
+      window.__airborneAirfieldObstacles = false;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 0.95; // denser rings
+      ruffWaitingRing = 8;
+      window.__airborneRingCollects = 0;
     } else if (name === "combined") {
       if (ruffLines.length) showRadio(ruffLines[0], 2.6);
       window.__airborneAirfieldRings = true;
       window.__airborneAirfieldObstacles = true;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 1.7;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 1.2;
     } else if (name === "landing") {
       if (ruffLines.length) showRadio(ruffLines[0], 3.0);
       // hand control to airfield land phase
@@ -640,6 +643,7 @@
       // Only crystals this lesson — clear birds/rings
       if (typeof obstacles !== "undefined") obstacles = [];
       if (typeof powerup !== "undefined") powerup = null;
+      if (typeof healPickup !== "undefined") healPickup = null;
       updateCrystals(dt);
       if (ruffCrystals.length < 2) spawnCrystals(3);
       if ((ruffWaitingCollect <= 0 && ruffStats.crystals >= 3 && ruffStageT > 8) || ruffStageT > 15) {
@@ -664,7 +668,7 @@
         ruffStats.rings = window.__airborneRingCollects;
         if (ruffStats.rings > ruffStats.bestCombo) ruffStats.bestCombo = ruffStats.rings;
       }
-      if (ruffStageT > 15 || (ruffStats.rings >= 3 && ruffStageT > 10)) {
+      if (ruffStageT > 22 || (ruffStats.rings >= 8 && ruffStageT > 12)) {
         showRadio("That's a combo. Keep the chain going!", 3.0);
         nextStage();
       }
