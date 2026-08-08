@@ -366,6 +366,7 @@
             if (typeof bumpScorePop === "function") bumpScorePop();
             if (typeof sfxPowerup === "function") sfxPowerup();
             if (typeof spawnComboPopup === "function") spawnComboPopup(cx, cy, "+5 RING!", "#ffd700");
+            if (typeof notifyRingCollect === "function") notifyRingCollect();
           }
         }
         return; // rings skip bird damage / anim
@@ -973,3 +974,9 @@
     ctx.restore();
   }
 
+
+  // R.U.F.F. ring tally
+  function notifyRingCollect() {
+    window.__airborneRingCollects = (window.__airborneRingCollects || 0) + 1;
+    if (typeof window.__airborneRuffReact === "function") window.__airborneRuffReact("ring");
+  }

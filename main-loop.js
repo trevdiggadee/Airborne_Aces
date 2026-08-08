@@ -136,6 +136,7 @@
       elapsedMs = performance.now() - runStartTime;
       updateFlipClock(elapsedMs);
       if (typeof updateAirfield === "function") updateAirfield(dt);
+      if (typeof window.__airborneUpdateRuff === "function") window.__airborneUpdateRuff(dt);
       updateBuildings(dtScale);
       updatePowerlines(dtScale);
       updateSketchSkyline(dtScale);
@@ -224,6 +225,7 @@
     drawBlimpHeadlight();
     if (typeof drawAirfieldShadow === "function") drawAirfieldShadow();
     drawPlayer();
+    if (typeof window.__airborneDrawRuff === "function") window.__airborneDrawRuff(); // companion near ship
     drawWindParticlesFront();
     drawShieldEffect();
     drawStorm();

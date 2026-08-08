@@ -264,6 +264,10 @@
     if (sm) sm.style.visibility = "hidden";
     if (typeof sfxAirfieldEngineStart === "function") sfxAirfieldEngineStart();
     if (typeof sfxAirfieldWindStart === "function") sfxAirfieldWindStart();
+    // R.U.F.F. instructor
+    if (typeof window.__airborneBeginRuff === "function") {
+      try { window.__airborneBeginRuff(); } catch (e) { console.warn("R.U.F.F.", e); }
+    }
   }
 
   function endAirfieldTrainingToMap() {
@@ -442,6 +446,35 @@
 
     // ---- LESSON ----
     } else if (airfieldPhase === "lesson") {
+      // R.U.F.F. may request landing
+      if (window.__airborneRuffRequestLand) {
+        window.__airborneRuffRequestLand = false;
+        airfieldPhase = "land";
+        airfieldPhaseT = 0;
+        airfieldLandT = 0;
+        window.__airborneAirfieldPaused = true;
+        window.__airborneAirfieldInvuln = true;
+        if (typeof obstacles !== "undefined") obstacles = [];
+        if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+        ensureAirfieldStripVisible();
+        airfieldTip = "Line up and ease her down…";
+        syncAirfieldGlobals();
+        return;
+      }
+      // If R.U.F.F. is active, skip old lesson auto-advance — R.U.F.F. drives stages
+      if (window.__airborneRuffActive) {
+        window.__airborneAirfieldPaused = false;
+        window.__airborneAirfieldInvuln = false;
+        if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 210;
+        // Flags set by R.U.F.F. stages
+        if (typeof spawnInterval !== "undefined") {
+          const needSpawn = window.__airborneAirfieldRings || window.__airborneAirfieldObstacles;
+          spawnInterval = needSpawn ? 1.9 : 999;
+        }
+        airfieldTip = "";
+        syncAirfieldGlobals();
+        return;
+      }
       const lessons = AIRFIELD_LESSONS;
       if (airfieldLesson >= lessons.length) {
         airfieldPhase = "land";
@@ -536,7 +569,12 @@
         player.rotation = 0;
       }
       if (airfieldScoreT >= 3.5) {
-        endAirfieldTrainingToMap();
+        if (window.__airborneRuffActive) {
+          // R.U.F.F. shows flight report instead of immediate map
+          window.__airborneAirfieldPhase = "score";
+        } else {
+          endAirfieldTrainingToMap();
+        }
       }
       syncAirfieldGlobals();
     }

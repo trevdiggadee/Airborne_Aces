@@ -7,8 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="format-detection" content="telephone=no" />
 <title>Airborne Aces</title>
-<link rel="stylesheet" href="style.css?v=20260808b">
-<link rel="stylesheet" href="blimp-profile.css?v=20260808b">
+<link rel="stylesheet" href="style.css?v=ruff1">
+<link rel="stylesheet" href="blimp-profile.css?v=ruff1">
 </head>
 <body>
 
@@ -361,20 +361,40 @@
 </div>
 
 
-<script src="assets-placeholders.js?v=20260808b"></script>
-<script src="blimp-profile.js?v=20260808b"></script>
-<script src="menu-intro.js?v=20260808b"></script>
-<script src="world-map.js?v=20260808b"></script>
-<script src="audio.js?v=20260808b"></script>
-<script src="asset-loading.js?v=20260808b"></script>
-<script src="world-buildings.js?v=20260808b"></script>
-<script src="player-obstacles.js?v=20260808b"></script>
-<script src="bosses.js?v=20260808b"></script>
-<script src="boss-dialogue.js?v=20260808b"></script>
-<script src="effects-combat.js?v=20260808b"></script>
-<script src="gamestate-ui.js?v=20260808b"></script>
-<script src="world-atmosphere.js?v=20260808b"></script>
-<script src="main-loop.js?v=20260808b"></script>
+
+<div id="ruffRadio" aria-live="polite">
+  <div class="ruffCard">
+    <div class="ruffName">R.U.F.F. <span class="ruffWaves"><span></span><span></span><span></span><span></span></span></div>
+    <p class="ruffText" id="ruffText"></p>
+    <button type="button" class="ruffSkip" id="ruffSkipBtn">SKIP ▶</button>
+  </div>
+</div>
+<div id="ruffTitleBanner"></div>
+<div id="ruffReport">
+  <div class="panel">
+    <h2>FLIGHT REPORT</h2>
+    <div id="ruffReportRows"></div>
+    <div class="final" id="ruffFinalScore"></div>
+    <div class="rank" id="ruffRank"></div>
+    <button type="button" class="continueBtn" id="ruffContinueBtn">TO THE MAP ▶</button>
+  </div>
+</div>
+
+<script src="assets-placeholders.js?v=ruff1"></script>
+<script src="blimp-profile.js?v=ruff1"></script>
+<script src="menu-intro.js?v=ruff1"></script>
+<script src="world-map.js?v=ruff1"></script>
+<script src="audio.js?v=ruff1"></script>
+<script src="asset-loading.js?v=ruff1"></script>
+<script src="ruff-tutorial.js?v=ruff1"></script>
+<script src="world-buildings.js?v=ruff1"></script>
+<script src="player-obstacles.js?v=ruff1"></script>
+<script src="bosses.js?v=ruff1"></script>
+<script src="boss-dialogue.js?v=ruff1"></script>
+<script src="effects-combat.js?v=ruff1"></script>
+<script src="gamestate-ui.js?v=ruff1"></script>
+<script src="world-atmosphere.js?v=ruff1"></script>
+<script src="main-loop.js?v=ruff1"></script>
 
 </body>
 </html>

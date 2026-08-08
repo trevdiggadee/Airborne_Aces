@@ -2426,3 +2426,159 @@ html, body {
   .wm-level { width: 44px; height: 44px; }
   .wm-level-num { font-size: 12px; }
 }
+
+
+/* R.U.F.F. Radio UI */
+#ruffRadio {
+  position: absolute;
+  left: 12px;
+  bottom: 72px;
+  max-width: min(280px, 72vw);
+  z-index: 40;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+#ruffRadio.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+#ruffRadio .ruffCard {
+  background: linear-gradient(160deg, rgba(28, 22, 14, 0.92), rgba(18, 28, 42, 0.9));
+  border: 1.5px solid rgba(212, 175, 55, 0.75);
+  border-radius: 10px;
+  padding: 10px 12px 10px 12px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.45), inset 0 0 20px rgba(212,175,55,0.06);
+  backdrop-filter: blur(4px);
+}
+#ruffRadio .ruffName {
+  font-family: 'Rockwell', Georgia, serif;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: #d4af37;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#ruffRadio .ruffWaves {
+  display: inline-flex;
+  gap: 2px;
+  height: 10px;
+  align-items: flex-end;
+}
+#ruffRadio .ruffWaves span {
+  width: 2px;
+  background: #d4af37;
+  border-radius: 1px;
+  animation: ruffWave 0.6s ease-in-out infinite alternate;
+}
+#ruffRadio .ruffWaves span:nth-child(2) { animation-delay: 0.1s; height: 6px; }
+#ruffRadio .ruffWaves span:nth-child(3) { animation-delay: 0.2s; height: 9px; }
+#ruffRadio .ruffWaves span:nth-child(4) { animation-delay: 0.15s; height: 5px; }
+@keyframes ruffWave {
+  from { transform: scaleY(0.4); opacity: 0.5; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+#ruffRadio .ruffText {
+  font-family: 'Rockwell', Georgia, serif;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #f5e6c8;
+  margin: 0;
+}
+#ruffRadio .ruffSkip {
+  margin-top: 6px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: rgba(212,175,55,0.85);
+  background: transparent;
+  border: 1px solid rgba(212,175,55,0.4);
+  border-radius: 4px;
+  padding: 3px 8px;
+  pointer-events: auto;
+  cursor: pointer;
+  font-family: 'Rockwell', Georgia, serif;
+}
+#ruffTitleBanner {
+  position: absolute;
+  top: 28%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 35;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  font-family: 'Rockwell', Georgia, serif;
+  font-size: 18px;
+  letter-spacing: 0.18em;
+  color: #f5e6c8;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.6);
+  text-align: center;
+}
+#ruffTitleBanner.visible { opacity: 1; }
+#ruffReport {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 10, 16, 0.72);
+  backdrop-filter: blur(3px);
+}
+#ruffReport.visible { display: flex; }
+#ruffReport .panel {
+  width: min(320px, 88vw);
+  background: linear-gradient(165deg, rgba(30,24,16,0.95), rgba(16,22,34,0.95));
+  border: 2px solid rgba(212,175,55,0.8);
+  border-radius: 14px;
+  padding: 18px 16px;
+  color: #f5e6c8;
+  font-family: 'Rockwell', Georgia, serif;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+}
+#ruffReport h2 {
+  margin: 0 0 12px;
+  text-align: center;
+  letter-spacing: 0.16em;
+  font-size: 16px;
+  color: #d4af37;
+}
+#ruffReport .row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(245,230,200,0.08);
+}
+#ruffReport .final {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 20px;
+  color: #d4af37;
+  letter-spacing: 0.08em;
+}
+#ruffReport .rank {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 14px;
+  letter-spacing: 0.2em;
+  color: #f5e6c8;
+}
+#ruffReport .continueBtn {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px;
+  background: linear-gradient(180deg, #c9a227, #8a6b18);
+  border: none;
+  border-radius: 8px;
+  color: #1a1208;
+  font-family: 'Rockwell', Georgia, serif;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
