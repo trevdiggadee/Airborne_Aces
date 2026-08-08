@@ -183,29 +183,33 @@
 
   function initAirfieldStrip() {
     airfieldTiles = [];
+    airfieldStripY = 0;
     const img = (typeof images !== "undefined" && images) ? images.airfield_strip : null;
     const aspect = (img && img.naturalWidth && img.naturalHeight) ? (img.naturalWidth / img.naturalHeight) : 5;
-    const groundY = groundLevelY();
-    const hh = Math.max(40, Math.min(H * 0.34, groundY * 0.98) || H * 0.25);
-    const ww = Math.max(80, hh * aspect);
-    // Single strip — no repeat
-    airfieldTiles.push({ x: (W || 300) * 0.08 - ww * 0.15, w: ww, h: hh });
+    // Size: fit bottom band, then +3%
+    let hh = Math.max(50, Math.min(H * 0.36, H * 0.42));
+    hh = hh * 1.03;
+    let ww = Math.max(120, hh * aspect);
+    // Single image, no loop — start slightly left so runway is under blimp
+    const startX = (W || 300) * 0.05 - ww * 0.08;
+    airfieldTiles.push({ x: startX, w: ww, h: hh, startX: startX });
   }
 
   function ensureAirfieldStripVisible() {
-    // Bring strip back under the player for landing (single image)
-    const img = images.airfield_strip;
-    const aspect = (img && img.naturalWidth) ? img.naturalWidth / img.naturalHeight : 5;
-    const groundY = groundLevelY();
-    const h = Math.min(H * 0.34, groundY * 0.98);
-    const w = h * aspect;
+    // Bring strip back under the player for landing (single image, no loop)
+    const img = (typeof images !== "undefined" && images) ? images.airfield_strip : null;
+    const aspect = (img && img.naturalWidth && img.naturalHeight) ? (img.naturalWidth / img.naturalHeight) : 5;
+    let h = Math.max(50, Math.min(H * 0.36, H * 0.42)) * 1.03;
+    let w = Math.max(120, h * aspect);
+    airfieldStripY = 0;
+    const startX = W * 0.12 - w * 0.08;
     if (!airfieldTiles.length) {
-      airfieldTiles.push({ x: W * 0.2, w: w, h: h });
+      airfieldTiles.push({ x: startX, w: w, h: h, startX: startX });
     } else {
-      // Slide strip so runway center is under player
-      airfieldTiles[0].x = W * 0.15 - w * 0.1;
+      airfieldTiles[0].x = startX;
       airfieldTiles[0].w = w;
       airfieldTiles[0].h = h;
+      airfieldTiles[0].startX = startX;
       airfieldTiles = [airfieldTiles[0]];
     }
   }
@@ -306,7 +310,8 @@
     const holding = !!window.__airborneAirfieldHold;
     if (!(airfieldTakeoffSpeed > 0)) airfieldTakeoffSpeed = 50;
 
-    // Scroll strip left; during climb also sink it downward for lift-off feel
+    // Scroll strip LEFT only (single image, no loop).
+    // Sink gradually only toward the END of the image.
     if (airfieldPhase === "taxi" || airfieldPhase === "accel" || airfieldPhase === "climb" ||
         airfieldPhase === "lesson") {
       const scrollSpd = Math.max(airfieldTakeoffSpeed || 0, (airfieldPhase === "lesson" ? 210 : 0));
@@ -315,23 +320,32 @@
           if (!tile) return;
           tile.x -= scrollSpd * dt;
         });
+        // Remove only when fully off-screen left — never re-add / loop
         airfieldTiles = (airfieldTiles || []).filter(function(tile) {
-          return tile && tile.x + (tile.w || 0) > -40;
+          return tile && tile.x + (tile.w || 0) > -20;
         });
       }
-    }
-    // Sink strip as we climb (looks like gaining altitude)
-    if (airfieldPhase === "climb") {
-      const climbDur = 2.0;
-      const u = Math.min(1, (airfieldPhaseT || 0) / climbDur);
-      airfieldStripY = u * (H * 0.55 + 60);
-      airfieldAltFrac = u;
-    } else if (airfieldPhase === "taxi" || airfieldPhase === "accel") {
-      airfieldStripY = 0;
-      airfieldAltFrac = 0;
-    } else if (airfieldPhase === "lesson") {
-      // Keep strip sunk / gone during free flight
-      airfieldStripY = Math.max(airfieldStripY || 0, H * 0.6);
+
+      // Progress through the one image (0 = start, 1 = fully scrolled past)
+      let progress = 0;
+      if (airfieldTiles && airfieldTiles.length) {
+        const tile = airfieldTiles[0];
+        const startX = (typeof tile.startX === "number") ? tile.startX : 0;
+        const w = tile.w || 1;
+        progress = Math.max(0, Math.min(1, (startX - tile.x) / w));
+      } else {
+        progress = 1;
+      }
+
+      // Sink only in the last ~35% of the strip image
+      if (progress < 0.65) {
+        airfieldStripY = 0;
+      } else {
+        const sinkU = (progress - 0.65) / 0.35; // 0→1 over last 35%
+        const ease = sinkU * sinkU; // gradual ease-in
+        airfieldStripY = ease * (H * 0.5 + 40);
+      }
+      airfieldAltFrac = progress;
     }
 
     // ---- RUNWAY ----
@@ -545,19 +559,19 @@
       try { initAirfieldStrip(); } catch (e) { return; }
       if (!airfieldTiles || !airfieldTiles.length) return;
     }
-    const groundY = groundLevelY();
     const sink = (typeof airfieldStripY === "number" && isFinite(airfieldStripY)) ? airfieldStripY : 0;
     airfieldTiles.forEach(function(tile) {
       if (!tile) return;
       let tw = tile.w, th = tile.h, tx = tile.x;
       if (!(tw > 0) || !(th > 0) || !isFinite(tx)) {
         const aspect = img.naturalWidth / img.naturalHeight;
-        th = Math.min(H * 0.34, groundY * 0.98);
+        th = Math.max(50, Math.min(H * 0.36, H * 0.42)) * 1.03;
         tw = th * aspect;
         tile.w = tw; tile.h = th;
         if (!isFinite(tx)) { tx = 0; tile.x = 0; }
       }
-      const y = groundY - th * 0.72 + sink;
+      // Anchor to bottom of screen, then apply sink (end-of-strip only)
+      const y = H - th + sink;
       if (!isFinite(y) || y > H + 40) return;
       try { ctx.drawImage(img, tx, y, tw, th); } catch (e) {}
     });
