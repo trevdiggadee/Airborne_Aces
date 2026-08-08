@@ -56,10 +56,16 @@
     if (state !== "playing") return;
     // Don't flap-react while docked on the pad
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) return;
-    // Airfield runway: holding/tapping powers acceleration instead of flapping
+    // Airfield runway: tap/hold powers acceleration instead of flapping
     if (window.__airborneAirfield &&
         (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel")) {
       window.__airborneAirfieldHold = true;
+      // Instant boost per tap so single taps feel responsive
+      if (typeof window.__airborneAirfieldBoost === "function") {
+        window.__airborneAirfieldBoost();
+      } else {
+        window.__airborneAirfieldBoostPending = true;
+      }
       return;
     }
     if (window.__airborneAirfield && window.__airborneAirfieldPhase === "climb") {

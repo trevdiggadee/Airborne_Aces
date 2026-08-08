@@ -169,6 +169,13 @@
     window.__airborneAirfieldPhase = airfieldPhase;
   }
 
+  window.__airborneAirfieldBoost = function () {
+    if (!airfieldMode) return;
+    if (airfieldPhase !== "taxi" && airfieldPhase !== "accel") return;
+    airfieldTakeoffSpeed = Math.min(215, (airfieldTakeoffSpeed || 28) + 28);
+    window.__airborneAirfieldHold = true;
+  };
+
   function initAirfieldStrip() {
     airfieldTiles = [];
     const img = (typeof images !== "undefined" && images) ? images.airfield_strip : null;
@@ -301,8 +308,13 @@
       window.__airborneAirfieldPaused = false;
       airfieldStripY = 0;
       airfieldAltFrac = 0;
+      // Process any pending tap boost
+      if (window.__airborneAirfieldBoostPending) {
+        window.__airborneAirfieldBoostPending = false;
+        airfieldTakeoffSpeed = Math.min(215, (airfieldTakeoffSpeed || 28) + 28);
+      }
       // Slow start, strong ramp when holding — peaks near liftoff speed
-      const accel = holding ? 48 : 10;
+      const accel = holding ? 95 : 12;
       airfieldTakeoffSpeed = Math.min(215, (airfieldTakeoffSpeed || 28) + accel * dt);
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = airfieldTakeoffSpeed;
       const engFrac = Math.max(0, Math.min(1, ((airfieldTakeoffSpeed || 28) - 28) / 185));

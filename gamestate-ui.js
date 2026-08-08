@@ -764,17 +764,25 @@
   function handleInput(e) {
     if (e.cancelable) e.preventDefault();
     ensureAudio();
+    // Mark hold immediately so takeoff accel responds same frame
+    if (state === "playing" && window.__airborneAirfield &&
+        (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel")) {
+      window.__airborneAirfieldHold = true;
+    }
     if (state === "playing") flap();
-    // ignore input while paused
   }
   function handleInputUp(e) {
+    // Only clear hold when no touches remain
+    if (e && e.touches && e.touches.length > 0) return;
     window.__airborneAirfieldHold = false;
   }
   canvas.addEventListener("touchstart", handleInput, { passive: false });
   canvas.addEventListener("mousedown", handleInput);
+  canvas.addEventListener("pointerdown", handleInput);
   canvas.addEventListener("touchend", handleInputUp, { passive: true });
   canvas.addEventListener("touchcancel", handleInputUp, { passive: true });
   canvas.addEventListener("mouseup", handleInputUp);
+  canvas.addEventListener("pointerup", handleInputUp);
   window.addEventListener("mouseup", handleInputUp);
   window.addEventListener("keydown", (e) => {
     if (e.code === "Space") {
