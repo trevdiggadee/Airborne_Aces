@@ -392,7 +392,7 @@
       // Pre–Level-1 airfield training (takeoff + mechanics)
       if (typeof beginAirfieldTraining === "function") {
         beginAirfieldTraining();
-        showBanner("AIRFIELD TRAINING", 2400, "level");
+        // no AIRFIELD TRAINING banner — R.U.F.F. handles intro
       } else {
         showBanner("LEVEL 1", 2000, "level");
       }

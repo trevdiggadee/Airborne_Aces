@@ -299,15 +299,10 @@
       window.__airborneAirfieldAllowPowerup = true;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       if (typeof powerup !== "undefined") powerup = null;
-      // Spawn one floating power-up symbol for the player to collect
-      ruffPowerOrb = {
-        x: (typeof W !== "undefined" ? W : 400) + 60,
-        y: (typeof H !== "undefined" ? H : 600) * 0.42,
-        r: 22,
-        bob: 0,
-        collected: false,
-        pulse: 0
-      };
+      ruffPowerOrb = null;
+      if (typeof STORM_MAX === "number") stormCharge = STORM_MAX;
+      else if (typeof stormCharge === "number") stormCharge = 100;
+      if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay(true);
     } else if (name === "rings") {
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
       window.__airborneAirfieldRings = true;
@@ -644,7 +639,8 @@
     if (typeof shieldPickup !== "undefined") shieldPickup = null;
     if (typeof stormCharge === "number") stormCharge = 0;
     const sm0 = document.getElementById("stormMeter");
-    if (sm0) sm0.style.visibility = "hidden";
+    if (sm0) sm0.style.visibility = ""; // icon always visible
+    if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay();
     ruffStats = { crystals: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, landingStars: 3 };
     ruffCrystals = [];
     ruffMarkers = [];
@@ -656,7 +652,6 @@
       ruffY = player.y - 30;
     }
     setStage("intro");
-    showTitle("FIRST FLIGHT TRAINING", 2600);
   }
 
   function updateRuff(dt) {
@@ -678,7 +673,6 @@
       if (done) {
         // Stage-specific after dialogue
         if (ruffStage === "intro") {
-          showTitle("FIRST FLIGHT TRAINING", 2000);
           nextStage(); // → takeoff
         } else if (ruffStage === "altitude" && ruffMarkers.length === 0) {
           nextStage();
@@ -748,46 +742,18 @@
       ruffCrystals = [];
       if (typeof obstacles !== "undefined") obstacles = [];
       if (typeof powerup !== "undefined") powerup = null;
-      // Move floating power symbol
-      if (ruffPowerOrb && !ruffPowerOrb.collected) {
-        const spd = Math.max(180, (typeof obstacleSpeed === "number" ? obstacleSpeed : 200));
-        ruffPowerOrb.x -= spd * dt;
-        ruffPowerOrb.bob += dt * 3;
-        ruffPowerOrb.pulse += dt * 5;
-        const px = player ? player.x : 0, py = player ? player.y : 0;
-        const dy = ruffPowerOrb.y + Math.sin(ruffPowerOrb.bob) * 12;
-        if (Math.hypot((player ? player.x : 0) - ruffPowerOrb.x, (player ? player.y : 0) - dy) < 40) {
-          ruffPowerOrb.collected = true;
-          ruffStats.powerups++;
-          // Activate storm / default power briefly
-          if (typeof activateStorm === "function") {
-            try { activateStorm(); } catch (e) {}
-          } else if (typeof stormActive !== "undefined") {
-            stormActive = true;
-          }
-          showRadio("You've got a storm charge! Use it wisely.", 3.0);
-          if (typeof window.__airborneRuffReact === "function") window.__airborneRuffReact("powerup");
-          for (let s = 0; s < 18; s++) {
-            const ang = Math.random() * Math.PI * 2;
-            const sp = 50 + Math.random() * 100;
-            ruffSparkles.push({
-              x: ruffPowerOrb.x, y: dy,
-              vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 20,
-              life: 0.5 + Math.random() * 0.3, age: 0, r: 2 + Math.random() * 3,
-              color: Math.random() > 0.5 ? "#a0e8ff" : "#ffe566"
-            });
-          }
-        }
-        if (ruffPowerOrb.x < -40 && !ruffPowerOrb.collected) {
-          // Respawn another
-          ruffPowerOrb.x = W + 80;
-          ruffPowerOrb.y = H * (0.3 + Math.random() * 0.3);
-          ruffPowerOrb.collected = false;
-        }
+      // Keep meter full until they tap it (or timeout)
+      if (!stormActive && typeof STORM_MAX === "number") {
+        stormCharge = STORM_MAX;
       }
-      const orbGone = !ruffPowerOrb || ruffPowerOrb.collected || ruffPowerOrb.x < -50;
-      if (ruffPowerOrb && ruffPowerOrb.collected && orbGone && ruffStageT > 4) nextStage();
-      else if (ruffStageT > 28 && orbGone) nextStage();
+      if (stormActive && !ruffStats._powerUsed) {
+        ruffStats._powerUsed = true;
+        ruffStats.powerups++;
+        showRadio("That's your ship power — clear the sky!", 3.0);
+      }
+      if ((ruffStats._powerUsed && ruffStageT > 6) || ruffStageT > 20) {
+        nextStage();
+      }
     } else if (ruffStage === "rings") {
       ruffCrystals = [];
       if (typeof powerup !== "undefined") powerup = null;

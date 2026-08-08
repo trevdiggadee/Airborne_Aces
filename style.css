@@ -2432,7 +2432,7 @@ html, body {
 #ruffRadio {
   position: absolute;
   right: 10px;
-  top: calc(108px + 2vh); /* below HUD + first training banner */
+  top: calc(150px + 3vh); /* below HUD + animated level banner */
   left: auto;
   bottom: auto;
   max-width: min(300px, 78vw);

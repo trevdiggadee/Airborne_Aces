@@ -265,7 +265,9 @@
     if (typeof bombs !== "undefined") bombs = [];
     if (typeof rockets !== "undefined") rockets = [];
     const sm = document.getElementById("stormMeter");
-    if (sm) sm.style.visibility = "hidden";
+    if (sm) sm.style.visibility = "";
+    if (typeof stormCharge === "number") stormCharge = 0;
+    if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay();
     if (typeof sfxAirfieldEngineStart === "function") sfxAirfieldEngineStart();
     if (typeof sfxAirfieldWindStart === "function") sfxAirfieldWindStart();
     // R.U.F.F. instructor
@@ -473,7 +475,7 @@
         window.__airborneAirfieldInvuln = false;
         if (typeof obstacleSpeed !== "undefined") obstacleSpeed = Math.max(210, obstacleSpeed || 210);
         const sm = document.getElementById("stormMeter");
-        if (sm) sm.style.visibility = window.__airborneAirfieldAllowPowerup ? "" : "hidden";
+        if (sm) sm.style.visibility = "";
         if (typeof spawnInterval !== "undefined") {
           const needSpawn = window.__airborneAirfieldRings || window.__airborneAirfieldObstacles;
           spawnInterval = needSpawn ? 1.9 : 999;
@@ -583,35 +585,31 @@
       window.__airborneAirfieldPaused = false;
       window.__airborneAirfieldInvuln = true;
       const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 80;
-      // Runway deck ~ near bottom of strip graphic
-      const surfaceY = H - Math.max(28, th * 0.18);
+      // Deck sits on the painted runway near bottom of graphic
+      const surfaceY = H - Math.max(36, th * 0.22);
       if (typeof player !== "undefined" && player) {
         const ph = player.h > 0 ? player.h : 40;
-        const landY = surfaceY - ph * 0.2;
-        // Use normal flap vy; apply soft gravity here
-        player.vy += 900 * dt;
-        if (player.vy > 420) player.vy = 420;
+        const landY = surfaceY - ph * 0.15;
+        player.vy += 1100 * dt;
+        if (player.vy > 500) player.vy = 500;
         player.y += player.vy * dt;
         player.x = W * 0.28;
-        if (player.y < ph * 0.45) { player.y = ph * 0.45; player.vy = Math.min(0, player.vy); }
-        player.rotation = Math.max(-0.28, Math.min(0.32, player.vy / 480));
-        airfieldTip = "Tap to flare — land on the strip!";
+        if (player.y < ph * 0.4) { player.y = ph * 0.4; player.vy = Math.min(0, player.vy); }
+        player.rotation = Math.max(-0.3, Math.min(0.35, player.vy / 450));
 
-        const fieldReady = (airfieldStripY || 0) < H * 0.18;
-        // Generous touchdown band
-        if (fieldReady && player.y >= landY - 18) {
+        // Touchdown: any time player reaches runway band after field has risen some
+        const fieldReady = airfieldLandT > 1.2;
+        if (fieldReady && player.y >= landY - 24) {
           player.y = landY;
           player.vy = 0;
           player.rotation = 0;
           airfieldPhase = "score";
           airfieldScoreT = 0;
-          airfieldTip = "Touchdown!";
           try {
             if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
             if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
           } catch (e) {}
-        } else if (airfieldLandT > 14) {
-          // Soft assist
+        } else if (airfieldLandT > 10) {
           player.y = landY;
           player.vy = 0;
           player.rotation = 0;
@@ -747,28 +745,7 @@
       return;
     }
 
-    if (!airfieldTip) return;
-    const boxW = Math.min(260, W * 0.42);
-    const boxH = 64;
-    const x = W - boxW - 12;
-    const y = 52;
-    ctx.save();
-    ctx.globalAlpha = 0.88;
-    ctx.fillStyle = "rgba(18, 28, 42, 0.72)";
-    roundRectPath(ctx, x, y, boxW, boxH, 10);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(212, 175, 55, 0.75)";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = "#f5e6c8";
-    ctx.font = "bold 11px 'Rockwell', Georgia, serif";
-    ctx.textAlign = "left";
-    ctx.fillText("TRAINING", x + 12, y + 18);
-    ctx.font = "12px 'Rockwell', Georgia, serif";
-    ctx.fillStyle = "rgba(245, 230, 200, 0.95)";
-    wrapText(ctx, airfieldTip, x + 12, y + 36, boxW - 22, 14);
-    ctx.restore();
+    // Training tip box removed — R.U.F.F. radio handles instructions
   }
 
   function roundRectPath(ctx, x, y, w, h, r) {
