@@ -2432,7 +2432,7 @@ html, body {
 #ruffRadio {
   position: absolute;
   right: 10px;
-  top: calc(58px + 1vh); /* below HUD, +1% lower */
+  top: calc(108px + 2vh); /* below HUD + first training banner */
   left: auto;
   bottom: auto;
   max-width: min(300px, 78vw);
@@ -2578,4 +2578,36 @@ html, body {
   font-weight: bold;
   letter-spacing: 0.1em;
   cursor: pointer;
+}
+
+#ruffLessonPopup {
+  position: absolute;
+  right: 12px;
+  bottom: 78px;
+  z-index: 38;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 10px;
+  background: linear-gradient(160deg, rgba(30,24,14,0.75), rgba(12,20,32,0.7));
+  border: 1.5px solid rgba(212,175,55,0.7);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  pointer-events: none;
+  max-width: 88px;
+}
+#ruffLessonPopup.visible { display: flex; }
+#ruffLessonPopup img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+}
+#ruffLessonPopup span {
+  font-family: 'Rockwell', Georgia, serif;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: #e0c060;
+  text-align: center;
 }

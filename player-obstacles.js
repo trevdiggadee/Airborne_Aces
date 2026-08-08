@@ -820,6 +820,7 @@
   const SHIELD_DURATION_MS = 6000;
 
   function spawnShieldPickup() {
+    if (window.__airborneAirfield) return; // no shield in training yet
     const img = images.shieldPickup;
     const aspect = img && img.naturalWidth ? img.naturalHeight / img.naturalWidth : 1;
     const dispW = Math.min(48, W * 0.11);
@@ -847,6 +848,7 @@
 
     if (bossActive || bonusActive) return; // shield only spawns during normal flight
 
+    if (window.__airborneAirfield) { shieldPickup = null; return; }
     if (!shieldPickup) {
       shieldSpawnTimer -= dt;
       if (shieldSpawnTimer <= 0) {

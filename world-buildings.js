@@ -472,6 +472,8 @@
         window.__airborneAirfieldPaused = false;
         window.__airborneAirfieldInvuln = false;
         if (typeof obstacleSpeed !== "undefined") obstacleSpeed = Math.max(210, obstacleSpeed || 210);
+        const sm = document.getElementById("stormMeter");
+        if (sm) sm.style.visibility = window.__airborneAirfieldAllowPowerup ? "" : "hidden";
         if (typeof spawnInterval !== "undefined") {
           const needSpawn = window.__airborneAirfieldRings || window.__airborneAirfieldObstacles;
           spawnInterval = needSpawn ? 1.9 : 999;

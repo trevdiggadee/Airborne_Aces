@@ -208,6 +208,8 @@
   // landing in the same frame as a streak bonus — still credits every notch it passed, so the
   // tank can never stall a few points short of full.
   function addStormChargeForScore(currentScore) {
+    // Training: no storm charge until the power-up lesson
+    if (window.__airborneAirfield && !window.__airborneAirfieldAllowPowerup) return;
     const crossedTotal = Math.floor(currentScore / STORM_CHARGE_PER_MILESTONE);
     if (crossedTotal <= stormMilestoneCount) return;
     const newNotches = crossedTotal - stormMilestoneCount;
@@ -241,6 +243,7 @@
   }
 
   function activateStorm() {
+    if (window.__airborneAirfield && !window.__airborneAirfieldAllowPowerup) return;
     if (state !== "playing" || stormActive || stormCharge < STORM_MAX) return;
 
     stormActive = true;

@@ -118,6 +118,7 @@
     const dtScale = dt * 60; // normalize movement speeds tuned at 60fps baseline
 
     updateParallaxLayers(dtScale);
+    if (typeof updateMountainParallax === "function") updateMountainParallax(dtScale);
     updateSkyline(dtScale);
     drawSkyline();
 
@@ -197,6 +198,7 @@
 
     if (!(typeof isAirfieldMode === "function" && isAirfieldMode()) && !window.__airborneAirfield) {
       drawParallaxLayers();
+    if (typeof drawMountainParallax === "function") drawMountainParallax();
       drawSketchSkyline();
     }
     drawPowerlines();

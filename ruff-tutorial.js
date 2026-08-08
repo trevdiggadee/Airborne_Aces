@@ -81,7 +81,8 @@
     ],
     obstacles: [
       "Now let's see if you can avoid something.",
-      "I recommend not flying directly into it."
+      "Birds, balloons, and other flyers will cost you a heart if you hit them.",
+      "Steer around them — I recommend not flying directly into one."
     ],
     powerup: [
       "Now THAT is something you want. Power-up ahead!",
@@ -190,6 +191,59 @@
     if (el) el.classList.remove("visible");
     ruffSpeakClose = 0;
     stopSpeak();
+  }
+
+  function setLessonPopup(kind) {
+    let el = document.getElementById("ruffLessonPopup");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "ruffLessonPopup";
+      el.innerHTML = '<img id="ruffLessonImg" alt=""/><span id="ruffLessonLabel"></span>';
+      document.body.appendChild(el);
+    }
+    const img = document.getElementById("ruffLessonImg");
+    const lab = document.getElementById("ruffLessonLabel");
+    const map = {
+      crystals: { key: "blue_crystal_01", label: "SKY CRYSTAL" },
+      obstacles: { key: "bird_01", label: "OBSTACLE" },
+      powerup: { key: "cloud", label: "POWER-UP" },
+      rings: { key: null, label: "GOLD RING" },
+      altitude: { key: null, label: "ALTITUDE" },
+      landing: { key: "landing_field", label: "LANDING" }
+    };
+    const info = map[kind];
+    if (!info) { el.classList.remove("visible"); return; }
+    lab.textContent = info.label;
+    // try image keys
+    let srcImg = null;
+    if (info.key && typeof images !== "undefined" && images[info.key] && images[info.key].naturalWidth) {
+      srcImg = images[info.key];
+    } else if (kind === "crystals") {
+      for (let i = 1; i <= 5; i++) {
+        const k = "blue_crystal_" + String(i).padStart(2, "0");
+        if (images[k] && images[k].naturalWidth) { srcImg = images[k]; break; }
+      }
+    } else if (kind === "powerup") {
+      for (const k of ["power_icon_blimp5", "cloud", "pirate_bomb"]) {
+        if (images[k] && images[k].naturalWidth) { srcImg = images[k]; break; }
+      }
+    } else if (kind === "obstacles") {
+      // any bird frame
+      for (const k of Object.keys(images || {})) {
+        if (/bird|balloon|mini_blimp/i.test(k) && images[k].naturalWidth) { srcImg = images[k]; break; }
+      }
+    }
+    if (srcImg && srcImg.src) {
+      img.src = srcImg.src;
+      img.style.display = "";
+    } else {
+      img.style.display = "none";
+    }
+    el.classList.add("visible");
+  }
+  function hideLessonPopup() {
+    const el = document.getElementById("ruffLessonPopup");
+    if (el) el.classList.remove("visible");
   }
 
   function showTitle(text, ms) {
@@ -585,6 +639,12 @@
   function beginRuffTraining() {
     ruffActive = true;
     window.__airborneRuffActive = true;
+    window.__airborneAirfieldAllowPowerup = false;
+    if (typeof powerup !== "undefined") powerup = null;
+    if (typeof shieldPickup !== "undefined") shieldPickup = null;
+    if (typeof stormCharge === "number") stormCharge = 0;
+    const sm0 = document.getElementById("stormMeter");
+    if (sm0) sm0.style.visibility = "hidden";
     ruffStats = { crystals: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, landingStars: 3 };
     ruffCrystals = [];
     ruffMarkers = [];
@@ -650,26 +710,38 @@
       ruffCrystals = [];
       if (typeof obstacles !== "undefined") obstacles = [];
       updateMarkers(dt);
-      if (ruffStageT > 15) {
+      if (ruffStageT > 12 && ruffMarkers.length === 0) {
         showRadio("Good control.", 2.4);
+        nextStage();
+      } else if (ruffStageT > 22) {
         nextStage();
       }
     } else if (ruffStage === "crystals") {
-      // Only crystals this lesson — clear birds/rings
       if (typeof obstacles !== "undefined") obstacles = [];
       if (typeof powerup !== "undefined") powerup = null;
       if (typeof healPickup !== "undefined") healPickup = null;
+      if (typeof shieldPickup !== "undefined") shieldPickup = null;
       updateCrystals(dt);
-      if (ruffCrystals.length < 2) spawnCrystals(3);
-      if ((ruffWaitingCollect <= 0 && ruffStats.crystals >= 3 && ruffStageT > 8) || ruffStageT > 15) {
+      // Keep spawning until goal met, then wait for remaining to leave screen
+      if (ruffStats.crystals < 3 && ruffCrystals.length < 2) spawnCrystals(3);
+      const crystalsDone = ruffStats.crystals >= 3 && ruffCrystals.length === 0;
+      if (crystalsDone && ruffStageT > 5) {
         showRadio("Crystals increase your score. Keep your eyes open.", 3.0);
+        nextStage();
+      } else if (ruffStageT > 45 && ruffCrystals.length === 0) {
         nextStage();
       }
     } else if (ruffStage === "obstacles") {
-      ruffCrystals = []; // only obstacles
-      if (ruffStageT > 15) {
-        showRadio("Excellent.", 2.2);
+      ruffCrystals = [];
+      if (typeof powerup !== "undefined") powerup = null;
+      if (typeof shieldPickup !== "undefined") shieldPickup = null;
+      // Wait for spawned birds to clear after practice window
+      const obsCount = (typeof obstacles !== "undefined" && obstacles) ? obstacles.length : 0;
+      if (ruffStageT > 12 && obsCount === 0) {
+        showRadio("Excellent. Avoid those and you keep your hearts.", 3.0);
         ruffStats.obstaclesAvoided += 3;
+        nextStage();
+      } else if (ruffStageT > 30 && obsCount === 0) {
         nextStage();
       }
     } else if (ruffStage === "powerup") {
@@ -713,16 +785,23 @@
           ruffPowerOrb.collected = false;
         }
       }
-      if (ruffStageT > 15 || (ruffPowerOrb && ruffPowerOrb.collected && ruffStageT > 6)) nextStage();
+      const orbGone = !ruffPowerOrb || ruffPowerOrb.collected || ruffPowerOrb.x < -50;
+      if (ruffPowerOrb && ruffPowerOrb.collected && orbGone && ruffStageT > 4) nextStage();
+      else if (ruffStageT > 28 && orbGone) nextStage();
     } else if (ruffStage === "rings") {
       ruffCrystals = [];
-      // rings only
+      if (typeof powerup !== "undefined") powerup = null;
       if (typeof window.__airborneRingCollects === "number") {
         ruffStats.rings = window.__airborneRingCollects;
         if (ruffStats.rings > ruffStats.bestCombo) ruffStats.bestCombo = ruffStats.rings;
       }
-      if (ruffStageT > 22 || (ruffStats.rings >= 8 && ruffStageT > 12)) {
+      const ringLeft = (typeof obstacles !== "undefined" && obstacles)
+        ? obstacles.filter(function(o){ return o && (o.isRing || o.type === "gold_ring") && !o.collected; }).length
+        : 0;
+      if (ruffStats.rings >= 6 && ringLeft === 0 && ruffStageT > 8) {
         showRadio("That's a combo. Keep the chain going!", 3.0);
+        nextStage();
+      } else if (ruffStageT > 35 && ringLeft === 0) {
         nextStage();
       }
     } else if (ruffStage === "combined") {
