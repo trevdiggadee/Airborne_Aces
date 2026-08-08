@@ -171,13 +171,13 @@
 
   function initAirfieldStrip() {
     airfieldTiles = [];
-    const img = images.airfield_strip;
-    const aspect = (img && img.naturalWidth) ? img.naturalWidth / img.naturalHeight : 5;
+    const img = (typeof images !== "undefined" && images) ? images.airfield_strip : null;
+    const aspect = (img && img.naturalWidth && img.naturalHeight) ? (img.naturalWidth / img.naturalHeight) : 5;
     const groundY = groundLevelY();
-    const h = Math.min(H * 0.34, groundY * 0.98);
-    const w = h * aspect;
+    const hh = Math.max(40, Math.min(H * 0.34, groundY * 0.98) || H * 0.25);
+    const ww = Math.max(80, hh * aspect);
     // Single strip — no repeat
-    airfieldTiles.push({ x: W * 0.08 - w * 0.15, w: w, h: h });
+    airfieldTiles.push({ x: (W || 300) * 0.08 - ww * 0.15, w: ww, h: hh });
   }
 
   function ensureAirfieldStripVisible() {
@@ -552,15 +552,34 @@
 
   function drawAirfieldStrip() {
     if (!airfieldMode) return;
+    if (typeof images === "undefined" || !images) return;
     const img = images.airfield_strip;
-    if (!img || !img.naturalWidth) return;
+    if (!img || !img.naturalWidth || !img.naturalHeight) return;
+    if (!airfieldTiles || !airfieldTiles.length) {
+      // Lazy init if takeoff started before tiles were ready
+      try { initAirfieldStrip(); } catch (e) { return; }
+      if (!airfieldTiles || !airfieldTiles.length) return;
+    }
     const groundY = groundLevelY();
-    const sink = airfieldStripY || 0;
+    const sink = (typeof airfieldStripY === "number" && isFinite(airfieldStripY)) ? airfieldStripY : 0;
     airfieldTiles.forEach(function(tile) {
-      // Sit strip on ground, then sink downward as blimp climbs
-      const y = groundY - tile.h * 0.72 + sink;
-      if (y > H + 20) return; // fully off-screen below
-      ctx.drawImage(img, tile.x, y, tile.w, tile.h);
+      if (!tile) return;
+      let tw = tile.w, th = tile.h, tx = tile.x;
+      if (!(tw > 0) || !(th > 0) || !isFinite(tx)) {
+        // Repair bad tile from aspect
+        const aspect = img.naturalWidth / img.naturalHeight;
+        th = Math.min(H * 0.34, groundY * 0.98);
+        tw = th * aspect;
+        tile.w = tw; tile.h = th;
+        if (!isFinite(tx)) { tx = 0; tile.x = 0; }
+      }
+      const y = groundY - th * 0.72 + sink;
+      if (!isFinite(y) || y > H + 20) return;
+      try {
+        ctx.drawImage(img, tx, y, tw, th);
+      } catch (e) {
+        // Safari throws on non-finite drawImage args — skip frame
+      }
     });
   }
 
