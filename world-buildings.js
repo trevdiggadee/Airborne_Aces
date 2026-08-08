@@ -337,13 +337,13 @@
         progress = 1;
       }
 
-      // Sink only in the last ~35% of the strip image
-      if (progress < 0.65) {
+      // Sink gradually in the last half of the strip image (no early sink)
+      if (progress < 0.50) {
         airfieldStripY = 0;
       } else {
-        const sinkU = (progress - 0.65) / 0.35; // 0→1 over last 35%
-        const ease = sinkU * sinkU; // gradual ease-in
-        airfieldStripY = ease * (H * 0.5 + 40);
+        const sinkU = (progress - 0.50) / 0.50; // 0→1 over last 50%
+        const ease = sinkU * sinkU * (3 - 2 * sinkU); // smooth
+        airfieldStripY = ease * (H * 0.48 + 30);
       }
       airfieldAltFrac = progress;
     }
