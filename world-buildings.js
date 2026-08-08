@@ -165,8 +165,9 @@
 
   function isAirfieldMode() { return !!airfieldMode; }
   function syncAirfieldGlobals() {
-    window.__airborneAirfield = airfieldMode;
+    window.__airborneAirfield = !!airfieldMode;
     window.__airborneAirfieldPhase = airfieldPhase;
+    window.__airborneAirfieldPaused = !!window.__airborneAirfieldPaused;
   }
 
   window.__airborneAirfieldBoost = function () {
@@ -212,22 +213,20 @@
     airfieldRunwayT = 0;
     airfieldClimbStartY = 0;
     airfieldAltFrac = 0;
-    airfieldTakeoffSpeed = 40;
-    window.__airborneScriptedPose = null;
+    airfieldTakeoffSpeed = 50;
+    airfieldLesson = 0;
+    airfieldLessonT = 0;
+    airfieldSub = "practice";
     window.__airborneAirfieldHold = false;
-    // Never let a leftover landing pad pin the blimp
+    window.__airborneAirfieldBoostPending = false;
+    window.__airborneScriptedPose = null;
     if (typeof levelEndPad !== "undefined") levelEndPad = null;
     if (typeof levelEndActive !== "undefined") levelEndActive = false;
 
-    airfieldTip = "HOLD anywhere to accelerate down the runway!";
+    airfieldTip = "HOLD to accelerate!";
     airfieldTipAge = 0;
-    airfieldLesson = 0;
-    airfieldLessonT = 0;
-    airfieldSub = "tip";
     airfieldLandT = 0;
     airfieldScoreT = 0;
-    airfieldStartScore = (typeof score !== "undefined") ? score : 0;
-    window.__airborneAirfieldHold = false;
     window.__airborneAirfieldInvuln = true;
     window.__airborneAirfieldPaused = false;
     window.__airborneAirfieldBlockBoss = true;
@@ -238,18 +237,16 @@
     if (typeof powerlineTiles !== "undefined") powerlineTiles = [];
     if (typeof streetTiles !== "undefined") streetTiles = [];
     if (typeof initClouds === "function") initClouds();
-    window.__airborneAirfieldInvuln = true;
     if (typeof applyPlayerBlimpSize === "function") applyPlayerBlimpSize();
     if (typeof player !== "undefined" && player) {
       const gy = groundLevelY();
       const ph = player.h > 0 ? player.h : 40;
-      player.x = W * 0.22;
-      player.y = gy - ph * 0.12;
+      player.x = W * 0.25;
+      player.y = gy - ph * 0.15;
       player.vy = 0;
       player.rotation = 0;
-      window.__airborneScriptedPose = { x: player.x, y: player.y, rotation: 0 };
     }
-    if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 28;
+    if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 50;
     if (typeof spawnInterval !== "undefined") spawnInterval = 999;
     if (typeof obstacles !== "undefined") obstacles = [];
     if (typeof powerup !== "undefined") powerup = null;
@@ -295,154 +292,116 @@
 
   function updateAirfield(dt) {
     if (!airfieldMode) return;
-    try {
     if (!(dt > 0) || !isFinite(dt)) dt = 0.016;
-    airfieldPhaseT = (Number(airfieldPhaseT) || 0) + dt;
-    airfieldTipAge = (Number(airfieldTipAge) || 0) + dt;
-    window.__airborneAirfieldBlockBoss = true;
-    window.__airborneAirfield = true;
-    window.__airborneAirfieldPhase = airfieldPhase;
+
+    airfieldPhaseT = (airfieldPhaseT || 0) + dt;
     syncAirfieldGlobals();
+    window.__airborneAirfieldBlockBoss = true;
 
     const holding = !!window.__airborneAirfieldHold;
-    if (!(airfieldTakeoffSpeed > 1)) airfieldTakeoffSpeed = 40;
-    if (!airfieldTiles || !airfieldTiles.length) {
-      try { initAirfieldStrip(); } catch (e) {}
-    }
+    if (!(airfieldTakeoffSpeed > 0)) airfieldTakeoffSpeed = 50;
 
-    // Always scroll strip during runway + climb
+    // Scroll the strip
     if (airfieldPhase === "taxi" || airfieldPhase === "accel" || airfieldPhase === "climb") {
-      const scrollSpd = Math.max(30, airfieldTakeoffSpeed || 40);
       (airfieldTiles || []).forEach(function(tile) {
-        if (tile) tile.x -= scrollSpd * dt;
+        if (tile) tile.x -= airfieldTakeoffSpeed * dt;
       });
     }
 
-    // ---------- RUNWAY (taxi + accel) ----------
+    // ---- RUNWAY ----
     if (airfieldPhase === "taxi" || airfieldPhase === "accel") {
       window.__airborneAirfieldInvuln = true;
       window.__airborneAirfieldPaused = false;
-      airfieldStripY = 0;
-      airfieldAltFrac = 0;
-      airfieldRunwayT = (Number(airfieldRunwayT) || 0) + dt;
 
       if (window.__airborneAirfieldBoostPending) {
         window.__airborneAirfieldBoostPending = false;
-        airfieldTakeoffSpeed += 45;
+        airfieldTakeoffSpeed += 35;
       }
-      airfieldTakeoffSpeed += (holding ? 110 : 30) * dt;
-      if (airfieldTakeoffSpeed > 230) airfieldTakeoffSpeed = 230;
+      airfieldTakeoffSpeed += (holding ? 90 : 20) * dt;
+      if (airfieldTakeoffSpeed > 220) airfieldTakeoffSpeed = 220;
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = airfieldTakeoffSpeed;
 
-      try {
-        const engFrac = Math.max(0, Math.min(1, (airfieldTakeoffSpeed - 40) / 160));
-        if (typeof sfxAirfieldEngineSetSpeed === "function") sfxAirfieldEngineSetSpeed(engFrac, 0);
-      } catch (e) {}
-
-      // Pin to runway
-      const gy = groundLevelY();
-      const ph = (typeof player !== "undefined" && player && player.h > 0) ? player.h : 40;
-      const runwayY = gy - ph * 0.12;
-      const runwayX = W * 0.22;
+      // Keep blimp on runway
       if (typeof player !== "undefined" && player) {
-        player.x = runwayX;
-        player.y = runwayY;
+        const gy = groundLevelY();
+        const ph = player.h > 0 ? player.h : 40;
+        player.x = W * 0.25;
+        player.y = gy - ph * 0.15;
         player.vy = 0;
-        player.rotation = -0.06 * Math.min(1, airfieldTakeoffSpeed / 180);
+        player.rotation = holding ? -0.08 : 0;
       }
-      window.__airborneScriptedPose = { x: runwayX, y: runwayY, rotation: -0.06 };
 
-      airfieldTip = holding ? "Accelerating… get ready!" : "HOLD to accelerate!";
+      airfieldTip = holding ? "Accelerating…" : "HOLD to accelerate!";
 
-      if (airfieldPhase === "taxi" && (airfieldTakeoffSpeed > 50 || airfieldRunwayT > 0.4)) {
+      if (airfieldPhase === "taxi" && airfieldPhaseT > 0.3) {
         airfieldPhase = "accel";
+        airfieldPhaseT = 0;
       }
 
-      // FORCE liftoff: time-based (primary) + speed/hold (secondary)
-      // 1.0s if holding, 2.2s always — cannot stay stuck
-      const mustLift =
-        airfieldRunwayT >= 2.2 ||
-        (holding && airfieldRunwayT >= 1.0) ||
-        airfieldTakeoffSpeed >= 150;
-
-      if (mustLift) {
+      // Take off when fast enough OR after a few seconds
+      if (airfieldTakeoffSpeed >= 160 || airfieldPhaseT > 3.5 || (holding && airfieldPhaseT > 1.5)) {
         airfieldPhase = "climb";
         airfieldPhaseT = 0;
-        airfieldClimbStartY = runwayY;
-        airfieldAltFrac = 0;
-        window.__airborneAirfieldPhase = "climb";
+        if (typeof player !== "undefined" && player) {
+          airfieldClimbStartY = player.y;
+        }
         try { if (typeof sfxAirfieldTakeoff === "function") sfxAirfieldTakeoff(); } catch (e) {}
+        syncAirfieldGlobals();
       }
 
-    // ---------- CLIMB ----------
+    // ---- CLIMB ----
     } else if (airfieldPhase === "climb") {
       window.__airborneAirfieldInvuln = true;
       window.__airborneAirfieldPaused = false;
-      window.__airborneAirfieldPhase = "climb";
 
-      const climbDur = 2.2;
-      const u = Math.min(1, airfieldPhaseT / climbDur);
-      // ease-out so lift is obvious immediately
-      const e = 1 - Math.pow(1 - u, 2);
-      airfieldAltFrac = e;
+      const dur = 2.0;
+      const tClimb = Math.min(1, airfieldPhaseT / dur);
+      // smooth ease
+      const e = tClimb * tClimb * (3 - 2 * tClimb);
 
       const gy = groundLevelY();
-      const ph = (typeof player !== "undefined" && player && player.h > 0) ? player.h : 40;
-      const startY = (airfieldClimbStartY > 10) ? airfieldClimbStartY : (gy - ph * 0.12);
-      const targetY = Math.min(H * 0.4, gy - H * 0.35); // clearly above runway
-      const yPos = startY + (targetY - startY) * e;
-      const xPos = W * 0.22 + (W * 0.28 - W * 0.22) * e;
-      const rot = -0.3 * Math.sin(u * Math.PI);
-
-      airfieldTakeoffSpeed = Math.min(220, 140 + e * 80);
-      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = airfieldTakeoffSpeed;
+      const startY = airfieldClimbStartY > 0 ? airfieldClimbStartY : gy - 30;
+      const endY = H * 0.4;
 
       if (typeof player !== "undefined" && player) {
-        player.x = xPos;
-        player.y = yPos;
-        player.rotation = rot;
+        player.y = startY + (endY - startY) * e;
+        player.x = W * 0.25 + (W * 0.28 - W * 0.25) * e;
         player.vy = 0;
+        player.rotation = -0.2 * Math.sin(tClimb * Math.PI);
       }
-      // THIS is what updatePlayer applies — must be set every climb frame
-      window.__airborneScriptedPose = { x: xPos, y: yPos, rotation: rot };
 
-      airfieldTip = "Liftoff! " + Math.round(e * 100) + "%";
+      airfieldTakeoffSpeed = 160 + e * 50;
+      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = airfieldTakeoffSpeed;
+      airfieldTip = "Liftoff!";
 
-      try {
-        if (typeof sfxAirfieldEngineSetSpeed === "function") sfxAirfieldEngineSetSpeed(0.5 + e * 0.5, 0.4);
-      } catch (e2) {}
-
-      if (u >= 1) {
+      if (tClimb >= 1) {
         airfieldPhase = "lesson";
         airfieldPhaseT = 0;
         airfieldLesson = 0;
         airfieldLessonT = 0;
         airfieldSub = "practice";
-        airfieldAltFrac = 1;
         if (typeof player !== "undefined" && player) {
           player.x = W * 0.28;
           player.y = H * 0.4;
           player.vy = 0;
           player.rotation = 0;
         }
-        window.__airborneScriptedPose = null;
-        window.__airborneAirfieldPhase = "lesson";
         if (typeof obstacles !== "undefined") obstacles = [];
         const L0 = AIRFIELD_LESSONS[0];
-        if (typeof spawnInterval !== "undefined") spawnInterval = (L0.obstacles || L0.rings) ? L0.spawn : 999;
+        if (typeof spawnInterval !== "undefined") spawnInterval = (L0.rings || L0.obstacles) ? L0.spawn : 999;
         window.__airborneAirfieldRings = !!L0.rings;
         window.__airborneAirfieldObstacles = !!L0.obstacles;
         if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 210;
         const sm = document.getElementById("stormMeter");
         if (sm) sm.style.visibility = "";
-        airfieldTip = "You're flying! Get a feel for the controls…";
+        airfieldTip = "You're flying!";
         window.__airborneAirfieldPaused = false;
         window.__airborneAirfieldInvuln = false;
+        syncAirfieldGlobals();
       }
 
-    // ---------- LESSON ----------
+    // ---- LESSON ----
     } else if (airfieldPhase === "lesson") {
-      window.__airborneAirfieldPhase = "lesson";
       const lessons = AIRFIELD_LESSONS;
       if (airfieldLesson >= lessons.length) {
         airfieldPhase = "land";
@@ -453,7 +412,8 @@
         if (typeof obstacles !== "undefined") obstacles = [];
         if (typeof spawnInterval !== "undefined") spawnInterval = 999;
         ensureAirfieldStripVisible();
-        airfieldTip = "Returning to the airfield — prepare to land…";
+        airfieldTip = "Prepare to land…";
+        syncAirfieldGlobals();
         return;
       }
       const L = lessons[airfieldLesson];
@@ -462,13 +422,12 @@
       if (airfieldSub === "practice") {
         window.__airborneAirfieldPaused = false;
         window.__airborneAirfieldInvuln = false;
-        window.__airborneScriptedPose = null;
         if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 210;
-        if (typeof spawnInterval !== "undefined") spawnInterval = (L.obstacles || L.rings) ? L.spawn : 999;
+        if (typeof spawnInterval !== "undefined") spawnInterval = (L.rings || L.obstacles) ? L.spawn : 999;
         window.__airborneAirfieldRings = !!L.rings;
         window.__airborneAirfieldObstacles = !!L.obstacles;
         const left = Math.max(0, Math.ceil(L.practice - airfieldLessonT));
-        airfieldTip = left > 0 ? ("Flying… tip in " + left + "s") : L.tip;
+        airfieldTip = left > 0 ? ("Flying… " + left + "s") : L.tip;
         if (airfieldLessonT >= L.practice) {
           airfieldSub = "tip";
           airfieldLessonT = 0;
@@ -477,87 +436,93 @@
           if (typeof obstacles !== "undefined") obstacles = [];
           if (typeof spawnInterval !== "undefined") spawnInterval = 999;
           airfieldTip = L.tip;
-          window.__airborneScriptedPose = { x: W * 0.28, y: H * 0.4, rotation: 0 };
+          if (typeof player !== "undefined" && player) {
+            player.x = W * 0.28;
+            player.y = H * 0.4;
+            player.vy = 0;
+            player.rotation = 0;
+          }
         }
       } else {
+        // tip pause
         window.__airborneAirfieldPaused = true;
         window.__airborneAirfieldInvuln = true;
         airfieldTip = L.tip;
-        window.__airborneScriptedPose = { x: W * 0.28, y: H * 0.4, rotation: 0 };
-        if (airfieldLessonT > 3.0) {
+        if (typeof player !== "undefined" && player) {
+          player.x = W * 0.28;
+          player.y = H * 0.4;
+          player.vy = 0;
+          player.rotation = 0;
+        }
+        if (airfieldLessonT > 3) {
           airfieldLesson++;
           airfieldLessonT = 0;
           airfieldSub = "practice";
-          window.__airborneScriptedPose = null;
           if (typeof obstacles !== "undefined") obstacles = [];
           if (airfieldLesson < lessons.length) {
             const Ln = lessons[airfieldLesson];
-            if (typeof spawnInterval !== "undefined") spawnInterval = (Ln.obstacles || Ln.rings) ? Ln.spawn : 999;
+            if (typeof spawnInterval !== "undefined") spawnInterval = (Ln.rings || Ln.obstacles) ? Ln.spawn : 999;
             window.__airborneAirfieldRings = !!Ln.rings;
             window.__airborneAirfieldObstacles = !!Ln.obstacles;
-            if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 210;
             window.__airborneAirfieldPaused = false;
             window.__airborneAirfieldInvuln = false;
-            airfieldTip = "Flying… tip in " + Ln.practice + "s";
+            if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 210;
+            airfieldTip = "Flying…";
           }
         }
       }
+      syncAirfieldGlobals();
 
-    // ---------- LAND ----------
+    // ---- LAND ----
     } else if (airfieldPhase === "land") {
       window.__airborneAirfieldPaused = true;
       window.__airborneAirfieldInvuln = true;
       airfieldLandT = (airfieldLandT || 0) + dt;
       if (typeof obstacles !== "undefined") obstacles = [];
-      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       ensureAirfieldStripVisible();
       (airfieldTiles || []).forEach(function(tile) {
         if (!tile) return;
-        const targetX = W * 0.12 - (tile.w || 100) * 0.08;
-        tile.x += (targetX - tile.x) * Math.min(1, dt * 1.4);
+        tile.x += ((W * 0.1) - tile.x) * Math.min(1, dt * 1.5);
       });
-      const gy = groundLevelY();
-      const ph = (typeof player !== "undefined" && player && player.h > 0) ? player.h : 40;
-      const landY = gy - ph * 0.12;
-      const u = Math.min(1, airfieldLandT / 3.0);
-      const e = u * u * (3 - 2 * u);
-      const yPos = H * 0.4 + (landY - H * 0.4) * e;
-      const xPos = W * 0.28;
-      const rot = -0.1 * (1 - u) * Math.sin(u * Math.PI);
       if (typeof player !== "undefined" && player) {
-        player.x = xPos; player.y = yPos; player.vy = 0; player.rotation = rot;
+        const gy = groundLevelY();
+        const ph = player.h > 0 ? player.h : 40;
+        const landY = gy - ph * 0.15;
+        const u = Math.min(1, airfieldLandT / 2.5);
+        const e = u * u * (3 - 2 * u);
+        player.y = H * 0.4 + (landY - H * 0.4) * e;
+        player.x = W * 0.28;
+        player.vy = 0;
+        player.rotation = 0;
       }
-      window.__airborneScriptedPose = { x: xPos, y: yPos, rotation: rot };
-      airfieldTip = u >= 1 ? "Touchdown! Training complete." : "Landing…";
-      if (airfieldLandT >= 3.2) {
+      airfieldTip = airfieldLandT > 2.5 ? "Touchdown!" : "Landing…";
+      if (airfieldLandT >= 2.8) {
         airfieldPhase = "score";
         airfieldScoreT = 0;
-        airfieldTip = "";
         try {
           if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
           if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
         } catch (e) {}
       }
+      syncAirfieldGlobals();
 
-    // ---------- SCORE ----------
+    // ---- SCORE ----
     } else if (airfieldPhase === "score") {
       window.__airborneAirfieldPaused = true;
       window.__airborneAirfieldInvuln = true;
       airfieldScoreT = (airfieldScoreT || 0) + dt;
-      const gy = groundLevelY();
-      const ph = (typeof player !== "undefined" && player && player.h > 0) ? player.h : 40;
-      const yPos = gy - ph * 0.12;
       if (typeof player !== "undefined" && player) {
-        player.x = W * 0.28; player.y = yPos; player.vy = 0; player.rotation = 0;
+        const gy = groundLevelY();
+        const ph = player.h > 0 ? player.h : 40;
+        player.y = gy - ph * 0.15;
+        player.x = W * 0.28;
+        player.vy = 0;
+        player.rotation = 0;
       }
-      window.__airborneScriptedPose = { x: W * 0.28, y: yPos, rotation: 0 };
-      if (airfieldScoreT >= 4.0) {
-        window.__airborneScriptedPose = null;
+      if (airfieldScoreT >= 3.5) {
         endAirfieldTrainingToMap();
       }
-    }
-    } catch (err) {
-      console.warn("updateAirfield", err);
+      syncAirfieldGlobals();
     }
   }
 

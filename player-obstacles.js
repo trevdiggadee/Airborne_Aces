@@ -56,23 +56,15 @@
     if (state !== "playing") return;
     // Don't flap-react while docked on the pad
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) return;
-    // Airfield runway: tap/hold powers acceleration instead of flapping
+    // Airfield runway: hold/tap accelerates instead of flap
     if (window.__airborneAirfield &&
         (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel")) {
       window.__airborneAirfieldHold = true;
-      // Instant boost per tap so single taps feel responsive
-      if (typeof window.__airborneAirfieldBoost === "function") {
-        window.__airborneAirfieldBoost();
-      } else {
-        window.__airborneAirfieldBoostPending = true;
-      }
+      window.__airborneAirfieldBoostPending = true;
       return;
     }
-    if (window.__airborneAirfield && window.__airborneAirfieldPhase === "climb") {
-      return; // scripted climb — no player flap
-    }
-    if (window.__airborneAirfieldPaused) {
-      // Fully suspended — no flap during tip / land / score
+    if (window.__airborneAirfield &&
+        (window.__airborneAirfieldPhase === "climb" || window.__airborneAirfieldPaused)) {
       return;
     }
     player.vy = FLAP_VELOCITY;
@@ -82,16 +74,6 @@
   }
 
   function updatePlayer(dt) {
-    // Airfield scripted pose MUST win over pad/gravity (takeoff climb)
-    if (window.__airborneScriptedPose && window.__airborneAirfield) {
-      const pose = window.__airborneScriptedPose;
-      if (typeof pose.x === "number" && isFinite(pose.x)) player.x = pose.x;
-      if (typeof pose.y === "number" && isFinite(pose.y)) player.y = pose.y;
-      if (typeof pose.rotation === "number" && isFinite(pose.rotation)) player.rotation = pose.rotation;
-      player.vy = 0;
-      return;
-    }
-
     // Calm rest on the landing pad
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) {
       player.vy = 0;
@@ -110,10 +92,16 @@
       }
       return;
     }
-    if (window.__airborneAirfieldPaused) {
+
+    // During airfield runway / climb / tip pause: updateAirfield owns position
+    const afPhase = window.__airborneAirfieldPhase;
+    if (window.__airborneAirfield &&
+        (afPhase === "taxi" || afPhase === "accel" || afPhase === "climb" ||
+         afPhase === "land" || afPhase === "score" || window.__airborneAirfieldPaused)) {
       player.vy = 0;
       return;
     }
+
     player.vy += GRAVITY * dt;
     if (player.vy > MAX_FALL_SPEED) player.vy = MAX_FALL_SPEED;
     player.y += player.vy * dt;
