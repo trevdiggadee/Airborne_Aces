@@ -82,13 +82,22 @@
   }
 
   function updatePlayer(dt) {
-    // Calm rest on the landing pad — no animation cycle, no exhaust, no squash
+    // Airfield scripted pose MUST win over pad/gravity (takeoff climb)
+    if (window.__airborneScriptedPose && window.__airborneAirfield) {
+      const pose = window.__airborneScriptedPose;
+      if (typeof pose.x === "number" && isFinite(pose.x)) player.x = pose.x;
+      if (typeof pose.y === "number" && isFinite(pose.y)) player.y = pose.y;
+      if (typeof pose.rotation === "number" && isFinite(pose.rotation)) player.rotation = pose.rotation;
+      player.vy = 0;
+      return;
+    }
+
+    // Calm rest on the landing pad
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) {
       player.vy = 0;
       player.rotation = 0;
       player.y = levelEndPad.surfaceY - player.h * 0.42;
       player.x = levelEndPad.x + levelEndPad.w * (levelEndPad.deckCenterFrac || 0.42);
-      // Freeze personality so frames/exhaust don't glitch
       if (typeof blimpPersonality !== "undefined" && blimpPersonality) {
         blimpPersonality.squashX = 1;
         blimpPersonality.squashY = 1;
@@ -99,17 +108,6 @@
         blimpPersonality.exhaustParticles = [];
         blimpPersonality.speedStreaks = [];
       }
-      // Do NOT advance frame animation while resting
-      return;
-    }
-
-    // Airfield scripted position (written by updateAirfield each frame)
-    if (window.__airborneAirfield && window.__airborneScriptedPose) {
-      const pose = window.__airborneScriptedPose;
-      if (typeof pose.x === "number") player.x = pose.x;
-      if (typeof pose.y === "number") player.y = pose.y;
-      if (typeof pose.rotation === "number") player.rotation = pose.rotation;
-      player.vy = 0;
       return;
     }
     if (window.__airborneAirfieldPaused) {
