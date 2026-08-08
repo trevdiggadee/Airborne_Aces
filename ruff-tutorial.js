@@ -26,6 +26,8 @@
   let ruffX = 0;
   let ruffY = 0;
   let ruffSpeakClose = 0;
+  let ruffTilt = 0;
+  let ruffScalePulse = 1;
   let ruffStats = {
     crystals: 0,
     rings: 0,
@@ -335,7 +337,9 @@
 
   function updateCrystals(dt) {
     if (!ruffCrystals.length) return;
-    const spd = (typeof obstacleSpeed === "number" ? obstacleSpeed : 210);
+    // Always scroll — never freeze when birds/obstacles appear
+    let spd = (typeof obstacleSpeed === "number" && obstacleSpeed > 40) ? obstacleSpeed : 210;
+    spd = Math.max(180, spd);
     const px = (typeof player !== "undefined" && player) ? player.x : 0;
     const py = (typeof player !== "undefined" && player) ? player.y : 0;
     const pw = (typeof player !== "undefined" && player) ? player.w * 0.4 : 20;
@@ -468,12 +472,17 @@
       ruffFrame = (ruffFrame + 1) % RUFF_FRAME_COUNT;
     }
     if (typeof player === "undefined" || !player) return;
-    // Behind and above the blimp
-    const targetX = player.x - player.w * 0.7 - 8;
-    const targetY = player.y - player.h * 0.95 - 12 + Math.sin(ruffBob) * 8;
-    const close = ruffSpeakClose > 0 ? 10 : 0;
-    ruffX += (targetX + close - ruffX) * Math.min(1, dt * 3.5);
-    ruffY += (targetY - ruffY) * Math.min(1, dt * 3.5);
+    // Behind + above with clear gap so sprites never touch
+    const gapX = player.w * 0.55 + 36;
+    const gapY = player.h * 0.75 + 28;
+    const targetX = player.x - gapX;
+    const targetY = player.y - gapY + Math.sin(ruffBob) * 10 + Math.sin(ruffBob * 1.7) * 3;
+    const close = ruffSpeakClose > 0 ? 8 : 0;
+    ruffX += (targetX + close - ruffX) * Math.min(1, dt * 3.2);
+    ruffY += (targetY - ruffY) * Math.min(1, dt * 3.2);
+    // Motion lean / bank
+    ruffTilt = Math.sin(ruffBob * 1.3) * 0.12 + Math.sin(ruffBob * 0.5) * 0.04;
+    ruffScalePulse = 1 + Math.sin(ruffBob * 2.1) * 0.03;
     if (ruffSpeakClose > 0) ruffSpeakClose = Math.max(0, ruffSpeakClose - dt * 0.5);
   }
 
@@ -482,22 +491,28 @@
     if (ruffStage === "report") return;
     const key = "ruff_" + String(ruffFrame + 1).padStart(2, "0");
     const img = (typeof images !== "undefined") ? images[key] : null;
-    // ~3× previous companion size
     const size = Math.max(84, (typeof player !== "undefined" && player ? player.h * 1.65 : 96));
+    const sc = size * (ruffScalePulse || 1);
     ctx.save();
+    ctx.translate(ruffX, ruffY);
+    ctx.rotate(ruffTilt || 0);
+    // Soft motion trail / glow
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = "rgba(212,175,55,0.5)";
+    ctx.beginPath();
+    ctx.arc(-6, 4, sc * 0.28, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
     if (img && img.naturalWidth) {
-      ctx.drawImage(img, ruffX - size / 2, ruffY - size / 2, size, size);
+      ctx.drawImage(img, -sc / 2, -sc / 2, sc, sc);
     } else {
-      // Brass radio placeholder
       ctx.fillStyle = "#b08d3a";
       ctx.strokeStyle = "#5a4010";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(ruffX, ruffY, size * 0.4, 0, Math.PI * 2);
+      ctx.arc(0, 0, sc * 0.4, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = "#1a2a1a";
-      ctx.fillRect(ruffX - size * 0.15, ruffY - size * 0.12, size * 0.3, size * 0.22);
     }
     ctx.restore();
   }
@@ -614,12 +629,17 @@
         }
       }
     } else if (ruffStage === "altitude") {
+      ruffCrystals = [];
+      if (typeof obstacles !== "undefined") obstacles = [];
       updateMarkers(dt);
       if (ruffStageT > 15) {
         showRadio("Good control.", 2.4);
         nextStage();
       }
     } else if (ruffStage === "crystals") {
+      // Only crystals this lesson — clear birds/rings
+      if (typeof obstacles !== "undefined") obstacles = [];
+      if (typeof powerup !== "undefined") powerup = null;
       updateCrystals(dt);
       if (ruffCrystals.length < 2) spawnCrystals(3);
       if ((ruffWaitingCollect <= 0 && ruffStats.crystals >= 3 && ruffStageT > 8) || ruffStageT > 15) {
@@ -627,15 +647,19 @@
         nextStage();
       }
     } else if (ruffStage === "obstacles") {
+      ruffCrystals = []; // only obstacles
       if (ruffStageT > 15) {
         showRadio("Excellent.", 2.2);
         ruffStats.obstaclesAvoided += 3;
         nextStage();
       }
     } else if (ruffStage === "powerup") {
+      ruffCrystals = [];
+      if (typeof obstacles !== "undefined") obstacles = [];
       if (ruffStageT > 15) nextStage();
     } else if (ruffStage === "rings") {
-      // rings collected via existing system — track via window hook
+      ruffCrystals = [];
+      // rings only
       if (typeof window.__airborneRingCollects === "number") {
         ruffStats.rings = window.__airborneRingCollects;
         if (ruffStats.rings > ruffStats.bestCombo) ruffStats.bestCombo = ruffStats.rings;

@@ -113,8 +113,8 @@
     const groundY = groundLevelY();
     if (player.y + player.h / 2 > groundY) {
       player.y = groundY - player.h / 2;
-      // Airfield takeoff / level-end pad: never punish ground contact
-      if (window.__airborneAirfieldInvuln ||
+      // Airfield open sky / training: never damage from bottom
+      if (window.__airborneAirfield || window.__airborneAirfieldInvuln ||
           (typeof isLevelEndActive === "function" && isLevelEndActive())) {
         player.vy = Math.min(player.vy, 0);
       } else {
@@ -303,16 +303,20 @@
     }
     const dispH = dispW * aspect;
 
-    // Buildings can rise up to maxH (see makeBuilding: H*0.5) above the ground,
-    // so keep flying obstacles' full extent (including bob) above that line —
-    // clearly in open sky, never dipping down into rooftop territory.
+    // Full screen vertical range during airfield training; city levels stay roof-safe
     const groundY = groundLevelY();
-    const tallestRoofY = groundY - H * 0.5;
-    const topMargin = H * 0.035; // use almost the full top of the screen
-    const bobBuffer = 20; // max bob amplitude, so bobbing never dips into rooftops
-    const minY = topMargin;
-    const maxY = Math.max(minY + 40, tallestRoofY - dispH - bobBuffer);
-    const y = minY + Math.random() * (maxY - minY);
+    const topMargin = H * 0.04;
+    let minY = topMargin;
+    let maxY;
+    if (window.__airborneAirfield) {
+      // Whole sky band — top to near bottom of playable area
+      maxY = Math.max(minY + 40, H * 0.82 - dispH);
+    } else {
+      const tallestRoofY = groundY - H * 0.5;
+      const bobBuffer = 20;
+      maxY = Math.max(minY + 40, tallestRoofY - dispH - bobBuffer);
+    }
+    const y = minY + Math.random() * Math.max(20, (maxY - minY));
 
     obstacles.push({
       type,

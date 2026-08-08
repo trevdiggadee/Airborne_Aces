@@ -475,14 +475,26 @@
           const needSpawn = window.__airborneAirfieldRings || window.__airborneAirfieldObstacles;
           spawnInterval = needSpawn ? 1.9 : 999;
         }
-        // Keep only hearts floating until obstacle stages
+        // Only the current lesson's objects stay on screen
         const st = window.__airborneRuffStage;
-        if (st === "intro" || st === "takeoff" || st === "altitude" || st === "crystals") {
-          if (typeof powerup !== "undefined") powerup = null;
-          if (typeof obstacles !== "undefined" && obstacles && obstacles.length) {
+        if (typeof powerup !== "undefined" && st !== "powerup" && st !== "combined") powerup = null;
+        if (typeof obstacles !== "undefined" && obstacles && obstacles.length) {
+          if (st === "intro" || st === "takeoff" || st === "altitude") {
+            obstacles = []; // clean sky
+          } else if (st === "crystals") {
             obstacles = obstacles.filter(function (o) {
-              return o && (o.type === "heart" || o.isHeart || o.isRing || o.type === "gold_ring");
+              return o && (o.type === "heart" || o.isHeart);
             });
+          } else if (st === "obstacles") {
+            obstacles = obstacles.filter(function (o) {
+              return o && !o.isRing && o.type !== "gold_ring";
+            });
+          } else if (st === "rings") {
+            obstacles = obstacles.filter(function (o) {
+              return o && (o.isRing || o.type === "gold_ring");
+            });
+          } else if (st === "powerup") {
+            obstacles = [];
           }
         }
         airfieldTip = "";
@@ -542,36 +554,46 @@
       window.__airborneAirfieldInvuln = true;
       airfieldLandT = (airfieldLandT || 0) + dt;
       if (typeof obstacles !== "undefined") obstacles = [];
+      if (typeof powerup !== "undefined") powerup = null;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-      // Spawn landing field once (from the right), then scroll it left like a level
+      // Spawn landing field once — starts BELOW screen (scrolls UP) and from the right
       if (!airfieldUseLandingArt || !airfieldTiles.length) {
         ensureAirfieldStripVisible();
+        // Start sunk down (opposite of takeoff sink) so it rises into view
+        airfieldStripY = H * 0.42;
       }
-      airfieldStripY = 0;
-      const approachSpd = 120;
+      // Scroll UP into place (sink → 0) over ~2s — inverse of takeoff dive
+      const riseU = Math.min(1, airfieldLandT / 2.0);
+      const riseE = 1 - (1 - riseU) * (1 - riseU);
+      airfieldStripY = (H * 0.42) * (1 - riseE);
+
+      // Scroll left until the BEGINNING of the landing strip is under the player
+      // Landing art has runway on the right half — stop so left edge of runway aligns
+      const approachSpd = 130;
       (airfieldTiles || []).forEach(function(tile) {
         if (!tile) return;
-        // Scroll left until pad sits under player
-        const targetX = W * 0.08;
+        // Stop near start of runway graphic (not center of full panorama)
+        const targetX = W * 0.02 - (tile.w || 0) * 0.42;
         if (tile.x > targetX) {
           tile.x -= approachSpd * dt;
           if (tile.x < targetX) tile.x = targetX;
         }
       });
       if (typeof player !== "undefined" && player) {
-        const gy = H - ((airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h * 0.22 : 40);
+        const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 80;
+        // Runway surface near bottom after rise
+        const gy = H - th * 0.28 + airfieldStripY * 0.1;
         const ph = player.h > 0 ? player.h : 40;
-        const landY = Math.min(groundLevelY(), gy) - ph * 0.12;
-        // Start descent after field has moved in a bit
-        const u = Math.min(1, Math.max(0, (airfieldLandT - 0.8) / 3.0));
+        const landY = gy - ph * 0.12;
+        const u = Math.min(1, Math.max(0, (airfieldLandT - 0.6) / 3.2));
         const e = u * u * (3 - 2 * u);
         player.y = H * 0.4 + (landY - H * 0.4) * e;
         player.x = W * 0.28;
         player.vy = 0;
-        player.rotation = -0.08 * (1 - u) * Math.sin(Math.min(1, u * 1.2) * Math.PI);
+        player.rotation = -0.1 * (1 - u) * Math.sin(Math.min(1, u * 1.2) * Math.PI);
       }
-      airfieldTip = airfieldLandT > 3.5 ? "Touchdown!" : "Line up… ease her down…";
-      if (airfieldLandT >= 4.2) {
+      airfieldTip = airfieldLandT > 3.6 ? "Touchdown!" : "Line up… ease her down…";
+      if (airfieldLandT >= 4.4) {
         airfieldPhase = "score";
         airfieldScoreT = 0;
         try {

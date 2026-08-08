@@ -2448,15 +2448,15 @@ html, body {
   pointer-events: auto;
 }
 #ruffRadio .ruffCard {
-  background: linear-gradient(155deg, rgba(36, 28, 16, 0.94), rgba(14, 24, 38, 0.92));
-  border: 2px solid rgba(212, 175, 55, 0.85);
+  background: linear-gradient(155deg, rgba(36, 28, 16, 0.72), rgba(14, 24, 38, 0.68));
+  border: 2px solid rgba(212, 175, 55, 0.75);
   border-radius: 12px;
   padding: 12px 14px 12px 14px;
   box-shadow:
-    0 6px 24px rgba(0,0,0,0.5),
-    0 0 0 1px rgba(255,220,140,0.08) inset,
-    0 0 28px rgba(212,175,55,0.1);
-  backdrop-filter: blur(6px);
+    0 6px 24px rgba(0,0,0,0.4),
+    0 0 0 1px rgba(255,220,140,0.06) inset,
+    0 0 28px rgba(212,175,55,0.08);
+  backdrop-filter: blur(5px);
 }
 #ruffRadio .ruffName {
   font-family: 'Rockwell', Georgia, serif;
