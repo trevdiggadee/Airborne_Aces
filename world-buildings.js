@@ -311,13 +311,13 @@
       // Process any pending tap boost
       if (window.__airborneAirfieldBoostPending) {
         window.__airborneAirfieldBoostPending = false;
-        airfieldTakeoffSpeed = Math.min(215, (airfieldTakeoffSpeed || 28) + 28);
+        airfieldTakeoffSpeed = Math.min(220, (airfieldTakeoffSpeed || 28) + 35);
       }
-      // Slow start, strong ramp when holding — peaks near liftoff speed
-      const accel = holding ? 95 : 12;
-      airfieldTakeoffSpeed = Math.min(215, (airfieldTakeoffSpeed || 28) + accel * dt);
+      // Holding accelerates hard; idle still builds so takeoff always happens
+      const accel = holding ? 120 : 22;
+      airfieldTakeoffSpeed = Math.min(220, (airfieldTakeoffSpeed || 28) + accel * dt);
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = airfieldTakeoffSpeed;
-      const engFrac = Math.max(0, Math.min(1, ((airfieldTakeoffSpeed || 28) - 28) / 185));
+      const engFrac = Math.max(0, Math.min(1, ((airfieldTakeoffSpeed || 28) - 28) / 170));
       try {
         if (typeof sfxAirfieldEngineSetSpeed === "function") sfxAirfieldEngineSetSpeed(engFrac, 0);
         if (typeof sfxAirfieldBirdTick === "function") sfxAirfieldBirdTick(dt);
@@ -327,31 +327,40 @@
         const gy = groundLevelY();
         const ph = (player.h > 0) ? player.h : 40;
         player.vy = 0;
-        player.rotation = -0.015 - engFrac * 0.14;
-        player.y = gy - ph * 0.12 - engFrac * 8;
+        player.rotation = -0.02 - engFrac * 0.2;
+        // Slight nose lift as speed builds (still on runway)
+        player.y = gy - ph * 0.12 - engFrac * 14;
       }
+
+      // Track total time on runway for forced liftoff
+      if (typeof airfieldRunwayT !== "number") airfieldRunwayT = 0;
+      airfieldRunwayT += dt;
 
       if (airfieldPhase === "taxi") {
         airfieldTip = holding
           ? "Accelerating… keep holding!"
           : "HOLD anywhere to accelerate down the runway!";
-        if (airfieldTakeoffSpeed > 48 || airfieldPhaseT > 0.55) {
+        if (airfieldTakeoffSpeed > 40 || airfieldRunwayT > 0.4) {
           airfieldPhase = "accel";
           airfieldPhaseT = 0;
         }
       } else {
         airfieldTip = holding
-          ? "Building speed — almost ready for liftoff!"
-          : "HOLD to power up — auto takeoff if you wait…";
-        // Liftoff when speed is high enough (or auto)
-        if (airfieldTakeoffSpeed >= 175 || airfieldPhaseT > 6.5) {
-          airfieldPhase = "climb";
-          airfieldPhaseT = 0;
-          try {
-            if (typeof sfxAirfieldTakeoff === "function") sfxAirfieldTakeoff();
-            else if (typeof sfxFlap === "function") sfxFlap();
-          } catch (e) {}
-        }
+          ? "Building speed — liftoff soon!"
+          : "HOLD to power up — auto takeoff…";
+      }
+
+      // Always leave the ground: speed threshold OR time OR hold long enough
+      const holdLong = holding && airfieldRunwayT > 1.8;
+      if (airfieldTakeoffSpeed >= 140 || airfieldRunwayT > 4.5 || holdLong) {
+        airfieldPhase = "climb";
+        airfieldPhaseT = 0;
+        airfieldClimbStartY = (typeof player !== "undefined" && player) ? player.y : (groundLevelY() - 30);
+        try {
+          if (typeof sfxAirfieldTakeoff === "function") sfxAirfieldTakeoff();
+          else if (typeof sfxFlap === "function") sfxFlap();
+        } catch (e) {}
+        syncAirfieldGlobals();
       }
     } else if (airfieldPhase === "climb") {
       window.__airborneAirfieldInvuln = true;
@@ -367,8 +376,9 @@
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = airfieldTakeoffSpeed;
 
       const gy = groundLevelY();
-      const targetY = H * 0.4;
-      const startY = gy - (typeof player !== "undefined" && player ? player.h * 0.12 : 20) - 8;
+      const targetY = H * 0.38;
+      const ph0 = (typeof player !== "undefined" && player && player.h > 0) ? player.h : 40;
+      const startY = (airfieldClimbStartY > 0) ? airfieldClimbStartY : (gy - ph0 * 0.12 - 8);
       // Stronger arch: rises faster mid-way, settles at top (smoothstep + arc lift)
       const e = u * u * (3 - 2 * u);
       const arch = Math.sin(u * Math.PI) * 0.18; // extra arch bulge

@@ -779,6 +779,14 @@
   canvas.addEventListener("touchstart", handleInput, { passive: false });
   canvas.addEventListener("mousedown", handleInput);
   canvas.addEventListener("pointerdown", handleInput);
+  // Capture holds even if a HUD element is under the finger
+  document.addEventListener("pointerdown", function(e) {
+    if (state === "playing" && window.__airborneAirfield &&
+        (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel")) {
+      window.__airborneAirfieldHold = true;
+      if (typeof window.__airborneAirfieldBoost === "function") window.__airborneAirfieldBoost();
+    }
+  }, true);
   canvas.addEventListener("touchend", handleInputUp, { passive: true });
   canvas.addEventListener("touchcancel", handleInputUp, { passive: true });
   canvas.addEventListener("mouseup", handleInputUp);
