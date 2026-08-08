@@ -306,11 +306,20 @@
     const holding = !!window.__airborneAirfieldHold;
     if (!(airfieldTakeoffSpeed > 0)) airfieldTakeoffSpeed = 50;
 
-    // Scroll the strip
-    if (airfieldPhase === "taxi" || airfieldPhase === "accel" || airfieldPhase === "climb") {
-      (airfieldTiles || []).forEach(function(tile) {
-        if (tile) tile.x -= airfieldTakeoffSpeed * dt;
-      });
+    // Scroll the strip during runway, climb, and free-flight until it's fully off-screen
+    if (airfieldPhase === "taxi" || airfieldPhase === "accel" || airfieldPhase === "climb" ||
+        airfieldPhase === "lesson") {
+      const scrollSpd = Math.max(airfieldTakeoffSpeed || 0, (airfieldPhase === "lesson" ? 210 : 0));
+      if (scrollSpd > 0) {
+        (airfieldTiles || []).forEach(function(tile) {
+          if (!tile) return;
+          tile.x -= scrollSpd * dt;
+        });
+        // Drop tiles that have fully scrolled off the left
+        airfieldTiles = (airfieldTiles || []).filter(function(tile) {
+          return tile && tile.x + (tile.w || 0) > -40;
+        });
+      }
     }
 
     // ---- RUNWAY ----
@@ -375,7 +384,7 @@
         player.rotation = -0.2 * Math.sin(tClimb * Math.PI);
       }
 
-      airfieldTakeoffSpeed = 160 + e * 50;
+      airfieldTakeoffSpeed = Math.max(180, 160 + e * 60);
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = airfieldTakeoffSpeed;
       airfieldTip = "Liftoff!";
 
