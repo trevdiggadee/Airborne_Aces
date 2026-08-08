@@ -103,31 +103,21 @@
       return;
     }
 
-    // Airfield scripted phases: no gravity at all
-    if (window.__airborneAirfield &&
-        (window.__airborneAirfieldPhase === "taxi" ||
-         window.__airborneAirfieldPhase === "accel" ||
-         window.__airborneAirfieldPhase === "climb" ||
-         window.__airborneAirfieldPaused)) {
+    // Airfield scripted position (written by updateAirfield each frame)
+    if (window.__airborneAirfield && window.__airborneScriptedPose) {
+      const pose = window.__airborneScriptedPose;
+      if (typeof pose.x === "number") player.x = pose.x;
+      if (typeof pose.y === "number") player.y = pose.y;
+      if (typeof pose.rotation === "number") player.rotation = pose.rotation;
+      player.vy = 0;
+      return;
+    }
+    if (window.__airborneAirfieldPaused) {
       player.vy = 0;
       return;
     }
     player.vy += GRAVITY * dt;
     if (player.vy > MAX_FALL_SPEED) player.vy = MAX_FALL_SPEED;
-    // Airfield taxi/accel/climb: scripted motion — no gravity fight
-    if (window.__airborneAirfield &&
-        (window.__airborneAirfieldPhase === "taxi" ||
-         window.__airborneAirfieldPhase === "accel" ||
-         window.__airborneAirfieldPhase === "climb")) {
-      player.vy = 0;
-      // Don't apply gravity displacement during scripted takeoff
-      return;
-    }
-    // Tip / land / score: fully suspended
-    if (window.__airborneAirfieldPaused) {
-      player.vy = 0;
-      return;
-    }
     player.y += player.vy * dt;
 
     // rotation follows velocity, clamped

@@ -328,19 +328,21 @@
         const ph = (player.h > 0) ? player.h : 40;
         player.vy = 0;
         player.rotation = -0.02 - engFrac * 0.2;
-        // Slight nose lift as speed builds (still on runway)
         player.y = gy - ph * 0.12 - engFrac * 14;
+        window.__airborneScriptedPose = {
+          x: player.x,
+          y: player.y,
+          rotation: player.rotation
+        };
       }
 
-      // Track total time on runway for forced liftoff
-      if (typeof airfieldRunwayT !== "number") airfieldRunwayT = 0;
-      airfieldRunwayT += dt;
+      airfieldRunwayT = (airfieldRunwayT || 0) + dt;
 
       if (airfieldPhase === "taxi") {
         airfieldTip = holding
           ? "Accelerating… keep holding!"
           : "HOLD anywhere to accelerate down the runway!";
-        if (airfieldTakeoffSpeed > 40 || airfieldRunwayT > 0.4) {
+        if (airfieldTakeoffSpeed > 40 || airfieldRunwayT > 0.35) {
           airfieldPhase = "accel";
           airfieldPhaseT = 0;
         }
@@ -350,12 +352,16 @@
           : "HOLD to power up — auto takeoff…";
       }
 
-      // Always leave the ground: speed threshold OR time OR hold long enough
-      const holdLong = holding && airfieldRunwayT > 1.8;
-      if (airfieldTakeoffSpeed >= 140 || airfieldRunwayT > 4.5 || holdLong) {
+      // Force climb quickly so the blimp never stays stuck
+      const holdLong = holding && airfieldRunwayT > 0.9;
+      if (airfieldTakeoffSpeed >= 110 || airfieldRunwayT > 2.8 || holdLong) {
         airfieldPhase = "climb";
         airfieldPhaseT = 0;
-        airfieldClimbStartY = (typeof player !== "undefined" && player) ? player.y : (groundLevelY() - 30);
+        const gy = groundLevelY();
+        const ph = (typeof player !== "undefined" && player && player.h > 0) ? player.h : 40;
+        airfieldClimbStartY = (typeof player !== "undefined" && player && player.y > 0)
+          ? player.y
+          : (gy - ph * 0.12);
         try {
           if (typeof sfxAirfieldTakeoff === "function") sfxAirfieldTakeoff();
           else if (typeof sfxFlap === "function") sfxFlap();
@@ -396,16 +402,19 @@
 
       if (typeof player !== "undefined" && player) {
         const targetX = W * 0.28;
-        player.y = startY + (targetY - startY) * alt;
-        player.x = W * 0.22 + (targetX - W * 0.22) * e;
-        // Stronger nose-up arch through the climb
-        player.rotation = -0.38 * Math.sin(u * Math.PI) * (1 - u * 0.25) - 0.04 * (1 - u);
+        // Linear altitude rise is guaranteed visible (plus arch for style)
+        const yPos = startY + (targetY - startY) * Math.max(alt, u);
+        const xPos = W * 0.22 + (targetX - W * 0.22) * e;
+        const rot = -0.42 * Math.sin(u * Math.PI) * (1 - u * 0.2) - 0.04 * (1 - u);
+        player.y = yPos;
+        player.x = xPos;
+        player.rotation = rot;
         player.vy = 0;
+        window.__airborneScriptedPose = { x: xPos, y: yPos, rotation: rot };
       }
 
-      // Strip scrolls left AND sinks down as altitude rises —
-      // gone before the last graphic is fully under the player
-      airfieldStripY = alt * (H * 0.55 + 40);
+      // Strip scrolls left AND sinks down as altitude rises
+      airfieldStripY = Math.max(u, alt) * (H * 0.55 + 40);
 
       // Hand off when climb completes — PRACTICE first
       if (airfieldPhaseT >= climbDur) {
@@ -432,6 +441,8 @@
         airfieldTip = "You're flying! Get a feel for the controls…";
         window.__airborneAirfieldPaused = false;
         window.__airborneAirfieldInvuln = false;
+        window.__airborneScriptedPose = null;
+        syncAirfieldGlobals();
       }
     } else if (airfieldPhase === "lesson") {
       const lessons = AIRFIELD_LESSONS;
@@ -493,6 +504,7 @@
             player.x = W * 0.28;
             player.y = H * 0.4;
             player.rotation = 0;
+            window.__airborneScriptedPose = { x: player.x, y: player.y, rotation: 0 };
           }
         }
       } else {
@@ -505,6 +517,7 @@
           player.x = W * 0.28;
           player.y = H * 0.4;
           player.rotation = 0;
+          window.__airborneScriptedPose = { x: player.x, y: player.y, rotation: 0 };
         }
         if (airfieldLessonT > 3.2) {
           airfieldLesson++;
@@ -519,6 +532,7 @@
             if (typeof obstacleSpeed !== "undefined") obstacleSpeed = Math.max(210, airfieldTakeoffSpeed || 210);
             window.__airborneAirfieldPaused = false;
             window.__airborneAirfieldInvuln = false;
+            window.__airborneScriptedPose = null;
             airfieldTip = "Flying… tip in " + Ln.practice + "s";
           }
         }
@@ -550,8 +564,8 @@
         player.y = startY + (landY - startY) * e;
         player.x = landX;
         player.vy = 0;
-        // Flare: slight nose-up then level
         player.rotation = -0.12 * (1 - u) * Math.sin(u * Math.PI);
+        window.__airborneScriptedPose = { x: player.x, y: player.y, rotation: player.rotation };
       }
 
       airfieldTip = uComplete(airfieldLandT, 3.2)
