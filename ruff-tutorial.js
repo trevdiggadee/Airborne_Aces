@@ -42,6 +42,8 @@
   let ruffSkipAll = false;
   let ruffIntroDone = false;
   let ruffSparkles = [];
+  let ruffIntroFly = false;
+  let ruffIntroFlyT = 0;
   let ruffPowerOrb = null;
 
   // Stage order
@@ -281,13 +283,39 @@
     if (!window.__airborneAirfieldAllowPowerup && typeof powerup !== "undefined") powerup = null;
     if (name !== "powerup") ruffPowerOrb = null;
     if (typeof powerup !== "undefined" && name !== "powerup" && name !== "combined") powerup = null;
+    const smGate = document.getElementById("stormMeter");
+    if (smGate) {
+      if (window.__airborneAirfieldAllowPowerup) {
+        smGate.style.display = "";
+        smGate.style.visibility = "";
+        smGate.classList.remove("trainingHidden");
+      } else {
+        smGate.style.display = "none";
+        smGate.style.visibility = "hidden";
+        smGate.classList.add("trainingHidden");
+      }
+    }
     syncStageFlags();
 
     if (name === "intro") {
-      if (ruffLines.length) showRadio(ruffLines[0], 4.5);
+      ruffIntroFly = true;
+      ruffIntroFlyT = 0;
+      ruffX = (typeof W !== "undefined" ? W : 400) + 120;
+      ruffY = (typeof H !== "undefined" ? H : 600) * 0.18;
+      ruffLineIdx = 0;
+      ruffLineT = 0;
+      ruffLineDuration = 999; // hold until we manually show lines
+      ruffSpeechDone = false;
+      ruffIntroLineArmed = false;
     } else if (name === "takeoff") {
+      ruffIntroFly = false;
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
       ruffWaitingInput = true;
+      window.__airborneAirfieldPaused = false;
+      try {
+        if (typeof sfxAirfieldEngineStart === "function") sfxAirfieldEngineStart();
+        if (typeof sfxAirfieldWindStart === "function") sfxAirfieldWindStart();
+      } catch (e) {}
     } else if (name === "altitude") {
       if (ruffLines.length) showRadio(ruffLines[0], 3.0);
       spawnAltitudeMarkers();
@@ -546,6 +574,28 @@
       ruffFrameT = 0;
       ruffFrame = (ruffFrame + 1) % RUFF_FRAME_COUNT;
     }
+    // Dramatic intro fly-in from upper-right
+    if (ruffIntroFly && ruffStage === "intro") {
+      ruffIntroFlyT += dt;
+      const destX = (typeof W !== "undefined" ? W : 400) * 0.62;
+      const destY = (typeof H !== "undefined" ? H : 600) * 0.28;
+      // Ease in fast, settle
+      const k = Math.min(1, ruffIntroFlyT / 1.6);
+      const ease = 1 - Math.pow(1 - k, 3);
+      const startX = (typeof W !== "undefined" ? W : 400) + 140;
+      const startY = (typeof H !== "undefined" ? H : 600) * 0.12;
+      ruffX = startX + (destX - startX) * ease;
+      ruffY = startY + (destY - startY) * ease + Math.sin(ruffIntroFlyT * 4) * 6 * (1 - ease);
+      ruffTilt = -0.25 * (1 - ease) + Math.sin(ruffBob * 1.3) * 0.08;
+      ruffScalePulse = 1 + (1 - ease) * 0.15 + Math.sin(ruffBob * 2.1) * 0.03;
+      // Arm first dialogue after settled a bit
+      if (!ruffIntroLineArmed && ruffIntroFlyT > 1.0 && ruffLines.length) {
+        ruffIntroLineArmed = true;
+        ruffLineIdx = 0;
+        showRadio(ruffLines[0], 3.4);
+      }
+      return;
+    }
     if (typeof player === "undefined" || !player) return;
     // Behind + above with clear gap so sprites never touch
     const gapX = player.w * 0.55 + 36;
@@ -666,6 +716,14 @@
     if (!ruffActive) return;
     ruffStageT += dt;
     ruffLineT += dt;
+    // Keep power icon suppressed until power lesson
+    if (!window.__airborneAirfieldAllowPowerup) {
+      const smx = document.getElementById("stormMeter");
+      if (smx && smx.style.display !== "none") {
+        smx.style.display = "none";
+        smx.style.visibility = "hidden";
+      }
+    }
     // Never let training world freeze
     if (typeof obstacleSpeed !== "undefined" && !(obstacleSpeed > 50)) {
       obstacleSpeed = 210;

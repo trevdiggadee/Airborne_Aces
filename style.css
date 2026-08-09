@@ -2611,3 +2611,9 @@ html, body {
   color: #e0c060;
   text-align: center;
 }
+
+#stormMeter.trainingHidden {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}

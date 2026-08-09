@@ -161,6 +161,8 @@
   let airfieldSub = "tip";
   let airfieldLandT = 0;
   let airfieldScoreT = 0;
+  let airfieldDidLand = false;
+  let airfieldLandContact = 0;
   let airfieldStartScore = 0;
   let airfieldClimbStartY = 0;
   let airfieldRunwayT = 0;
@@ -239,6 +241,8 @@
     airfieldTipAge = 0;
     airfieldLandT = 0;
     airfieldScoreT = 0;
+    airfieldDidLand = false;
+    airfieldLandContact = 0;
     window.__airborneAirfieldInvuln = true;
     window.__airborneAirfieldPaused = false;
     window.__airborneAirfieldBlockBoss = true;
@@ -265,12 +269,16 @@
     if (typeof bombs !== "undefined") bombs = [];
     if (typeof rockets !== "undefined") rockets = [];
     const sm = document.getElementById("stormMeter");
-    if (sm) sm.style.visibility = "";
+    if (sm) {
+      sm.style.visibility = "hidden";
+      sm.style.display = "none";
+      sm.classList.add("trainingHidden");
+    }
+    window.__airborneAirfieldAllowPowerup = false;
     if (typeof stormCharge === "number") stormCharge = 0;
     if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay();
-    if (typeof sfxAirfieldEngineStart === "function") sfxAirfieldEngineStart();
-    if (typeof sfxAirfieldWindStart === "function") sfxAirfieldWindStart();
-    // R.U.F.F. instructor
+    // Don't start engine SFX until player can accelerate (after R.U.F.F. intro)
+    // R.U.F.F. instructor — dramatic entrance before liftoff
     if (typeof window.__airborneBeginRuff === "function") {
       try { window.__airborneBeginRuff(); } catch (e) { console.warn("R.U.F.F.", e); }
     }
@@ -610,6 +618,8 @@
           player.rotation = 0;
           airfieldPhase = "score";
           airfieldScoreT = 0;
+    airfieldDidLand = false;
+    airfieldLandContact = 0;
           try {
             if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
             if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
@@ -621,6 +631,8 @@
           player.rotation = 0;
           airfieldPhase = "score";
           airfieldScoreT = 0;
+    airfieldDidLand = false;
+    airfieldLandContact = 0;
           try {
             if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
             if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
