@@ -176,6 +176,10 @@
     window.__airborneAirfield = !!airfieldMode;
     window.__airborneAirfieldPhase = airfieldPhase;
     window.__airborneAirfieldPaused = !!window.__airborneAirfieldPaused;
+    window.__airborneAirfieldPreLift = !!(airfieldMode && (
+      airfieldPhase === "taxi" || airfieldPhase === "accel" ||
+      window.__airborneRuffStage === "intro"
+    ));
   }
 
   window.__airborneAirfieldBoost = function () {

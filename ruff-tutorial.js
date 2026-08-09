@@ -375,29 +375,32 @@
   }
 
   function syncStageFlags() {
-    // Keep flight speed alive so nothing freezes on screen
-    if (typeof obstacleSpeed !== "undefined") {
-      obstacleSpeed = Math.max(obstacleSpeed || 0, 200);
-    }
-    window.__airborneAirfieldPaused = false;
-
-    // Early stages: no obstacles/rings; only hearts (and later crystals via R.U.F.F.)
+    // Early stages: no obstacles/rings
     if (ruffStage === "intro" || ruffStage === "takeoff" || ruffStage === "altitude") {
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-      // Clear any frozen powerups / bombs sitting on screen
       if (typeof powerup !== "undefined") powerup = null;
       if (typeof obstacles !== "undefined" && obstacles) {
         obstacles = obstacles.filter(function (o) {
           return o && (o.type === "heart" || o.isHeart);
         });
       }
+      // Intro: keep world paused/still — do NOT force flight speed
+      if (ruffStage === "intro") {
+        window.__airborneAirfieldPaused = true;
+        if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 0;
+      }
     } else if (ruffStage === "crystals") {
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       if (typeof powerup !== "undefined") powerup = null;
+    } else if (ruffStage === "obstacles" || ruffStage === "combined" || ruffStage === "rings") {
+      // Cruise speed only once airborne lessons need it
+      if (typeof obstacleSpeed !== "undefined" && (obstacleSpeed || 0) < 150) {
+        obstacleSpeed = 210;
+      }
     }
   }
 
