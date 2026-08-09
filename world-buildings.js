@@ -340,6 +340,15 @@
     const holding = !!window.__airborneAirfieldHold;
     if (!(airfieldTakeoffSpeed > 0)) airfieldTakeoffSpeed = 50;
 
+    // Safety: if somehow in lesson with Ruff still on intro, snap back to taxi
+    if ((airfieldPhase === "lesson" || airfieldPhase === "climb") &&
+        (window.__airborneRuffStage === "intro" || window.__airborneRuffStage === "idle")) {
+      airfieldPhase = "taxi";
+      airfieldPhaseT = 0;
+      airfieldDriveDist = 0;
+      airfieldTakeoffSpeed = 50;
+    }
+
     // Scroll strip LEFT only (single image, no loop).
     // Sink gradually only toward the END of the image.
     if (airfieldPhase === "taxi" || airfieldPhase === "accel" || airfieldPhase === "climb" ||
@@ -396,7 +405,11 @@
 
       // Intro lock: only allow drive after R.U.F.F. leaves intro
       const ruffStage = window.__airborneRuffStage || "intro";
-      const introLock = (ruffStage === "intro" || ruffStage === "idle");
+      // Lock until takeoff stage explicitly starts
+      const introLock = !(ruffStage === "takeoff" || ruffStage === "altitude" ||
+        ruffStage === "crystals" || ruffStage === "obstacles" || ruffStage === "shield" ||
+        ruffStage === "powerup" || ruffStage === "rings" || ruffStage === "combined" ||
+        ruffStage === "landing" || ruffStage === "report");
       if (introLock) {
         window.__airborneAirfieldPaused = true;
         window.__airborneAirfieldHold = false;

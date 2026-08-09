@@ -305,8 +305,8 @@
       ruffY = (typeof H !== "undefined" ? H : 600) * 0.14;
       ruffLineIdx = 0;
       ruffLineT = 0;
-      ruffLineDuration = 999; // hold until we manually show lines
-      ruffSpeechDone = false;
+      ruffLineDuration = 3.5;
+      ruffSpeechDone = true; // don't block on speech API
       ruffIntroLineArmed = false;
     } else if (name === "takeoff") {
       ruffIntroFly = false;
@@ -599,10 +599,12 @@
       ruffY = startY + (destY - startY) * ease + Math.sin(ruffIntroFlyT * 4) * 6 * (1 - ease);
       ruffTilt = -0.3 * (1 - ease) + Math.sin(ruffBob * 1.3) * 0.08;
       ruffScalePulse = 1 + (1 - ease) * 0.18 + Math.sin(ruffBob * 2.1) * 0.03;
-      if (!ruffIntroLineArmed && ruffIntroFlyT > 1.15 && ruffLines.length) {
+      if (!ruffIntroLineArmed && ruffIntroFlyT > 1.0 && ruffLines.length) {
         ruffIntroLineArmed = true;
         ruffLineIdx = 0;
-        showRadio(ruffLines[0], 3.4);
+        ruffLineT = 0;
+        ruffSpeechDone = true;
+        showRadio(ruffLines[0], 3.2);
       }
       return;
     }
@@ -708,7 +710,11 @@
     if (typeof shieldPickup !== "undefined") shieldPickup = null;
     if (typeof stormCharge === "number") stormCharge = 0;
     const sm0 = document.getElementById("stormMeter");
-    if (sm0) sm0.style.visibility = ""; // icon always visible
+    if (sm0) {
+      sm0.style.visibility = "hidden";
+      sm0.style.display = "none";
+      sm0.classList.add("trainingHidden");
+    }
     if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay();
     ruffStats = { crystals: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, landingStars: 3 };
     ruffCrystals = [];
@@ -730,16 +736,26 @@
     // Keep power icon suppressed until power lesson
     if (!window.__airborneAirfieldAllowPowerup) {
       const smx = document.getElementById("stormMeter");
-      if (smx && smx.style.display !== "none") {
+      if (smx) {
         smx.style.display = "none";
         smx.style.visibility = "hidden";
+        smx.classList.add("trainingHidden");
       }
     }
-    // Never let training world freeze
-    if (typeof obstacleSpeed !== "undefined" && !(obstacleSpeed > 50)) {
-      obstacleSpeed = 210;
+    // Do NOT force obstacleSpeed or unpause during intro/runway —
+    // airfield owns those. Only ensure cruise speed once airborne lessons run.
+    const afPh = window.__airborneAirfieldPhase;
+    if (afPh === "lesson" || afPh === "land" || afPh === "score") {
+      if (typeof obstacleSpeed !== "undefined" && !(obstacleSpeed > 50)) {
+        obstacleSpeed = 210;
+      }
     }
-    window.__airborneAirfieldPaused = false;
+    // Only clear pause once intro is done and player is in takeoff+ stages
+    if (ruffStage !== "intro" && ruffStage !== "idle") {
+      if (afPh === "taxi" || afPh === "accel" || afPh === "climb" || afPh === "lesson") {
+        // allow airfield to manage pause; do not force true
+      }
+    }
     updateRuffCompanion(dt);
     updateSparkles(dt);
 
@@ -762,9 +778,12 @@
       }
     }
 
-    // Intro hard-fail: after fly-in + lines time, open takeoff
+    // Intro: always leave after lines or max time so training never soft-locks
     if (ruffStage === "intro") {
-      if (ruffIntroFlyT > 14 || (ruffIntroLineArmed && ruffLineIdx >= ruffLines.length && ruffStageT > 2)) {
+      if (ruffIntroLineArmed && ruffLineIdx >= ruffLines.length) {
+        ruffIntroFly = false;
+        nextStage();
+      } else if (ruffStageT > 12 || ruffIntroFlyT > 14) {
         ruffIntroFly = false;
         nextStage();
       }
