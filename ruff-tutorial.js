@@ -299,7 +299,8 @@
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
       window.__airborneAirfieldObstacles = true;
       window.__airborneAirfieldRings = false;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 1.15; // more obstacles
+      if (typeof spawnInterval !== "undefined") spawnInterval = 1.15;
+      if (typeof obstacles !== "undefined") obstacles = [];
       ruffWaitingAvoid = true;
     } else if (name === "powerup") {
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
@@ -736,13 +737,20 @@
       ruffCrystals = [];
       if (typeof powerup !== "undefined") powerup = null;
       if (typeof shieldPickup !== "undefined") shieldPickup = null;
-      // Wait for spawned birds to clear after practice window
+      // Practice window, then stop spawning so the sky can clear
+      if (ruffStageT > 10) {
+        window.__airborneAirfieldObstacles = false;
+        if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      }
       const obsCount = (typeof obstacles !== "undefined" && obstacles) ? obstacles.length : 0;
       if (ruffStageT > 12 && obsCount === 0) {
         showRadio("Excellent. Avoid those and you keep your hearts.", 3.0);
         ruffStats.obstaclesAvoided += 3;
         nextStage();
-      } else if (ruffStageT > 30 && obsCount === 0) {
+      } else if (ruffStageT > 18) {
+        // Force advance — clear leftover birds so next lesson is clean
+        if (typeof obstacles !== "undefined") obstacles = [];
+        ruffStats.obstaclesAvoided += 3;
         nextStage();
       }
     } else if (ruffStage === "powerup") {

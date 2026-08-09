@@ -286,10 +286,10 @@
     if (!img || !img.complete || !img.naturalWidth || !img.naturalHeight) return;
     mountainReady = true;
     const aspect = img.naturalHeight / img.naturalWidth;
-    // ~half screen tall; bottom of range at bottom of canvas
-    const tileH = Math.max(H * 0.50, 160);
+    // ~half screen tall; bottom of graphic hangs off bottom of screen
+    const tileH = Math.max(H * 0.52, 160);
     const tileW = tileH / aspect;
-    const y = H - tileH * 0.92;
+    const y = H - tileH * 0.72; // lower portion off-screen
     if (!drawMountainParallax._tiles || drawMountainParallax._tileW !== tileW) {
       drawMountainParallax._tiles = [];
       drawMountainParallax._tileW = tileW;
@@ -314,8 +314,8 @@
     const aspect = img.naturalHeight / img.naturalWidth;
     const tileH = Math.max(H * 0.50, 160);
     const tileW = tileH / aspect;
-    // Slower than clouds (clouds use ~0.15–0.35 * dtScale)
-    let mSpeed = 0.08;
+    // Still under typical clouds, but 2× previous mountain speed
+    let mSpeed = 0.16;
     if (typeof worldScrollFrozen === "function" && worldScrollFrozen()) mSpeed = 0;
     if (!drawMountainParallax._tiles || drawMountainParallax._tileW !== tileW) {
       drawMountainParallax._tiles = [];
