@@ -53,7 +53,15 @@
   }
 
   function flap() {
-    if (window.__airborneRuffActive && window.__airborneRuffStage === "intro") return;
+    // During intro, still register hold so player can break into takeoff
+    if (window.__airborneRuffActive && window.__airborneRuffStage === "intro") {
+      if (window.__airborneAirfield &&
+          (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel")) {
+        window.__airborneAirfieldHold = true;
+        window.__airborneAirfieldBoostPending = true;
+      }
+      return;
+    }
     if (state !== "playing") return;
     // Don't flap-react while docked on the pad
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) return;

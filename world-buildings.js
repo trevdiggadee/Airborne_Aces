@@ -345,39 +345,35 @@
 
     // ---- R.U.F.F. / intro failsafes (never soft-lock on runway) ----
     airfieldRunwayT = (airfieldRunwayT || 0) + dt;
-    // Restart R.U.F.F. if training is on but companion never activated
-    if (!window.__airborneRuffActive && airfieldRunwayT > 0.4) {
+    // Restart R.U.F.F. once if missing (don't spam begin → intro)
+    if (!window.__airborneRuffActive && !window.__airborneRuffTried && airfieldRunwayT > 0.5) {
+      window.__airborneRuffTried = true;
       if (typeof window.__airborneBeginRuff === "function") {
         try {
           window.__airborneBeginRuff();
-          console.log("[Airborne] R.U.F.F. restarted");
+          console.log("[Airborne] R.U.F.F. started");
         } catch (e) {
-          console.warn("[Airborne] R.U.F.F. restart failed", e);
+          console.warn("[Airborne] R.U.F.F. failed", e);
           window.__airborneRuffStage = "takeoff";
         }
       } else {
         window.__airborneRuffStage = "takeoff";
-        console.warn("[Airborne] R.U.F.F. missing — open takeoff");
       }
     }
-    // If stuck on intro too long, force takeoff so player can drive
-    if (window.__airborneRuffStage === "intro" && airfieldRunwayT > 16) {
+    // Intro timeout → takeoff (don't reset drive progress)
+    if (window.__airborneRuffStage === "intro" && airfieldRunwayT > 12) {
       window.__airborneRuffStage = "takeoff";
-      window.__airborneResetRunway = true;
       console.log("[Airborne] Intro timeout → takeoff");
     }
-    // If stage never set, default to takeoff after a beat
     if (!window.__airborneRuffStage || window.__airborneRuffStage === "idle") {
-      if (airfieldRunwayT > 1.5) {
-        window.__airborneRuffStage = "takeoff";
-      }
+      if (airfieldRunwayT > 1.0) window.__airborneRuffStage = "takeoff";
     }
 
     const holding = !!window.__airborneAirfieldHold;
     if (!(airfieldTakeoffSpeed > 0)) airfieldTakeoffSpeed = 50;
 
-    // Safety: if somehow in lesson with Ruff still on intro, snap back to taxi
-    if ((airfieldPhase === "lesson" || airfieldPhase === "climb") &&
+    // Only snap LESSON back if intro somehow still active — never cancel climb
+    if (airfieldPhase === "lesson" &&
         (window.__airborneRuffStage === "intro" || window.__airborneRuffStage === "idle")) {
       airfieldPhase = "taxi";
       airfieldPhaseT = 0;
@@ -441,11 +437,17 @@
 
       // Intro lock: only allow drive after R.U.F.F. leaves intro
       const ruffStage = window.__airborneRuffStage || "intro";
-      // Lock only during intro; everything else can drive
-      const introLock = (ruffStage === "intro");
+      // If player is already holding, end intro so takeoff can happen
+      if (ruffStage === "intro" && (holding || window.__airborneAirfieldBoostPending)) {
+        window.__airborneRuffStage = "takeoff";
+        if (typeof window.__airborneRuffActive !== "undefined") {
+          // leave ruff active; just leave intro
+        }
+      }
+      const introLock = (window.__airborneRuffStage === "intro");
       if (introLock) {
         window.__airborneAirfieldPaused = true;
-        window.__airborneAirfieldHold = false;
+        // Do NOT clear hold here — let a long press break out next frame
         window.__airborneAirfieldBoostPending = false;
         airfieldTakeoffSpeed = 50;
         airfieldDriveDist = 0;
@@ -461,7 +463,7 @@
           player.vy = 0;
           player.rotation = 0;
         }
-        airfieldTip = "";
+        airfieldTip = "HOLD to start!";
         syncAirfieldGlobals();
       } else {
         // HOLD to drive down the strip, then liftoff
@@ -503,19 +505,23 @@
           airfieldPhaseT = 0;
         }
 
-        // Liftoff: ~1 screen of runway OR ~2.2s of hold — easier to complete
-        const needDist = (typeof W !== "undefined" ? W : 400) * 0.95;
-        const readyDist = airfieldDriveDist >= needDist && airfieldTakeoffSpeed >= 120;
-        const readyTime = airfieldHoldTime >= 2.2 && airfieldTakeoffSpeed >= 130;
-        if (readyDist || readyTime) {
+        // Liftoff after brief hold — reliable on mobile
+        const readyTime = airfieldHoldTime >= 1.4;
+        const readyDist = airfieldDriveDist >= ((typeof W !== "undefined" ? W : 400) * 0.55);
+        const readySpd = airfieldTakeoffSpeed >= 100 && airfieldHoldTime >= 0.9;
+        if (readyTime || readyDist || readySpd) {
           airfieldPhase = "climb";
           airfieldPhaseT = 0;
           if (typeof player !== "undefined" && player) airfieldClimbStartY = player.y;
+          // Make sure Ruff is past intro so safety never cancels climb
+          if (window.__airborneRuffStage === "intro" || window.__airborneRuffStage === "idle") {
+            window.__airborneRuffStage = "takeoff";
+          }
           try { if (typeof sfxAirfieldTakeoff === "function") sfxAirfieldTakeoff(); } catch (e) {}
           console.log("[Airborne] LIFTOFF", {
-            dist: Math.round(airfieldDriveDist),
-            spd: Math.round(airfieldTakeoffSpeed),
-            hold: airfieldHoldTime.toFixed(2)
+            dist: Math.round(airfieldDriveDist || 0),
+            spd: Math.round(airfieldTakeoffSpeed || 0),
+            hold: (airfieldHoldTime || 0).toFixed(2)
           });
           syncAirfieldGlobals();
         }
