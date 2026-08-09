@@ -243,6 +243,7 @@
     airfieldScoreT = 0;
     airfieldDidLand = false;
     airfieldLandContact = 0;
+    airfieldDriveDist = 0;
     window.__airborneAirfieldInvuln = true;
     window.__airborneAirfieldPaused = false;
     window.__airborneAirfieldBlockBoss = true;
@@ -405,13 +406,16 @@
 
         if (window.__airborneAirfieldBoostPending) {
           window.__airborneAirfieldBoostPending = false;
-          airfieldTakeoffSpeed += 40;
+          airfieldTakeoffSpeed += 35;
         }
-        // Hold/tap accelerates; slight roll when not holding
-        airfieldTakeoffSpeed += (holding ? 95 : 18) * dt;
+        // Hold accelerates; slight idle roll when not holding
+        airfieldTakeoffSpeed += (holding ? 70 : 12) * dt;
         if (airfieldTakeoffSpeed < 50) airfieldTakeoffSpeed = 50;
-        if (airfieldTakeoffSpeed > 230) airfieldTakeoffSpeed = 230;
+        if (airfieldTakeoffSpeed > 240) airfieldTakeoffSpeed = 240;
         if (typeof obstacleSpeed !== "undefined") obstacleSpeed = airfieldTakeoffSpeed;
+
+        // Distance driven along strip (for ~2× runway before climb)
+        airfieldDriveDist = (airfieldDriveDist || 0) + airfieldTakeoffSpeed * dt;
 
         // Blimp stays on runway while driving
         if (typeof player !== "undefined" && player) {
@@ -430,8 +434,11 @@
           airfieldPhaseT = 0;
         }
 
-        // Liftoff when speed is up (hold to get there faster)
-        if (airfieldTakeoffSpeed >= 165 || (holding && airfieldPhaseT > 2.2) || airfieldPhaseT > 5.5) {
+        // Need roughly 2× previous distance (~W*1.6) before liftoff
+        const needDist = (typeof W !== "undefined" ? W : 400) * 1.6;
+        if ((airfieldDriveDist >= needDist && airfieldTakeoffSpeed >= 140) ||
+            airfieldDriveDist >= needDist * 1.35 ||
+            airfieldPhaseT > 10) {
           airfieldPhase = "climb";
           airfieldPhaseT = 0;
           if (typeof player !== "undefined" && player) {
@@ -799,36 +806,37 @@
   }
 
   function drawAirfieldTip() {
-    // Celebration fireworks during training score
-    if (!airfieldMode || airfieldPhase !== "score") return;
-    const list = airfieldFireworks || [];
-    // Also draw levelEndFireworks if shared
-    const extra = (typeof levelEndFireworks !== "undefined" && levelEndFireworks) ? levelEndFireworks : [];
-    const all = list.concat(extra);
-    all.forEach(function(fw) {
-      const life = fw.life || 1;
-      const tt = 1 - (fw.age || 0) / life;
-      if (tt <= 0) return;
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, tt);
-      ctx.fillStyle = fw.color || "#ffd700";
-      ctx.beginPath();
-      ctx.arc(fw.x, fw.y, (fw.r || 3) * tt, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    });
-    // Title
-    if (airfieldScoreT < 3.5) {
-      ctx.save();
-      ctx.textAlign = "center";
-      const fs = Math.floor(W * 0.065);
-      ctx.font = "bold " + fs + "px 'Rockwell', Georgia, serif";
-      ctx.fillStyle = "rgba(0,0,0,0.4)";
-      ctx.fillText("TRAINING COMPLETE!", W / 2 + 2, H * 0.2 + 2);
-      ctx.fillStyle = "#ffe9a8";
-      ctx.fillText("TRAINING COMPLETE!", W / 2, H * 0.2);
-      ctx.restore();
-    }
+    try {
+      if (!airfieldMode || airfieldPhase !== "score") return;
+      const list = Array.isArray(airfieldFireworks) ? airfieldFireworks : [];
+      for (let i = 0; i < list.length; i++) {
+        const fw = list[i];
+        if (!fw) continue;
+        const life = fw.life || 1;
+        const tt = 1 - (fw.age || 0) / life;
+        if (tt <= 0) continue;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, tt);
+        ctx.fillStyle = fw.color || "#ffd700";
+        ctx.beginPath();
+        ctx.arc(fw.x || 0, fw.y || 0, (fw.r || 3) * tt, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      if ((airfieldScoreT || 0) < 3.5) {
+        ctx.save();
+        ctx.textAlign = "center";
+        const fs = Math.floor((typeof W !== "undefined" ? W : 400) * 0.065);
+        ctx.font = "bold " + fs + "px Rockwell, Georgia, serif";
+        const cx = (typeof W !== "undefined" ? W : 400) / 2;
+        const cy = (typeof H !== "undefined" ? H : 600) * 0.2;
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.fillText("TRAINING COMPLETE!", cx + 2, cy + 2);
+        ctx.fillStyle = "#ffe9a8";
+        ctx.fillText("TRAINING COMPLETE!", cx, cy);
+        ctx.restore();
+      }
+    } catch (e) { /* never break the game loop */ }
   }
 
   function roundRectPath(ctx, x, y, w, h, r) {
