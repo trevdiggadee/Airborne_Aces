@@ -370,6 +370,27 @@
     // ---- RUNWAY ----
     if (airfieldPhase === "taxi" || airfieldPhase === "accel") {
       window.__airborneAirfieldInvuln = true;
+
+      // Block ALL takeoff until R.U.F.F. finishes introduction
+      const introLock = window.__airborneRuffActive &&
+        (window.__airborneRuffStage === "intro" || !window.__airborneRuffStage);
+      if (introLock) {
+        window.__airborneAirfieldPaused = true;
+        window.__airborneAirfieldHold = false;
+        window.__airborneAirfieldBoostPending = false;
+        airfieldTakeoffSpeed = 50;
+        if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 0;
+        if (typeof player !== "undefined" && player) {
+          const gy = groundLevelY();
+          const ph = player.h > 0 ? player.h : 40;
+          player.x = W * 0.25;
+          player.y = gy - ph * 0.15;
+          player.vy = 0;
+          player.rotation = 0;
+        }
+        airfieldTip = "";
+        syncAirfieldGlobals();
+      } else {
       window.__airborneAirfieldPaused = false;
 
       if (window.__airborneAirfieldBoostPending) {
@@ -397,7 +418,7 @@
         airfieldPhaseT = 0;
       }
 
-      // Take off when fast enough OR after a few seconds
+      // Take off when fast enough OR after a few seconds of accel
       if (airfieldTakeoffSpeed >= 160 || airfieldPhaseT > 3.5 || (holding && airfieldPhaseT > 1.5)) {
         airfieldPhase = "climb";
         airfieldPhaseT = 0;
@@ -407,6 +428,7 @@
         try { if (typeof sfxAirfieldTakeoff === "function") sfxAirfieldTakeoff(); } catch (e) {}
         syncAirfieldGlobals();
       }
+      } // end introLock else
 
     // ---- CLIMB ----
     } else if (airfieldPhase === "climb") {
@@ -591,48 +613,53 @@
           if (tile.x < targetX) tile.x = targetX;
         }
       });
-      // Player fully controls flight; strip only moves visually
+      // Player controls flare; gentle assist toward the deck once field is up
       window.__airborneAirfieldPaused = false;
       window.__airborneAirfieldInvuln = true;
-      const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 80;
-      // Match drawAirfieldStrip: y = H - th + sink, runway near top of that tile
+      const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
       const sink = (typeof airfieldStripY === "number") ? airfieldStripY : 0;
-      const stripTop = H - th + sink;
-      const surfaceY = stripTop + th * 0.55; // asphalt band mid-tile
+      // Deck near bottom of canvas (strip is bottom-anchored)
+      const landY = H - Math.max(36, th * 0.32) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.2 : 8);
       if (typeof player !== "undefined" && player) {
         const ph = player.h > 0 ? player.h : 40;
-        const landY = surfaceY - ph * 0.25;
-        player.vy += 1000 * dt;
-        if (player.vy > 480) player.vy = 480;
+        // Soft gravity + player flap
+        player.vy += 900 * dt;
+        if (player.vy > 420) player.vy = 420;
+        // After field is mostly up, ease downward so landing can complete
+        const fieldReady = airfieldLandT > 2.2 && sink < H * 0.1;
+        if (fieldReady && player.y < landY - 10) {
+          player.vy += 200 * dt; // extra pull toward strip
+        }
         player.y += player.vy * dt;
         player.x = W * 0.28;
         if (player.y < ph * 0.4) { player.y = ph * 0.4; player.vy = Math.min(0, player.vy); }
-        player.rotation = Math.max(-0.3, Math.min(0.35, player.vy / 450));
+        player.rotation = Math.max(-0.28, Math.min(0.32, player.vy / 480));
 
-        // Only count as landed when field is up AND player is on the deck
-        const fieldReady = airfieldLandT > 1.5 && sink < H * 0.15;
-        const onDeck = fieldReady && player.y >= landY - 12;
-        if (onDeck) {
+        if (fieldReady && player.y >= landY - 10) {
+          airfieldLandContact = (airfieldLandContact || 0) + dt;
+        } else {
+          airfieldLandContact = 0;
+        }
+
+        if (!airfieldDidLand && airfieldLandContact >= 0.35) {
+          airfieldDidLand = true;
           player.y = landY;
           player.vy = 0;
           player.rotation = 0;
           airfieldPhase = "score";
           airfieldScoreT = 0;
-    airfieldDidLand = false;
-    airfieldLandContact = 0;
           try {
             if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
             if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
           } catch (e) {}
-        } else if (airfieldLandT > 22) {
-          // Late assist only — still place on strip first
+        } else if (!airfieldDidLand && airfieldLandT > 20) {
+          // Guaranteed finish — settle on strip then score
+          airfieldDidLand = true;
           player.y = landY;
           player.vy = 0;
           player.rotation = 0;
           airfieldPhase = "score";
           airfieldScoreT = 0;
-    airfieldDidLand = false;
-    airfieldLandContact = 0;
           try {
             if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
             if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
@@ -646,17 +673,17 @@
       window.__airborneAirfieldPaused = true;
       window.__airborneAirfieldInvuln = true;
       airfieldScoreT = (airfieldScoreT || 0) + dt;
+      airfieldStripY = 0;
       if (typeof player !== "undefined" && player) {
-        const gy = groundLevelY();
-        const ph = player.h > 0 ? player.h : 40;
-        player.y = gy - ph * 0.15;
+        const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
+        const landY = H - Math.max(36, th * 0.32) - (player.h > 0 ? player.h * 0.2 : 8);
+        player.y = landY;
         player.x = W * 0.28;
         player.vy = 0;
         player.rotation = 0;
       }
-      if (airfieldScoreT >= 3.5) {
+      if (airfieldScoreT >= 4.0) {
         if (window.__airborneRuffActive) {
-          // R.U.F.F. shows flight report instead of immediate map
           window.__airborneAirfieldPhase = "score";
         } else {
           endAirfieldTrainingToMap();

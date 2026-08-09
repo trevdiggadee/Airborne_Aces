@@ -742,6 +742,7 @@
       if (done) {
         // Stage-specific after dialogue
         if (ruffStage === "intro") {
+          ruffIntroFly = false;
           nextStage(); // → takeoff
         } else if (ruffStage === "altitude" && ruffMarkers.length === 0) {
           nextStage();
@@ -750,6 +751,14 @@
         } else if (ruffStage === "combined" && ruffStageT > 40) {
           nextStage(); // → landing
         }
+      }
+    }
+
+    // Intro hard-fail: after fly-in + lines time, open takeoff
+    if (ruffStage === "intro") {
+      if (ruffIntroFlyT > 14 || (ruffIntroLineArmed && ruffLineIdx >= ruffLines.length && ruffStageT > 2)) {
+        ruffIntroFly = false;
+        nextStage();
       }
     }
 
@@ -859,11 +868,9 @@
     } else if (ruffStage === "landing") {
       window.__airborneRuffRequestLand = true;
       const ph = window.__airborneAirfieldPhase;
-      // Only leave landing after a real touchdown (score phase) — not on a timer alone
       if (ph === "score" || ph === "done") {
         nextStage();
-      } else if (ruffStageT > 35) {
-        // absolute fallback
+      } else if (ruffStageT > 40) {
         nextStage();
       }
     } else if (ruffStage === "report") {

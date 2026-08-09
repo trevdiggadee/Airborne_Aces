@@ -53,6 +53,7 @@
   }
 
   function flap() {
+    if (window.__airborneRuffActive && window.__airborneRuffStage === "intro") return;
     if (state !== "playing") return;
     // Don't flap-react while docked on the pad
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) return;
