@@ -732,16 +732,27 @@
       }
     } else if (ruffStage === "shield") {
       ruffCrystals = [];
-      if (typeof obstacles !== "undefined") obstacles = [];
       window.__airborneAirfieldAllowShield = true;
-      if ((typeof shieldPickup === "undefined" || !shieldPickup || shieldPickup.x < -50) && ruffStageT < 10) {
+      // Spawn shield early
+      if ((typeof shieldPickup === "undefined" || !shieldPickup || shieldPickup.x < -50) && ruffStageT < 8 && !(typeof shieldActive !== "undefined" && shieldActive)) {
         shieldPickup = {
           x: (typeof W !== "undefined" ? W : 400) + 40,
           y: (typeof H !== "undefined" ? H : 600) * 0.4,
           w: 44, h: 44, speed: 150, bobPhase: 0
         };
       }
-      if ((typeof shieldActive !== "undefined" && shieldActive && ruffStageT > 1.5) || ruffStageT > 12) {
+      // After shield is up (or 5s), send obstacles to demonstrate protection
+      if ((typeof shieldActive !== "undefined" && shieldActive) || ruffStageT > 5) {
+        window.__airborneAirfieldObstacles = true;
+        if (typeof spawnInterval !== "undefined") spawnInterval = 1.3;
+      }
+      // Stop birds near end so stage can finish cleanly
+      if (ruffStageT > 14) {
+        window.__airborneAirfieldObstacles = false;
+        if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      }
+      if (ruffStageT > 16) {
+        if (typeof obstacles !== "undefined") obstacles = [];
         nextStage();
       }
     } else if (ruffStage === "powerup") {
@@ -750,7 +761,7 @@
       if (typeof powerup !== "undefined") powerup = null;
       window.__airborneAirfieldAllowPowerup = true;
       const sm = document.getElementById("stormMeter");
-      if (sm) sm.style.visibility = "";
+      if (sm) { sm.style.display = ""; sm.style.visibility = ""; }
       if (typeof stormCharge === "number" && typeof STORM_MAX === "number" && !stormActive) {
         stormCharge = STORM_MAX;
         if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay();
@@ -787,7 +798,11 @@
     } else if (ruffStage === "landing") {
       window.__airborneRuffRequestLand = true;
       const ph = window.__airborneAirfieldPhase;
-      if (ph === "score" || ph === "done" || ruffStageT > 16) {
+      // Only leave landing after a real touchdown (score phase) — not on a timer alone
+      if (ph === "score" || ph === "done") {
+        nextStage();
+      } else if (ruffStageT > 35) {
+        // absolute fallback
         nextStage();
       }
     } else if (ruffStage === "report") {

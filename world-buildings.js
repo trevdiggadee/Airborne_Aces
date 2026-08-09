@@ -456,17 +456,19 @@
       // R.U.F.F. may request landing
       if (window.__airborneRuffRequestLand) {
         window.__airborneRuffRequestLand = false;
-        airfieldPhase = "land";
-        airfieldPhaseT = 0;
-        airfieldLandT = 0;
-        window.__airborneAirfieldPaused = false; // keep control — no delay
-        window.__airborneAirfieldInvuln = true;
-        if (typeof obstacles !== "undefined") obstacles = [];
-        if (typeof powerup !== "undefined") powerup = null;
-        if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-        ensureAirfieldStripVisible();
-        airfieldTip = "Tap to flare — land on the strip!";
-        syncAirfieldGlobals();
+        if (airfieldPhase !== "land" && airfieldPhase !== "score") {
+          airfieldPhase = "land";
+          airfieldPhaseT = 0;
+          airfieldLandT = 0;
+          window.__airborneAirfieldPaused = false;
+          window.__airborneAirfieldInvuln = true;
+          if (typeof obstacles !== "undefined") obstacles = [];
+          if (typeof powerup !== "undefined") powerup = null;
+          if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+          ensureAirfieldStripVisible();
+          airfieldTip = "Tap to flare — land on the strip!";
+          syncAirfieldGlobals();
+        }
         return;
       }
       // If R.U.F.F. is active, skip old lesson auto-advance — R.U.F.F. drives stages
@@ -599,8 +601,10 @@
         if (player.y < ph * 0.4) { player.y = ph * 0.4; player.vy = Math.min(0, player.vy); }
         player.rotation = Math.max(-0.3, Math.min(0.35, player.vy / 450));
 
-        const fieldReady = airfieldLandT > 0.8 && sink < H * 0.2;
-        if (fieldReady && player.y >= landY - 30) {
+        // Only count as landed when field is up AND player is on the deck
+        const fieldReady = airfieldLandT > 1.5 && sink < H * 0.15;
+        const onDeck = fieldReady && player.y >= landY - 12;
+        if (onDeck) {
           player.y = landY;
           player.vy = 0;
           player.rotation = 0;
@@ -610,7 +614,8 @@
             if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
             if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
           } catch (e) {}
-        } else if (airfieldLandT > 11) {
+        } else if (airfieldLandT > 22) {
+          // Late assist only — still place on strip first
           player.y = landY;
           player.vy = 0;
           player.rotation = 0;
