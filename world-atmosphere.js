@@ -314,9 +314,9 @@
     const aspect = img.naturalHeight / img.naturalWidth;
     const tileH = Math.max(H * 0.50, 160);
     const tileW = tileH / aspect;
-    let spd = 50;
-    if (typeof obstacleSpeed === "number" && obstacleSpeed > 30) spd = Math.max(40, obstacleSpeed * 0.2);
-    if (typeof worldScrollFrozen === "function" && worldScrollFrozen()) spd = 0;
+    // Slower than clouds (clouds use ~0.15–0.35 * dtScale)
+    let mSpeed = 0.08;
+    if (typeof worldScrollFrozen === "function" && worldScrollFrozen()) mSpeed = 0;
     if (!drawMountainParallax._tiles || drawMountainParallax._tileW !== tileW) {
       drawMountainParallax._tiles = [];
       drawMountainParallax._tileW = tileW;
@@ -327,7 +327,7 @@
       }
     }
     const tiles = drawMountainParallax._tiles;
-    for (let i = 0; i < tiles.length; i++) tiles[i] -= spd * (dtScale || 1) * 0.2;
+    for (let i = 0; i < tiles.length; i++) tiles[i] -= mSpeed * (dtScale || 1);
     while (tiles.length && tiles[0] + tileW < -40) tiles.shift();
     while (tiles.length < 3) {
       const last = tiles.length ? tiles[tiles.length - 1] : 0;
