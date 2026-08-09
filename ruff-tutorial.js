@@ -708,6 +708,7 @@
   function beginRuffTraining() {
     ruffActive = true;
     window.__airborneRuffActive = true;
+    console.log("[R.U.F.F.] beginRuffTraining");
     window.__airborneAirfieldAllowPowerup = false;
     if (typeof powerup !== "undefined") powerup = null;
     if (typeof shieldPickup !== "undefined") shieldPickup = null;

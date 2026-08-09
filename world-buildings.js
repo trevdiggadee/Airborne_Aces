@@ -341,6 +341,37 @@
       airfieldDriveDist = 0;
       airfieldTakeoffSpeed = 50;
     }
+
+    // ---- R.U.F.F. / intro failsafes (never soft-lock on runway) ----
+    airfieldRunwayT = (airfieldRunwayT || 0) + dt;
+    // Restart R.U.F.F. if training is on but companion never activated
+    if (!window.__airborneRuffActive && airfieldRunwayT > 0.4) {
+      if (typeof window.__airborneBeginRuff === "function") {
+        try {
+          window.__airborneBeginRuff();
+          console.log("[Airborne] R.U.F.F. restarted");
+        } catch (e) {
+          console.warn("[Airborne] R.U.F.F. restart failed", e);
+          window.__airborneRuffStage = "takeoff";
+        }
+      } else {
+        window.__airborneRuffStage = "takeoff";
+        console.warn("[Airborne] R.U.F.F. missing — open takeoff");
+      }
+    }
+    // If stuck on intro too long, force takeoff so player can drive
+    if (window.__airborneRuffStage === "intro" && airfieldRunwayT > 16) {
+      window.__airborneRuffStage = "takeoff";
+      window.__airborneResetRunway = true;
+      console.log("[Airborne] Intro timeout → takeoff");
+    }
+    // If stage never set, default to takeoff after a beat
+    if (!window.__airborneRuffStage || window.__airborneRuffStage === "idle") {
+      if (airfieldRunwayT > 1.5) {
+        window.__airborneRuffStage = "takeoff";
+      }
+    }
+
     const holding = !!window.__airborneAirfieldHold;
     if (!(airfieldTakeoffSpeed > 0)) airfieldTakeoffSpeed = 50;
 
@@ -409,11 +440,8 @@
 
       // Intro lock: only allow drive after R.U.F.F. leaves intro
       const ruffStage = window.__airborneRuffStage || "intro";
-      // Lock until takeoff stage explicitly starts
-      const introLock = !(ruffStage === "takeoff" || ruffStage === "altitude" ||
-        ruffStage === "crystals" || ruffStage === "obstacles" || ruffStage === "shield" ||
-        ruffStage === "powerup" || ruffStage === "rings" || ruffStage === "combined" ||
-        ruffStage === "landing" || ruffStage === "report");
+      // Lock only during intro; everything else can drive
+      const introLock = (ruffStage === "intro");
       if (introLock) {
         window.__airborneAirfieldPaused = true;
         window.__airborneAirfieldHold = false;
