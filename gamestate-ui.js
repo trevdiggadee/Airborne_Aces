@@ -389,10 +389,17 @@
     if (mapLvl && mapLvl >= 2) {
       applyMapLevelProgress(mapLvl);
     } else {
-      // Pre–Level-1 airfield training
-      const startTrain = window.beginAirfieldTraining || (typeof beginAirfieldTraining === "function" ? beginAirfieldTraining : null);
+      // Always train on level 1 / hangar start
+      window.__airbornePendingMapLevel = null;
+      const startTrain = window.beginAirfieldTraining ||
+        (typeof beginAirfieldTraining === "function" ? beginAirfieldTraining : null);
       if (startTrain) {
-        startTrain();
+        try {
+          startTrain();
+          console.log("[Airborne] Training started", window.__airborneAirfield, window.__airborneAirfieldPhase, window.__airborneRuffStage);
+        } catch (err) {
+          console.error("[Airborne] Training failed", err);
+        }
         if (typeof player !== "undefined" && player && typeof groundLevelY === "function") {
           const gy = groundLevelY();
           const ph = player.h > 0 ? player.h : 40;
@@ -402,7 +409,7 @@
           player.rotation = 0;
         }
       } else {
-        console.warn("beginAirfieldTraining missing");
+        console.error("[Airborne] beginAirfieldTraining missing");
         showBanner("LEVEL 1", 2000, "level");
       }
     }

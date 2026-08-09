@@ -97,19 +97,16 @@
       return;
     }
 
-    // During airfield runway / climb / tip pause: updateAirfield owns position
+    // Airfield training: updateAirfield owns position except free lesson flight
     const afPhase = window.__airborneAirfieldPhase;
-    // Land phase: player controls descent (don't freeze)
-    if (window.__airborneAirfield &&
-        (afPhase === "taxi" || afPhase === "accel" || afPhase === "climb" ||
-         afPhase === "score" || window.__airborneAirfieldPaused)) {
-      player.vy = 0;
-      return;
-    }
-    if (window.__airborneAirfield && afPhase === "land") {
-      // Landing physics handled in updateAirfield — skip normal gravity here
-      // but allow flap() to set vy
-      return;
+    if (window.__airborneAirfield) {
+      if (afPhase === "lesson") {
+        // normal flight physics below
+      } else {
+        // taxi, accel, climb, land, score, intro lock, unknown — freeze here
+        player.vy = 0;
+        return;
+      }
     }
 
     player.vy += GRAVITY * dt;

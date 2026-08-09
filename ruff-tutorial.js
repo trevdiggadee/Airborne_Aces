@@ -781,31 +781,34 @@
       }
     }
 
-    // Intro: always leave after lines or max time so training never soft-locks
+    // Intro: advance lines on a timer, then go to takeoff
     if (ruffStage === "intro") {
-      if (ruffIntroLineArmed && ruffLineIdx >= ruffLines.length) {
+      if (ruffIntroLineArmed && ruffLineIdx < ruffLines.length &&
+          ruffLineT >= Math.max(2.8, ruffLineDuration || 3)) {
+        ruffLineIdx++;
+        ruffLineT = 0;
+        if (ruffLineIdx < ruffLines.length) {
+          showRadio(ruffLines[ruffLineIdx], 3.2);
+        }
+      }
+      if ((ruffIntroLineArmed && ruffLineIdx >= ruffLines.length && ruffLineT > 1.0) ||
+          ruffStageT > 18) {
         ruffIntroFly = false;
-        nextStage();
-      } else if (ruffStageT > 12 || ruffIntroFlyT > 14) {
-        ruffIntroFly = false;
-        nextStage();
+        nextStage(); // takeoff
       }
     }
 
     // Stage logic — every stage has a hard timeout so training never freezes
     if (ruffStage === "takeoff") {
       const ph = window.__airborneAirfieldPhase;
-      if (ph === "lesson" || ph === "climb") {
-        if (ph === "lesson" || ruffStageT > 6) {
-          nextStage();
-        }
-      } else if (ruffStageT > 12) {
+      // Only advance after actual climb/lesson — never skip runway on a timer
+      if (ph === "lesson" || (ph === "climb" && ruffStageT > 3)) {
         nextStage();
       }
     } else if (ruffStage === "altitude") {
       ruffCrystals = [];
       if (typeof obstacles !== "undefined") obstacles = [];
-      updateMarkers(dt);
+      if (typeof updateMarkers === "function") updateMarkers(dt);
       if (ruffStageT > 10) nextStage();
     } else if (ruffStage === "crystals") {
       if (typeof obstacles !== "undefined") obstacles = [];

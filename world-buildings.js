@@ -468,9 +468,9 @@
           airfieldPhaseT = 0;
         }
 
-        // Must hold and cover ~2× screen width of runway
+        // Must be HOLDING now + cover ~2× screen width
         const needDist = (typeof W !== "undefined" ? W : 400) * 1.7;
-        if (airfieldDriveDist >= needDist && airfieldTakeoffSpeed >= 150) {
+        if (holding && airfieldDriveDist >= needDist && airfieldTakeoffSpeed >= 150) {
           airfieldPhase = "climb";
           airfieldPhaseT = 0;
           if (typeof player !== "undefined" && player) airfieldClimbStartY = player.y;
@@ -767,6 +767,15 @@
       }
       syncAirfieldGlobals();
     }
+      // Final runway pin each frame while on ground phases
+      if ((airfieldPhase === "taxi" || airfieldPhase === "accel") &&
+          typeof player !== "undefined" && player) {
+        const gy = groundLevelY();
+        const ph = player.h > 0 ? player.h : 40;
+        player.y = gy - ph * 0.15;
+        player.x = W * 0.25;
+        player.vy = 0;
+      }
     } catch (err) {
       console.warn("updateAirfield", err);
     }
