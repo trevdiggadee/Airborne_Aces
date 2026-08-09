@@ -126,7 +126,7 @@
     updateBirdFlocks(dt);
     
     drawClouds();
-    // Mountains behind strip / gameplay (always)
+    // Mountains BEHIND landing strip / world
     if (typeof drawMountainParallax === "function") drawMountainParallax();
     drawBirdFlocks();
     if (typeof drawAirfieldStrip === "function") drawAirfieldStrip();
@@ -198,8 +198,7 @@
       updateScreenEffects(dt);
     }
 
-    // Mountains always on (training + levels). City parallax only off-airfield.
-    if (typeof drawMountainParallax === "function") drawMountainParallax();
+    // City parallax only off-airfield (mountains already drawn behind strip above)
     if (!(typeof isAirfieldMode === "function" && isAirfieldMode()) && !window.__airborneAirfield) {
       drawParallaxLayers();
       drawSketchSkyline();

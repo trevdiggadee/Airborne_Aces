@@ -51,6 +51,7 @@
     "altitude",
     "crystals",
     "obstacles",
+    "shield",
     "powerup",
     "rings",
     "combined",
@@ -83,6 +84,11 @@
       "Now let's see if you can avoid something.",
       "Birds, balloons, and other flyers will cost you a heart if you hit them.",
       "Steer around them — I recommend not flying directly into one."
+    ],
+    shield: [
+      "See that glowing shield icon?",
+      "Grab it and you'll be protected for a short time.",
+      "Hits bounce off while the shield is up — very handy."
     ],
     powerup: [
       "Now THAT is something you want. Power-up ahead!",
@@ -209,7 +215,8 @@
       powerup: { key: "cloud", label: "POWER-UP" },
       rings: { key: null, label: "GOLD RING" },
       altitude: { key: null, label: "ALTITUDE" },
-      landing: { key: "landing_field", label: "LANDING" }
+      landing: { key: "landing_field", label: "LANDING" },
+      shield: { key: "shieldPickup", label: "SHIELD" }
     };
     const info = map[kind];
     if (!info) { el.classList.remove("visible"); return; }
@@ -792,7 +799,6 @@
     if (!ruffActive) return;
     drawMarkers();
     drawCrystals();
-    drawPowerOrb();
     drawSparkles();
     drawRuffCompanion();
   }

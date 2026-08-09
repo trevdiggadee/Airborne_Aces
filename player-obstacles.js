@@ -820,7 +820,7 @@
   const SHIELD_DURATION_MS = 6000;
 
   function spawnShieldPickup() {
-    if (window.__airborneAirfield) return; // no shield in training yet
+    if (window.__airborneAirfield && !window.__airborneAirfieldAllowShield) return;
     const img = images.shieldPickup;
     const aspect = img && img.naturalWidth ? img.naturalHeight / img.naturalWidth : 1;
     const dispW = Math.min(48, W * 0.11);
@@ -846,9 +846,15 @@
       shieldActive = false;
     }
 
-    if (bossActive || bonusActive) return; // shield only spawns during normal flight
+    if ((bossActive || bonusActive) && !window.__airborneAirfield) return;
 
-    if (window.__airborneAirfield) { shieldPickup = null; return; }
+    if (window.__airborneAirfield && !window.__airborneAirfieldAllowShield) {
+      // Keep existing training-spawned shield moving; don't auto-clear mid-lesson
+      if (window.__airborneRuffStage !== "shield" && window.__airborneRuffStage !== "combined") {
+        shieldPickup = null;
+        return;
+      }
+    }
     if (!shieldPickup) {
       shieldSpawnTimer -= dt;
       if (shieldSpawnTimer <= 0) {

@@ -200,18 +200,18 @@
   }
 
   function ensureAirfieldStripVisible() {
-    // Landing field art — approaches from the right like a normal level pad
+    // Landing field — approaches from right; runway section ends under player
     airfieldUseLandingArt = true;
     airfieldStripGone = false;
-    airfieldStripY = 0;
+    airfieldStripY = H * 0.35; // start slightly low, rise up
     const img = (typeof images !== "undefined" && images)
       ? (images.landing_field || images.airfield_strip)
       : null;
-    const aspect = (img && img.naturalWidth && img.naturalHeight) ? (img.naturalWidth / img.naturalHeight) : 4.5;
-    let h = Math.max(55, Math.min(H * 0.4, H * 0.48)) * 1.07;
-    let w = Math.max(140, h * aspect);
-    // Start off-screen right so it scrolls in for approach
-    const startX = W * 0.55;
+    const aspect = (img && img.naturalWidth && img.naturalHeight) ? (img.naturalWidth / img.naturalHeight) : 5.3;
+    // Fit height so strip is clearly on screen
+    let h = Math.max(70, Math.min(H * 0.36, 160));
+    let w = h * aspect;
+    const startX = W * 0.4;
     airfieldTiles = [{ x: startX, w: w, h: h, startX: startX }];
   }
 
@@ -444,7 +444,7 @@
         window.__airborneAirfieldObstacles = !!L0.obstacles;
         if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 210;
         const sm = document.getElementById("stormMeter");
-        if (sm) sm.style.visibility = "";
+        if (sm) sm.style.visibility = window.__airborneAirfieldAllowPowerup ? "" : "hidden";
         airfieldTip = "You're flying!";
         window.__airborneAirfieldPaused = false;
         window.__airborneAirfieldInvuln = false;
@@ -475,7 +475,7 @@
         window.__airborneAirfieldInvuln = false;
         if (typeof obstacleSpeed !== "undefined") obstacleSpeed = Math.max(210, obstacleSpeed || 210);
         const sm = document.getElementById("stormMeter");
-        if (sm) sm.style.visibility = "";
+        if (sm) sm.style.visibility = window.__airborneAirfieldAllowPowerup ? "" : "hidden";
         if (typeof spawnInterval !== "undefined") {
           const needSpawn = window.__airborneAirfieldRings || window.__airborneAirfieldObstacles;
           spawnInterval = needSpawn ? 1.9 : 999;
@@ -574,8 +574,8 @@
       const approachSpd = 130;
       (airfieldTiles || []).forEach(function(tile) {
         if (!tile) return;
-        // Stop near start of runway graphic (not center of full panorama)
-        const targetX = W * 0.02 - (tile.w || 0) * 0.42;
+        // Stop so the runway (right portion of art) sits under the blimp
+        const targetX = W * 0.15 - (tile.w || 0) * 0.55;
         if (tile.x > targetX) {
           tile.x -= approachSpd * dt;
           if (tile.x < targetX) tile.x = targetX;
@@ -585,21 +585,22 @@
       window.__airborneAirfieldPaused = false;
       window.__airborneAirfieldInvuln = true;
       const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 80;
-      // Deck sits on the painted runway near bottom of graphic
-      const surfaceY = H - Math.max(36, th * 0.22);
+      // Match drawAirfieldStrip: y = H - th + sink, runway near top of that tile
+      const sink = (typeof airfieldStripY === "number") ? airfieldStripY : 0;
+      const stripTop = H - th + sink;
+      const surfaceY = stripTop + th * 0.55; // asphalt band mid-tile
       if (typeof player !== "undefined" && player) {
         const ph = player.h > 0 ? player.h : 40;
-        const landY = surfaceY - ph * 0.15;
-        player.vy += 1100 * dt;
-        if (player.vy > 500) player.vy = 500;
+        const landY = surfaceY - ph * 0.25;
+        player.vy += 1000 * dt;
+        if (player.vy > 480) player.vy = 480;
         player.y += player.vy * dt;
         player.x = W * 0.28;
         if (player.y < ph * 0.4) { player.y = ph * 0.4; player.vy = Math.min(0, player.vy); }
         player.rotation = Math.max(-0.3, Math.min(0.35, player.vy / 450));
 
-        // Touchdown: any time player reaches runway band after field has risen some
-        const fieldReady = airfieldLandT > 1.2;
-        if (fieldReady && player.y >= landY - 24) {
+        const fieldReady = airfieldLandT > 0.8 && sink < H * 0.2;
+        if (fieldReady && player.y >= landY - 30) {
           player.y = landY;
           player.vy = 0;
           player.rotation = 0;
@@ -609,7 +610,7 @@
             if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
             if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
           } catch (e) {}
-        } else if (airfieldLandT > 10) {
+        } else if (airfieldLandT > 11) {
           player.y = landY;
           player.vy = 0;
           player.rotation = 0;
@@ -715,37 +716,8 @@
   }
 
   function drawAirfieldTip() {
-    if (!airfieldMode) return;
-
-    if (airfieldPhase === "score") {
-      const panelW = Math.min(300, W * 0.78);
-      const panelH = 120;
-      const x = (W - panelW) / 2;
-      const y = H * 0.28;
-      ctx.save();
-      ctx.globalAlpha = 0.92;
-      ctx.fillStyle = "rgba(18, 28, 42, 0.82)";
-      roundRectPath(ctx, x, y, panelW, panelH, 12);
-      ctx.fill();
-      ctx.strokeStyle = "rgba(212, 175, 55, 0.85)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-      ctx.textAlign = "center";
-      ctx.fillStyle = "#f5e6c8";
-      ctx.font = "bold 16px 'Rockwell', Georgia, serif";
-      ctx.fillText("TRAINING COMPLETE", W / 2, y + 36);
-      ctx.font = "14px 'Rockwell', Georgia, serif";
-      const sc = (typeof score !== "undefined") ? score : 0;
-      ctx.fillText("Score: " + sc, W / 2, y + 64);
-      ctx.font = "12px 'Rockwell', Georgia, serif";
-      ctx.fillStyle = "rgba(245,230,200,0.8)";
-      ctx.fillText("Returning to map…", W / 2, y + 92);
-      ctx.restore();
-      return;
-    }
-
-    // Training tip box removed — R.U.F.F. radio handles instructions
+    // Training tip box removed — R.U.F.F. radio handles guidance
+    return;
   }
 
   function roundRectPath(ctx, x, y, w, h, r) {

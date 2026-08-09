@@ -283,24 +283,20 @@
 
   function drawMountainParallax() {
     const img = (typeof images !== "undefined") ? images.parallax_mountains : null;
-    if (!img || !img.naturalWidth || !img.naturalHeight) return;
+    if (!img || !img.complete || !img.naturalWidth || !img.naturalHeight) return;
     mountainReady = true;
     const aspect = img.naturalHeight / img.naturalWidth;
-    // Width ~ screen; height from aspect, boosted so we can crop bottom
-    const tileW = Math.max(W * 1.15, 400);
-    const tileH = tileW * aspect * 1.3;
-    // Bottom of mountains at bottom of screen — lower graphic hangs below H
-    const y = H - tileH * 0.62;
-    // Independent scroll (not tied to airfield strip)
-    let spd = 40;
-    if (typeof obstacleSpeed === "number" && obstacleSpeed > 30) spd = Math.max(35, obstacleSpeed * 0.18);
-    // Only advance when called from update — draw uses current mountainScrollX
-    if (!drawMountainParallax._tiles) {
+    // ~half screen tall; bottom of range at bottom of canvas
+    const tileH = Math.max(H * 0.50, 160);
+    const tileW = tileH / aspect;
+    const y = H - tileH * 0.92;
+    if (!drawMountainParallax._tiles || drawMountainParallax._tileW !== tileW) {
       drawMountainParallax._tiles = [];
-      let x = -20;
+      drawMountainParallax._tileW = tileW;
+      let x = -10;
       while (x < W + tileW * 2) {
         drawMountainParallax._tiles.push(x);
-        x += tileW - 2;
+        x += tileW - 1;
       }
     }
     const tiles = drawMountainParallax._tiles;
@@ -316,26 +312,26 @@
     const img = (typeof images !== "undefined") ? images.parallax_mountains : null;
     if (!img || !img.naturalWidth) return;
     const aspect = img.naturalHeight / img.naturalWidth;
-    const tileW = Math.max(W * 1.15, 400);
-    let spd = 40;
-    if (typeof obstacleSpeed === "number" && obstacleSpeed > 30) spd = Math.max(35, obstacleSpeed * 0.18);
+    const tileH = Math.max(H * 0.50, 160);
+    const tileW = tileH / aspect;
+    let spd = 50;
+    if (typeof obstacleSpeed === "number" && obstacleSpeed > 30) spd = Math.max(40, obstacleSpeed * 0.2);
     if (typeof worldScrollFrozen === "function" && worldScrollFrozen()) spd = 0;
-    if (!drawMountainParallax._tiles) {
+    if (!drawMountainParallax._tiles || drawMountainParallax._tileW !== tileW) {
       drawMountainParallax._tiles = [];
-      let x = -20;
+      drawMountainParallax._tileW = tileW;
+      let x = -10;
       while (x < W + tileW * 2) {
         drawMountainParallax._tiles.push(x);
-        x += tileW - 2;
+        x += tileW - 1;
       }
     }
     const tiles = drawMountainParallax._tiles;
-    for (let i = 0; i < tiles.length; i++) tiles[i] -= spd * (dtScale || 1) * 0.22;
-    while (tiles.length && tiles[0] + tileW < -40) {
-      tiles.shift();
-    }
+    for (let i = 0; i < tiles.length; i++) tiles[i] -= spd * (dtScale || 1) * 0.2;
+    while (tiles.length && tiles[0] + tileW < -40) tiles.shift();
     while (tiles.length < 3) {
       const last = tiles.length ? tiles[tiles.length - 1] : 0;
-      tiles.push(last + tileW - 2);
+      tiles.push(last + tileW - 1);
     }
   }
 
