@@ -44,6 +44,7 @@
   let ruffSparkles = [];
   let ruffIntroFly = false;
   let ruffIntroFlyT = 0;
+  let ruffIntroLineArmed = false;
   let ruffPowerOrb = null;
 
   // Stage order
@@ -568,6 +569,7 @@
   // ---------- Companion ----------
   function updateRuffCompanion(dt) {
     if (!ruffActive) return;
+    try {
     ruffBob += dt * 2.2;
     ruffFrameT += dt;
     if (ruffFrameT > 1 / 12) {
@@ -609,6 +611,7 @@
     ruffTilt = Math.sin(ruffBob * 1.3) * 0.12 + Math.sin(ruffBob * 0.5) * 0.04;
     ruffScalePulse = 1 + Math.sin(ruffBob * 2.1) * 0.03;
     if (ruffSpeakClose > 0) ruffSpeakClose = Math.max(0, ruffSpeakClose - dt * 0.5);
+    } catch (e) { console.warn("updateRuffCompanion", e); }
   }
 
   function drawRuffCompanion() {
