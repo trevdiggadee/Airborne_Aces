@@ -176,10 +176,8 @@
     window.__airborneAirfield = !!airfieldMode;
     window.__airborneAirfieldPhase = airfieldPhase;
     window.__airborneAirfieldPaused = !!window.__airborneAirfieldPaused;
-    window.__airborneAirfieldPreLift = !!(airfieldMode && (
-      airfieldPhase === "taxi" || airfieldPhase === "accel" ||
-      window.__airborneRuffStage === "intro"
-    ));
+    // Only freeze parallax during intro — runway drive should scroll the world
+    window.__airborneAirfieldPreLift = !!(airfieldMode && window.__airborneRuffStage === "intro");
   }
 
   window.__airborneAirfieldBoost = function () {
@@ -290,9 +288,15 @@
     window.__airborneRuffStage = "intro";
     window.__airborneRuffActive = true;
     if (typeof window.__airborneBeginRuff === "function") {
-      try { window.__airborneBeginRuff(); } catch (e) { console.warn("R.U.F.F.", e); }
+      try {
+        window.__airborneBeginRuff();
+        console.log("[Airborne] Ruff started", window.__airborneRuffActive, window.__airborneRuffStage);
+      } catch (e) {
+        console.warn("[Airborne] R.U.F.F. error", e);
+      }
+    } else {
+      console.error("[Airborne] __airborneBeginRuff missing — is ruff-tutorial.js loaded?");
     }
-    // Final pin
     syncAirfieldGlobals();
   }
 
@@ -1327,7 +1331,7 @@
   function updateClouds(dtScale) {
     // Freeze clouds after touchdown OR before liftoff in training
     if (worldScrollFrozen()) return;
-    if (window.__airborneAirfieldPreLift || (window.__airborneRuffStage === "intro")) return;
+    if (window.__airborneRuffStage === "intro") return;
     const img = images.cloud;
     const baseW = (img && img.naturalWidth) ? img.naturalWidth : 256;
     clouds.forEach(c => {
@@ -1391,7 +1395,7 @@
   }
 
   function updateBirdFlocks(dt) {
-    if (window.__airborneAirfieldPreLift || window.__airborneRuffStage === "intro") return;
+    if (window.__airborneRuffStage === "intro") return;
     if (worldScrollFrozen()) return;
     birdFlockTimer -= dt;
     if (birdFlockTimer <= 0) {

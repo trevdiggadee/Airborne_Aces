@@ -301,13 +301,15 @@
     if (name === "intro") {
       ruffIntroFly = true;
       ruffIntroFlyT = 0;
-      ruffX = (typeof W !== "undefined" ? W : 400) + 160;
-      ruffY = (typeof H !== "undefined" ? H : 600) * 0.14;
+      // Start just off right edge so first frames are almost visible
+      ruffX = (typeof W !== "undefined" ? W : 400) * 0.92;
+      ruffY = (typeof H !== "undefined" ? H : 600) * 0.22;
       ruffLineIdx = 0;
       ruffLineT = 0;
       ruffLineDuration = 3.5;
-      ruffSpeechDone = true; // don't block on speech API
+      ruffSpeechDone = true;
       ruffIntroLineArmed = false;
+      ruffScalePulse = 1.15;
     } else if (name === "takeoff") {
       ruffIntroFly = false;
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
@@ -576,18 +578,17 @@
     // Dramatic intro fly-in from upper-right
     if (ruffIntroFly && ruffStage === "intro") {
       ruffIntroFlyT += dt;
-      // Fly all the way to the LEFT so dialog (bottom/right) never covers him
-      const destX = (typeof W !== "undefined" ? W : 400) * 0.16;
-      const destY = (typeof H !== "undefined" ? H : 600) * 0.30;
-      const k = Math.min(1, ruffIntroFlyT / 1.8);
+      const destX = (typeof W !== "undefined" ? W : 400) * 0.18;
+      const destY = (typeof H !== "undefined" ? H : 600) * 0.28;
+      const k = Math.min(1, ruffIntroFlyT / 1.6);
       const ease = 1 - Math.pow(1 - k, 3);
-      const startX = (typeof W !== "undefined" ? W : 400) + 160;
-      const startY = (typeof H !== "undefined" ? H : 600) * 0.14;
+      const startX = (typeof W !== "undefined" ? W : 400) * 0.95;
+      const startY = (typeof H !== "undefined" ? H : 600) * 0.18;
       ruffX = startX + (destX - startX) * ease;
       ruffY = startY + (destY - startY) * ease + Math.sin(ruffIntroFlyT * 4) * 6 * (1 - ease);
-      ruffTilt = -0.3 * (1 - ease) + Math.sin(ruffBob * 1.3) * 0.08;
-      ruffScalePulse = 1 + (1 - ease) * 0.18 + Math.sin(ruffBob * 2.1) * 0.03;
-      if (!ruffIntroLineArmed && ruffIntroFlyT > 1.0 && ruffLines.length) {
+      ruffTilt = -0.25 * (1 - ease) + Math.sin(ruffBob * 1.3) * 0.08;
+      ruffScalePulse = 1.05 + (1 - ease) * 0.2 + Math.sin(ruffBob * 2.1) * 0.03;
+      if (!ruffIntroLineArmed && ruffIntroFlyT > 0.7 && ruffLines.length) {
         ruffIntroLineArmed = true;
         ruffLineIdx = 0;
         ruffLineT = 0;
@@ -615,30 +616,52 @@
   function drawRuffCompanion() {
     if (!ruffActive || typeof ctx === "undefined") return;
     if (ruffStage === "report") return;
-    const key = "ruff_" + String(ruffFrame + 1).padStart(2, "0");
-    const img = (typeof images !== "undefined") ? images[key] : null;
-    const size = Math.max(84, (typeof player !== "undefined" && player ? player.h * 1.65 : 96));
+    // Clamp on-screen so he never vanishes off the side
+    const maxX = (typeof W !== "undefined" ? W : 400) - 20;
+    const maxY = (typeof H !== "undefined" ? H : 600) - 20;
+    let dx = ruffX, dy = ruffY;
+    if (!(dx > 0) || !isFinite(dx)) dx = (typeof W !== "undefined" ? W : 400) * 0.2;
+    if (!(dy > 0) || !isFinite(dy)) dy = (typeof H !== "undefined" ? H : 600) * 0.3;
+    dx = Math.max(20, Math.min(maxX, dx));
+    dy = Math.max(20, Math.min(maxY, dy));
+
+    const idx = ((ruffFrame | 0) % RUFF_FRAME_COUNT) + 1;
+    const key = "ruff_" + String(idx).padStart(2, "0");
+    let img = (typeof images !== "undefined") ? images[key] : null;
+    if (!img || !img.naturalWidth) {
+      // fallback any loaded ruff frame
+      for (let i = 1; i <= RUFF_FRAME_COUNT; i++) {
+        const k2 = "ruff_" + String(i).padStart(2, "0");
+        if (images && images[k2] && images[k2].naturalWidth) { img = images[k2]; break; }
+      }
+    }
+    const size = Math.max(100, (typeof player !== "undefined" && player ? player.h * 1.85 : 110));
     const sc = size * (ruffScalePulse || 1);
     ctx.save();
-    ctx.translate(ruffX, ruffY);
+    ctx.translate(dx, dy);
     ctx.rotate(ruffTilt || 0);
-    // Soft motion trail / glow
-    ctx.globalAlpha = 0.2;
-    ctx.fillStyle = "rgba(212,175,55,0.5)";
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = "rgba(212,175,55,0.55)";
     ctx.beginPath();
-    ctx.arc(-6, 4, sc * 0.28, 0, Math.PI * 2);
+    ctx.arc(-6, 4, sc * 0.3, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
     if (img && img.naturalWidth) {
       ctx.drawImage(img, -sc / 2, -sc / 2, sc, sc);
     } else {
-      ctx.fillStyle = "#b08d3a";
-      ctx.strokeStyle = "#5a4010";
-      ctx.lineWidth = 2;
+      // Visible brass robot placeholder if assets not loaded yet
+      ctx.fillStyle = "#c4a35a";
+      ctx.strokeStyle = "#4a3210";
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(0, 0, sc * 0.4, 0, Math.PI * 2);
+      ctx.arc(0, 0, sc * 0.42, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
+      ctx.fillStyle = "#2a1a08";
+      ctx.font = "bold " + Math.floor(sc * 0.18) + "px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("R.U.F.F.", 0, 0);
     }
     ctx.restore();
   }
@@ -693,7 +716,10 @@
   function beginRuffTraining() {
     ruffActive = true;
     window.__airborneRuffActive = true;
+    window.__airborneRuffStage = "intro";
     console.log("[R.U.F.F.] beginRuffTraining");
+    ruffX = (typeof W !== "undefined" ? W : 400) * 0.9;
+    ruffY = (typeof H !== "undefined" ? H : 600) * 0.25;
     window.__airborneAirfieldAllowPowerup = false;
     if (typeof powerup !== "undefined") powerup = null;
     if (typeof shieldPickup !== "undefined") shieldPickup = null;
