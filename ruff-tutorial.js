@@ -692,81 +692,70 @@
       }
     }
 
-    // Stage logic
+    // Stage logic — every stage has a hard timeout so training never freezes
     if (ruffStage === "takeoff") {
-      // Progress when airfield reaches climb or lesson
       const ph = window.__airborneAirfieldPhase;
-      if (ph === "climb" && ruffLineIdx === 0) {
-        // celebrate lift
-      }
       if (ph === "lesson" || ph === "climb") {
-        if (ruffStageT > 1.2 && ruffLineIdx >= 1) {
-          // after some climb time, move on once lines done or forced
-        }
-        if (ph === "lesson") {
-          showRadio("Easy does it. You're flying now.", 2.4);
+        if (ph === "lesson" || ruffStageT > 6) {
           nextStage();
         }
+      } else if (ruffStageT > 12) {
+        nextStage();
       }
     } else if (ruffStage === "altitude") {
       ruffCrystals = [];
       if (typeof obstacles !== "undefined") obstacles = [];
       updateMarkers(dt);
-      if (ruffStageT > 12 && ruffMarkers.length === 0) {
-        showRadio("Good control.", 2.4);
-        nextStage();
-      } else if (ruffStageT > 22) {
-        nextStage();
-      }
+      if (ruffStageT > 10) nextStage();
     } else if (ruffStage === "crystals") {
       if (typeof obstacles !== "undefined") obstacles = [];
       if (typeof powerup !== "undefined") powerup = null;
-      if (typeof healPickup !== "undefined") healPickup = null;
-      if (typeof shieldPickup !== "undefined") shieldPickup = null;
       updateCrystals(dt);
-      // Keep spawning until goal met, then wait for remaining to leave screen
       if (ruffStats.crystals < 3 && ruffCrystals.length < 2) spawnCrystals(3);
-      const crystalsDone = ruffStats.crystals >= 3 && ruffCrystals.length === 0;
-      if (crystalsDone && ruffStageT > 5) {
-        showRadio("Crystals increase your score. Keep your eyes open.", 3.0);
-        nextStage();
-      } else if (ruffStageT > 45 && ruffCrystals.length === 0) {
+      if ((ruffStats.crystals >= 3 && ruffCrystals.length === 0 && ruffStageT > 4) || ruffStageT > 20) {
+        if (typeof obstacles !== "undefined") obstacles = [];
+        ruffCrystals = [];
         nextStage();
       }
     } else if (ruffStage === "obstacles") {
       ruffCrystals = [];
       if (typeof powerup !== "undefined") powerup = null;
-      if (typeof shieldPickup !== "undefined") shieldPickup = null;
-      // Practice window, then stop spawning so the sky can clear
-      if (ruffStageT > 10) {
+      if (ruffStageT > 8) {
         window.__airborneAirfieldObstacles = false;
         if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       }
       const obsCount = (typeof obstacles !== "undefined" && obstacles) ? obstacles.length : 0;
-      if (ruffStageT > 12 && obsCount === 0) {
-        showRadio("Excellent. Avoid those and you keep your hearts.", 3.0);
-        ruffStats.obstaclesAvoided += 3;
-        nextStage();
-      } else if (ruffStageT > 18) {
-        // Force advance — clear leftover birds so next lesson is clean
+      if ((ruffStageT > 10 && obsCount === 0) || ruffStageT > 16) {
         if (typeof obstacles !== "undefined") obstacles = [];
-        ruffStats.obstaclesAvoided += 3;
+        ruffStats.obstaclesAvoided += 2;
+        nextStage();
+      }
+    } else if (ruffStage === "shield") {
+      ruffCrystals = [];
+      if (typeof obstacles !== "undefined") obstacles = [];
+      window.__airborneAirfieldAllowShield = true;
+      if ((typeof shieldPickup === "undefined" || !shieldPickup || shieldPickup.x < -50) && ruffStageT < 10) {
+        shieldPickup = {
+          x: (typeof W !== "undefined" ? W : 400) + 40,
+          y: (typeof H !== "undefined" ? H : 600) * 0.4,
+          w: 44, h: 44, speed: 150, bobPhase: 0
+        };
+      }
+      if ((typeof shieldActive !== "undefined" && shieldActive && ruffStageT > 1.5) || ruffStageT > 12) {
         nextStage();
       }
     } else if (ruffStage === "powerup") {
       ruffCrystals = [];
       if (typeof obstacles !== "undefined") obstacles = [];
       if (typeof powerup !== "undefined") powerup = null;
-      // Keep meter full until they tap it (or timeout)
-      if (!stormActive && typeof STORM_MAX === "number") {
+      window.__airborneAirfieldAllowPowerup = true;
+      const sm = document.getElementById("stormMeter");
+      if (sm) sm.style.visibility = "";
+      if (typeof stormCharge === "number" && typeof STORM_MAX === "number" && !stormActive) {
         stormCharge = STORM_MAX;
+        if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay();
       }
-      if (stormActive && !ruffStats._powerUsed) {
-        ruffStats._powerUsed = true;
-        ruffStats.powerups++;
-        showRadio("That's your ship power — clear the sky!", 3.0);
-      }
-      if ((ruffStats._powerUsed && ruffStageT > 6) || ruffStageT > 20) {
+      if ((typeof stormActive !== "undefined" && stormActive && ruffStageT > 2) || ruffStageT > 14) {
         nextStage();
       }
     } else if (ruffStage === "rings") {
@@ -776,30 +765,36 @@
         ruffStats.rings = window.__airborneRingCollects;
         if (ruffStats.rings > ruffStats.bestCombo) ruffStats.bestCombo = ruffStats.rings;
       }
+      if (ruffStageT > 10) {
+        window.__airborneAirfieldRings = false;
+        if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      }
       const ringLeft = (typeof obstacles !== "undefined" && obstacles)
-        ? obstacles.filter(function(o){ return o && (o.isRing || o.type === "gold_ring") && !o.collected; }).length
+        ? obstacles.filter(function (o) { return o && (o.isRing || o.type === "gold_ring") && !o.collected; }).length
         : 0;
-      if (ruffStats.rings >= 6 && ringLeft === 0 && ruffStageT > 8) {
-        showRadio("That's a combo. Keep the chain going!", 3.0);
-        nextStage();
-      } else if (ruffStageT > 35 && ringLeft === 0) {
+      if ((ruffStats.rings >= 4 && ringLeft === 0 && ruffStageT > 6) || ruffStageT > 18) {
+        if (typeof obstacles !== "undefined") obstacles = [];
         nextStage();
       }
     } else if (ruffStage === "combined") {
       updateCrystals(dt);
-      if (ruffCrystals.length < 1 && ruffStageT > 5) spawnCrystals(2);
-      if (ruffStageT > 20) {
-        showRadio("Alright, pilot. Time to bring her home.", 3.2);
+      if (ruffCrystals.length < 1 && ruffStageT > 3) spawnCrystals(2);
+      if (ruffStageT > 16) {
+        ruffCrystals = [];
+        if (typeof obstacles !== "undefined") obstacles = [];
         nextStage();
       }
     } else if (ruffStage === "landing") {
       window.__airborneRuffRequestLand = true;
       const ph = window.__airborneAirfieldPhase;
-      if (ph === "score" || ph === "done") {
+      if (ph === "score" || ph === "done" || ruffStageT > 16) {
         nextStage();
       }
-      // also timeout to report if land finishes
-      if (ruffStageT > 20) nextStage();
+    } else if (ruffStage === "report") {
+      // report UI handles exit
+    } else if (ruffStageT > 25) {
+      // Unknown stage safety
+      nextStage();
     }
   }
 
