@@ -313,6 +313,15 @@
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
       ruffWaitingInput = true;
       window.__airborneAirfieldPaused = false;
+      // Reset runway drive so intro duration doesn't auto-liftoff
+      try {
+        if (typeof airfieldDriveDist !== "undefined") airfieldDriveDist = 0;
+        if (typeof airfieldPhaseT !== "undefined") airfieldPhaseT = 0;
+        if (typeof airfieldTakeoffSpeed !== "undefined") airfieldTakeoffSpeed = 50;
+        if (typeof airfieldPhase !== "undefined") airfieldPhase = "taxi";
+      } catch (e) {}
+      window.__airborneAirfieldPhase = "taxi";
+      window.__airborneResetRunway = true;
       try {
         if (typeof sfxAirfieldEngineStart === "function") sfxAirfieldEngineStart();
         if (typeof sfxAirfieldWindStart === "function") sfxAirfieldWindStart();

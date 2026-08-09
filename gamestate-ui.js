@@ -389,11 +389,20 @@
     if (mapLvl && mapLvl >= 2) {
       applyMapLevelProgress(mapLvl);
     } else {
-      // Pre–Level-1 airfield training (takeoff + mechanics)
-      if (typeof beginAirfieldTraining === "function") {
-        beginAirfieldTraining();
-        // no AIRFIELD TRAINING banner — R.U.F.F. handles intro
+      // Pre–Level-1 airfield training
+      const startTrain = window.beginAirfieldTraining || (typeof beginAirfieldTraining === "function" ? beginAirfieldTraining : null);
+      if (startTrain) {
+        startTrain();
+        if (typeof player !== "undefined" && player && typeof groundLevelY === "function") {
+          const gy = groundLevelY();
+          const ph = player.h > 0 ? player.h : 40;
+          player.y = gy - ph * 0.15;
+          player.x = W * 0.25;
+          player.vy = 0;
+          player.rotation = 0;
+        }
       } else {
+        console.warn("beginAirfieldTraining missing");
         showBanner("LEVEL 1", 2000, "level");
       }
     }
