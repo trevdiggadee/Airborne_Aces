@@ -326,7 +326,7 @@
     // Independent slow scroll — frozen before liftoff / intro
     let mSpeed = 0.18;
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) mSpeed = 0;
-    if (window.__airborneAirfieldPreLift || window.__airborneRuffStage === "intro") mSpeed = 0;
+    if (window.__airborneRuffStage === "intro") mSpeed = 0;
     if (!drawMountainParallax._tiles || drawMountainParallax._tileW !== tileW) {
       drawMountainParallax._tiles = [];
       drawMountainParallax._tileW = tileW;

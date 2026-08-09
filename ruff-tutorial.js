@@ -42,6 +42,9 @@
   let ruffSkipAll = false;
   let ruffIntroDone = false;
   let ruffSparkles = [];
+  let ruffIntroFly = false;
+  let ruffIntroFlyT = 0;
+  let ruffIntroLineArmed = false;
   let ruffPowerOrb = null;
 
   // Stage order
@@ -281,13 +284,51 @@
     if (!window.__airborneAirfieldAllowPowerup && typeof powerup !== "undefined") powerup = null;
     if (name !== "powerup") ruffPowerOrb = null;
     if (typeof powerup !== "undefined" && name !== "powerup" && name !== "combined") powerup = null;
+    const smGate = document.getElementById("stormMeter");
+    if (smGate) {
+      if (window.__airborneAirfieldAllowPowerup) {
+        smGate.style.display = "";
+        smGate.style.visibility = "";
+        smGate.classList.remove("trainingHidden");
+      } else {
+        smGate.style.display = "none";
+        smGate.style.visibility = "hidden";
+        smGate.classList.add("trainingHidden");
+      }
+    }
     syncStageFlags();
 
     if (name === "intro") {
-      if (ruffLines.length) showRadio(ruffLines[0], 4.5);
+      ruffIntroFly = true;
+      ruffIntroFlyT = 0;
+      // Start just off right edge so first frames are almost visible
+      ruffX = (typeof W !== "undefined" ? W : 400) * 0.92;
+      ruffY = (typeof H !== "undefined" ? H : 600) * 0.22;
+      ruffLineIdx = 0;
+      ruffLineT = 0;
+      ruffLineDuration = 3.5;
+      ruffSpeechDone = true;
+      ruffIntroLineArmed = false;
+      ruffScalePulse = 1.15;
     } else if (name === "takeoff") {
+      ruffIntroFly = false;
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
       ruffWaitingInput = true;
+      window.__airborneAirfieldPaused = false;
+      window.__airborneResetRunway = true;
+      // Reset runway drive so intro duration doesn't auto-liftoff
+      try {
+        if (typeof airfieldDriveDist !== "undefined") airfieldDriveDist = 0;
+        if (typeof airfieldPhaseT !== "undefined") airfieldPhaseT = 0;
+        if (typeof airfieldTakeoffSpeed !== "undefined") airfieldTakeoffSpeed = 50;
+        if (typeof airfieldPhase !== "undefined") airfieldPhase = "taxi";
+      } catch (e) {}
+      window.__airborneAirfieldPhase = "taxi";
+      window.__airborneResetRunway = true;
+      try {
+        if (typeof sfxAirfieldEngineStart === "function") sfxAirfieldEngineStart();
+        if (typeof sfxAirfieldWindStart === "function") sfxAirfieldWindStart();
+      } catch (e) {}
     } else if (name === "altitude") {
       if (ruffLines.length) showRadio(ruffLines[0], 3.0);
       spawnAltitudeMarkers();
@@ -337,29 +378,16 @@
   }
 
   function syncStageFlags() {
-    // Keep flight speed alive so nothing freezes on screen
-    if (typeof obstacleSpeed !== "undefined") {
-      obstacleSpeed = Math.max(obstacleSpeed || 0, 200);
-    }
-    window.__airborneAirfieldPaused = false;
-
-    // Early stages: no obstacles/rings; only hearts (and later crystals via R.U.F.F.)
-    if (ruffStage === "intro" || ruffStage === "takeoff" || ruffStage === "altitude") {
-      window.__airborneAirfieldObstacles = false;
-      window.__airborneAirfieldRings = false;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-      // Clear any frozen powerups / bombs sitting on screen
-      if (typeof powerup !== "undefined") powerup = null;
-      if (typeof obstacles !== "undefined" && obstacles) {
-        obstacles = obstacles.filter(function (o) {
-          return o && (o.type === "heart" || o.isHeart);
-        });
-      }
-    } else if (ruffStage === "crystals") {
+    // Do NOT force obstacleSpeed or unpause during intro/runway
+    if (ruffStage === "intro" || ruffStage === "takeoff") {
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       if (typeof powerup !== "undefined") powerup = null;
+    } else if (ruffStage === "altitude" || ruffStage === "crystals") {
+      window.__airborneAirfieldObstacles = false;
+      window.__airborneAirfieldRings = false;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
     }
   }
 
@@ -540,11 +568,34 @@
   // ---------- Companion ----------
   function updateRuffCompanion(dt) {
     if (!ruffActive) return;
+    try {
     ruffBob += dt * 2.2;
     ruffFrameT += dt;
     if (ruffFrameT > 1 / 12) {
       ruffFrameT = 0;
       ruffFrame = (ruffFrame + 1) % RUFF_FRAME_COUNT;
+    }
+    // Dramatic intro fly-in from upper-right
+    if (ruffIntroFly && ruffStage === "intro") {
+      ruffIntroFlyT += dt;
+      const destX = (typeof W !== "undefined" ? W : 400) * 0.18;
+      const destY = (typeof H !== "undefined" ? H : 600) * 0.28;
+      const k = Math.min(1, ruffIntroFlyT / 1.6);
+      const ease = 1 - Math.pow(1 - k, 3);
+      const startX = (typeof W !== "undefined" ? W : 400) * 0.95;
+      const startY = (typeof H !== "undefined" ? H : 600) * 0.18;
+      ruffX = startX + (destX - startX) * ease;
+      ruffY = startY + (destY - startY) * ease + Math.sin(ruffIntroFlyT * 4) * 6 * (1 - ease);
+      ruffTilt = -0.25 * (1 - ease) + Math.sin(ruffBob * 1.3) * 0.08;
+      ruffScalePulse = 1.05 + (1 - ease) * 0.2 + Math.sin(ruffBob * 2.1) * 0.03;
+      if (!ruffIntroLineArmed && ruffIntroFlyT > 0.7 && ruffLines.length) {
+        ruffIntroLineArmed = true;
+        ruffLineIdx = 0;
+        ruffLineT = 0;
+        ruffSpeechDone = true;
+        showRadio(ruffLines[0], 3.2);
+      }
+      return;
     }
     if (typeof player === "undefined" || !player) return;
     // Behind + above with clear gap so sprites never touch
@@ -559,35 +610,58 @@
     ruffTilt = Math.sin(ruffBob * 1.3) * 0.12 + Math.sin(ruffBob * 0.5) * 0.04;
     ruffScalePulse = 1 + Math.sin(ruffBob * 2.1) * 0.03;
     if (ruffSpeakClose > 0) ruffSpeakClose = Math.max(0, ruffSpeakClose - dt * 0.5);
+    } catch (e) { console.warn("updateRuffCompanion", e); }
   }
 
   function drawRuffCompanion() {
     if (!ruffActive || typeof ctx === "undefined") return;
     if (ruffStage === "report") return;
-    const key = "ruff_" + String(ruffFrame + 1).padStart(2, "0");
-    const img = (typeof images !== "undefined") ? images[key] : null;
-    const size = Math.max(84, (typeof player !== "undefined" && player ? player.h * 1.65 : 96));
+    // Clamp on-screen so he never vanishes off the side
+    const maxX = (typeof W !== "undefined" ? W : 400) - 20;
+    const maxY = (typeof H !== "undefined" ? H : 600) - 20;
+    let dx = ruffX, dy = ruffY;
+    if (!(dx > 0) || !isFinite(dx)) dx = (typeof W !== "undefined" ? W : 400) * 0.2;
+    if (!(dy > 0) || !isFinite(dy)) dy = (typeof H !== "undefined" ? H : 600) * 0.3;
+    dx = Math.max(20, Math.min(maxX, dx));
+    dy = Math.max(20, Math.min(maxY, dy));
+
+    const idx = ((ruffFrame | 0) % RUFF_FRAME_COUNT) + 1;
+    const key = "ruff_" + String(idx).padStart(2, "0");
+    let img = (typeof images !== "undefined") ? images[key] : null;
+    if (!img || !img.naturalWidth) {
+      // fallback any loaded ruff frame
+      for (let i = 1; i <= RUFF_FRAME_COUNT; i++) {
+        const k2 = "ruff_" + String(i).padStart(2, "0");
+        if (images && images[k2] && images[k2].naturalWidth) { img = images[k2]; break; }
+      }
+    }
+    const size = Math.max(100, (typeof player !== "undefined" && player ? player.h * 1.85 : 110));
     const sc = size * (ruffScalePulse || 1);
     ctx.save();
-    ctx.translate(ruffX, ruffY);
+    ctx.translate(dx, dy);
     ctx.rotate(ruffTilt || 0);
-    // Soft motion trail / glow
-    ctx.globalAlpha = 0.2;
-    ctx.fillStyle = "rgba(212,175,55,0.5)";
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = "rgba(212,175,55,0.55)";
     ctx.beginPath();
-    ctx.arc(-6, 4, sc * 0.28, 0, Math.PI * 2);
+    ctx.arc(-6, 4, sc * 0.3, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
     if (img && img.naturalWidth) {
       ctx.drawImage(img, -sc / 2, -sc / 2, sc, sc);
     } else {
-      ctx.fillStyle = "#b08d3a";
-      ctx.strokeStyle = "#5a4010";
-      ctx.lineWidth = 2;
+      // Visible brass robot placeholder if assets not loaded yet
+      ctx.fillStyle = "#c4a35a";
+      ctx.strokeStyle = "#4a3210";
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(0, 0, sc * 0.4, 0, Math.PI * 2);
+      ctx.arc(0, 0, sc * 0.42, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
+      ctx.fillStyle = "#2a1a08";
+      ctx.font = "bold " + Math.floor(sc * 0.18) + "px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("R.U.F.F.", 0, 0);
     }
     ctx.restore();
   }
@@ -642,12 +716,26 @@
   function beginRuffTraining() {
     ruffActive = true;
     window.__airborneRuffActive = true;
+    window.__airborneRuffStage = "intro";
+    console.log("[R.U.F.F.] beginRuffTraining active=", ruffActive);
+    // Visible start position (right side)
+    ruffX = (typeof W !== "undefined" ? W : 400) * 0.85;
+    ruffY = (typeof H !== "undefined" ? H : 600) * 0.28;
+    ruffIntroFly = true;
+    ruffIntroFlyT = 0;
+    ruffIntroLineArmed = false;
+    ruffScalePulse = 1.2;
+    ruffFrame = 0;
     window.__airborneAirfieldAllowPowerup = false;
     if (typeof powerup !== "undefined") powerup = null;
     if (typeof shieldPickup !== "undefined") shieldPickup = null;
     if (typeof stormCharge === "number") stormCharge = 0;
     const sm0 = document.getElementById("stormMeter");
-    if (sm0) sm0.style.visibility = ""; // icon always visible
+    if (sm0) {
+      sm0.style.visibility = "hidden";
+      sm0.style.display = "none";
+      sm0.classList.add("trainingHidden");
+    }
     if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay();
     ruffStats = { crystals: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, landingStars: 3 };
     ruffCrystals = [];
@@ -666,11 +754,29 @@
     if (!ruffActive) return;
     ruffStageT += dt;
     ruffLineT += dt;
-    // Never let training world freeze
-    if (typeof obstacleSpeed !== "undefined" && !(obstacleSpeed > 50)) {
-      obstacleSpeed = 210;
+    // Keep power icon suppressed until power lesson
+    if (!window.__airborneAirfieldAllowPowerup) {
+      const smx = document.getElementById("stormMeter");
+      if (smx) {
+        smx.style.display = "none";
+        smx.style.visibility = "hidden";
+        smx.classList.add("trainingHidden");
+      }
     }
-    window.__airborneAirfieldPaused = false;
+    // Do NOT force obstacleSpeed or unpause during intro/runway —
+    // airfield owns those. Only ensure cruise speed once airborne lessons run.
+    const afPh = window.__airborneAirfieldPhase;
+    if (afPh === "lesson" || afPh === "land" || afPh === "score") {
+      if (typeof obstacleSpeed !== "undefined" && !(obstacleSpeed > 50)) {
+        obstacleSpeed = 210;
+      }
+    }
+    // Only clear pause once intro is done and player is in takeoff+ stages
+    if (ruffStage !== "intro" && ruffStage !== "idle") {
+      if (afPh === "taxi" || afPh === "accel" || afPh === "climb" || afPh === "lesson") {
+        // allow airfield to manage pause; do not force true
+      }
+    }
     updateRuffCompanion(dt);
     updateSparkles(dt);
 
@@ -681,6 +787,7 @@
       if (done) {
         // Stage-specific after dialogue
         if (ruffStage === "intro") {
+          ruffIntroFly = false;
           nextStage(); // → takeoff
         } else if (ruffStage === "altitude" && ruffMarkers.length === 0) {
           nextStage();
@@ -692,20 +799,35 @@
       }
     }
 
+    // Intro: advance lines on a timer, then go to takeoff (must finish before drive)
+    if (ruffStage === "intro") {
+      if (ruffIntroLineArmed && ruffLineIdx < ruffLines.length &&
+          ruffLineT >= Math.max(2.8, ruffLineDuration || 3)) {
+        ruffLineIdx++;
+        ruffLineT = 0;
+        if (ruffLineIdx < ruffLines.length) {
+          showRadio(ruffLines[ruffLineIdx], 3.2);
+        }
+      }
+      if ((ruffIntroLineArmed && ruffLineIdx >= ruffLines.length && ruffLineT > 1.2) ||
+          ruffStageT > 16) {
+        ruffIntroFly = false;
+        nextStage(); // → takeoff — runway unlocks only after this
+        console.log("[R.U.F.F.] intro done → takeoff");
+      }
+    }
+
     // Stage logic — every stage has a hard timeout so training never freezes
     if (ruffStage === "takeoff") {
       const ph = window.__airborneAirfieldPhase;
-      if (ph === "lesson" || ph === "climb") {
-        if (ph === "lesson" || ruffStageT > 6) {
-          nextStage();
-        }
-      } else if (ruffStageT > 12) {
+      // Only advance after actual climb/lesson — never skip runway on a timer
+      if (ph === "lesson" || (ph === "climb" && ruffStageT > 3)) {
         nextStage();
       }
     } else if (ruffStage === "altitude") {
       ruffCrystals = [];
       if (typeof obstacles !== "undefined") obstacles = [];
-      updateMarkers(dt);
+      if (typeof updateMarkers === "function") updateMarkers(dt);
       if (ruffStageT > 10) nextStage();
     } else if (ruffStage === "crystals") {
       if (typeof obstacles !== "undefined") obstacles = [];
@@ -798,11 +920,9 @@
     } else if (ruffStage === "landing") {
       window.__airborneRuffRequestLand = true;
       const ph = window.__airborneAirfieldPhase;
-      // Only leave landing after a real touchdown (score phase) — not on a timer alone
       if (ph === "score" || ph === "done") {
         nextStage();
-      } else if (ruffStageT > 35) {
-        // absolute fallback
+      } else if (ruffStageT > 40) {
         nextStage();
       }
     } else if (ruffStage === "report") {
@@ -814,7 +934,10 @@
   }
 
   function drawRuff() {
-    if (!ruffActive) return;
+    if (!ruffActive) {
+      // still nothing to draw
+      return;
+    }
     drawMarkers();
     drawCrystals();
     drawSparkles();
@@ -879,6 +1002,12 @@
     }
   };
 
+  window.__airborneForceRuffAltitude = function() {
+    if (!ruffActive) return;
+    if (ruffStage === "intro" || ruffStage === "takeoff" || ruffStage === "idle") {
+      setStage("altitude");
+    }
+  };
   window.__airborneBeginRuff = beginRuffTraining;
   window.__airborneUpdateRuff = updateRuff;
   window.__airborneDrawRuff = drawRuff;

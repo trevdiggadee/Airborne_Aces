@@ -53,10 +53,7 @@
   }
 
   function flap() {
-    // Intro: ignore taps — wait for R.U.F.F. to finish
-    if (window.__airborneRuffActive && window.__airborneRuffStage === "intro") {
-      return;
-    }
+    if (window.__airborneRuffActive && window.__airborneRuffStage === "intro") return;
     if (state !== "playing") return;
     // Don't flap-react while docked on the pad
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) return;
@@ -71,7 +68,7 @@
       return;
     }
     // land: allow flap (vy set here; position integrated in updateAirfield)
-    if (window.__airborneAirfieldPaused && !window.__airborneTrainingFlight) {
+    if (window.__airborneAirfieldPaused) {
       return;
     }
     player.vy = FLAP_VELOCITY;
@@ -100,23 +97,19 @@
       return;
     }
 
-    // Airfield training: runway/climb scripted; free flight once airborne
+    // Airfield: scripted phases freeze player; lesson = free flight
     const afPhase = window.__airborneAirfieldPhase;
-    if (window.__airborneAirfield) {
-      const free = window.__airborneTrainingFlight ||
-        afPhase === "lesson" ||
-        (afPhase === "climb" && window.__airborneClimbAlmostDone);
-      if (!free) {
-        // taxi, accel, early climb, land, score — airfield owns pose
-        if (afPhase !== "land") {
-          player.vy = 0;
-          return;
-        }
-        // land: allow flap vy, integration in updateAirfield
-        return;
-      }
-      // free flight — fall through to gravity + flap
+    if (window.__airborneAirfield &&
+        (afPhase === "taxi" || afPhase === "accel" || afPhase === "climb" ||
+         afPhase === "score" || window.__airborneAirfieldPaused)) {
+      player.vy = 0;
+      return;
     }
+    if (window.__airborneAirfield && afPhase === "land") {
+      return;
+    }
+    // lesson / training flight falls through to gravity
+
 
     player.vy += GRAVITY * dt;
     if (player.vy > MAX_FALL_SPEED) player.vy = MAX_FALL_SPEED;

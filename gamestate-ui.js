@@ -793,13 +793,10 @@
     if (e && e.touches && e.touches.length > 0) return;
     window.__airborneAirfieldHold = false;
   }
-  // Pointer Events are the single input path for touch + mouse. Using
-  // touchstart + mousedown + pointerdown together can produce duplicate
-  // flap events on iOS Safari.
+  canvas.addEventListener("touchstart", handleInput, { passive: false });
+  canvas.addEventListener("mousedown", handleInput);
   canvas.addEventListener("pointerdown", handleInput);
-  canvas.addEventListener("pointerup", handleInputUp);
-  canvas.addEventListener("pointercancel", handleInputUp);
-  // Capture holds even if a HUD element is under the finger.
+  // Capture holds even if a HUD element is under the finger
   document.addEventListener("pointerdown", function(e) {
     if (state === "playing" && window.__airborneAirfield &&
         (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel")) {
@@ -807,8 +804,11 @@
       if (typeof window.__airborneAirfieldBoost === "function") window.__airborneAirfieldBoost();
     }
   }, true);
-  window.addEventListener("pointerup", handleInputUp);
-  window.addEventListener("pointercancel", handleInputUp);
+  canvas.addEventListener("touchend", handleInputUp, { passive: true });
+  canvas.addEventListener("touchcancel", handleInputUp, { passive: true });
+  canvas.addEventListener("mouseup", handleInputUp);
+  canvas.addEventListener("pointerup", handleInputUp);
+  window.addEventListener("mouseup", handleInputUp);
   window.addEventListener("keydown", (e) => {
     if (e.code === "Space") {
       e.preventDefault();
