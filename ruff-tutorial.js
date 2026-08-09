@@ -782,7 +782,7 @@
       }
     }
 
-    // Intro: advance lines on a timer, then go to takeoff
+    // Intro: advance lines on a timer, then go to takeoff (must finish before drive)
     if (ruffStage === "intro") {
       if (ruffIntroLineArmed && ruffLineIdx < ruffLines.length &&
           ruffLineT >= Math.max(2.8, ruffLineDuration || 3)) {
@@ -792,10 +792,11 @@
           showRadio(ruffLines[ruffLineIdx], 3.2);
         }
       }
-      if ((ruffIntroLineArmed && ruffLineIdx >= ruffLines.length && ruffLineT > 1.0) ||
-          ruffStageT > 18) {
+      if ((ruffIntroLineArmed && ruffLineIdx >= ruffLines.length && ruffLineT > 1.2) ||
+          ruffStageT > 16) {
         ruffIntroFly = false;
-        nextStage(); // takeoff
+        nextStage(); // → takeoff — runway unlocks only after this
+        console.log("[R.U.F.F.] intro done → takeoff");
       }
     }
 

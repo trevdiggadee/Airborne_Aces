@@ -53,13 +53,8 @@
   }
 
   function flap() {
-    // During intro, still register hold so player can break into takeoff
+    // Intro: ignore taps — wait for R.U.F.F. to finish
     if (window.__airborneRuffActive && window.__airborneRuffStage === "intro") {
-      if (window.__airborneAirfield &&
-          (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel")) {
-        window.__airborneAirfieldHold = true;
-        window.__airborneAirfieldBoostPending = true;
-      }
       return;
     }
     if (state !== "playing") return;

@@ -782,7 +782,8 @@
     ensureAudio();
     // Mark hold immediately so takeoff accel responds same frame
     if (state === "playing" && window.__airborneAirfield &&
-        (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel")) {
+        (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel") &&
+        window.__airborneRuffStage !== "intro") {
       window.__airborneAirfieldHold = true;
     }
     if (state === "playing") flap();
