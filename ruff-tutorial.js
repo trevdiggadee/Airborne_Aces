@@ -301,21 +301,18 @@
     if (name === "intro") {
       ruffIntroFly = true;
       ruffIntroFlyT = 0;
-      // Start just off right edge so first frames are almost visible
-      ruffX = (typeof W !== "undefined" ? W : 400) * 0.92;
-      ruffY = (typeof H !== "undefined" ? H : 600) * 0.22;
+      ruffX = (typeof W !== "undefined" ? W : 400) + 160;
+      ruffY = (typeof H !== "undefined" ? H : 600) * 0.14;
       ruffLineIdx = 0;
       ruffLineT = 0;
       ruffLineDuration = 3.5;
-      ruffSpeechDone = true;
+      ruffSpeechDone = true; // don't block on speech API
       ruffIntroLineArmed = false;
-      ruffScalePulse = 1.15;
     } else if (name === "takeoff") {
       ruffIntroFly = false;
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
       ruffWaitingInput = true;
       window.__airborneAirfieldPaused = false;
-      window.__airborneResetRunway = true;
       // Reset runway drive so intro duration doesn't auto-liftoff
       try {
         if (typeof airfieldDriveDist !== "undefined") airfieldDriveDist = 0;
@@ -378,16 +375,32 @@
   }
 
   function syncStageFlags() {
-    // Do NOT force obstacleSpeed or unpause during intro/runway
-    if (ruffStage === "intro" || ruffStage === "takeoff") {
+    // Early stages: no obstacles/rings
+    if (ruffStage === "intro" || ruffStage === "takeoff" || ruffStage === "altitude") {
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       if (typeof powerup !== "undefined") powerup = null;
-    } else if (ruffStage === "altitude" || ruffStage === "crystals") {
+      if (typeof obstacles !== "undefined" && obstacles) {
+        obstacles = obstacles.filter(function (o) {
+          return o && (o.type === "heart" || o.isHeart);
+        });
+      }
+      // Intro: keep world paused/still — do NOT force flight speed
+      if (ruffStage === "intro") {
+        window.__airborneAirfieldPaused = true;
+        if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 0;
+      }
+    } else if (ruffStage === "crystals") {
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      if (typeof powerup !== "undefined") powerup = null;
+    } else if (ruffStage === "obstacles" || ruffStage === "combined" || ruffStage === "rings") {
+      // Cruise speed only once airborne lessons need it
+      if (typeof obstacleSpeed !== "undefined" && (obstacleSpeed || 0) < 150) {
+        obstacleSpeed = 210;
+      }
     }
   }
 
@@ -578,17 +591,18 @@
     // Dramatic intro fly-in from upper-right
     if (ruffIntroFly && ruffStage === "intro") {
       ruffIntroFlyT += dt;
-      const destX = (typeof W !== "undefined" ? W : 400) * 0.18;
-      const destY = (typeof H !== "undefined" ? H : 600) * 0.28;
-      const k = Math.min(1, ruffIntroFlyT / 1.6);
+      // Fly all the way to the LEFT so dialog (bottom/right) never covers him
+      const destX = (typeof W !== "undefined" ? W : 400) * 0.16;
+      const destY = (typeof H !== "undefined" ? H : 600) * 0.30;
+      const k = Math.min(1, ruffIntroFlyT / 1.8);
       const ease = 1 - Math.pow(1 - k, 3);
-      const startX = (typeof W !== "undefined" ? W : 400) * 0.95;
-      const startY = (typeof H !== "undefined" ? H : 600) * 0.18;
+      const startX = (typeof W !== "undefined" ? W : 400) + 160;
+      const startY = (typeof H !== "undefined" ? H : 600) * 0.14;
       ruffX = startX + (destX - startX) * ease;
       ruffY = startY + (destY - startY) * ease + Math.sin(ruffIntroFlyT * 4) * 6 * (1 - ease);
-      ruffTilt = -0.25 * (1 - ease) + Math.sin(ruffBob * 1.3) * 0.08;
-      ruffScalePulse = 1.05 + (1 - ease) * 0.2 + Math.sin(ruffBob * 2.1) * 0.03;
-      if (!ruffIntroLineArmed && ruffIntroFlyT > 0.7 && ruffLines.length) {
+      ruffTilt = -0.3 * (1 - ease) + Math.sin(ruffBob * 1.3) * 0.08;
+      ruffScalePulse = 1 + (1 - ease) * 0.18 + Math.sin(ruffBob * 2.1) * 0.03;
+      if (!ruffIntroLineArmed && ruffIntroFlyT > 1.0 && ruffLines.length) {
         ruffIntroLineArmed = true;
         ruffLineIdx = 0;
         ruffLineT = 0;
@@ -616,52 +630,30 @@
   function drawRuffCompanion() {
     if (!ruffActive || typeof ctx === "undefined") return;
     if (ruffStage === "report") return;
-    // Clamp on-screen so he never vanishes off the side
-    const maxX = (typeof W !== "undefined" ? W : 400) - 20;
-    const maxY = (typeof H !== "undefined" ? H : 600) - 20;
-    let dx = ruffX, dy = ruffY;
-    if (!(dx > 0) || !isFinite(dx)) dx = (typeof W !== "undefined" ? W : 400) * 0.2;
-    if (!(dy > 0) || !isFinite(dy)) dy = (typeof H !== "undefined" ? H : 600) * 0.3;
-    dx = Math.max(20, Math.min(maxX, dx));
-    dy = Math.max(20, Math.min(maxY, dy));
-
-    const idx = ((ruffFrame | 0) % RUFF_FRAME_COUNT) + 1;
-    const key = "ruff_" + String(idx).padStart(2, "0");
-    let img = (typeof images !== "undefined") ? images[key] : null;
-    if (!img || !img.naturalWidth) {
-      // fallback any loaded ruff frame
-      for (let i = 1; i <= RUFF_FRAME_COUNT; i++) {
-        const k2 = "ruff_" + String(i).padStart(2, "0");
-        if (images && images[k2] && images[k2].naturalWidth) { img = images[k2]; break; }
-      }
-    }
-    const size = Math.max(100, (typeof player !== "undefined" && player ? player.h * 1.85 : 110));
+    const key = "ruff_" + String(ruffFrame + 1).padStart(2, "0");
+    const img = (typeof images !== "undefined") ? images[key] : null;
+    const size = Math.max(84, (typeof player !== "undefined" && player ? player.h * 1.65 : 96));
     const sc = size * (ruffScalePulse || 1);
     ctx.save();
-    ctx.translate(dx, dy);
+    ctx.translate(ruffX, ruffY);
     ctx.rotate(ruffTilt || 0);
-    ctx.globalAlpha = 0.25;
-    ctx.fillStyle = "rgba(212,175,55,0.55)";
+    // Soft motion trail / glow
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = "rgba(212,175,55,0.5)";
     ctx.beginPath();
-    ctx.arc(-6, 4, sc * 0.3, 0, Math.PI * 2);
+    ctx.arc(-6, 4, sc * 0.28, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
     if (img && img.naturalWidth) {
       ctx.drawImage(img, -sc / 2, -sc / 2, sc, sc);
     } else {
-      // Visible brass robot placeholder if assets not loaded yet
-      ctx.fillStyle = "#c4a35a";
-      ctx.strokeStyle = "#4a3210";
-      ctx.lineWidth = 3;
+      ctx.fillStyle = "#b08d3a";
+      ctx.strokeStyle = "#5a4010";
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(0, 0, sc * 0.42, 0, Math.PI * 2);
+      ctx.arc(0, 0, sc * 0.4, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = "#2a1a08";
-      ctx.font = "bold " + Math.floor(sc * 0.18) + "px sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText("R.U.F.F.", 0, 0);
     }
     ctx.restore();
   }
@@ -716,10 +708,8 @@
   function beginRuffTraining() {
     ruffActive = true;
     window.__airborneRuffActive = true;
-    window.__airborneRuffStage = "intro";
+    window.__airborneRuffTried = false;
     console.log("[R.U.F.F.] beginRuffTraining");
-    ruffX = (typeof W !== "undefined" ? W : 400) * 0.9;
-    ruffY = (typeof H !== "undefined" ? H : 600) * 0.25;
     window.__airborneAirfieldAllowPowerup = false;
     if (typeof powerup !== "undefined") powerup = null;
     if (typeof shieldPickup !== "undefined") shieldPickup = null;
@@ -999,6 +989,18 @@
       setStage("altitude");
     }
   };
+  // Used by the airfield failsafe so it never changes the public stage
+  // without changing R.U.F.F.'s private stage at the same time.
+  window.__airborneForceRuffTakeoff = function () {
+    if (!ruffActive) return false;
+    if (ruffStage === "intro" || ruffStage === "idle") {
+      ruffIntroFly = false;
+      setStage("takeoff");
+      return true;
+    }
+    return ruffStage === "takeoff";
+  };
+
   window.__airborneBeginRuff = beginRuffTraining;
   window.__airborneUpdateRuff = updateRuff;
   window.__airborneDrawRuff = drawRuff;
