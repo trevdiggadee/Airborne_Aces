@@ -332,10 +332,10 @@
     // Sink gradually only toward the END of the image.
     if (airfieldPhase === "taxi" || airfieldPhase === "accel" || airfieldPhase === "climb" ||
         airfieldPhase === "lesson") {
-      // No strip scroll during R.U.F.F. intro — world stays still until takeoff
-      const introStill = window.__airborneRuffActive && window.__airborneRuffStage === "intro";
-      const scrollSpd = introStill ? 0
-        : Math.max(airfieldTakeoffSpeed || 0, (airfieldPhase === "lesson" ? 210 : 0));
+      // Nothing scrolls until liftoff (climb) actually begins
+      const preLift = (airfieldPhase === "taxi" || airfieldPhase === "accel");
+      const scrollSpd = preLift ? 0
+        : Math.max(airfieldTakeoffSpeed || 210, (airfieldPhase === "lesson" ? 210 : 0));
       if (scrollSpd > 0) {
         (airfieldTiles || []).forEach(function(tile) {
           if (!tile) return;
@@ -1269,8 +1269,9 @@
     }
   }
   function updateClouds(dtScale) {
-    // Freeze clouds only after touchdown
+    // Freeze clouds after touchdown OR before liftoff in training
     if (worldScrollFrozen()) return;
+    if (window.__airborneAirfieldPreLift || (window.__airborneRuffStage === "intro")) return;
     const img = images.cloud;
     const baseW = (img && img.naturalWidth) ? img.naturalWidth : 256;
     clouds.forEach(c => {
@@ -1334,6 +1335,7 @@
   }
 
   function updateBirdFlocks(dt) {
+    if (window.__airborneAirfieldPreLift || window.__airborneRuffStage === "intro") return;
     if (worldScrollFrozen()) return;
     birdFlockTimer -= dt;
     if (birdFlockTimer <= 0) {

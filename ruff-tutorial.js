@@ -301,8 +301,8 @@
     if (name === "intro") {
       ruffIntroFly = true;
       ruffIntroFlyT = 0;
-      ruffX = (typeof W !== "undefined" ? W : 400) + 120;
-      ruffY = (typeof H !== "undefined" ? H : 600) * 0.18;
+      ruffX = (typeof W !== "undefined" ? W : 400) + 160;
+      ruffY = (typeof H !== "undefined" ? H : 600) * 0.14;
       ruffLineIdx = 0;
       ruffLineT = 0;
       ruffLineDuration = 999; // hold until we manually show lines
@@ -579,19 +579,18 @@
     // Dramatic intro fly-in from upper-right
     if (ruffIntroFly && ruffStage === "intro") {
       ruffIntroFlyT += dt;
-      const destX = (typeof W !== "undefined" ? W : 400) * 0.62;
-      const destY = (typeof H !== "undefined" ? H : 600) * 0.28;
-      // Ease in fast, settle
-      const k = Math.min(1, ruffIntroFlyT / 1.6);
+      // Fly all the way to the LEFT so dialog (bottom/right) never covers him
+      const destX = (typeof W !== "undefined" ? W : 400) * 0.16;
+      const destY = (typeof H !== "undefined" ? H : 600) * 0.30;
+      const k = Math.min(1, ruffIntroFlyT / 1.8);
       const ease = 1 - Math.pow(1 - k, 3);
-      const startX = (typeof W !== "undefined" ? W : 400) + 140;
-      const startY = (typeof H !== "undefined" ? H : 600) * 0.12;
+      const startX = (typeof W !== "undefined" ? W : 400) + 160;
+      const startY = (typeof H !== "undefined" ? H : 600) * 0.14;
       ruffX = startX + (destX - startX) * ease;
       ruffY = startY + (destY - startY) * ease + Math.sin(ruffIntroFlyT * 4) * 6 * (1 - ease);
-      ruffTilt = -0.25 * (1 - ease) + Math.sin(ruffBob * 1.3) * 0.08;
-      ruffScalePulse = 1 + (1 - ease) * 0.15 + Math.sin(ruffBob * 2.1) * 0.03;
-      // Arm first dialogue after settled a bit
-      if (!ruffIntroLineArmed && ruffIntroFlyT > 1.0 && ruffLines.length) {
+      ruffTilt = -0.3 * (1 - ease) + Math.sin(ruffBob * 1.3) * 0.08;
+      ruffScalePulse = 1 + (1 - ease) * 0.18 + Math.sin(ruffBob * 2.1) * 0.03;
+      if (!ruffIntroLineArmed && ruffIntroFlyT > 1.15 && ruffLines.length) {
         ruffIntroLineArmed = true;
         ruffLineIdx = 0;
         showRadio(ruffLines[0], 3.4);

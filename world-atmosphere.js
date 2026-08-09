@@ -323,9 +323,10 @@
     const aspect = img.naturalHeight / Math.max(1, img.naturalWidth);
     const tileH = Math.max(H * 0.5, 150);
     const tileW = tileH / Math.max(0.05, aspect);
-    // Independent slow-but-visible scroll (not frozen during airfield)
+    // Independent slow scroll — frozen before liftoff / intro
     let mSpeed = 0.18;
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) mSpeed = 0;
+    if (window.__airborneAirfieldPreLift || window.__airborneRuffStage === "intro") mSpeed = 0;
     if (!drawMountainParallax._tiles || drawMountainParallax._tileW !== tileW) {
       drawMountainParallax._tiles = [];
       drawMountainParallax._tileW = tileW;
