@@ -71,7 +71,7 @@
       return;
     }
     // land: allow flap (vy set here; position integrated in updateAirfield)
-    if (window.__airborneAirfieldPaused) {
+    if (window.__airborneAirfieldPaused && !window.__airborneTrainingFlight) {
       return;
     }
     player.vy = FLAP_VELOCITY;
@@ -100,16 +100,22 @@
       return;
     }
 
-    // Airfield training: updateAirfield owns position except free lesson flight
+    // Airfield training: runway/climb scripted; free flight once airborne
     const afPhase = window.__airborneAirfieldPhase;
     if (window.__airborneAirfield) {
-      if (afPhase === "lesson") {
-        // normal flight physics below
-      } else {
-        // taxi, accel, climb, land, score, intro lock, unknown — freeze here
-        player.vy = 0;
+      const free = window.__airborneTrainingFlight ||
+        afPhase === "lesson" ||
+        (afPhase === "climb" && window.__airborneClimbAlmostDone);
+      if (!free) {
+        // taxi, accel, early climb, land, score — airfield owns pose
+        if (afPhase !== "land") {
+          player.vy = 0;
+          return;
+        }
+        // land: allow flap vy, integration in updateAirfield
         return;
       }
+      // free flight — fall through to gravity + flap
     }
 
     player.vy += GRAVITY * dt;

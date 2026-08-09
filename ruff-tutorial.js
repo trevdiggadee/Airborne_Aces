@@ -150,7 +150,7 @@
   // ---------- Voice (Web Speech — radio-ish) ----------
   function speakLine(text) {
     try {
-      if (!window.speechSynthesis) return;
+      if (!window.speechSynthesis) { ruffSpeechDone = true; return; }
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.rate = 0.84;  // slower, more natural
@@ -764,15 +764,16 @@
     updateSparkles(dt);
 
     // Auto-advance dialogue lines
-    if (ruffLines.length && ruffLineIdx < ruffLines.length &&
+    // NOTE: "intro" is intentionally excluded here — it has its own dedicated
+    // advance/timeout block below (tied to the R.U.F.F. fly-in animation).
+    // Letting both run at once raced against each other and could hand off
+    // to "takeoff" mid-animation, leaving the runway in an inconsistent state.
+    if (ruffStage !== "intro" && ruffLines.length && ruffLineIdx < ruffLines.length &&
         ruffLineT >= ruffLineDuration && ruffSpeechDone) {
       const done = advanceLine();
       if (done) {
         // Stage-specific after dialogue
-        if (ruffStage === "intro") {
-          ruffIntroFly = false;
-          nextStage(); // → takeoff
-        } else if (ruffStage === "altitude" && ruffMarkers.length === 0) {
+        if (ruffStage === "altitude" && ruffMarkers.length === 0) {
           nextStage();
         } else if (ruffStage === "powerup") {
           nextStage();
@@ -982,6 +983,12 @@
     }
   };
 
+  window.__airborneForceRuffAltitude = function() {
+    if (!ruffActive) return;
+    if (ruffStage === "intro" || ruffStage === "takeoff" || ruffStage === "idle") {
+      setStage("altitude");
+    }
+  };
   window.__airborneBeginRuff = beginRuffTraining;
   window.__airborneUpdateRuff = updateRuff;
   window.__airborneDrawRuff = drawRuff;

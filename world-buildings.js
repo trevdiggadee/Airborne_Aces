@@ -247,6 +247,8 @@
     window.__airborneScriptedPose = null;
     window.__airborneAirfieldInvuln = true;
     window.__airborneAirfieldPaused = true; // locked until intro done
+    window.__airborneTrainingFlight = false;
+    window.__airborneClimbAlmostDone = false;
     window.__airborneAirfieldBlockBoss = true;
     window.__airborneAirfieldAllowPowerup = false;
     window.__airborneAirfieldObstacles = false;
@@ -494,10 +496,19 @@
           airfieldPhase = "accel";
         }
 
-        // Need a real hold after intro (not instant)
-        const holdOk = (airfieldHoldTime || 0) >= 1.5;
-        const distOk = (airfieldDriveDist || 0) >= ((typeof W !== "undefined" ? W : 400) * 0.7);
-        if (holdOk || distOk) {
+        // Reliable liftoff after intro: ~1.0s hold or short distance
+        const holdOk = (airfieldHoldTime || 0) >= 1.0;
+        const distOk = (airfieldDriveDist || 0) >= ((typeof W !== "undefined" ? W : 400) * 0.55);
+        // Never soft-lock the runway: if the player has clearly been trying
+        // (any hold registered at all) but liftoff hasn't tripped yet after
+        // a generous window, force it — mirrors the safety timeouts already
+        // used everywhere else in training (shield/obstacles/rings/landing).
+        const stuckTooLong = (airfieldPhaseT || 0) > 10 && (airfieldHoldTime || 0) > 0;
+        const hardTimeout = (airfieldPhaseT || 0) > 16;
+        if (holdOk || distOk || stuckTooLong || hardTimeout) {
+          if (hardTimeout && !holdOk && !distOk) {
+            console.log("[Airborne] Runway hard-timeout liftoff (input may not be registering)");
+          }
           airfieldPhase = "climb";
           airfieldPhaseT = 0;
           if (typeof player !== "undefined" && player) airfieldClimbStartY = player.y;
@@ -512,14 +523,18 @@
       window.__airborneAirfieldInvuln = true;
       window.__airborneAirfieldPaused = false;
       window.__airborneAirfieldHold = false;
+      window.__airborneTrainingFlight = false;
 
-      const dur = 1.6;
+      const dur = 1.5;
       const tClimb = Math.min(1, (airfieldPhaseT || 0) / dur);
       const e = tClimb * tClimb * (3 - 2 * tClimb);
+      window.__airborneClimbAlmostDone = tClimb > 0.85;
 
       const gy = groundLevelY();
       const startY = (airfieldClimbStartY > 0) ? airfieldClimbStartY : (gy - 30);
-      const endY = H * 0.38;
+      // Climb to a clearly "high altitude" cruise height before free-flight
+      // mechanics (gravity + flap) take over — was 0.36, felt too low.
+      const endY = H * 0.3;
 
       if (typeof player !== "undefined" && player) {
         player.y = startY + (endY - startY) * e;
@@ -532,9 +547,6 @@
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = airfieldTakeoffSpeed;
       airfieldTip = "Liftoff!";
 
-      // Keep strip scrolling / sinking during climb
-      // (handled in scroll block above when phase is climb)
-
       if (tClimb >= 1) {
         airfieldPhase = "lesson";
         airfieldPhaseT = 0;
@@ -543,7 +555,7 @@
         airfieldSub = "practice";
         if (typeof player !== "undefined" && player) {
           player.x = W * 0.28;
-          player.y = H * 0.38;
+          player.y = H * 0.3;
           player.vy = 0;
           player.rotation = 0;
         }
@@ -555,11 +567,21 @@
         window.__airborneAirfieldPaused = false;
         window.__airborneAirfieldInvuln = false;
         window.__airborneAirfieldHold = false;
-        // Free flight online
-        if (window.__airborneRuffStage === "takeoff" || window.__airborneRuffStage === "intro") {
+        // FREE FLIGHT — training lessons can run
+        window.__airborneTrainingFlight = true;
+        window.__airborneClimbAlmostDone = false;
+        if (window.__airborneRuffStage === "takeoff" || window.__airborneRuffStage === "intro" ||
+            window.__airborneRuffStage === "idle") {
           window.__airborneRuffStage = "altitude";
         }
-        console.log("[Airborne] climb complete → free flight");
+        // Nudge Ruff stage machine if it exposes nextStage via window
+        try {
+          if (typeof window.__airborneForceRuffAltitude === "function") {
+            window.__airborneForceRuffAltitude();
+          }
+        } catch (e) {}
+        airfieldTip = "Tap to fly!";
+        console.log("[Airborne] FREE FLIGHT enabled");
         syncAirfieldGlobals();
       }
 
@@ -568,6 +590,7 @@
       // Always keep free-flight controls enabled during lessons
       window.__airborneAirfieldPaused = false;
       window.__airborneAirfieldInvuln = false;
+      window.__airborneTrainingFlight = true;
       if (typeof obstacleSpeed !== "undefined" && (obstacleSpeed || 0) < 180) {
         obstacleSpeed = 210;
       }
@@ -726,13 +749,17 @@
         }
         player.rotation = Math.max(-0.25, Math.min(0.28, player.vy / 500));
 
-        if (fieldReady && player.y >= landY - 6) {
+        // Wider contact band + shorter required dwell time: the old 6px/0.3s
+        // window was easy to miss on a real device (frame-time jitter could
+        // knock the blimp out of the band before contact accumulated),
+        // which is what made landing feel like it "wasn't landing."
+        if (fieldReady && player.y >= landY - 18) {
           airfieldLandContact = (airfieldLandContact || 0) + dt;
         } else {
           airfieldLandContact = 0;
         }
 
-        if (!airfieldDidLand && ((fieldReady && airfieldLandContact >= 0.3) || airfieldLandT > 18)) {
+        if (!airfieldDidLand && ((fieldReady && airfieldLandContact >= 0.18) || airfieldLandT > 12)) {
           airfieldDidLand = true;
           player.y = landY;
           player.vy = 0;
