@@ -150,7 +150,7 @@
   // ---------- Voice (Web Speech — radio-ish) ----------
   function speakLine(text) {
     try {
-      if (!window.speechSynthesis) { ruffSpeechDone = true; return; }
+      if (!window.speechSynthesis) return;
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.rate = 0.84;  // slower, more natural
@@ -313,6 +313,7 @@
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
       ruffWaitingInput = true;
       window.__airborneAirfieldPaused = false;
+      window.__airborneResetRunway = true;
       // Reset runway drive so intro duration doesn't auto-liftoff
       try {
         if (typeof airfieldDriveDist !== "undefined") airfieldDriveDist = 0;
@@ -375,32 +376,16 @@
   }
 
   function syncStageFlags() {
-    // Early stages: no obstacles/rings
-    if (ruffStage === "intro" || ruffStage === "takeoff" || ruffStage === "altitude") {
+    // Do NOT force obstacleSpeed or unpause during intro/runway
+    if (ruffStage === "intro" || ruffStage === "takeoff") {
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       if (typeof powerup !== "undefined") powerup = null;
-      if (typeof obstacles !== "undefined" && obstacles) {
-        obstacles = obstacles.filter(function (o) {
-          return o && (o.type === "heart" || o.isHeart);
-        });
-      }
-      // Intro: keep world paused/still — do NOT force flight speed
-      if (ruffStage === "intro") {
-        window.__airborneAirfieldPaused = true;
-        if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 0;
-      }
-    } else if (ruffStage === "crystals") {
+    } else if (ruffStage === "altitude" || ruffStage === "crystals") {
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-      if (typeof powerup !== "undefined") powerup = null;
-    } else if (ruffStage === "obstacles" || ruffStage === "combined" || ruffStage === "rings") {
-      // Cruise speed only once airborne lessons need it
-      if (typeof obstacleSpeed !== "undefined" && (obstacleSpeed || 0) < 150) {
-        obstacleSpeed = 210;
-      }
     }
   }
 
@@ -764,16 +749,15 @@
     updateSparkles(dt);
 
     // Auto-advance dialogue lines
-    // NOTE: "intro" is intentionally excluded here — it has its own dedicated
-    // advance/timeout block below (tied to the R.U.F.F. fly-in animation).
-    // Letting both run at once raced against each other and could hand off
-    // to "takeoff" mid-animation, leaving the runway in an inconsistent state.
-    if (ruffStage !== "intro" && ruffLines.length && ruffLineIdx < ruffLines.length &&
+    if (ruffLines.length && ruffLineIdx < ruffLines.length &&
         ruffLineT >= ruffLineDuration && ruffSpeechDone) {
       const done = advanceLine();
       if (done) {
         // Stage-specific after dialogue
-        if (ruffStage === "altitude" && ruffMarkers.length === 0) {
+        if (ruffStage === "intro") {
+          ruffIntroFly = false;
+          nextStage(); // → takeoff
+        } else if (ruffStage === "altitude" && ruffMarkers.length === 0) {
           nextStage();
         } else if (ruffStage === "powerup") {
           nextStage();

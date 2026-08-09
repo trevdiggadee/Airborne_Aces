@@ -796,17 +796,6 @@
   canvas.addEventListener("touchstart", handleInput, { passive: false });
   canvas.addEventListener("mousedown", handleInput);
   canvas.addEventListener("pointerdown", handleInput);
-  // Keep the runway "hold" alive through finger drift — on some mobile
-  // browsers a touchstart can land on the canvas but subsequent movement
-  // doesn't re-fire touchstart, so without this the hold flag could look
-  // like it was released even while the finger never left the screen.
-  canvas.addEventListener("touchmove", function (e) {
-    if (state === "playing" && window.__airborneAirfield &&
-        (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel") &&
-        window.__airborneRuffStage !== "intro") {
-      window.__airborneAirfieldHold = true;
-    }
-  }, { passive: true });
   // Capture holds even if a HUD element is under the finger
   document.addEventListener("pointerdown", function(e) {
     if (state === "playing" && window.__airborneAirfield &&
@@ -824,15 +813,8 @@
     if (e.code === "Space") {
       e.preventDefault();
       ensureAudio();
-      if (state === "playing" && window.__airborneAirfield &&
-          (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel")) {
-        window.__airborneAirfieldHold = true;
-      }
       if (state === "playing") flap();
     }
-  });
-  window.addEventListener("keyup", (e) => {
-    if (e.code === "Space") window.__airborneAirfieldHold = false;
   });
 
 
