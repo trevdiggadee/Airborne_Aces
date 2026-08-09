@@ -332,7 +332,10 @@
     // Sink gradually only toward the END of the image.
     if (airfieldPhase === "taxi" || airfieldPhase === "accel" || airfieldPhase === "climb" ||
         airfieldPhase === "lesson") {
-      const scrollSpd = Math.max(airfieldTakeoffSpeed || 0, (airfieldPhase === "lesson" ? 210 : 0));
+      // No strip scroll during R.U.F.F. intro — world stays still until takeoff
+      const introStill = window.__airborneRuffActive && window.__airborneRuffStage === "intro";
+      const scrollSpd = introStill ? 0
+        : Math.max(airfieldTakeoffSpeed || 0, (airfieldPhase === "lesson" ? 210 : 0));
       if (scrollSpd > 0) {
         (airfieldTiles || []).forEach(function(tile) {
           if (!tile) return;
@@ -613,56 +616,54 @@
           if (tile.x < targetX) tile.x = targetX;
         }
       });
-      // Player controls flare; gentle assist toward the deck once field is up
+      // Player controls flare; hard deck floor so we never fall through
       window.__airborneAirfieldPaused = false;
       window.__airborneAirfieldInvuln = true;
       const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
       const sink = (typeof airfieldStripY === "number") ? airfieldStripY : 0;
-      // Deck near bottom of canvas (strip is bottom-anchored)
-      const landY = H - Math.max(36, th * 0.32) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.2 : 8);
+      // Deck sits on the runway band of the bottom-anchored strip
+      const landY = H - Math.max(40, th * 0.28) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10);
       if (typeof player !== "undefined" && player) {
         const ph = player.h > 0 ? player.h : 40;
-        // Soft gravity + player flap
-        player.vy += 900 * dt;
-        if (player.vy > 420) player.vy = 420;
-        // After field is mostly up, ease downward so landing can complete
-        const fieldReady = airfieldLandT > 2.2 && sink < H * 0.1;
-        if (fieldReady && player.y < landY - 10) {
-          player.vy += 200 * dt; // extra pull toward strip
+        player.vy += 850 * dt;
+        if (player.vy > 380) player.vy = 380;
+        const fieldReady = airfieldLandT > 2.0 && sink < H * 0.12;
+        if (fieldReady && player.y < landY - 20) {
+          player.vy += 260 * dt;
         }
         player.y += player.vy * dt;
         player.x = W * 0.28;
         if (player.y < ph * 0.4) { player.y = ph * 0.4; player.vy = Math.min(0, player.vy); }
-        player.rotation = Math.max(-0.28, Math.min(0.32, player.vy / 480));
+        // HARD FLOOR — never fall through the strip
+        if (player.y > landY) {
+          player.y = landY;
+          if (player.vy > 0) player.vy = 0;
+        }
+        player.rotation = Math.max(-0.25, Math.min(0.28, player.vy / 500));
 
-        if (fieldReady && player.y >= landY - 10) {
+        if (fieldReady && player.y >= landY - 6) {
           airfieldLandContact = (airfieldLandContact || 0) + dt;
         } else {
           airfieldLandContact = 0;
         }
 
-        if (!airfieldDidLand && airfieldLandContact >= 0.35) {
+        if (!airfieldDidLand && ((fieldReady && airfieldLandContact >= 0.3) || airfieldLandT > 18)) {
           airfieldDidLand = true;
           player.y = landY;
           player.vy = 0;
           player.rotation = 0;
           airfieldPhase = "score";
           airfieldScoreT = 0;
+          airfieldFireworkT = 0;
           try {
             if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
             if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
-          } catch (e) {}
-        } else if (!airfieldDidLand && airfieldLandT > 20) {
-          // Guaranteed finish — settle on strip then score
-          airfieldDidLand = true;
-          player.y = landY;
-          player.vy = 0;
-          player.rotation = 0;
-          airfieldPhase = "score";
-          airfieldScoreT = 0;
-          try {
-            if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
-            if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
+            if (typeof spawnVictoryFirework === "function") {
+              spawnVictoryFirework(player.x, player.y - 30);
+              spawnVictoryFirework(W * 0.5, H * 0.3);
+              spawnVictoryFirework(W * 0.7, H * 0.35);
+            }
+            if (typeof spawnLandingDust === "function") spawnLandingDust(player.x, landY + ph * 0.3);
           } catch (e) {}
         }
       }
@@ -673,16 +674,45 @@
       window.__airborneAirfieldPaused = true;
       window.__airborneAirfieldInvuln = true;
       airfieldScoreT = (airfieldScoreT || 0) + dt;
+      airfieldFireworkT = (airfieldFireworkT || 0) + dt;
       airfieldStripY = 0;
       if (typeof player !== "undefined" && player) {
         const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
-        const landY = H - Math.max(36, th * 0.32) - (player.h > 0 ? player.h * 0.2 : 8);
+        const landY = H - Math.max(40, th * 0.28) - (player.h > 0 ? player.h * 0.22 : 10);
         player.y = landY;
         player.x = W * 0.28;
         player.vy = 0;
         player.rotation = 0;
       }
-      if (airfieldScoreT >= 4.0) {
+      // Burst fireworks like level victory
+      if (airfieldFireworkT > 0.55) {
+        airfieldFireworkT = 0;
+        const bx = W * (0.2 + Math.random() * 0.6);
+        const by = H * (0.18 + Math.random() * 0.28);
+        if (typeof spawnVictoryFirework === "function") {
+          try { spawnVictoryFirework(bx, by); } catch (e) {}
+        } else {
+          const colors = ["#ffd700", "#ff6b35", "#7ec8ff", "#ff4d6d", "#b8f2e6", "#c9a66b"];
+          for (let i = 0; i < 16; i++) {
+            const ang = (Math.PI * 2 * i) / 16 + Math.random() * 0.3;
+            const spd = 80 + Math.random() * 150;
+            airfieldFireworks.push({
+              x: bx, y: by,
+              vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd - 40,
+              life: 0.7 + Math.random() * 0.5, age: 0,
+              color: colors[i % colors.length], r: 2 + Math.random() * 3
+            });
+          }
+        }
+      }
+      // Update local fireworks
+      if (airfieldFireworks && airfieldFireworks.length) {
+        airfieldFireworks.forEach(function(fw) {
+          fw.age += dt; fw.x += fw.vx * dt; fw.y += fw.vy * dt; fw.vy += 220 * dt;
+        });
+        airfieldFireworks = airfieldFireworks.filter(function(fw) { return fw.age < fw.life; });
+      }
+      if (airfieldScoreT >= 5.0) {
         if (window.__airborneRuffActive) {
           window.__airborneAirfieldPhase = "score";
         } else {
@@ -760,8 +790,36 @@
   }
 
   function drawAirfieldTip() {
-    // Training tip box removed — R.U.F.F. radio handles guidance
-    return;
+    // Celebration fireworks during training score
+    if (!airfieldMode || airfieldPhase !== "score") return;
+    const list = airfieldFireworks || [];
+    // Also draw levelEndFireworks if shared
+    const extra = (typeof levelEndFireworks !== "undefined" && levelEndFireworks) ? levelEndFireworks : [];
+    const all = list.concat(extra);
+    all.forEach(function(fw) {
+      const life = fw.life || 1;
+      const tt = 1 - (fw.age || 0) / life;
+      if (tt <= 0) return;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, tt);
+      ctx.fillStyle = fw.color || "#ffd700";
+      ctx.beginPath();
+      ctx.arc(fw.x, fw.y, (fw.r || 3) * tt, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+    // Title
+    if (airfieldScoreT < 3.5) {
+      ctx.save();
+      ctx.textAlign = "center";
+      const fs = Math.floor(W * 0.065);
+      ctx.font = "bold " + fs + "px 'Rockwell', Georgia, serif";
+      ctx.fillStyle = "rgba(0,0,0,0.4)";
+      ctx.fillText("TRAINING COMPLETE!", W / 2 + 2, H * 0.2 + 2);
+      ctx.fillStyle = "#ffe9a8";
+      ctx.fillText("TRAINING COMPLETE!", W / 2, H * 0.2);
+      ctx.restore();
+    }
   }
 
   function roundRectPath(ctx, x, y, w, h, r) {
