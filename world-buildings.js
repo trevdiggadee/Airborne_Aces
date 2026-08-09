@@ -229,6 +229,7 @@
     airfieldClimbStartY = 0;
     airfieldAltFrac = 0;
     airfieldDriveDist = 0;
+    airfieldHoldTime = 0;
     airfieldTakeoffSpeed = 50;
     airfieldStripGone = false;
     airfieldUseLandingArt = false;
@@ -448,6 +449,7 @@
         window.__airborneAirfieldBoostPending = false;
         airfieldTakeoffSpeed = 50;
         airfieldDriveDist = 0;
+        airfieldHoldTime = 0;
         airfieldPhaseT = 0;
         airfieldPhase = "taxi";
         if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 0;
@@ -467,18 +469,23 @@
 
         if (window.__airborneAirfieldBoostPending) {
           window.__airborneAirfieldBoostPending = false;
-          airfieldTakeoffSpeed += 30;
+          airfieldTakeoffSpeed += 45;
+          airfieldHoldTime = (airfieldHoldTime || 0) + 0.15;
         }
         if (holding) {
-          airfieldTakeoffSpeed += 80 * dt;
+          airfieldTakeoffSpeed += 110 * dt;
           airfieldDriveDist = (airfieldDriveDist || 0) + airfieldTakeoffSpeed * dt;
+          airfieldHoldTime = (airfieldHoldTime || 0) + dt;
         } else {
-          // Coast slowly — do NOT count distance when not holding
-          airfieldTakeoffSpeed = Math.max(50, airfieldTakeoffSpeed - 25 * dt);
+          airfieldTakeoffSpeed = Math.max(50, airfieldTakeoffSpeed - 20 * dt);
+          // sticky: keep a short hold window so release on the exact liftoff frame still works
+          airfieldHoldTime = Math.max(0, (airfieldHoldTime || 0) - dt * 0.5);
         }
-        if (airfieldTakeoffSpeed > 240) airfieldTakeoffSpeed = 240;
+        if (airfieldTakeoffSpeed > 260) airfieldTakeoffSpeed = 260;
         if (typeof obstacleSpeed !== "undefined") {
-          obstacleSpeed = holding ? airfieldTakeoffSpeed : Math.min(airfieldTakeoffSpeed, 60);
+          obstacleSpeed = (holding || airfieldHoldTime > 0.05)
+            ? airfieldTakeoffSpeed
+            : Math.min(airfieldTakeoffSpeed, 60);
         }
 
         if (typeof player !== "undefined" && player) {
@@ -487,22 +494,29 @@
           player.x = W * 0.25;
           player.y = gy - ph * 0.15;
           player.vy = 0;
-          player.rotation = holding ? -0.1 : 0;
+          player.rotation = holding ? -0.12 : 0;
         }
 
         airfieldTip = holding ? "Accelerating…" : "HOLD to accelerate!";
-        if (airfieldPhase === "taxi" && holding) {
+        if (airfieldPhase === "taxi" && (holding || airfieldHoldTime > 0.1)) {
           airfieldPhase = "accel";
           airfieldPhaseT = 0;
         }
 
-        // Must be HOLDING now + cover ~2× screen width
-        const needDist = (typeof W !== "undefined" ? W : 400) * 1.7;
-        if (holding && airfieldDriveDist >= needDist && airfieldTakeoffSpeed >= 150) {
+        // Liftoff: ~1 screen of runway OR ~2.2s of hold — easier to complete
+        const needDist = (typeof W !== "undefined" ? W : 400) * 0.95;
+        const readyDist = airfieldDriveDist >= needDist && airfieldTakeoffSpeed >= 120;
+        const readyTime = airfieldHoldTime >= 2.2 && airfieldTakeoffSpeed >= 130;
+        if (readyDist || readyTime) {
           airfieldPhase = "climb";
           airfieldPhaseT = 0;
           if (typeof player !== "undefined" && player) airfieldClimbStartY = player.y;
           try { if (typeof sfxAirfieldTakeoff === "function") sfxAirfieldTakeoff(); } catch (e) {}
+          console.log("[Airborne] LIFTOFF", {
+            dist: Math.round(airfieldDriveDist),
+            spd: Math.round(airfieldTakeoffSpeed),
+            hold: airfieldHoldTime.toFixed(2)
+          });
           syncAirfieldGlobals();
         }
       }
