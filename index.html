@@ -1,410 +1,556 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="format-detection" content="telephone=no" />
-<title>Airborne Aces</title>
-<link rel="stylesheet" href="style.css?v=ruff41">
-<link rel="stylesheet" href="blimp-profile.css?v=ruff41">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Airborne Aces 1933 - One Thumb Gaming</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0a1628;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: #fff;
+    }
+
+    /* ========== LOADING SCREEN ========== */
+    #loading-screen {
+      position: fixed;
+      inset: 0;
+      background: #0a1628;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      transition: opacity 0.8s ease, visibility 0.8s ease;
+    }
+
+    #loading-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .logo-container {
+      width: 70%;
+      max-width: 320px;
+      position: relative;
+    }
+
+    .logo-container img {
+      width: 100%;
+      height: auto;
+      display: block;
+      filter: drop-shadow(0 0 20px rgba(0, 150, 255, 0.4));
+    }
+
+    .loading-area {
+      position: absolute;
+      bottom: 8%;
+      left: 0;
+      right: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      padding: 0 20px;
+    }
+
+    .loading-text {
+      font-size: 13px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #7eb8e8;
+      font-weight: 500;
+      animation: pulse-text 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse-text {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    .progress-bar-track {
+      width: 100%;
+      max-width: 260px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #1a6bb5, #3da5ff, #7ec8ff);
+      border-radius: 10px;
+      transition: width 0.15s linear;
+      position: relative;
+      box-shadow: 0 0 12px rgba(61, 165, 255, 0.7);
+    }
+
+    .progress-bar-fill::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.4) 50%,
+        transparent 100%
+      );
+      animation: shimmer 1.2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .progress-percent {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Motion dots */
+    .motion-dots {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .motion-dots span {
+      width: 6px;
+      height: 6px;
+      background: #3da5ff;
+      border-radius: 50%;
+      animation: bounce-dot 1.4s ease-in-out infinite;
+    }
+
+    .motion-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .motion-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce-dot {
+      0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+      40% { transform: scale(1.2); opacity: 1; }
+    }
+
+    /* ========== SPLASH / MAIN SCREEN ========== */
+    #splash-screen {
+      position: fixed;
+      inset: 0;
+      background: #0a1628;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.9s ease;
+      z-index: 100;
+    }
+
+    #splash-screen.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .poster-bg {
+      position: absolute;
+      inset: 0;
+      background-image: url('airborne_aces_poster.png');
+      background-size: cover;
+      background-position: center top;
+      background-repeat: no-repeat;
+    }
+
+    /* Soft vignette to help button readability */
+    .poster-bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to bottom,
+        transparent 55%,
+        rgba(5, 15, 30, 0.55) 78%,
+        rgba(5, 15, 30, 0.85) 100%
+      );
+      pointer-events: none;
+    }
+
+    /* Crystal glow overlay – centered over the crystal in the art */
+    .crystal-glow {
+      position: absolute;
+      top: 38%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 42%;
+      max-width: 280px;
+      aspect-ratio: 0.72;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .crystal-glow .core {
+      position: absolute;
+      inset: 15% 20%;
+      background: radial-gradient(
+        ellipse at center,
+        rgba(120, 220, 255, 0.55) 0%,
+        rgba(40, 140, 255, 0.25) 40%,
+        transparent 70%
+      );
+      border-radius: 40% 40% 45% 45%;
+      animation: crystal-pulse 2.8s ease-in-out infinite;
+      filter: blur(4px);
+    }
+
+    .crystal-glow .sparkle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 6px 2px rgba(180, 240, 255, 0.9);
+      animation: sparkle-float 3s ease-in-out infinite;
+    }
+
+    @keyframes crystal-pulse {
+      0%, 100% {
+        opacity: 0.7;
+        transform: scale(1);
+        filter: blur(4px) brightness(1);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.08);
+        filter: blur(6px) brightness(1.3);
+      }
+    }
+
+    @keyframes sparkle-float {
+      0%, 100% {
+        opacity: 0;
+        transform: translateY(0) scale(0.5);
+      }
+      20% { opacity: 1; }
+      50% {
+        opacity: 0.9;
+        transform: translateY(-18px) scale(1.1);
+      }
+      80% { opacity: 0.3; }
+      100% {
+        opacity: 0;
+        transform: translateY(-30px) scale(0.3);
+      }
+    }
+
+    /* Extra outer aura */
+    .crystal-aura {
+      position: absolute;
+      top: 38%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 55%;
+      max-width: 360px;
+      aspect-ratio: 1;
+      background: radial-gradient(
+        circle,
+        rgba(80, 180, 255, 0.22) 0%,
+        rgba(40, 120, 220, 0.08) 45%,
+        transparent 70%
+      );
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 4;
+      animation: aura-breathe 4s ease-in-out infinite;
+    }
+
+    @keyframes aura-breathe {
+      0%, 100% { transform: translate(-50%, -50%) scale(0.95); opacity: 0.7; }
+      50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+    }
+
+    /* Enter Hangar Button */
+    .enter-hangar-wrap {
+      position: absolute;
+      bottom: 7%;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      z-index: 20;
+      padding: 0 24px;
+    }
+
+    .enter-hangar-btn {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 16px 42px;
+      min-width: 220px;
+      background: linear-gradient(180deg, #2a6fbf 0%, #1a4a8a 100%);
+      border: 2px solid #7ec8ff;
+      border-radius: 50px;
+      color: #fff;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+      box-shadow:
+        0 0 0 3px rgba(30, 90, 160, 0.4),
+        0 8px 24px rgba(0, 40, 100, 0.55),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+      overflow: hidden;
+    }
+
+    .enter-hangar-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.22),
+        transparent
+      );
+      animation: btn-shine 3.5s ease-in-out infinite;
+    }
+
+    @keyframes btn-shine {
+      0% { left: -100%; }
+      40%, 100% { left: 150%; }
+    }
+
+    .enter-hangar-btn:hover,
+    .enter-hangar-btn:active {
+      transform: scale(1.04);
+      filter: brightness(1.12);
+      box-shadow:
+        0 0 0 3px rgba(50, 140, 220, 0.55),
+        0 10px 28px rgba(0, 60, 140, 0.65),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+
+    .enter-hangar-btn .icon {
+      font-size: 20px;
+      line-height: 1;
+    }
+
+    /* Subtle wing accents on button */
+    .enter-hangar-btn .wing {
+      position: absolute;
+      top: 50%;
+      width: 18px;
+      height: 10px;
+      background: rgba(180, 220, 255, 0.35);
+      clip-path: polygon(0 50%, 100% 0, 100% 100%);
+    }
+
+    .enter-hangar-btn .wing.left {
+      left: 12px;
+      transform: translateY(-50%) scaleX(-1);
+    }
+
+    .enter-hangar-btn .wing.right {
+      right: 12px;
+      transform: translateY(-50%);
+    }
+
+    /* Version / footer */
+    .splash-footer {
+      position: absolute;
+      bottom: 2.2%;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.35);
+      letter-spacing: 1px;
+      z-index: 20;
+    }
+  </style>
 </head>
 <body>
 
-<!-- Screen Effects Overlay Layers -->
-<div id="screenChromatic" class="screen-chromatic"></div>
-<div id="screenGrain" class="screen-grain"></div>
-<div id="screenScanlines" class="screen-scanlines"></div>
-<div id="screenFlash" class="screen-flash"></div>
-
-<div id="tutorialGuide" class="hidden">
-  <div class="tutGuideChar">
-    <img src="" alt="" id="tutGuideImg">
-  </div>
-  <div class="tutBubble">
-    <p id="tutBubbleText"></p>
-    <button type="button" id="tutSkipBtn">GOT IT ▶</button>
-  </div>
-</div>
-
-
-
-<div id="splashScreen">
-  <div class="splashSandGlow" aria-hidden="true"></div>
-  <div class="splashRadar" aria-hidden="true">
-    <svg class="splashRadarSvg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <radialGradient id="radarGrad" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="rgba(255,255,255,0.35)"/>
-          <stop offset="40%" stop-color="rgba(255,255,255,0.12)"/>
-          <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
-        </radialGradient>
-        <linearGradient id="sweepGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="rgba(255,255,255,0)"/>
-          <stop offset="70%" stop-color="rgba(255,255,255,0.08)"/>
-          <stop offset="100%" stop-color="rgba(255,255,255,0.45)"/>
-        </linearGradient>
-      </defs>
-      <circle class="radarRing thick" cx="200" cy="200" r="196"/>
-      <circle class="radarRing" cx="200" cy="200" r="157"/>
-      <circle class="radarRing" cx="200" cy="200" r="118"/>
-      <circle class="radarRing" cx="200" cy="200" r="78"/>
-      <circle class="radarRing" cx="200" cy="200" r="39"/>
-      <line class="radarCross" x1="200" y1="10" x2="200" y2="390"/>
-      <line class="radarCross" x1="10" y1="200" x2="390" y2="200"/>
-      <line class="radarCross" x1="58" y1="58" x2="342" y2="342"/>
-      <line class="radarCross" x1="342" y1="58" x2="58" y2="342"/>
-      <g class="radarSweep">
-        <path class="radarSweepFan" d="M200,200 L200,10 A190,190 0 0,1 340,70 Z" fill="url(#sweepGrad)"/>
-        <line x1="200" y1="200" x2="200" y2="12" stroke="rgba(255,255,255,0.7)" stroke-width="2"/>
-      </g>
-      <g class="radarBlimp b1" transform="translate(258,118)">
-        <ellipse class="blimpGlow" cx="0" cy="0" rx="10" ry="7"/>
-        <ellipse class="blimpBody" cx="0" cy="0" rx="7" ry="3.2"/>
-        <rect class="blimpBody" x="-1.5" y="2.5" width="3" height="2.2" rx="0.4"/>
-        <line class="blimpBody" x1="6" y1="0" x2="9" y2="-1.5" stroke="rgba(255,255,255,0.7)" stroke-width="0.8"/>
-      </g>
-    </svg>
-  </div>
-  <div class="splashParticles" id="splashParticles" aria-hidden="true"></div>
-  <div class="splashStage">
-    <div class="splashTitle">AIRBORNE ACES</div>
-  </div>
-  <button class="enterHangarBtn" id="splashEnterBtn" type="button">ENTER HANGAR</button>
-</div>
-
-<div id="menuScreen">
-<audio id="menuMusic" loop preload="auto" src="victory_brass_step.mp3"></audio>
-<audio id="gameplayMusic" loop preload="auto" src="skyward-march%202.mp3"></audio>
-<div class="stage">
-  <img class="stageBg" crossorigin="anonymous" src="hangar_bg_v2.jpg" alt="Airborne Aces" />
-
-  <!-- Cloud overlays disabled — new hangar art is a full scene -->
-
-  <div class="menuBanner">
-    <img crossorigin="anonymous" src="menuBanner.webp?cb=2" alt="" />
-  </div>
-
-  <div class="heroBlimpWrap">
-    <img id="heroBlimpImgA" class="heroBlimpLayer" crossorigin="anonymous" src="player_blimp_01.webp" alt="" />
-    <img id="heroBlimpImgB" class="heroBlimpLayer heroBlimpLayerB" crossorigin="anonymous" src="" alt="" />
-    <div class="propBlur" id="propBlur"></div>
-    <div class="smokeParticles" id="smokeParticles">
-      <span class="puff p1"></span>
-      <span class="puff p2"></span>
-      <span class="puff p3"></span>
-      <span class="puff p4"></span>
-      <span class="puff p5"></span>
+  <!-- ========== LOADING SCREEN (One Thumb Gaming) ========== -->
+  <div id="loading-screen">
+    <div class="logo-container">
+      <img src="one_thumb_gaming_logo.png" alt="One Thumb Gaming">
     </div>
-  </div>
-  <div class="heroBlimpName" id="heroBlimpName">Zeppelin Ace</div>
 
-  
-  <!-- Blimp Profile Panel -->
-  <div class="blimpProfile" id="blimpProfile">
-    <div class="bpBadge" aria-hidden="true">
-      <svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg">
-        <path d="M8 20 Q20 8 32 20 Q20 18 8 20Z" fill="#c9a66b" opacity="0.85"/>
-        <path d="M56 20 Q44 8 32 20 Q44 18 56 20Z" fill="#c9a66b" opacity="0.85"/>
-        <circle cx="32" cy="20" r="10" fill="#2a1c10" stroke="#c9a66b" stroke-width="1.5"/>
-        <path d="M32 14 L33.5 18.5 L38 19 L34.5 22 L35.5 26.5 L32 24 L28.5 26.5 L29.5 22 L26 19 L30.5 18.5Z" fill="#c9a66b"/>
-      </svg>
-    </div>
-    <div class="bpMk" id="bpMk">Mk I</div>
-    <div class="bpDivider"></div>
-    <div class="bpSection">Power Up</div>
-    <div class="bpAbility">
-      <div class="bpAbilityText">
-        <div class="bpAbilityName" id="bpAbilityName">—</div>
-        <div class="bpAbilityDesc" id="bpAbilityDesc">—</div>
+    <div class="loading-area">
+      <div class="loading-text">Loading Assets</div>
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="progress-fill"></div>
       </div>
-    </div>
-    <div class="bpPowerIconWrap">
-      <img id="bpPowerIcon" class="bpPowerIcon" src="power_icon_blimp9.webp" alt="Power up" />
-    </div>
-    <div class="bpDivider"></div>
-    <div class="bpSection">Next Rank</div>
-    <div class="bpUpgrade">
-      <div class="bpUpgradeRow"><span id="bpUpgrade">—</span></div>
-      <div class="bpXpTrack"><div class="bpXpFill" id="bpXpFill"></div></div>
-      <div class="bpXpLabel" id="bpXpLabel">0 / 0 XP</div>
-    </div>
-  </div>
-
-  <button class="flyBtn" id="flyBtn">Take Flight</button>
-
-  <button class="numBtn n1 active" onclick="selectBlimp('blimp1', this)" aria-label="Zeppelin Ace">
-    <img crossorigin="anonymous" src="player_blimp_01.webp" alt="" />
-  </button>
-  <button class="numBtn n2" onclick="selectBlimp('blimp2', this)" aria-label="Deco Liner">
-    <img crossorigin="anonymous" src="blimp2_flight_01.webp" alt="" />
-  </button>
-  <button class="numBtn n3" onclick="selectBlimp('blimp3', this)" aria-label="Aero Slicer">
-    <img crossorigin="anonymous" src="blimp3_flight_01.webp" alt="" />
-  </button>
-  <button class="numBtn n4" onclick="selectBlimp('blimp4', this)" aria-label="Steampunk">
-    <img crossorigin="anonymous" src="blimp4_flight_01.webp" alt="" />
-  </button>
-
-  <button class="numBtn n5" onclick="selectBlimp('blimp5', this)" aria-label="Petro">
-    <img crossorigin="anonymous" src="blimp5_flight_01.webp" alt="" />
-  </button>
-  <button class="numBtn n6" onclick="selectBlimp('blimp6', this)" aria-label="Little Spy">
-    <img crossorigin="anonymous" src="ship_wood_01.webp" alt="" />
-  </button>
-  <button class="numBtn n7" onclick="selectBlimp('blimp7', this)" aria-label="Storm Chaser">
-    <img crossorigin="anonymous" src="ship_lightning_01.webp" alt="" />
-  </button>
-  <button class="numBtn n8" onclick="selectBlimp('blimp8', this)" aria-label="Cargo King">
-    <img crossorigin="anonymous" src="ship_cargo_01.webp" alt="" />
-  </button>
-  <button class="numBtn n9" onclick="selectBlimp('blimp9', this)" aria-label="Jolly Rogers">
-    <img crossorigin="anonymous" src="ship_pirate_01.webp" alt="" />
-  </button>
-  <button class="numBtn n10" onclick="selectBlimp('blimp10', this)" aria-label="Ivory Anchor">
-    <img crossorigin="anonymous" src="ship_ivory_01.webp" alt="" />
-  </button>
-  <button class="numBtn n11" onclick="selectBlimp('blimp11', this)" aria-label="Pirate Rocket">
-    <img crossorigin="anonymous" src="blimp11_flight_01.webp" alt="" />
-  </button>
-  <button class="numBtn n12" onclick="selectBlimp('blimp12', this)" aria-label="War Shark">
-    <img crossorigin="anonymous" src="blimp12_flight_01.webp" alt="" />
-  </button>
-  <button class="numBtn n13" onclick="selectBlimp('blimp13', this)" aria-label="Iron Lattice">
-    <img crossorigin="anonymous" src="blimp13_flight_01.webp" alt="" />
-  </button>
-  <button class="numBtn n14" onclick="selectBlimp('blimp14', this)" aria-label="Royal Stripe">
-    <img crossorigin="anonymous" src="blimp14_flight_01.webp" alt="" />
-  </button>
-  <button class="numBtn n15" onclick="selectBlimp('blimp15', this)" aria-label="Sky Rocket">
-    <img crossorigin="anonymous" src="blimp15_flight_01.webp" alt="" />
-  </button>
-
-</div>
-</div>
-
-<!-- World Map (after cutscene / between levels) -->
-<div id="worldMapScreen" style="display:none;">
-  <div class="wm-chrome">
-    <div class="wm-title" id="worldMapTitle">CHART YOUR COURSE</div>
-    <div class="wm-hint" id="worldMapHint">Tap an unlocked post to take flight.</div>
-  </div>
-  <div id="worldMapContainer">
-    <div class="wm-player-blimp" id="worldMapBlimp">
-      <img src="player_blimp.png" alt="" />
-    </div>
-  </div>
-</div>
-
-<div id="cutsceneScreen" class="cutsceneScreen" style="display:none;">
-  <div class="cutsceneStage">
-    <div class="cutsceneBg"></div>
-    <img class="cutsceneCloud cc1" crossorigin="anonymous" src="asset_extra_04.webp?cb=2" alt="" />
-    <img class="cutsceneCloud cc2" crossorigin="anonymous" src="asset_extra_05.webp?cb=2" alt="" />
-    <div class="cutsceneGlow left"></div>
-    <div class="cutsceneGlow right"></div>
-
-    <div class="cutsceneBlimpWrap" id="cutsceneBlimpWrap">
-      <img id="cutsceneBlimpImg" crossorigin="anonymous" src="" alt="" />
-    </div>
-
-    <div class="cutsceneTutorWrap" id="cutsceneTutorWrap"></div>
-
-    <div class="cutsceneVignette"></div>
-
-    <button class="cutsceneSkip" id="cutsceneSkip" type="button">Skip &#9654;</button>
-
-    <div class="cutsceneDialogue" id="cutsceneDialogue">
-      <span class="cutsceneNameplate">Flight Tutor</span>
-      <p class="cutsceneText" id="cutsceneText"></p>
-      <span class="cutsceneTapHint">Tap to continue</span>
-    </div>
-  </div>
-</div>
-
-<div id="gameScreen" style="display:none;">
-<canvas id="gameCanvas"></canvas>
-
-<button id="muteBtn" aria-label="Game settings">⚙</button>
-
-<div id="pauseOverlay" class="hidden" aria-hidden="true">
-  <div class="pausePanel">
-    <div class="pausePanelGlow"></div>
-    <div class="pausePanelInner">
-      <h2 class="pauseTitle">PAUSED</h2>
-      <p class="pauseSubtitle">Adjust volumes · game is paused</p>
-
-      <div class="pauseSliderRow">
-        <div class="pauseSliderLabel">
-          <span class="pauseIcon">🎵</span>
-          <span>Music</span>
-          <span class="pauseVal" id="pauseMusicVal">25%</span>
-        </div>
-        <input type="range" id="pauseMusicSlider" class="pauseSlider" min="0" max="100" value="25" aria-label="Music volume" />
-      </div>
-
-      <div class="pauseSliderRow">
-        <div class="pauseSliderLabel">
-          <span class="pauseIcon">🔊</span>
-          <span>Sound FX</span>
-          <span class="pauseVal" id="pauseSfxVal">100%</span>
-        </div>
-        <input type="range" id="pauseSfxSlider" class="pauseSlider" min="0" max="100" value="100" aria-label="Sound effects volume" />
-      </div>
-
-      <div class="pauseActions">
-        <button type="button" id="pauseMuteToggle" class="pauseSecondaryBtn">Mute All</button>
-        <button type="button" id="pauseResumeBtn" class="pausePrimaryBtn">Resume</button>
+      <div class="progress-percent" id="progress-text">0%</div>
+      <div class="motion-dots">
+        <span></span><span></span><span></span>
       </div>
     </div>
   </div>
-</div>
 
-<div id="hudFrame">
-  <img id="hudFrameImg" crossorigin="anonymous" src="hudFrame.webp?cb=2" alt="" />
+  <!-- ========== SPLASH SCREEN (Airborne Aces poster) ========== -->
+  <div id="splash-screen">
+    <div class="poster-bg"></div>
 
-  <div id="healthMeter">
-    <img id="healthImg" crossorigin="anonymous" src="heartPickup.webp?cb=2" alt="Health" />
+    <!-- Crystal aura + glow effects -->
+    <div class="crystal-aura"></div>
+    <div class="crystal-glow" id="crystal-glow">
+      <div class="core"></div>
+      <!-- Sparkles will be injected by JS -->
+    </div>
+
+    <div class="enter-hangar-wrap">
+      <button class="enter-hangar-btn" id="enter-hangar" onclick="enterHangar()">
+        <span class="wing left"></span>
+        <span class="icon">✈</span>
+        <span>Enter Hangar</span>
+        <span class="wing right"></span>
+      </button>
+    </div>
+
+    <div class="splash-footer">ONE THUMB GAMING  •  AIRBORNE ACES 1933</div>
   </div>
 
-  <div id="bonusHearts"></div>
+  <script>
+    // ---------- Simulated asset loading ----------
+    const progressFill = document.getElementById('progress-fill');
+    const progressText = document.getElementById('progress-text');
+    const loadingScreen = document.getElementById('loading-screen');
+    const splashScreen = document.getElementById('splash-screen');
 
-  <div class="scoreFrame">SCORE: <span id="scoreVal">0</span></div>
+    // Preload the big poster so it is ready when we transition
+    const posterImg = new Image();
+    posterImg.src = 'airborne_aces_poster.png';
 
-  <div id="timerFrame">
-    <div class="flip-clock" id="flipClock">
-      <div class="flip-unit" data-pos="m1">
-        <div class="flip-card-static" id="fc-m1-static">0</div>
-        <div class="flip-card" id="fc-m1" style="display:none;">
-          <div class="flip-card-top" id="fc-m1-top"><span class="digit">0</span></div>
-          <div class="flip-card-bottom" id="fc-m1-bottom"><span class="digit">0</span></div>
-        </div>
-      </div>
-      <div class="flip-unit" data-pos="m2">
-        <div class="flip-card-static" id="fc-m2-static">0</div>
-        <div class="flip-card" id="fc-m2" style="display:none;">
-          <div class="flip-card-top" id="fc-m2-top"><span class="digit">0</span></div>
-          <div class="flip-card-bottom" id="fc-m2-bottom"><span class="digit">0</span></div>
-        </div>
-      </div>
-      <div class="flip-separator"><span></span><span></span></div>
-      <div class="flip-unit" data-pos="s1">
-        <div class="flip-card-static" id="fc-s1-static">0</div>
-        <div class="flip-card" id="fc-s1" style="display:none;">
-          <div class="flip-card-top" id="fc-s1-top"><span class="digit">0</span></div>
-          <div class="flip-card-bottom" id="fc-s1-bottom"><span class="digit">0</span></div>
-        </div>
-      </div>
-      <div class="flip-unit" data-pos="s2">
-        <div class="flip-card-static" id="fc-s2-static">0</div>
-        <div class="flip-card" id="fc-s2" style="display:none;">
-          <div class="flip-card-top" id="fc-s2-top"><span class="digit">0</span></div>
-          <div class="flip-card-bottom" id="fc-s2-bottom"><span class="digit">0</span></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+    // Fake progressive loading of game assets
+    let progress = 0;
+    const assets = [
+      { name: 'Textures', weight: 18 },
+      { name: 'Aircraft Models', weight: 22 },
+      { name: 'Audio', weight: 12 },
+      { name: 'UI Assets', weight: 10 },
+      { name: 'Particle Systems', weight: 15 },
+      { name: 'Level Data', weight: 13 },
+      { name: 'Shaders', weight: 10 }
+    ];
 
-<div id="stormMeter">
-  <img id="stormIcon" crossorigin="anonymous" src="storm_icon_1.webp?cb=2" alt="Storm Power" data-stage="0" />
-</div>
+    let currentAsset = 0;
+    let loadedWeight = 0;
+    const totalWeight = assets.reduce((s, a) => s + a.weight, 0);
 
-<div id="startOverlay" class="overlay">
-  <h1>AIRBORNE ACES</h1>
-  <p>Tap anywhere to climb.<br/>Dodge the balloons and birds!</p>
-  <button class="gameFlyBtn" id="startBtn">FLY!</button>
-</div>
+    function loadNextAsset() {
+      if (currentAsset >= assets.length) {
+        // Ensure poster is fully loaded before transition
+        if (posterImg.complete) {
+          finishLoading();
+        } else {
+          posterImg.onload = finishLoading;
+        }
+        return;
+      }
 
-<div id="gameOverOverlay" class="overlay hidden">
-  <span class="ember" style="left:8%; animation-duration:3.4s; animation-delay:0s; --drift:18px;"></span>
-  <span class="ember" style="left:22%; animation-duration:2.8s; animation-delay:0.6s; --drift:-14px;"></span>
-  <span class="ember" style="left:38%; animation-duration:3.8s; animation-delay:0.2s; --drift:22px;"></span>
-  <span class="ember" style="left:58%; animation-duration:3.1s; animation-delay:1.1s; --drift:-20px;"></span>
-  <span class="ember" style="left:74%; animation-duration:3.6s; animation-delay:0.4s; --drift:16px;"></span>
-  <span class="ember" style="left:88%; animation-duration:2.9s; animation-delay:0.9s; --drift:-18px;"></span>
-  <span class="ember" style="left:50%; animation-duration:4.1s; animation-delay:1.5s; --drift:10px;"></span>
-  <div class="overlayPanel">
-    <h1>CRASHED!</h1>
-    <div class="bigScore" id="finalScore">0</div>
-    <div class="bestScore" id="bestScoreLine">Best: 0</div>
-    <button class="gameFlyBtn" id="retryBtn">RETRY</button>
-    <button class="gameFlyBtn secondaryBtn hidden" id="checkpointBtn">CHECKPOINT</button>
-    <button class="gameFlyBtn secondaryBtn" id="menuBtn">CHANGE BLIMP</button>
-  </div>
-</div>
+      const asset = assets[currentAsset];
+      const start = loadedWeight;
+      const end = loadedWeight + asset.weight;
+      const duration = 280 + Math.random() * 420; // varied timing
+      const startTime = performance.now();
 
-<div id="bossDialogueOverlay" class="hidden">
-  <div class="dlgStage">
-    <div class="dlgPortrait dlgPortraitPlayer">
-      <div class="dlgPortraitFrame"><img id="dlgPlayerImg" src="" alt=""></div>
-      <div class="dlgNamePlate">YOU</div>
-    </div>
-    <div class="dlgVs">VS</div>
-    <div class="dlgPortrait dlgPortraitBoss">
-      <div class="dlgPortraitFrame"><img id="dlgBossImg" src="" alt=""></div>
-      <div class="dlgNamePlate" id="dlgBossName">BOSS</div>
-    </div>
-  </div>
-  <div class="dlgDialogueArea">
-    <div class="dlgBubble dlgBubbleBoss hidden" id="dlgBossBubble">
-      <p id="dlgBossText"></p>
-    </div>
-    <div class="dlgBubble dlgBubblePlayer hidden" id="dlgPlayerBubble">
-      <p id="dlgPlayerText"></p>
-    </div>
-    <button type="button" id="dlgSkipBtn" class="dlgSkipBtn">SKIP ▶</button>
-    <div class="dlgTapHint">TAP TO CONTINUE</div>
-  </div>
-</div>
-</div>
+      function tick(now) {
+        const t = Math.min(1, (now - startTime) / duration);
+        // ease-out
+        const eased = 1 - Math.pow(1 - t, 2.2);
+        progress = start + (end - start) * eased;
+        const pct = Math.min(99, Math.round((progress / totalWeight) * 100));
+        progressFill.style.width = pct + '%';
+        progressText.textContent = pct + '%';
 
+        if (t < 1) {
+          requestAnimationFrame(tick);
+        } else {
+          loadedWeight = end;
+          currentAsset++;
+          // small pause between assets
+          setTimeout(loadNextAsset, 90 + Math.random() * 120);
+        }
+      }
+      requestAnimationFrame(tick);
+    }
 
+    function finishLoading() {
+      progressFill.style.width = '100%';
+      progressText.textContent = '100%';
+      document.querySelector('.loading-text').textContent = 'Ready';
 
-<div id="ruffRadio" aria-live="polite">
-  <div class="ruffCard">
-    <div class="ruffName">
-      <span class="ruffLabel">R.U.F.F.</span>
-      <span class="ruffWaveIcon" aria-hidden="true" title="Speaking">
-        <span class="ruffWaves"><span></span><span></span><span></span><span></span><span></span></span>
-      </span>
-    </div>
-    <p class="ruffText" id="ruffText"></p>
-    <button type="button" class="ruffSkip" id="ruffSkipBtn">SKIP ▶</button>
-  </div>
-</div>
-<div id="ruffTitleBanner"></div>
-<div id="ruffReport">
-  <div class="panel">
-    <h2>FLIGHT REPORT</h2>
-    <div id="ruffReportRows"></div>
-    <div class="final" id="ruffFinalScore"></div>
-    <div id="ruffRankBanner" class="rankBanner">
-      <img id="ruffMedalImg" class="rankMedal" alt="Medal" width="120" height="120">
-      <div class="rankUp">RANK UP</div>
-      <div class="rankName" id="ruffRankName">CADET</div>
-      <div class="rankTitle" id="ruffRankTitle">Starting pilot</div>
-    </div>
-    <button type="button" class="continueBtn" id="ruffContinueBtn">TO THE MAP ▶</button>
-  </div>
-</div>
+      setTimeout(() => {
+        loadingScreen.classList.add('hidden');
+        splashScreen.classList.add('visible');
+        createSparkles();
+      }, 450);
+    }
 
-<script src="assets-placeholders.js?v=ruff41"></script>
-<script src="blimp-profile.js?v=ruff41"></script>
-<script src="menu-intro.js?v=ruff41"></script>
-<script src="world-map.js?v=ruff41"></script>
-<script src="audio.js?v=ruff41"></script>
-<script src="asset-loading.js?v=ruff41"></script>
-<script src="ruff-tutorial.js?v=ruff41"></script>
-<script src="world-buildings.js?v=ruff41"></script>
-<script src="player-obstacles.js?v=ruff41"></script>
-<script src="bosses.js?v=ruff41"></script>
-<script src="boss-dialogue.js?v=ruff41"></script>
-<script src="effects-combat.js?v=ruff41"></script>
-<script src="gamestate-ui.js?v=ruff41"></script>
-<script src="world-atmosphere.js?v=ruff41"></script>
-<script src="main-loop.js?v=ruff41"></script>
+    // Start loading sequence after a short initial delay
+    setTimeout(loadNextAsset, 400);
 
+    // ---------- Crystal sparkles ----------
+    function createSparkles() {
+      const container = document.getElementById('crystal-glow');
+      const count = 14;
+
+      for (let i = 0; i < count; i++) {
+        const s = document.createElement('div');
+        s.className = 'sparkle';
+        const x = 15 + Math.random() * 70;
+        const y = 20 + Math.random() * 60;
+        s.style.left = x + '%';
+        s.style.top = y + '%';
+        s.style.animationDelay = (Math.random() * 2.8) + 's';
+        s.style.animationDuration = (2.2 + Math.random() * 1.8) + 's';
+        // occasional larger sparkles
+        if (Math.random() > 0.7) {
+          s.style.width = '6px';
+          s.style.height = '6px';
+        }
+        container.appendChild(s);
+      }
+    }
+
+    // ---------- Enter Hangar ----------
+    function enterHangar() {
+      const btn = document.getElementById('enter-hangar');
+      btn.style.transform = 'scale(0.96)';
+      btn.style.filter = 'brightness(0.9)';
+
+      // Simple feedback – in a real game this would load the hangar scene
+      setTimeout(() => {
+        alert('Entering Hangar…\n\n(In the full game this would transition to the Hangar scene.)');
+        btn.style.transform = '';
+        btn.style.filter = '';
+      }, 180);
+    }
+
+    // Prevent accidental zoom / scroll on mobile
+    document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+  </script>
 </body>
 </html>
