@@ -635,7 +635,7 @@
         if (images && images[k2] && images[k2].naturalWidth) { img = images[k2]; break; }
       }
     }
-    const size = Math.max(100, (typeof player !== "undefined" && player ? player.h * 1.85 : 110));
+    const size = Math.max(120, (typeof player !== "undefined" && player ? player.h * 2.1 : 130));
     const sc = size * (ruffScalePulse || 1);
     ctx.save();
     ctx.translate(dx, dy);
@@ -743,14 +743,29 @@
     ruffCombo = 0;
     ruffIntroDone = false;
     ensureSkipHandler();
-    if (typeof player !== "undefined" && player) {
-      ruffX = player.x - 40;
-      ruffY = player.y - 30;
-    }
     setStage("intro");
+    // Re-assert after setStage so he is visible immediately
+    ruffActive = true;
+    window.__airborneRuffActive = true;
+    window.__airborneRuffStage = "intro";
+    ruffIntroFly = true;
+    ruffIntroFlyT = 0;
+    ruffX = (typeof W !== "undefined" ? W : 400) * 0.8;
+    ruffY = (typeof H !== "undefined" ? H : 600) * 0.26;
+    ruffScalePulse = 1.25;
+    console.log("[R.U.F.F.] on screen at", Math.round(ruffX), Math.round(ruffY));
   }
 
   function updateRuff(dt) {
+    if (!ruffActive && window.__airborneRuffActive) {
+      ruffActive = true;
+      if (!ruffStage || ruffStage === "idle") {
+        ruffStage = window.__airborneRuffStage || "intro";
+        if (ruffStage === "intro") {
+          ruffIntroFly = true;
+        }
+      }
+    }
     if (!ruffActive) return;
     ruffStageT += dt;
     ruffLineT += dt;
@@ -934,10 +949,12 @@
   }
 
   function drawRuff() {
-    if (!ruffActive) {
-      // still nothing to draw
-      return;
+    // Resync if begin set window flag but local was reset
+    if (!ruffActive && window.__airborneRuffActive) {
+      ruffActive = true;
+      if (!ruffStage || ruffStage === "idle") ruffStage = window.__airborneRuffStage || "intro";
     }
+    if (!ruffActive) return;
     drawMarkers();
     drawCrystals();
     drawSparkles();

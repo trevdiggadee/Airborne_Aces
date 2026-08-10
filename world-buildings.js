@@ -287,16 +287,22 @@
     // Start R.U.F.F. intro — keep stage locked until it finishes
     window.__airborneRuffStage = "intro";
     window.__airborneRuffActive = true;
-    if (typeof window.__airborneBeginRuff === "function") {
-      try {
-        window.__airborneBeginRuff();
-        console.log("[Airborne] Ruff started", window.__airborneRuffActive, window.__airborneRuffStage);
-      } catch (e) {
-        console.warn("[Airborne] R.U.F.F. error", e);
+    function startRuffNow() {
+      if (typeof window.__airborneBeginRuff === "function") {
+        try {
+          window.__airborneBeginRuff();
+          console.log("[Airborne] Ruff started", window.__airborneRuffActive, window.__airborneRuffStage);
+        } catch (e) {
+          console.warn("[Airborne] R.U.F.F. error", e);
+        }
+      } else {
+        console.error("[Airborne] __airborneBeginRuff missing");
       }
-    } else {
-      console.error("[Airborne] __airborneBeginRuff missing — is ruff-tutorial.js loaded?");
     }
+    startRuffNow();
+    // Retry next frames if first call was before ruff script finished binding
+    setTimeout(startRuffNow, 50);
+    setTimeout(startRuffNow, 250);
     syncAirfieldGlobals();
   }
 
@@ -340,6 +346,16 @@
     airfieldPhaseT = (airfieldPhaseT || 0) + dt;
     syncAirfieldGlobals();
     window.__airborneAirfieldBlockBoss = true;
+
+    // Power icon off unless power-up lesson
+    if (!window.__airborneAirfieldAllowPowerup) {
+      const smHide = document.getElementById("stormMeter");
+      if (smHide) {
+        smHide.style.display = "none";
+        smHide.style.visibility = "hidden";
+        smHide.classList.add("trainingHidden");
+      }
+    }
 
     if (window.__airborneResetRunway) {
       window.__airborneResetRunway = false;
@@ -452,9 +468,10 @@
           window.__airborneAirfieldBoostPending = false;
           airfieldTakeoffSpeed += 40;
         }
-        airfieldTakeoffSpeed += (holding ? 95 : 18) * dt;
+        // Slightly slower accel so ~30% more strip is used before climb
+        airfieldTakeoffSpeed += (holding ? 72 : 14) * dt;
         if (airfieldTakeoffSpeed < 50) airfieldTakeoffSpeed = 50;
-        if (airfieldTakeoffSpeed > 230) airfieldTakeoffSpeed = 230;
+        if (airfieldTakeoffSpeed > 250) airfieldTakeoffSpeed = 250;
         if (typeof obstacleSpeed !== "undefined") obstacleSpeed = airfieldTakeoffSpeed;
 
         if (typeof player !== "undefined" && player) {
@@ -471,12 +488,13 @@
           airfieldPhase = "accel";
         }
 
-        if (airfieldTakeoffSpeed >= 165 || (holding && airfieldPhaseT > 2.2) || airfieldPhaseT > 5.5) {
+        // ~30% longer run: higher speed + more hold/time on strip
+        if (airfieldTakeoffSpeed >= 215 || (holding && airfieldPhaseT > 3.0) || airfieldPhaseT > 7.5) {
           airfieldPhase = "climb";
           airfieldPhaseT = 0;
           if (typeof player !== "undefined" && player) airfieldClimbStartY = player.y;
           try { if (typeof sfxAirfieldTakeoff === "function") sfxAirfieldTakeoff(); } catch (e) {}
-          console.log("[Airborne] LIFTOFF");
+          console.log("[Airborne] LIFTOFF", Math.round(airfieldTakeoffSpeed), airfieldPhaseT.toFixed(1));
           syncAirfieldGlobals();
         }
       }
