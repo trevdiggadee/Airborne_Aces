@@ -206,7 +206,7 @@
     const tx = radioText();
     if (!el || !tx) return;
     tx.textContent = text;
-    el.classList.add("visible");
+    el.classList.add("visible", "speaking");
     ruffSpeakClose = 1;
     ruffLineT = 0;
     ruffSpeechDone = false;
@@ -220,7 +220,7 @@
 
   function hideRadio() {
     const el = radioEl();
-    if (el) el.classList.remove("visible");
+    if (el) el.classList.remove("visible", "speaking");
     ruffSpeakClose = 0;
     stopSpeak();
   }
