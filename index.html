@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Airborne Aces 1933 - One Thumb Gaming</title>
   <style>
     * {
@@ -21,15 +21,11 @@
       color: #fff;
     }
 
-    /* ========== LOADING SCREEN ========== */
+    /* ========== LOADING SCREEN (full-screen logo) ========== */
     #loading-screen {
       position: fixed;
       inset: 0;
       background: #0a1628;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
       z-index: 1000;
       transition: opacity 0.8s ease, visibility 0.8s ease;
     }
@@ -40,50 +36,50 @@
       pointer-events: none;
     }
 
-    .logo-container {
-      width: 70%;
-      max-width: 320px;
-      position: relative;
-    }
-
-    .logo-container img {
+    /* Full-screen logo image */
+    .logo-full {
+      position: absolute;
+      inset: 0;
       width: 100%;
-      height: auto;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
       display: block;
-      filter: drop-shadow(0 0 20px rgba(0, 150, 255, 0.4));
     }
 
     .loading-area {
       position: absolute;
-      bottom: 8%;
+      bottom: 9%;
       left: 0;
       right: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 14px;
-      padding: 0 20px;
+      gap: 12px;
+      padding: 0 28px;
+      z-index: 10;
     }
 
     .loading-text {
-      font-size: 13px;
-      letter-spacing: 3px;
+      font-size: 12px;
+      letter-spacing: 3.5px;
       text-transform: uppercase;
-      color: #7eb8e8;
+      color: rgba(180, 210, 240, 0.85);
       font-weight: 500;
       animation: pulse-text 1.5s ease-in-out infinite;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.6);
     }
 
     @keyframes pulse-text {
-      0%, 100% { opacity: 0.6; }
+      0%, 100% { opacity: 0.55; }
       50% { opacity: 1; }
     }
 
     .progress-bar-track {
       width: 100%;
-      max-width: 260px;
-      height: 6px;
-      background: rgba(255, 255, 255, 0.12);
+      max-width: 240px;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.15);
       border-radius: 10px;
       overflow: hidden;
       position: relative;
@@ -96,7 +92,7 @@
       border-radius: 10px;
       transition: width 0.15s linear;
       position: relative;
-      box-shadow: 0 0 12px rgba(61, 165, 255, 0.7);
+      box-shadow: 0 0 10px rgba(61, 165, 255, 0.65);
     }
 
     .progress-bar-fill::after {
@@ -109,7 +105,7 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        rgba(255, 255, 255, 0.4) 50%,
+        rgba(255, 255, 255, 0.45) 50%,
         transparent 100%
       );
       animation: shimmer 1.2s infinite;
@@ -122,20 +118,19 @@
 
     .progress-percent {
       font-size: 11px;
-      color: rgba(255, 255, 255, 0.5);
+      color: rgba(255, 255, 255, 0.45);
       font-variant-numeric: tabular-nums;
     }
 
-    /* Motion dots */
     .motion-dots {
       display: flex;
       gap: 6px;
-      margin-top: 4px;
+      margin-top: 2px;
     }
 
     .motion-dots span {
-      width: 6px;
-      height: 6px;
+      width: 5px;
+      height: 5px;
       background: #3da5ff;
       border-radius: 50%;
       animation: bounce-dot 1.4s ease-in-out infinite;
@@ -145,8 +140,8 @@
     .motion-dots span:nth-child(3) { animation-delay: 0.4s; }
 
     @keyframes bounce-dot {
-      0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-      40% { transform: scale(1.2); opacity: 1; }
+      0%, 80%, 100% { transform: scale(0.55); opacity: 0.35; }
+      40% { transform: scale(1.15); opacity: 1; }
     }
 
     /* ========== SPLASH / MAIN SCREEN ========== */
@@ -174,21 +169,21 @@
       background-repeat: no-repeat;
     }
 
-    /* Soft vignette to help button readability */
+    /* Soft vignette so button stays readable */
     .poster-bg::after {
       content: '';
       position: absolute;
       inset: 0;
       background: linear-gradient(
         to bottom,
-        transparent 55%,
-        rgba(5, 15, 30, 0.55) 78%,
-        rgba(5, 15, 30, 0.85) 100%
+        transparent 58%,
+        rgba(5, 15, 30, 0.45) 80%,
+        rgba(5, 15, 30, 0.78) 100%
       );
       pointer-events: none;
     }
 
-    /* Crystal glow overlay – centered over the crystal in the art */
+    /* Crystal glow overlay */
     .crystal-glow {
       position: absolute;
       top: 38%;
@@ -255,7 +250,6 @@
       }
     }
 
-    /* Extra outer aura */
     .crystal-aura {
       position: absolute;
       top: 38%;
@@ -281,16 +275,16 @@
       50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
     }
 
-    /* Enter Hangar Button */
+    /* ========== Enter Hangar – transparent style ========== */
     .enter-hangar-wrap {
       position: absolute;
-      bottom: 7%;
+      bottom: 7.5%;
       left: 0;
       right: 0;
       display: flex;
       justify-content: center;
       z-index: 20;
-      padding: 0 24px;
+      padding: 0 28px;
     }
 
     .enter-hangar-btn {
@@ -299,23 +293,24 @@
       align-items: center;
       justify-content: center;
       gap: 10px;
-      padding: 16px 42px;
-      min-width: 220px;
-      background: linear-gradient(180deg, #2a6fbf 0%, #1a4a8a 100%);
-      border: 2px solid #7ec8ff;
+      padding: 15px 48px;
+      min-width: 210px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1.5px solid rgba(180, 220, 255, 0.55);
       border-radius: 50px;
-      color: #fff;
-      font-size: 17px;
-      font-weight: 700;
-      letter-spacing: 1.5px;
+      color: #e8f4ff;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 2px;
       text-transform: uppercase;
-      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
       box-shadow:
-        0 0 0 3px rgba(30, 90, 160, 0.4),
-        0 8px 24px rgba(0, 40, 100, 0.55),
-        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        0 4px 18px rgba(0, 30, 80, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
       cursor: pointer;
-      transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+      transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
       overflow: hidden;
     }
 
@@ -324,58 +319,28 @@
       position: absolute;
       top: 0;
       left: -100%;
-      width: 60%;
+      width: 55%;
       height: 100%;
       background: linear-gradient(
         90deg,
         transparent,
-        rgba(255, 255, 255, 0.22),
+        rgba(255, 255, 255, 0.18),
         transparent
       );
-      animation: btn-shine 3.5s ease-in-out infinite;
+      animation: btn-shine 3.8s ease-in-out infinite;
     }
 
     @keyframes btn-shine {
       0% { left: -100%; }
-      40%, 100% { left: 150%; }
+      35%, 100% { left: 150%; }
     }
 
-    .enter-hangar-btn:hover,
     .enter-hangar-btn:active {
-      transform: scale(1.04);
-      filter: brightness(1.12);
-      box-shadow:
-        0 0 0 3px rgba(50, 140, 220, 0.55),
-        0 10px 28px rgba(0, 60, 140, 0.65),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+      transform: scale(0.97);
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(200, 230, 255, 0.75);
     }
 
-    .enter-hangar-btn .icon {
-      font-size: 20px;
-      line-height: 1;
-    }
-
-    /* Subtle wing accents on button */
-    .enter-hangar-btn .wing {
-      position: absolute;
-      top: 50%;
-      width: 18px;
-      height: 10px;
-      background: rgba(180, 220, 255, 0.35);
-      clip-path: polygon(0 50%, 100% 0, 100% 100%);
-    }
-
-    .enter-hangar-btn .wing.left {
-      left: 12px;
-      transform: translateY(-50%) scaleX(-1);
-    }
-
-    .enter-hangar-btn .wing.right {
-      right: 12px;
-      transform: translateY(-50%);
-    }
-
-    /* Version / footer */
     .splash-footer {
       position: absolute;
       bottom: 2.2%;
@@ -383,19 +348,51 @@
       right: 0;
       text-align: center;
       font-size: 10px;
-      color: rgba(255, 255, 255, 0.35);
+      color: rgba(255, 255, 255, 0.32);
       letter-spacing: 1px;
       z-index: 20;
+    }
+
+    /* After entering hangar – simple next state */
+    #hangar-placeholder {
+      position: fixed;
+      inset: 0;
+      background: #061018;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.7s ease;
+      z-index: 200;
+    }
+
+    #hangar-placeholder.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    #hangar-placeholder h2 {
+      font-size: 22px;
+      letter-spacing: 3px;
+      font-weight: 600;
+      color: #a8d4ff;
+    }
+
+    #hangar-placeholder p {
+      font-size: 13px;
+      color: rgba(255,255,255,0.45);
+      letter-spacing: 1px;
     }
   </style>
 </head>
 <body>
 
-  <!-- ========== LOADING SCREEN (One Thumb Gaming) ========== -->
+  <!-- ========== LOADING SCREEN (full-screen One Thumb) ========== -->
   <div id="loading-screen">
-    <div class="logo-container">
-      <img src="one_thumb_gaming_logo.png" alt="One Thumb Gaming">
-    </div>
+    <img class="logo-full" src="one_thumb_gaming_logo.png" alt="One Thumb Gaming">
 
     <div class="loading-area">
       <div class="loading-text">Loading Assets</div>
@@ -409,41 +406,41 @@
     </div>
   </div>
 
-  <!-- ========== SPLASH SCREEN (Airborne Aces poster) ========== -->
+  <!-- ========== SPLASH SCREEN ========== -->
   <div id="splash-screen">
     <div class="poster-bg"></div>
 
-    <!-- Crystal aura + glow effects -->
     <div class="crystal-aura"></div>
     <div class="crystal-glow" id="crystal-glow">
       <div class="core"></div>
-      <!-- Sparkles will be injected by JS -->
     </div>
 
     <div class="enter-hangar-wrap">
       <button class="enter-hangar-btn" id="enter-hangar" onclick="enterHangar()">
-        <span class="wing left"></span>
-        <span class="icon">✈</span>
-        <span>Enter Hangar</span>
-        <span class="wing right"></span>
+        Enter Hangar
       </button>
     </div>
 
     <div class="splash-footer">ONE THUMB GAMING  •  AIRBORNE ACES 1933</div>
   </div>
 
+  <!-- Simple next screen after button press -->
+  <div id="hangar-placeholder">
+    <h2>HANGAR</h2>
+    <p>Scene loading…</p>
+  </div>
+
   <script>
-    // ---------- Simulated asset loading ----------
     const progressFill = document.getElementById('progress-fill');
     const progressText = document.getElementById('progress-text');
     const loadingScreen = document.getElementById('loading-screen');
     const splashScreen = document.getElementById('splash-screen');
+    const hangarPlaceholder = document.getElementById('hangar-placeholder');
 
-    // Preload the big poster so it is ready when we transition
+    // Preload poster
     const posterImg = new Image();
     posterImg.src = 'airborne_aces_poster.png';
 
-    // Fake progressive loading of game assets
     let progress = 0;
     const assets = [
       { name: 'Textures', weight: 18 },
@@ -461,7 +458,6 @@
 
     function loadNextAsset() {
       if (currentAsset >= assets.length) {
-        // Ensure poster is fully loaded before transition
         if (posterImg.complete) {
           finishLoading();
         } else {
@@ -473,12 +469,11 @@
       const asset = assets[currentAsset];
       const start = loadedWeight;
       const end = loadedWeight + asset.weight;
-      const duration = 280 + Math.random() * 420; // varied timing
+      const duration = 280 + Math.random() * 420;
       const startTime = performance.now();
 
       function tick(now) {
         const t = Math.min(1, (now - startTime) / duration);
-        // ease-out
         const eased = 1 - Math.pow(1 - t, 2.2);
         progress = start + (end - start) * eased;
         const pct = Math.min(99, Math.round((progress / totalWeight) * 100));
@@ -490,7 +485,6 @@
         } else {
           loadedWeight = end;
           currentAsset++;
-          // small pause between assets
           setTimeout(loadNextAsset, 90 + Math.random() * 120);
         }
       }
@@ -509,24 +503,18 @@
       }, 450);
     }
 
-    // Start loading sequence after a short initial delay
-    setTimeout(loadNextAsset, 400);
+    setTimeout(loadNextAsset, 350);
 
-    // ---------- Crystal sparkles ----------
     function createSparkles() {
       const container = document.getElementById('crystal-glow');
       const count = 14;
-
       for (let i = 0; i < count; i++) {
         const s = document.createElement('div');
         s.className = 'sparkle';
-        const x = 15 + Math.random() * 70;
-        const y = 20 + Math.random() * 60;
-        s.style.left = x + '%';
-        s.style.top = y + '%';
+        s.style.left = (15 + Math.random() * 70) + '%';
+        s.style.top = (20 + Math.random() * 60) + '%';
         s.style.animationDelay = (Math.random() * 2.8) + 's';
         s.style.animationDuration = (2.2 + Math.random() * 1.8) + 's';
-        // occasional larger sparkles
         if (Math.random() > 0.7) {
           s.style.width = '6px';
           s.style.height = '6px';
@@ -535,21 +523,22 @@
       }
     }
 
-    // ---------- Enter Hangar ----------
+    // No alert – clean transition past the button
     function enterHangar() {
       const btn = document.getElementById('enter-hangar');
-      btn.style.transform = 'scale(0.96)';
-      btn.style.filter = 'brightness(0.9)';
+      btn.style.pointerEvents = 'none';
+      btn.style.opacity = '0.55';
+      btn.style.transform = 'scale(0.97)';
 
-      // Simple feedback – in a real game this would load the hangar scene
+      // Fade splash out and show next screen
       setTimeout(() => {
-        alert('Entering Hangar…\n\n(In the full game this would transition to the Hangar scene.)');
-        btn.style.transform = '';
-        btn.style.filter = '';
+        splashScreen.style.opacity = '0';
+        setTimeout(() => {
+          hangarPlaceholder.classList.add('visible');
+        }, 400);
       }, 180);
     }
 
-    // Prevent accidental zoom / scroll on mobile
     document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
   </script>
 </body>
