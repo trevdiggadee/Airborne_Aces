@@ -207,6 +207,104 @@
     playNoise({ duration: 0.2, vol: 0.04, filterType: "bandpass", filterFreq: 2400, filterFreqEnd: 800, reverbSend: 0.3 });
   }
 
+  function sfxCrystalCollect() {
+    // Bright crystalline chime — rising sparkle
+    ensureAudio();
+    try {
+      const t0 = audioCtx.currentTime;
+      const g = audioCtx.createGain();
+      g.connect(audioCtx.destination);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.22 * (typeof sfxVolume === "number" ? sfxVolume : 0.7), t0 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.45);
+      [880, 1174, 1568].forEach(function (freq, i) {
+        const o = audioCtx.createOscillator();
+        o.type = "sine";
+        o.frequency.setValueAtTime(freq, t0);
+        const og = audioCtx.createGain();
+        og.gain.setValueAtTime(0.0001, t0);
+        og.gain.exponentialRampToValueAtTime(0.35 / (i + 1), t0 + 0.015 + i * 0.02);
+        og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.28 + i * 0.06);
+        o.connect(og); og.connect(g);
+        o.start(t0 + i * 0.02);
+        o.stop(t0 + 0.5);
+      });
+    } catch (e) {}
+  }
+
+  function sfxRingCollect() {
+    // Whoosh + bright ping for flying through a gold ring
+    ensureAudio();
+    try {
+      const t0 = audioCtx.currentTime;
+      const vol = (typeof sfxVolume === "number" ? sfxVolume : 0.7);
+      // soft whoosh noise burst
+      const len = Math.floor(audioCtx.sampleRate * 0.12);
+      const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      const bp = audioCtx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = 900;
+      bp.Q.value = 0.8;
+      const ng = audioCtx.createGain();
+      ng.gain.setValueAtTime(0.18 * vol, t0);
+      ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.12);
+      src.connect(bp); bp.connect(ng); ng.connect(audioCtx.destination);
+      src.start(t0); src.stop(t0 + 0.13);
+      // gold ping
+      const o = audioCtx.createOscillator();
+      o.type = "triangle";
+      o.frequency.setValueAtTime(740, t0);
+      o.frequency.exponentialRampToValueAtTime(1480, t0 + 0.08);
+      const og = audioCtx.createGain();
+      og.gain.setValueAtTime(0.0001, t0);
+      og.gain.exponentialRampToValueAtTime(0.2 * vol, t0 + 0.01);
+      og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.28);
+      o.connect(og); og.connect(audioCtx.destination);
+      o.start(t0); o.stop(t0 + 0.3);
+    } catch (e) {}
+  }
+
+  function sfxRankUp() {
+    // Fanfare-ish rising brass sparkle for RANK UP
+    ensureAudio();
+    try {
+      const t0 = audioCtx.currentTime;
+      const vol = (typeof sfxVolume === "number" ? sfxVolume : 0.7);
+      const notes = [523.25, 659.25, 783.99, 1046.5]; // C E G C
+      notes.forEach(function (freq, i) {
+        const o = audioCtx.createOscillator();
+        o.type = i % 2 === 0 ? "triangle" : "square";
+        o.frequency.setValueAtTime(freq, t0 + i * 0.09);
+        const og = audioCtx.createGain();
+        og.gain.setValueAtTime(0.0001, t0 + i * 0.09);
+        og.gain.exponentialRampToValueAtTime(0.18 * vol, t0 + i * 0.09 + 0.02);
+        og.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.09 + 0.45);
+        o.connect(og); og.connect(audioCtx.destination);
+        o.start(t0 + i * 0.09);
+        o.stop(t0 + i * 0.09 + 0.5);
+      });
+      // shimmer noise tail
+      const len = Math.floor(audioCtx.sampleRate * 0.35);
+      const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 1.5);
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      const hp = audioCtx.createBiquadFilter();
+      hp.type = "highpass";
+      hp.frequency.value = 1800;
+      const ng = audioCtx.createGain();
+      ng.gain.setValueAtTime(0.08 * vol, t0 + 0.15);
+      ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.5);
+      src.connect(hp); hp.connect(ng); ng.connect(audioCtx.destination);
+      src.start(t0 + 0.15); src.stop(t0 + 0.52);
+    } catch (e) {}
+  }
+
   function sfxHeart() {
     playTone({ freq: 660, duration: 0.16, type: "sine", vol: 0.12, sweep: 140, reverbSend: 0.35 });
     playTone({ freq: 990, duration: 0.14, type: "sine", vol: 0.06, startDelay: 0.03, reverbSend: 0.35 });

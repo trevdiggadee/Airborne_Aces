@@ -483,6 +483,25 @@
     }
   }
 
+  function playCrystalCollectSfx() {
+    try {
+      if (typeof sfxCrystalCollect === "function") sfxCrystalCollect();
+      else if (typeof sfxHeart === "function") sfxHeart();
+    } catch (e) {}
+  }
+  function playRingCollectSfx() {
+    try {
+      if (typeof sfxRingCollect === "function") sfxRingCollect();
+      else if (typeof sfxStreak === "function") sfxStreak();
+    } catch (e) {}
+  }
+  function playRankUpSfx() {
+    try {
+      if (typeof sfxRankUp === "function") sfxRankUp();
+      else if (typeof sfxLevelCompleteFanfare === "function") sfxLevelCompleteFanfare();
+    } catch (e) {}
+  }
+
   function updateCrystals(dt) {
     if (!ruffCrystals.length) return;
     // Always scroll — never freeze when birds/obstacles appear
@@ -504,7 +523,7 @@
       // collect
       if (Math.abs(c.x - px) < pw + c.r && Math.abs(c.y - py) < ph + c.r) {
         c.collected = true;
-        ruffStats.crystals++;
+        ruffStats.crystals++; playCrystalCollectSfx();
         if (typeof score === "number") score += CRYSTAL_SCORE;
         if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
         if (ruffWaitingCollect > 0) ruffWaitingCollect--;
@@ -524,7 +543,6 @@
         }
         if (ruffStats.crystals === 1) showRadio("That's one.", 2.2);
         else if (ruffStats.crystals % 5 === 0) showRadio("Now you're getting greedy. I like it.", 2.6);
-        try { if (typeof sfxCollect === "function") sfxCollect(); } catch (e) {}
       }
     });
     ruffCrystals = ruffCrystals.filter(c => !c.collected && c.x > -40);
@@ -781,6 +799,7 @@
             rankBanner.classList.add("visible", "bounceIn");
             rankBanner.style.opacity = "1";
           }
+          playRankUpSfx();
           showRadio("Not bad for a first flight, " + (pilotRank.name || "Cadet") + ".", 3.2);
         }, 480);
       }
@@ -998,16 +1017,29 @@
       }
     } else if (ruffStage === "powerup") {
       ruffCrystals = [];
-      if (typeof obstacles !== "undefined") obstacles = [];
-      if (typeof powerup !== "undefined") powerup = null;
       window.__airborneAirfieldAllowPowerup = true;
       const sm = document.getElementById("stormMeter");
-      if (sm) { sm.style.display = ""; sm.style.visibility = ""; }
+      if (sm) {
+        sm.style.display = "";
+        sm.style.visibility = "";
+        sm.classList.remove("trainingHidden");
+      }
+      // Fill meter so player can activate power
       if (typeof stormCharge === "number" && typeof STORM_MAX === "number" && !stormActive) {
         stormCharge = STORM_MAX;
         if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay();
       }
-      if ((typeof stormActive !== "undefined" && stormActive && ruffStageT > 2) || ruffStageT > 14) {
+      // After a beat (or once storm is active), send birds/obstacles to destroy
+      if ((typeof stormActive !== "undefined" && stormActive) || ruffStageT > 3.5) {
+        window.__airborneAirfieldObstacles = true;
+        if (typeof spawnInterval !== "undefined") spawnInterval = 1.15;
+      }
+      if (ruffStageT > 12) {
+        window.__airborneAirfieldObstacles = false;
+        if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      }
+      if ((typeof stormActive !== "undefined" && stormActive && ruffStageT > 5) || ruffStageT > 18) {
+        window.__airborneAirfieldObstacles = false;
         nextStage();
       }
     } else if (ruffStage === "rings") {

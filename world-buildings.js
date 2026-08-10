@@ -491,13 +491,13 @@
           window.__airborneAirfieldBoostPending = false;
           airfieldTakeoffSpeed += 40;
         }
-        // ONLY accelerate while holding — never creep on its own
+        // ONLY accelerate while holding — slower ramp = ~30% longer runway
         if (holding) {
-          airfieldTakeoffSpeed += 72 * dt;
+          airfieldTakeoffSpeed += 55 * dt;
         } else {
           airfieldTakeoffSpeed = Math.max(50, airfieldTakeoffSpeed - 40 * dt);
         }
-        if (airfieldTakeoffSpeed > 250) airfieldTakeoffSpeed = 250;
+        if (airfieldTakeoffSpeed > 280) airfieldTakeoffSpeed = 280;
         if (typeof obstacleSpeed !== "undefined") {
           obstacleSpeed = holding ? airfieldTakeoffSpeed : 0;
         }
@@ -516,8 +516,8 @@
           airfieldPhase = "accel";
         }
 
-        // Must be holding — long runway (~30% more strip)
-        if (holding && (airfieldTakeoffSpeed >= 200 || airfieldPhaseT > 3.5)) {
+        // Must be holding — ~30% longer run before liftoff
+        if (holding && (airfieldTakeoffSpeed >= 255 || airfieldPhaseT > 4.8)) {
           airfieldPhase = "climb";
           airfieldPhaseT = 0;
           if (typeof player !== "undefined" && player) airfieldClimbStartY = player.y;
@@ -703,26 +703,22 @@
         ensureAirfieldStripVisible();
         airfieldStripY = H * 0.55; // deeper start so top edge stays off-screen longer
       }
-      // Continuous UP scroll (descent feel): ground rises toward the blimp
-      // Ease most of the rise early, then keep a gentle upward drift so the
-      // image edge never sits still on screen.
-      const riseDur = 3.2;
+      // Rise into place, then HARD STOP — no more scroll so image end never shows
+      const riseDur = 3.0;
       const riseU = Math.min(1, airfieldLandT / riseDur);
       const riseE = 1 - Math.pow(1 - riseU, 2.4);
-      // Resting sink is slightly positive so top edge of art stays clipped
-      const restSink = H * 0.04;
-      const startSink = H * 0.55;
+      const restSink = H * 0.05;
+      const startSink = H * 0.52;
       airfieldStripY = startSink + (restSink - startSink) * riseE;
-      // After main rise, keep drifting up slowly (hides edge, feels like descent)
-      if (riseU >= 1) {
-        airfieldStripY = Math.max(-H * 0.02, restSink - (airfieldLandT - riseDur) * 12);
-      }
+      // Lock vertical once risen (no drift past the art edge)
+      if (riseU >= 1) airfieldStripY = restSink;
 
-      // Continuous left scroll during whole approach (same energy as takeoff scroll)
-      const approachSpd = 115;
+      // Left scroll only until target — then stop (prevents running off the image)
+      const approachSpd = 110;
       (airfieldTiles || []).forEach(function(tile) {
         if (!tile) return;
-        const targetX = W * 0.02 - (tile.w || 0) * 0.62;
+        // Stop earlier so the runway stays fully under the blimp with margin
+        const targetX = W * 0.08 - (tile.w || 0) * 0.48;
         if (tile.x > targetX) {
           tile.x -= approachSpd * dt;
           if (tile.x < targetX) tile.x = targetX;

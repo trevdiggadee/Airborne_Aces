@@ -1001,5 +1001,9 @@
   // R.U.F.F. ring tally
   function notifyRingCollect() {
     window.__airborneRingCollects = (window.__airborneRingCollects || 0) + 1;
+    try {
+      if (typeof sfxRingCollect === "function") sfxRingCollect();
+      else if (typeof sfxStreak === "function") sfxStreak();
+    } catch (e) {}
     if (typeof window.__airborneRuffReact === "function") window.__airborneRuffReact("ring");
   }
