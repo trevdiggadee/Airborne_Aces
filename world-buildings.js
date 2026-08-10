@@ -215,7 +215,8 @@
     // Fit height so strip is clearly on screen
     let h = Math.max(70, Math.min(H * 0.36, 160));
     let w = h * aspect;
-    const startX = W * 0.4;
+    // Start further right so approach travels ~30% more distance
+    const startX = W * 0.55;
     airfieldTiles = [{ x: startX, w: w, h: h, startX: startX }];
   }
 
@@ -703,17 +704,15 @@
         airfieldStripY = H * 0.42;
       }
       // Scroll UP into place (sink → 0) over ~2s — inverse of takeoff dive
-      const riseU = Math.min(1, airfieldLandT / 2.0);
+      const riseU = Math.min(1, airfieldLandT / 2.6);
       const riseE = 1 - (1 - riseU) * (1 - riseU);
       airfieldStripY = (H * 0.42) * (1 - riseE);
 
-      // Scroll left until the BEGINNING of the landing strip is under the player
-      // Landing art has runway on the right half — stop so left edge of runway aligns
-      const approachSpd = 130;
+      // Scroll left — ~30% longer approach before touchdown alignment
+      const approachSpd = 100;
       (airfieldTiles || []).forEach(function(tile) {
         if (!tile) return;
-        // Stop so the runway (right portion of art) sits under the blimp
-        const targetX = W * 0.15 - (tile.w || 0) * 0.55;
+        const targetX = W * 0.02 - (tile.w || 0) * 0.62;
         if (tile.x > targetX) {
           tile.x -= approachSpd * dt;
           if (tile.x < targetX) tile.x = targetX;
@@ -730,7 +729,7 @@
         const ph = player.h > 0 ? player.h : 40;
         player.vy += 850 * dt;
         if (player.vy > 380) player.vy = 380;
-        const fieldReady = airfieldLandT > 2.0 && sink < H * 0.12;
+        const fieldReady = airfieldLandT > 2.6 && sink < H * 0.12;
         if (fieldReady && player.y < landY - 20) {
           player.vy += 260 * dt;
         }

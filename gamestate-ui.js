@@ -239,51 +239,54 @@
 
   function takeHit() {
     if (state !== "playing") return;
-    if (bonusActive) return; // invincible during the bonus round
-    // Airfield takeoff / landing / tip pauses — never damage
+    if (bonusActive) return;
+    // Scripted airfield phases — no damage
     if (window.__airborneAirfieldInvuln ||
         (window.__airborneAirfield &&
          (window.__airborneAirfieldPhase === "taxi" ||
           window.__airborneAirfieldPhase === "accel" ||
           window.__airborneAirfieldPhase === "climb" ||
           window.__airborneAirfieldPhase === "land" ||
-          window.__airborneAirfieldPhase === "score"))) {
-      return;
-    }
-    // Full training soft-death: never game-over / checkpoint / landing
-    if (window.__airborneAirfield && window.__airborneAirfieldPhase === "lesson") {
-      health = Math.max(1, health - 1);
-      updateHealthDisplay();
-      invulnerableUntil = performance.now() + 1500;
-      spawnHitParticles(player.x, player.y);
-      try { if (typeof sfxHit === "function") sfxHit(); } catch (e) {}
-      if (health <= 1) {
-        health = MAX_HEALTH;
-        updateHealthDisplay();
-        // gentle recenter — stay in training
-        player.y = H * 0.4;
-        player.vy = 0;
-      }
+          window.__airborneAirfieldPhase === "score" ||
+          window.__airborneAirfieldPhase === "done"))) {
       return;
     }
     if (shieldActive) {
-      // the shield absorbs the hit — a spark, a soft chime, and a bright ripple on the bubble itself
       spawnHitParticles(player.x, player.y);
       sfxDeflect();
       shieldImpactTime = performance.now();
       return;
     }
-    if (performance.now() < invulnerableUntil) return; // still invulnerable from the last hit
+    // Shared i-frames — prevents multi-hit / meter flicker same frame
+    if (performance.now() < invulnerableUntil) return;
 
     health--;
     dodgeStreak = 0;
+    if (health < 0) health = 0;
     updateHealthDisplay();
-    healthMeter.classList.remove("hit");
-    void healthMeter.offsetWidth; // restart the pulse animation
-    healthMeter.classList.add("hit");
-    invulnerableUntil = performance.now() + 1200;
-    sfxHit();
-    triggerScreenShake(4, 200);
+    if (healthMeter) {
+      healthMeter.classList.remove("hit");
+      void healthMeter.offsetWidth;
+      healthMeter.classList.add("hit");
+    }
+    invulnerableUntil = performance.now() + 1400;
+    try { sfxHit(); } catch (e) {}
+    try { triggerScreenShake(4, 200); } catch (e) {}
+    try { spawnHitParticles(player.x, player.y); } catch (e) {}
+
+    // Training: never game-over — soft recover at 0
+    if (window.__airborneAirfield && window.__airborneAirfieldPhase === "lesson") {
+      if (health <= 0) {
+        health = MAX_HEALTH;
+        updateHealthDisplay();
+        if (typeof player !== "undefined" && player) {
+          player.y = H * 0.4;
+          player.vy = 0;
+        }
+        invulnerableUntil = performance.now() + 2000;
+      }
+      return;
+    }
 
     if (health <= 0) {
       crash();

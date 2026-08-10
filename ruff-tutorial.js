@@ -9,6 +9,29 @@
   const CRYSTAL_FRAME_COUNT = 25;
   const CRYSTAL_SCORE = 15;
 
+  // Pilot rank progression (wire thresholds later; training always Cadet for now)
+  const PILOT_RANKS = [
+    { id: 0, name: "Cadet",           title: "Starting pilot",   minScore: 0 },
+    { id: 1, name: "Air Scout",       title: "Learning the skies", minScore: 500 },
+    { id: 2, name: "Sky Ranger",      title: "Proven pilot",     minScore: 1200 },
+    { id: 3, name: "Squadron Leader", title: "Experienced ace",  minScore: 2500 },
+    { id: 4, name: "Ace Pilot",       title: "Elite flyer",      minScore: 4000 },
+    { id: 5, name: "Sky Marshal",     title: "Master of the air", minScore: 6000 },
+    { id: 6, name: "Legendary Ace",   title: "Ultimate rank",    minScore: 10000 }
+  ];
+
+  function getPilotRank(totalScore, stats) {
+    // Training / early game: always Cadet. Higher ranks unlock with future achievements.
+    void totalScore; void stats;
+    return PILOT_RANKS[0];
+    // Future:
+    // let rank = PILOT_RANKS[0];
+    // for (let i = 0; i < PILOT_RANKS.length; i++) {
+    //   if ((totalScore || 0) >= PILOT_RANKS[i].minScore) rank = PILOT_RANKS[i];
+    // }
+    // return rank;
+  }
+
   // ---------- State ----------
   let ruffActive = false;
   let ruffStage = "idle"; // see STAGES
@@ -672,7 +695,11 @@
     if (!el) return;
     const rows = document.getElementById("ruffReportRows");
     const final = document.getElementById("ruffFinalScore");
-    const rank = document.getElementById("ruffRank");
+    const rankBanner = document.getElementById("ruffRankBanner");
+    const rankNameEl = document.getElementById("ruffRankName");
+    const rankTitleEl = document.getElementById("ruffRankTitle");
+    const medalImg = document.getElementById("ruffMedalImg");
+
     if (rows) {
       rows.innerHTML =
         row("SKY CRYSTALS", "×" + ruffStats.crystals) +
@@ -680,18 +707,52 @@
         row("POWER-UPS", "×" + ruffStats.powerups) +
         row("OBSTACLES AVOIDED", "×" + ruffStats.obstaclesAvoided) +
         row("BEST COMBO", "×" + ruffStats.bestCombo) +
-        row("LANDING", "★".repeat(ruffStats.landingStars));
+        row("LANDING", "★".repeat(Math.max(1, ruffStats.landingStars || 3)));
     }
+
     const sc = (typeof score === "number") ? score : 0;
-    if (final) final.textContent = "FINAL SCORE  " + sc;
-    let rankName = "CADET";
-    let reaction = "Not bad for a first flight.";
-    if (sc >= 800) { rankName = "AIR SCOUT"; reaction = "Now THAT is how you fly!"; }
-    if (sc >= 1500) { rankName = "SKY RANGER"; reaction = "Rookie? I think we just found an ace."; }
-    if (rank) rank.textContent = "PILOT RANK  ·  " + rankName;
+    const pilotRank = getPilotRank(sc, ruffStats);
+
+    // Hide rank banner until score finishes counting
+    if (rankBanner) {
+      rankBanner.classList.remove("visible");
+      rankBanner.style.opacity = "0";
+    }
+    if (rankNameEl) rankNameEl.textContent = (pilotRank.name || "Cadet").toUpperCase();
+    if (rankTitleEl) rankTitleEl.textContent = pilotRank.title || "Starting pilot";
+    if (medalImg) {
+      const src = (typeof images !== "undefined" && images.medal_badge && images.medal_badge.src)
+        ? images.medal_badge.src
+        : "medal_badge.webp";
+      medalImg.src = src;
+      medalImg.alt = pilotRank.name || "Cadet";
+    }
+
+    if (final) final.textContent = "FINAL SCORE  0";
     el.classList.add("visible");
-    showRadio(reaction, 3.5);
     ensureSkipHandler();
+
+    // Count-up final score, then reveal medal / RANK UP
+    const duration = 1600;
+    const t0 = performance.now();
+    function tick(now) {
+      const u = Math.min(1, (now - t0) / duration);
+      const eased = 1 - Math.pow(1 - u, 3);
+      const n = Math.round(sc * eased);
+      if (final) final.textContent = "FINAL SCORE  " + n;
+      if (u < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        if (final) final.textContent = "FINAL SCORE  " + sc;
+        // Reveal rank banner
+        if (rankBanner) {
+          rankBanner.classList.add("visible");
+          rankBanner.style.opacity = "1";
+        }
+        showRadio("Not bad for a first flight, " + (pilotRank.name || "Cadet") + ".", 3.2);
+      }
+    }
+    requestAnimationFrame(tick);
   }
 
   function row(label, val) {
