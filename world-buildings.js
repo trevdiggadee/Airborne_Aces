@@ -698,19 +698,28 @@
       if (typeof obstacles !== "undefined") obstacles = [];
       if (typeof powerup !== "undefined") powerup = null;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-      // Spawn landing field once — starts BELOW screen (scrolls UP) and from the right
+      // Spawn landing field once — starts BELOW screen, rises while scrolling left
       if (!airfieldUseLandingArt || !airfieldTiles.length) {
         ensureAirfieldStripVisible();
-        // Start sunk down (opposite of takeoff sink) so it rises into view
-        airfieldStripY = H * 0.42;
+        airfieldStripY = H * 0.55; // deeper start so top edge stays off-screen longer
       }
-      // Scroll UP into place (sink → 0) over ~2s — inverse of takeoff dive
-      const riseU = Math.min(1, airfieldLandT / 2.6);
-      const riseE = 1 - (1 - riseU) * (1 - riseU);
-      airfieldStripY = (H * 0.42) * (1 - riseE);
+      // Continuous UP scroll (descent feel): ground rises toward the blimp
+      // Ease most of the rise early, then keep a gentle upward drift so the
+      // image edge never sits still on screen.
+      const riseDur = 3.2;
+      const riseU = Math.min(1, airfieldLandT / riseDur);
+      const riseE = 1 - Math.pow(1 - riseU, 2.4);
+      // Resting sink is slightly positive so top edge of art stays clipped
+      const restSink = H * 0.04;
+      const startSink = H * 0.55;
+      airfieldStripY = startSink + (restSink - startSink) * riseE;
+      // After main rise, keep drifting up slowly (hides edge, feels like descent)
+      if (riseU >= 1) {
+        airfieldStripY = Math.max(-H * 0.02, restSink - (airfieldLandT - riseDur) * 12);
+      }
 
-      // Scroll left — ~30% longer approach before touchdown alignment
-      const approachSpd = 100;
+      // Continuous left scroll during whole approach (same energy as takeoff scroll)
+      const approachSpd = 115;
       (airfieldTiles || []).forEach(function(tile) {
         if (!tile) return;
         const targetX = W * 0.02 - (tile.w || 0) * 0.62;
@@ -730,7 +739,7 @@
         const ph = player.h > 0 ? player.h : 40;
         player.vy += 850 * dt;
         if (player.vy > 380) player.vy = 380;
-        const fieldReady = airfieldLandT > 2.6 && sink < H * 0.12;
+        const fieldReady = airfieldLandT > 2.8 && sink < H * 0.14;
         if (fieldReady && player.y < landY - 20) {
           player.vy += 260 * dt;
         }
