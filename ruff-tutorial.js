@@ -580,7 +580,7 @@
       ruffIntroFlyT += dt;
       const destX = (typeof W !== "undefined" ? W : 400) * 0.18;
       const destY = (typeof H !== "undefined" ? H : 600) * 0.28;
-      const k = Math.min(1, ruffIntroFlyT / 1.6);
+      const k = Math.min(1, ruffIntroFlyT / 1.0);
       const ease = 1 - Math.pow(1 - k, 3);
       const startX = (typeof W !== "undefined" ? W : 400) * 0.95;
       const startY = (typeof H !== "undefined" ? H : 600) * 0.18;
@@ -588,7 +588,7 @@
       ruffY = startY + (destY - startY) * ease + Math.sin(ruffIntroFlyT * 4) * 6 * (1 - ease);
       ruffTilt = -0.25 * (1 - ease) + Math.sin(ruffBob * 1.3) * 0.08;
       ruffScalePulse = 1.05 + (1 - ease) * 0.2 + Math.sin(ruffBob * 2.1) * 0.03;
-      if (!ruffIntroLineArmed && ruffIntroFlyT > 0.7 && ruffLines.length) {
+      if (!ruffIntroLineArmed && ruffIntroFlyT > 0.35 && ruffLines.length) {
         ruffIntroLineArmed = true;
         ruffLineIdx = 0;
         ruffLineT = 0;
@@ -635,7 +635,7 @@
         if (images && images[k2] && images[k2].naturalWidth) { img = images[k2]; break; }
       }
     }
-    const size = Math.max(120, (typeof player !== "undefined" && player ? player.h * 2.1 : 130));
+    const size = Math.max(90, (typeof player !== "undefined" && player ? player.h * 1.55 : 98)); // ~25% smaller
     const sc = size * (ruffScalePulse || 1);
     ctx.save();
     ctx.translate(dx, dy);
@@ -705,12 +705,24 @@
     if (el) el.classList.remove("visible");
     ruffActive = false;
     window.__airborneRuffActive = false;
+    window.__airborneRuffStage = "idle";
+    window.__airborneRuffRequestLand = false;
+    // Always end airfield cleanly — never leave land/score running
     if (typeof endAirfieldTrainingToMap === "function") {
       endAirfieldTrainingToMap();
+    } else if (window.endAirfieldTrainingToMap) {
+      window.endAirfieldTrainingToMap();
     } else if (window.__airborneShowWorldMap) {
       window.__airborneShowWorldMap({ mode: "start" });
     }
   }
+  window.__airborneShowRuffReport = function() {
+    if (!ruffActive) {
+      ruffActive = true;
+      window.__airborneRuffActive = true;
+    }
+    setStage("report");
+  };
 
   // ---------- Public API ----------
   function beginRuffTraining() {
