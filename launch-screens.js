@@ -77,45 +77,10 @@
   // Start after a short delay so the logo paints first
   setTimeout(loadNext, 350);
 
-  // ---------- Crystal (real blue_crystal frames) + sparkles ----------
-  const CRYSTAL_FRAME_COUNT = 25;
-  let crystalFrame = 0;
-  let crystalTimer = null;
-  const crystalFrames = [];
-
-  function preloadCrystalFrames() {
-    for (let i = 1; i <= CRYSTAL_FRAME_COUNT; i++) {
-      const img = new Image();
-      const n = String(i).padStart(2, '0');
-      img.src = 'blue_crystal_' + n + '.webp';
-      crystalFrames.push(img);
-    }
-  }
-  preloadCrystalFrames();
-
-  function startCrystalAnim() {
-    const el = document.getElementById('otg-crystal-img');
-    if (!el) return;
-    // Keep native aspect; size controlled by CSS to match poster crystal
-    el.width = 404;
-    el.height = 612;
-    if (crystalTimer) clearInterval(crystalTimer);
-    crystalTimer = setInterval(function () {
-      crystalFrame = (crystalFrame + 1) % CRYSTAL_FRAME_COUNT;
-      const frame = crystalFrames[crystalFrame];
-      if (frame && frame.complete && frame.naturalWidth) {
-        el.src = frame.src;
-      } else {
-        const n = String(crystalFrame + 1).padStart(2, '0');
-        el.src = 'blue_crystal_' + n + '.webp';
-      }
-    }, 80); // ~12.5 fps — smooth crystal shimmer
-  }
-
+  // ---------- Blue sparkles only (poster crystal art, no frame anim) ----------
   function createSparkles() {
     const container = document.getElementById('otg-crystal-glow');
     if (!container) return;
-    startCrystalAnim();
     for (let i = 0; i < 14; i++) {
       const s = document.createElement('div');
       s.className = 'otg-sparkle';

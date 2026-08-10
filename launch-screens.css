@@ -134,30 +134,26 @@
   pointer-events: none;
 }
 
-/* Real sky-crystal asset (404×612 native) — sized to match poster crystal */
+/* Soft glow + blue sparkles only (poster crystal art shows through) */
 .otg-crystal-glow {
   position: absolute;
   top: 36.5%;
   left: 50%;
-  /* Center, then lower by 55% of crystal height */
+  /* Center, then lower by 55% of glow height */
   transform: translate(-50%, calc(-50% + 55%));
-  /* Match painted crystal on poster: ~28% of viewport width, native aspect 404/612 */
-  width: min(28vw, 200px);
-  aspect-ratio: 404 / 612;
-  height: auto;
+  width: 42%;
+  max-width: 280px;
+  aspect-ratio: 0.72;
   pointer-events: none;
   z-index: 5;
-  filter: drop-shadow(0 0 18px rgba(80, 180, 255, 0.55));
 }
-.otg-crystal-glow .otg-crystal-img {
+.otg-crystal-glow .otg-core {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center;
-  display: block;
+  inset: 15% 20%;
+  background: radial-gradient(ellipse at center, rgba(120,220,255,0.45) 0%, rgba(40,140,255,0.2) 40%, transparent 70%);
+  border-radius: 40% 40% 45% 45%;
   animation: otg-crystal-pulse 2.8s ease-in-out infinite;
+  filter: blur(4px);
 }
 .otg-crystal-glow .otg-sparkle {
   position: absolute;
@@ -166,11 +162,10 @@
   border-radius: 50%;
   box-shadow: 0 0 6px 2px rgba(180,240,255,0.9);
   animation: otg-sparkle 3s ease-in-out infinite;
-  z-index: 2;
 }
 @keyframes otg-crystal-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); filter: brightness(1); }
-  50% { opacity: 1; transform: scale(1.04); filter: brightness(1.15); }
+  0%, 100% { opacity: 0.7; transform: scale(1); filter: blur(4px) brightness(1); }
+  50% { opacity: 1; transform: scale(1.08); filter: blur(6px) brightness(1.3); }
 }
 @keyframes otg-sparkle {
   0%, 100% { opacity: 0; transform: translateY(0) scale(0.5); }
@@ -184,9 +179,9 @@
   position: absolute;
   top: 36.5%;
   left: 50%;
-  /* Match crystal: center then lower 55% of crystal-ish radius */
   transform: translate(-50%, calc(-50% + 28%));
-  width: min(42vw, 300px);
+  width: 55%;
+  max-width: 360px;
   aspect-ratio: 1;
   background: radial-gradient(circle, rgba(80,180,255,0.22) 0%, rgba(40,120,220,0.08) 45%, transparent 70%);
   border-radius: 50%;
