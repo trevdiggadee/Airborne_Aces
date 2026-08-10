@@ -284,25 +284,25 @@
       sm.style.display = "none";
       sm.classList.add("trainingHidden");
     }
-    // Start R.U.F.F. intro — keep stage locked until it finishes
+    // Start R.U.F.F. — only mark active if begin succeeds
     window.__airborneRuffStage = "intro";
-    window.__airborneRuffActive = true;
     function startRuffNow() {
-      if (typeof window.__airborneBeginRuff === "function") {
-        try {
-          window.__airborneBeginRuff();
-          console.log("[Airborne] Ruff started", window.__airborneRuffActive, window.__airborneRuffStage);
-        } catch (e) {
-          console.warn("[Airborne] R.U.F.F. error", e);
-        }
-      } else {
+      if (typeof window.__airborneBeginRuff !== "function") {
         console.error("[Airborne] __airborneBeginRuff missing");
+        window.__airborneRuffActive = false;
+        return;
+      }
+      try {
+        window.__airborneBeginRuff();
+        console.log("[Airborne] Ruff started", window.__airborneRuffActive, window.__airborneRuffStage);
+      } catch (e) {
+        console.warn("[Airborne] R.U.F.F. error", e);
+        window.__airborneRuffActive = false;
       }
     }
     startRuffNow();
-    // Retry next frames if first call was before ruff script finished binding
-    setTimeout(startRuffNow, 50);
-    setTimeout(startRuffNow, 250);
+    setTimeout(startRuffNow, 100);
+    setTimeout(startRuffNow, 400);
     syncAirfieldGlobals();
   }
 
@@ -587,32 +587,40 @@
         }
         return;
       }
-      // If R.U.F.F. is active, skip old lesson auto-advance — R.U.F.F. drives stages
+      // R.U.F.F. drives stages only when companion is really running
       if (window.__airborneRuffActive) {
         window.__airborneAirfieldPaused = false;
-        window.__airborneAirfieldInvuln = false;
+        // Stay invuln during early training so death can't dump to checkpoint
+        const st = window.__airborneRuffStage || "";
+        window.__airborneAirfieldInvuln = (st === "altitude" || st === "crystals" || st === "takeoff" || st === "intro");
         if (typeof obstacleSpeed !== "undefined") obstacleSpeed = Math.max(210, obstacleSpeed || 210);
         const sm = document.getElementById("stormMeter");
-        if (sm) sm.style.visibility = window.__airborneAirfieldAllowPowerup ? "" : "hidden";
+        if (sm) {
+          if (window.__airborneAirfieldAllowPowerup) {
+            sm.style.display = ""; sm.style.visibility = "";
+            sm.classList.remove("trainingHidden");
+          } else {
+            sm.style.display = "none"; sm.style.visibility = "hidden";
+            sm.classList.add("trainingHidden");
+          }
+        }
         if (typeof spawnInterval !== "undefined") {
           const needSpawn = window.__airborneAirfieldRings || window.__airborneAirfieldObstacles;
           spawnInterval = needSpawn ? 1.9 : 999;
         }
-        // Only the current lesson's objects stay on screen
-        const st = window.__airborneRuffStage;
         if (typeof powerup !== "undefined" && st !== "powerup" && st !== "combined") powerup = null;
         if (typeof obstacles !== "undefined" && obstacles && obstacles.length) {
-          if (st === "intro" || st === "takeoff" || st === "altitude") {
-            obstacles = []; // clean sky
-          } else if (st === "crystals") {
-            obstacles = [];
-          } else if (st === "obstacles") {
+          if (st === "intro" || st === "takeoff" || st === "altitude" || st === "crystals") {
+            obstacles = obstacles.filter(function (o) {
+              return o && (o.isHeart || o.type === "heart");
+            });
+          } else if (st === "obstacles" || st === "shield") {
             obstacles = obstacles.filter(function (o) {
               return o && !o.isRing && o.type !== "gold_ring";
             });
           } else if (st === "rings") {
             obstacles = obstacles.filter(function (o) {
-              return o && (o.isRing || o.type === "gold_ring");
+              return o && (o.isRing || o.type === "gold_ring" || o.isHeart || o.type === "heart");
             });
           } else if (st === "powerup") {
             obstacles = [];

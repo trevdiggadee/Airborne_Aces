@@ -250,6 +250,22 @@
           window.__airborneAirfieldPhase === "score"))) {
       return;
     }
+    // Full training soft-death: never game-over / checkpoint / landing
+    if (window.__airborneAirfield && window.__airborneAirfieldPhase === "lesson") {
+      health = Math.max(1, health - 1);
+      updateHealthDisplay();
+      invulnerableUntil = performance.now() + 1500;
+      spawnHitParticles(player.x, player.y);
+      try { if (typeof sfxHit === "function") sfxHit(); } catch (e) {}
+      if (health <= 1) {
+        health = MAX_HEALTH;
+        updateHealthDisplay();
+        // gentle recenter — stay in training
+        player.y = H * 0.4;
+        player.vy = 0;
+      }
+      return;
+    }
     if (shieldActive) {
       // the shield absorbs the hit — a spark, a soft chime, and a bright ripple on the bubble itself
       spawnHitParticles(player.x, player.y);
@@ -467,7 +483,8 @@
     }
     document.getElementById("finalScore").textContent = score;
     document.getElementById("bestScoreLine").textContent = "Best: " + best;
-    document.getElementById("checkpointBtn").classList.toggle("hidden", checkpointReached <= 0);
+    const hideCk = checkpointReached <= 0 || window.__airborneAirfield || window.__airborneRuffActive;
+    document.getElementById("checkpointBtn").classList.toggle("hidden", hideCk);
     gameOverOverlay.classList.remove("hidden");
   }
 
@@ -496,6 +513,17 @@
   });
 
   function restartFromCheckpoint() {
+    // If still in / was training, never jump to level landing — restart training
+    if (window.__airborneAirfield || window.__airborneRuffActive) {
+      ensureAudio();
+      gameOverOverlay.classList.add("hidden");
+      if (typeof beginAirfieldTraining === "function") beginAirfieldTraining();
+      else if (window.beginAirfieldTraining) window.beginAirfieldTraining();
+      state = "playing";
+      health = MAX_HEALTH;
+      updateHealthDisplay();
+      return;
+    }
     // Resume game from last checkpoint — keep score, reset health, clear threats
     ensureAudio();
     setMusicTheme(THEME_NORMAL);

@@ -229,7 +229,8 @@
     drawBlimpHeadlight();
     if (typeof drawAirfieldShadow === "function") drawAirfieldShadow();
     drawPlayer();
-    if (typeof window.__airborneDrawRuff === "function") window.__airborneDrawRuff(); // companion near ship
+    // R.U.F.F. on top of world (not under strip/mountains)
+    if (typeof window.__airborneDrawRuff === "function") window.__airborneDrawRuff();
     drawWindParticlesFront();
     drawShieldEffect();
     drawStorm();

@@ -841,15 +841,19 @@
       }
     } else if (ruffStage === "altitude") {
       ruffCrystals = [];
-      if (typeof obstacles !== "undefined") obstacles = [];
+      if (typeof obstacles !== "undefined") {
+        obstacles = obstacles.filter(function(o){ return o && (o.isHeart || o.type==="heart"); });
+      }
       if (typeof updateMarkers === "function") updateMarkers(dt);
-      if (ruffStageT > 10) nextStage();
+      if (ruffStageT > 14) nextStage();
     } else if (ruffStage === "crystals") {
-      if (typeof obstacles !== "undefined") obstacles = [];
+      if (typeof obstacles !== "undefined") {
+        obstacles = obstacles.filter(function(o){ return o && (o.isHeart || o.type==="heart"); });
+      }
       if (typeof powerup !== "undefined") powerup = null;
       updateCrystals(dt);
       if (ruffStats.crystals < 3 && ruffCrystals.length < 2) spawnCrystals(3);
-      if ((ruffStats.crystals >= 3 && ruffCrystals.length === 0 && ruffStageT > 4) || ruffStageT > 20) {
+      if ((ruffStats.crystals >= 3 && ruffCrystals.length === 0 && ruffStageT > 5) || ruffStageT > 22) {
         if (typeof obstacles !== "undefined") obstacles = [];
         ruffCrystals = [];
         nextStage();
@@ -857,12 +861,14 @@
     } else if (ruffStage === "obstacles") {
       ruffCrystals = [];
       if (typeof powerup !== "undefined") powerup = null;
-      if (ruffStageT > 8) {
+      window.__airborneAirfieldObstacles = true;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 1.6;
+      if (ruffStageT > 12) {
         window.__airborneAirfieldObstacles = false;
         if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       }
       const obsCount = (typeof obstacles !== "undefined" && obstacles) ? obstacles.length : 0;
-      if ((ruffStageT > 10 && obsCount === 0) || ruffStageT > 16) {
+      if ((ruffStageT > 14 && obsCount === 0) || ruffStageT > 20) {
         if (typeof obstacles !== "undefined") obstacles = [];
         ruffStats.obstaclesAvoided += 2;
         nextStage();
@@ -949,12 +955,15 @@
   }
 
   function drawRuff() {
-    // Resync if begin set window flag but local was reset
     if (!ruffActive && window.__airborneRuffActive) {
       ruffActive = true;
       if (!ruffStage || ruffStage === "idle") ruffStage = window.__airborneRuffStage || "intro";
     }
     if (!ruffActive) return;
+    if (!window.__ruffDrawLogged) {
+      window.__ruffDrawLogged = true;
+      console.log("[R.U.F.F.] drawing", ruffStage, Math.round(ruffX), Math.round(ruffY));
+    }
     drawMarkers();
     drawCrystals();
     drawSparkles();
@@ -1020,7 +1029,10 @@
   };
 
   window.__airborneForceRuffAltitude = function() {
-    if (!ruffActive) return;
+    if (!ruffActive) {
+      ruffActive = true;
+      window.__airborneRuffActive = true;
+    }
     if (ruffStage === "intro" || ruffStage === "takeoff" || ruffStage === "idle") {
       setStage("altitude");
     }
