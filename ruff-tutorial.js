@@ -321,6 +321,28 @@
     }
     syncStageFlags();
 
+    // Clear items ONCE when entering a stage (never every frame mid-flight)
+    if (name === "altitude" || name === "crystals" || name === "powerup") {
+      if (typeof obstacles !== "undefined") obstacles = [];
+      ruffCrystals = [];
+      window.__airborneAirfieldObstacles = false;
+      window.__airborneAirfieldRings = false;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+    } else if (name === "obstacles" || name === "shield") {
+      ruffCrystals = [];
+      window.__airborneAirfieldObstacles = true;
+      window.__airborneAirfieldRings = false;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 1.35;
+    } else if (name === "rings") {
+      window.__airborneAirfieldRings = true;
+      window.__airborneAirfieldObstacles = false;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 1.5;
+    } else if (name === "combined") {
+      window.__airborneAirfieldRings = true;
+      window.__airborneAirfieldObstacles = true;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 1.55;
+    }
+
     if (name === "intro") {
       ruffIntroFly = true;
       ruffIntroFlyT = 0;
@@ -728,11 +750,19 @@
       medalImg.alt = pilotRank.name || "Cadet";
     }
 
-    if (final) final.textContent = "FINAL SCORE  0";
+    if (final) {
+      final.textContent = "FINAL SCORE  0";
+      final.style.opacity = "0.75";
+      final.classList.remove("fadeOut");
+    }
+    if (rankBanner) {
+      rankBanner.classList.remove("visible", "bounceIn");
+      rankBanner.style.opacity = "0";
+    }
     el.classList.add("visible");
     ensureSkipHandler();
 
-    // Count-up final score, then reveal medal / RANK UP
+    // Count-up → fade score → big RANK UP bounce
     const duration = 1600;
     const t0 = performance.now();
     function tick(now) {
@@ -744,12 +774,15 @@
         requestAnimationFrame(tick);
       } else {
         if (final) final.textContent = "FINAL SCORE  " + sc;
-        // Reveal rank banner
-        if (rankBanner) {
-          rankBanner.classList.add("visible");
-          rankBanner.style.opacity = "1";
-        }
-        showRadio("Not bad for a first flight, " + (pilotRank.name || "Cadet") + ".", 3.2);
+        // Fade score away, then bounce rank in
+        if (final) final.classList.add("fadeOut");
+        setTimeout(function () {
+          if (rankBanner) {
+            rankBanner.classList.add("visible", "bounceIn");
+            rankBanner.style.opacity = "1";
+          }
+          showRadio("Not bad for a first flight, " + (pilotRank.name || "Cadet") + ".", 3.2);
+        }, 480);
       }
     }
     requestAnimationFrame(tick);
@@ -854,9 +887,12 @@
     // Do NOT force obstacleSpeed or unpause during intro/runway —
     // airfield owns those. Only ensure cruise speed once airborne lessons run.
     const afPh = window.__airborneAirfieldPhase;
-    if (afPh === "lesson" || afPh === "land" || afPh === "score") {
-      if (typeof obstacleSpeed !== "undefined" && !(obstacleSpeed > 50)) {
-        obstacleSpeed = 210;
+    if (afPh === "lesson") {
+      // Slightly higher tempo during training (birds/items)
+      if (typeof obstacleSpeed !== "undefined") {
+        const target = (ruffStage === "obstacles" || ruffStage === "shield" || ruffStage === "combined")
+          ? 255 : 230;
+        if (obstacleSpeed < target) obstacleSpeed = target;
       }
     }
     // Only clear pause once intro is done and player is in takeoff+ stages
@@ -913,36 +949,25 @@
         nextStage();
       }
     } else if (ruffStage === "altitude") {
-      ruffCrystals = [];
-      if (typeof obstacles !== "undefined") {
-        obstacles = obstacles.filter(function(o){ return o && (o.isHeart || o.type==="heart"); });
-      }
+      // Do NOT wipe obstacles every frame — causes random item disappear
       if (typeof updateMarkers === "function") updateMarkers(dt);
       if (ruffStageT > 14) nextStage();
     } else if (ruffStage === "crystals") {
-      if (typeof obstacles !== "undefined") {
-        obstacles = obstacles.filter(function(o){ return o && (o.isHeart || o.type==="heart"); });
-      }
-      if (typeof powerup !== "undefined") powerup = null;
       updateCrystals(dt);
       if (ruffStats.crystals < 3 && ruffCrystals.length < 2) spawnCrystals(3);
       if ((ruffStats.crystals >= 3 && ruffCrystals.length === 0 && ruffStageT > 5) || ruffStageT > 22) {
-        if (typeof obstacles !== "undefined") obstacles = [];
-        ruffCrystals = [];
         nextStage();
       }
     } else if (ruffStage === "obstacles") {
-      ruffCrystals = [];
-      if (typeof powerup !== "undefined") powerup = null;
       window.__airborneAirfieldObstacles = true;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 1.6;
-      if (ruffStageT > 12) {
+      if (typeof spawnInterval !== "undefined") spawnInterval = 1.35; // slightly faster birds
+      // Keep spawning for most of the stage — only stop near the end
+      if (ruffStageT > 16) {
         window.__airborneAirfieldObstacles = false;
         if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       }
       const obsCount = (typeof obstacles !== "undefined" && obstacles) ? obstacles.length : 0;
-      if ((ruffStageT > 14 && obsCount === 0) || ruffStageT > 20) {
-        if (typeof obstacles !== "undefined") obstacles = [];
+      if ((ruffStageT > 18 && obsCount === 0) || ruffStageT > 24) {
         ruffStats.obstaclesAvoided += 2;
         nextStage();
       }

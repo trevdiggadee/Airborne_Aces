@@ -222,10 +222,11 @@
     ctx.save();
     ctx.textAlign = "center";
     ctx.font = "bold " + Math.max(14, Math.min(20, W * 0.05)) + "px Georgia, serif";
-    ctx.shadowColor = "rgba(0,0,0,0.75)";
-    ctx.shadowBlur = 4;
-    ctx.shadowOffsetX = 1;
-    ctx.shadowOffsetY = 2;
+    // No drop shadow on blimps (gameplay + training)
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
     comboPopups.forEach(p => {
       const t = (now - p.born) / p.life;
       const y = p.y - t * 36;
@@ -359,7 +360,7 @@
 
     const frameDuration = 1 / OBSTACLE_ANIM_FPS;
     obstacles.forEach(o => {
-      o.x -= obstacleSpeed * (o.speedMult || 1) * dt;
+      o.x -= obstacleSpeed * (window.__airborneAirfield && window.__airborneAirfieldObstacles ? 1.18 : 1) * (o.speedMult || 1) * dt;
       if (o.isRing || o.type === "gold_ring") {
         o.spin = (o.spin || 0) + dt * 2.2;
         o.bobPhase = (o.bobPhase || 0) + dt * 1.6;

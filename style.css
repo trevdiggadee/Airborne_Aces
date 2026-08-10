@@ -2557,6 +2557,12 @@ html, body {
   font-size: 20px;
   color: #d4af37;
   letter-spacing: 0.08em;
+  opacity: 0.72;
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+#ruffReport .final.fadeOut {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.96);
 }
 #ruffReport .rank {
   margin-top: 10px;
@@ -2566,40 +2572,47 @@ html, body {
   color: #f5e6c8;
 }
 #ruffReport .rankBanner {
-  margin-top: 14px;
+  margin-top: 10px;
   text-align: center;
   opacity: 0;
-  transform: scale(0.85);
-  transition: opacity 0.55s ease, transform 0.55s ease;
+  transform: scale(0.5);
   pointer-events: none;
 }
 #ruffReport .rankBanner.visible {
   opacity: 1;
-  transform: scale(1);
+}
+#ruffReport .rankBanner.bounceIn {
+  animation: ruffRankBounce 0.85s cubic-bezier(0.22, 1.4, 0.36, 1) both;
+}
+@keyframes ruffRankBounce {
+  0%   { opacity: 0; transform: scale(0.4) translateY(18px); filter: brightness(1.4); }
+  55%  { opacity: 1; transform: scale(1.18) translateY(-4px); filter: brightness(1.15); }
+  75%  { transform: scale(0.96) translateY(2px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); filter: brightness(1); }
 }
 #ruffReport .rankMedal {
   display: block;
-  width: min(140px, 42vw);
+  width: min(168px, 48vw);
   height: auto;
-  margin: 0 auto 6px;
-  filter: drop-shadow(0 4px 14px rgba(0,0,0,0.55));
+  margin: 0 auto 8px;
+  filter: drop-shadow(0 6px 18px rgba(212,175,55,0.45));
 }
 #ruffReport .rankUp {
   font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
   font-weight: bold;
-  font-size: clamp(18px, 5.2vw, 26px);
-  letter-spacing: 0.22em;
+  font-size: clamp(26px, 7.5vw, 36px);
+  letter-spacing: 0.24em;
   color: #ffe9a8;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.55), 0 0 18px rgba(212,175,55,0.45);
-  margin-top: 2px;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.55), 0 0 28px rgba(212,175,55,0.55);
+  margin-top: 4px;
 }
 #ruffReport .rankName {
   font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
   font-weight: bold;
-  font-size: clamp(16px, 4.6vw, 22px);
-  letter-spacing: 0.18em;
+  font-size: clamp(20px, 5.8vw, 28px);
+  letter-spacing: 0.2em;
   color: #d4af37;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 #ruffReport .rankTitle {
   font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;

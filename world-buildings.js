@@ -594,8 +594,8 @@
       window.__airborneAirfieldPaused = false;
       window.__airborneAirfieldInvuln = false;
       window.__airborneTrainingFlight = true;
-      if (typeof obstacleSpeed !== "undefined" && (obstacleSpeed || 0) < 180) {
-        obstacleSpeed = 210;
+      if (typeof obstacleSpeed !== "undefined" && (obstacleSpeed || 0) < 220) {
+        obstacleSpeed = 240;
       }
       // R.U.F.F. may request landing
       if (window.__airborneRuffRequestLand) {
@@ -635,10 +635,11 @@
         }
         if (typeof spawnInterval !== "undefined") {
           const needSpawn = window.__airborneAirfieldRings || window.__airborneAirfieldObstacles;
-          spawnInterval = needSpawn ? 1.9 : 999;
+          spawnInterval = needSpawn
+            ? (window.__airborneAirfieldObstacles ? 1.35 : 1.55)
+            : 999;
         }
-        if (typeof powerup !== "undefined" && st !== "powerup" && st !== "combined") powerup = null;
-        // Spawn flags only — avoid filtering every frame (collision flicker)
+        // Spawn flags only — never null out live pickups mid-frame
         airfieldTip = "";
         syncAirfieldGlobals();
         return;
