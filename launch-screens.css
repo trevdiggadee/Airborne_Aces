@@ -139,7 +139,8 @@
   position: absolute;
   top: 36.5%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  /* Center, then lower by 55% of crystal height */
+  transform: translate(-50%, calc(-50% + 55%));
   /* Match painted crystal on poster: ~28% of viewport width, native aspect 404/612 */
   width: min(28vw, 200px);
   aspect-ratio: 404 / 612;
@@ -183,7 +184,8 @@
   position: absolute;
   top: 36.5%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  /* Match crystal: center then lower 55% of crystal-ish radius */
+  transform: translate(-50%, calc(-50% + 28%));
   width: min(42vw, 300px);
   aspect-ratio: 1;
   background: radial-gradient(circle, rgba(80,180,255,0.22) 0%, rgba(40,120,220,0.08) 45%, transparent 70%);
@@ -193,8 +195,8 @@
   animation: otg-aura 4s ease-in-out infinite;
 }
 @keyframes otg-aura {
-  0%, 100% { transform: translate(-50%, -50%) scale(0.95); opacity: 0.7; }
-  50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+  0%, 100% { transform: translate(-50%, calc(-50% + 28%)) scale(0.95); opacity: 0.7; }
+  50% { transform: translate(-50%, calc(-50% + 28%)) scale(1.1); opacity: 1; }
 }
 
 .otg-enter-wrap {
@@ -218,6 +220,7 @@
   border: 1.5px solid rgba(180,220,255,0.55);
   border-radius: 8px; /* rectangle with small rounded edges */
   color: #e8f4ff;
+  font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
   font-size: 19px;
   font-weight: 700;
   letter-spacing: 2.5px;
