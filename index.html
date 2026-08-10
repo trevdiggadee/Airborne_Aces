@@ -21,7 +21,7 @@
       color: #fff;
     }
 
-    /* ========== LOADING SCREEN (full-screen logo) ========== */
+    /* ========== LOADING SCREEN ========== */
     #loading-screen {
       position: fixed;
       inset: 0;
@@ -314,11 +314,11 @@
       z-index: 20;
     }
 
-    /* ========== MENU SCREEN ========== */
-    #menu-screen {
+    /* ========== BLIMP SELECT SCREEN ========== */
+    #blimp-select {
       position: fixed;
       inset: 0;
-      background: linear-gradient(180deg, #0b1a2e 0%, #061018 100%);
+      background: linear-gradient(180deg, #0c1c32 0%, #071018 100%);
       display: flex;
       flex-direction: column;
       opacity: 0;
@@ -327,77 +327,151 @@
       z-index: 200;
     }
 
-    #menu-screen.visible {
+    #blimp-select.visible {
       opacity: 1;
       visibility: visible;
     }
 
-    .menu-header {
-      padding: 48px 24px 20px;
+    .blimp-header {
+      padding: 44px 20px 12px;
       text-align: center;
     }
 
-    .menu-title {
-      font-size: 28px;
+    .blimp-header h1 {
+      font-size: 22px;
       font-weight: 700;
-      letter-spacing: 4px;
+      letter-spacing: 3px;
       color: #e8f4ff;
-      text-shadow: 0 0 20px rgba(80, 160, 255, 0.4);
+      text-shadow: 0 0 18px rgba(80, 160, 255, 0.35);
     }
 
-    .menu-subtitle {
+    .blimp-header p {
       margin-top: 6px;
       font-size: 12px;
-      letter-spacing: 3px;
-      color: rgba(160, 200, 240, 0.55);
+      letter-spacing: 2px;
+      color: rgba(160, 200, 240, 0.5);
       text-transform: uppercase;
     }
 
-    .menu-body {
+    .blimp-list {
       flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 12px 20px 30px;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
       gap: 14px;
-      padding: 0 32px;
     }
 
-    .menu-btn {
-      width: 100%;
-      max-width: 280px;
-      padding: 16px 20px;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1.5px solid rgba(140, 190, 255, 0.35);
-      border-radius: 14px;
-      color: #dceeff;
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      text-align: center;
+    .blimp-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 18px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1.5px solid rgba(120, 180, 255, 0.28);
+      border-radius: 16px;
       cursor: pointer;
       transition: background 0.15s, border-color 0.15s, transform 0.12s;
-      backdrop-filter: blur(4px);
     }
 
-    .menu-btn:active {
-      transform: scale(0.97);
-      background: rgba(255, 255, 255, 0.12);
-      border-color: rgba(180, 220, 255, 0.6);
+    .blimp-card:active {
+      transform: scale(0.98);
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(160, 210, 255, 0.55);
     }
 
-    .menu-btn.primary {
-      background: linear-gradient(180deg, rgba(40, 110, 190, 0.55), rgba(20, 70, 140, 0.55));
-      border-color: rgba(120, 190, 255, 0.55);
+    .blimp-card.selected {
+      background: rgba(40, 110, 190, 0.28);
+      border-color: rgba(120, 200, 255, 0.65);
+      box-shadow: 0 0 20px rgba(50, 140, 255, 0.25);
     }
 
-    .menu-footer {
-      padding: 20px;
-      text-align: center;
+    .blimp-icon {
+      width: 64px;
+      height: 48px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #2a5a8a, #1a3a5c);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      flex-shrink: 0;
+      border: 1px solid rgba(150, 200, 255, 0.25);
+    }
+
+    .blimp-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .blimp-name {
+      font-size: 15px;
+      font-weight: 650;
+      letter-spacing: 0.5px;
+      color: #eef6ff;
+    }
+
+    .blimp-desc {
+      margin-top: 3px;
+      font-size: 11px;
+      color: rgba(180, 210, 240, 0.55);
+      line-height: 1.35;
+    }
+
+    .blimp-stats {
+      margin-top: 6px;
+      display: flex;
+      gap: 10px;
       font-size: 10px;
-      color: rgba(255, 255, 255, 0.28);
-      letter-spacing: 1px;
+      letter-spacing: 0.5px;
+      color: rgba(140, 190, 240, 0.7);
+    }
+
+    .blimp-stats span {
+      background: rgba(255,255,255,0.06);
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+
+    .blimp-footer {
+      padding: 14px 20px 28px;
+      display: flex;
+      gap: 12px;
+    }
+
+    .blimp-footer button {
+      flex: 1;
+      padding: 15px;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 650;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: 1.5px solid transparent;
+      transition: transform 0.12s, background 0.15s;
+    }
+
+    .blimp-footer button:active {
+      transform: scale(0.97);
+    }
+
+    .btn-back {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(140, 180, 230, 0.3);
+      color: #c8dff5;
+    }
+
+    .btn-select {
+      background: linear-gradient(180deg, rgba(40, 120, 200, 0.7), rgba(20, 80, 150, 0.7));
+      border-color: rgba(120, 190, 255, 0.55);
+      color: #fff;
+    }
+
+    .btn-select:disabled {
+      opacity: 0.4;
+      pointer-events: none;
     }
   </style>
 </head>
@@ -433,19 +507,21 @@
     <div class="splash-footer">ONE THUMB GAMING  •  AIRBORNE ACES 1933</div>
   </div>
 
-  <!-- MENU -->
-  <div id="menu-screen">
-    <div class="menu-header">
-      <div class="menu-title">AIRBORNE ACES</div>
-      <div class="menu-subtitle">1933</div>
+  <!-- BLIMP SELECT (menu disabled for now) -->
+  <div id="blimp-select">
+    <div class="blimp-header">
+      <h1>SELECT BLIMP</h1>
+      <p>Choose your airship</p>
     </div>
-    <div class="menu-body">
-      <button class="menu-btn primary" onclick="menuAction('play')">Play</button>
-      <button class="menu-btn" onclick="menuAction('hangar')">Hangar</button>
-      <button class="menu-btn" onclick="menuAction('missions')">Missions</button>
-      <button class="menu-btn" onclick="menuAction('settings')">Settings</button>
+
+    <div class="blimp-list" id="blimp-list">
+      <!-- cards injected by JS -->
     </div>
-    <div class="menu-footer">ONE THUMB GAMING</div>
+
+    <div class="blimp-footer">
+      <button class="btn-back" onclick="backToSplash()">Back</button>
+      <button class="btn-select" id="btn-confirm" disabled onclick="confirmBlimp()">Select</button>
+    </div>
   </div>
 
   <script>
@@ -453,11 +529,106 @@
     const progressText = document.getElementById('progress-text');
     const loadingScreen = document.getElementById('loading-screen');
     const splashScreen = document.getElementById('splash-screen');
-    const menuScreen = document.getElementById('menu-screen');
+    const blimpSelect = document.getElementById('blimp-select');
+    const btnConfirm = document.getElementById('btn-confirm');
 
     const posterImg = new Image();
     posterImg.src = 'airborne_aces_poster.png';
 
+    // Blimp roster (placeholder – replace with real assets later)
+    const blimps = [
+      {
+        id: 'zeppelin-ace',
+        name: 'Zeppelin Ace',
+        desc: 'Classic rigid airship. Balanced speed & firepower.',
+        icon: '🎈',
+        stats: ['SPD 3', 'ARM 4', 'GUN 3']
+      },
+      {
+        id: 'sky-raider',
+        name: 'Sky Raider',
+        desc: 'Fast scout blimp. Light armor, high mobility.',
+        icon: '✈️',
+        stats: ['SPD 5', 'ARM 2', 'GUN 2']
+      },
+      {
+        id: 'ironclad',
+        name: 'Ironclad',
+        desc: 'Heavy armored behemoth. Slow but devastating.',
+        icon: '🛡️',
+        stats: ['SPD 2', 'ARM 5', 'GUN 4']
+      },
+      {
+        id: 'thunderbolt',
+        name: 'Thunderbolt',
+        desc: 'Experimental storm-class. Lightning weapons.',
+        icon: '⚡',
+        stats: ['SPD 4', 'ARM 3', 'GUN 5']
+      },
+      {
+        id: 'cloud-hopper',
+        name: 'Cloud Hopper',
+        desc: 'Lightweight observation craft. Stealthy.',
+        icon: '☁️',
+        stats: ['SPD 4', 'ARM 1', 'GUN 1']
+      }
+    ];
+
+    let selectedBlimp = null;
+
+    function renderBlimps() {
+      const list = document.getElementById('blimp-list');
+      list.innerHTML = '';
+      blimps.forEach(b => {
+        const card = document.createElement('div');
+        card.className = 'blimp-card';
+        card.dataset.id = b.id;
+        card.innerHTML = `
+          <div class="blimp-icon">${b.icon}</div>
+          <div class="blimp-info">
+            <div class="blimp-name">${b.name}</div>
+            <div class="blimp-desc">${b.desc}</div>
+            <div class="blimp-stats">${b.stats.map(s => '<span>' + s + '</span>').join('')}</div>
+          </div>
+        `;
+        card.addEventListener('click', function() { selectBlimp(b.id, card); });
+        list.appendChild(card);
+      });
+    }
+
+    function selectBlimp(id, cardEl) {
+      selectedBlimp = id;
+      document.querySelectorAll('.blimp-card').forEach(c => c.classList.remove('selected'));
+      cardEl.classList.add('selected');
+      btnConfirm.disabled = false;
+    }
+
+    function confirmBlimp() {
+      if (!selectedBlimp) return;
+      console.log('Selected blimp:', selectedBlimp);
+      btnConfirm.textContent = 'Ready…';
+      btnConfirm.disabled = true;
+      setTimeout(function() {
+        btnConfirm.textContent = 'Select';
+        btnConfirm.disabled = false;
+      }, 800);
+    }
+
+    function backToSplash() {
+      blimpSelect.style.opacity = '0';
+      setTimeout(function() {
+        blimpSelect.classList.remove('visible');
+        blimpSelect.style.visibility = 'hidden';
+        splashScreen.style.visibility = 'visible';
+        splashScreen.style.opacity = '1';
+        splashScreen.classList.add('visible');
+        var btn = document.getElementById('enter-hangar');
+        btn.style.pointerEvents = '';
+        btn.style.opacity = '';
+      }, 500);
+    }
+
+    // ---------- Loading sequence ----------
     let progress = 0;
     const assets = [
       { weight: 18 }, { weight: 22 }, { weight: 12 },
@@ -465,7 +636,7 @@
     ];
     let currentAsset = 0;
     let loadedWeight = 0;
-    const totalWeight = assets.reduce((s, a) => s + a.weight, 0);
+    const totalWeight = assets.reduce(function(s, a) { return s + a.weight; }, 0);
 
     function loadNextAsset() {
       if (currentAsset >= assets.length) {
@@ -500,10 +671,11 @@
       progressFill.style.width = '100%';
       progressText.textContent = '100%';
       document.querySelector('.loading-text').textContent = 'Ready';
-      setTimeout(() => {
+      setTimeout(function() {
         loadingScreen.classList.add('hidden');
         splashScreen.classList.add('visible');
         createSparkles();
+        renderBlimps();
       }, 450);
     }
 
@@ -526,26 +698,23 @@
       }
     }
 
-    // Jump straight to menu
+    // Go straight to blimp select (menu disabled until later)
     function enterHangar() {
       const btn = document.getElementById('enter-hangar');
       btn.style.pointerEvents = 'none';
       btn.style.opacity = '0.5';
 
       splashScreen.style.opacity = '0';
-      setTimeout(() => {
+      setTimeout(function() {
         splashScreen.classList.remove('visible');
         splashScreen.style.visibility = 'hidden';
-        menuScreen.classList.add('visible');
+        blimpSelect.classList.add('visible');
       }, 500);
     }
 
-    function menuAction(id) {
-      // Placeholder – wire to real game scenes later
-      console.log('Menu action:', id);
-    }
-
-    document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+    document.addEventListener('touchmove', function(e) {
+      if (!e.target.closest('.blimp-list')) e.preventDefault();
+    }, { passive: false });
   </script>
 </body>
 </html>
