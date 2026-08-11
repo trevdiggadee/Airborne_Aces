@@ -25,6 +25,48 @@
   object-fit: cover;
   object-position: center;
   display: block;
+  animation: otg-logo-breathe 6s ease-in-out infinite;
+  filter: contrast(1.05) saturate(1.08);
+}
+@keyframes otg-logo-breathe {
+  0%, 100% { transform: scale(1); filter: contrast(1.05) saturate(1.08) brightness(1); }
+  50% { transform: scale(1.03); filter: contrast(1.08) saturate(1.12) brightness(1.06); }
+}
+#otg-loading::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(61,165,255,0.18) 0%, transparent 55%),
+    radial-gradient(ellipse at 30% 70%, rgba(30,90,180,0.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 80%, rgba(100,180,255,0.1) 0%, transparent 45%);
+  animation: otg-load-glow 4.5s ease-in-out infinite alternate;
+}
+@keyframes otg-load-glow {
+  from { opacity: 0.55; }
+  to   { opacity: 1; }
+}
+#otg-loading::after {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  z-index: 3;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    115deg,
+    transparent 0px,
+    transparent 40px,
+    rgba(255,255,255,0.03) 40px,
+    rgba(255,255,255,0.03) 42px
+  );
+  animation: otg-load-scan 8s linear infinite;
+  mix-blend-mode: screen;
+}
+@keyframes otg-load-scan {
+  from { transform: translateX(-8%) translateY(-4%); }
+  to   { transform: translateX(8%) translateY(4%); }
 }
 
 .otg-loading-area {
@@ -196,7 +238,7 @@
 
 .otg-enter-wrap {
   position: absolute;
-  bottom: 7.5%;
+  bottom: 6.5%; /* down ~1% */
   left: 0; right: 0;
   display: flex;
   justify-content: center;

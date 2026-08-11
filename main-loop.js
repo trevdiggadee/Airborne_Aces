@@ -124,9 +124,7 @@
 
     updateClouds(dtScale);
     updateBirdFlocks(dt);
-    
-    drawClouds();
-    // Mountains BEHIND landing strip / world
+    // Mountains BEHIND landing strip / world (clouds drawn later, in front)
     if (typeof drawMountainParallax === "function") drawMountainParallax();
     drawBirdFlocks();
     if (typeof drawAirfieldStrip === "function") drawAirfieldStrip();
@@ -229,6 +227,8 @@
     drawBlimpHeadlight();
     if (typeof drawAirfieldShadow === "function") drawAirfieldShadow();
     drawPlayer();
+    // Soft clouds in FRONT of mountains + blimp (50% alpha) — fly-through like L3
+    drawClouds();
     // R.U.F.F. on top of world (not under strip/mountains)
     if (typeof window.__airborneDrawRuff === "function") window.__airborneDrawRuff();
     drawWindParticlesFront();

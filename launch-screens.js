@@ -65,7 +65,7 @@
     progressFill.style.width = '100%';
     progressPct.textContent = '100%';
     const txt = loadingEl.querySelector('.otg-loading-text');
-    if (txt) txt.textContent = 'Ready';
+    if (txt) txt.textContent = 'ENGINES READY';
 
     setTimeout(() => {
       loadingEl.classList.add('otg-hidden');
@@ -73,6 +73,20 @@
       createSparkles();
     }, 450);
   }
+
+  // Alternating loading copy
+  const loadLines = ['WARMING THE ENGINES', 'SPINNING THE PROPELLERS'];
+  let loadLineIdx = 0;
+  const loadTxtEl = loadingEl.querySelector('.otg-loading-text');
+  if (loadTxtEl) loadTxtEl.textContent = loadLines[0];
+  const loadLineTimer = setInterval(function () {
+    if (!loadingEl || loadingEl.classList.contains('otg-hidden')) {
+      clearInterval(loadLineTimer);
+      return;
+    }
+    loadLineIdx = (loadLineIdx + 1) % loadLines.length;
+    if (loadTxtEl) loadTxtEl.textContent = loadLines[loadLineIdx];
+  }, 1600);
 
   // Start after a short delay so the logo paints first
   setTimeout(loadNext, 350);

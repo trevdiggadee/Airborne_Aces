@@ -183,11 +183,14 @@
     ctx.rotate(player.rotation + fin);
     if (!docked && performance.now() < invulnerableUntil) {
       ctx.globalAlpha = (Math.floor(performance.now() / 90) % 2 === 0) ? 1 : 0.35;
+    } else if (window.__airborneInCloud) {
+      // Level-3 style: blimp reads through the cloud
+      ctx.globalAlpha = 0.78;
     }
     if (docked) {
       ctx.scale(1, 1);
-    } else {
-      ctx.scale(blimpPersonality.squashX, blimpPersonality.squashY);
+    } else if (blimpPersonality) {
+      ctx.scale(blimpPersonality.squashX || 1, blimpPersonality.squashY || 1);
     }
     ctx.drawImage(img, -player.w / 2, -player.h / 2, player.w, player.h);
     ctx.restore();
@@ -382,27 +385,31 @@
             else if (typeof sfxPowerup === "function") sfxPowerup();
             if (typeof spawnComboPopup === "function") spawnComboPopup(cx, cy, "+5 RING!", "#ffd700");
             if (typeof notifyRingCollect === "function") notifyRingCollect();
-            // Gold spark burst when flying through a ring
-            if (typeof particles !== "undefined" && particles && Array.isArray(particles)) {
-              for (let i = 0; i < 18; i++) {
-                const ang = Math.random() * Math.PI * 2;
-                const spd = 60 + Math.random() * 140;
-                particles.push({
-                  x: cx, y: cy,
-                  vx: Math.cos(ang) * spd,
-                  vy: Math.sin(ang) * spd - 30,
-                  life: 0.45 + Math.random() * 0.35,
-                  age: 0,
-                  size: 2.5 + Math.random() * 4,
-                  color: Math.random() > 0.35 ? "#ffd700" : "#fff6c0",
-                  type: "spark"
-                });
-              }
-            }
+            // Explosive gold/white spark ring burst
+            o.burstT = 0.45;
+            o.burstX = cx;
+            o.burstY = cy;
             if (typeof spawnHitParticles === "function") {
               try { spawnHitParticles(cx, cy); } catch (e) {}
             }
-            o.burstT = 0.35;
+            if (typeof hitParticles !== "undefined" && hitParticles && Array.isArray(hitParticles)) {
+              for (let i = 0; i < 28; i++) {
+                const ang = (Math.PI * 2 * i) / 28 + Math.random() * 0.2;
+                const spd = 90 + Math.random() * 180;
+                hitParticles.push({
+                  x: cx, y: cy,
+                  vx: Math.cos(ang) * spd,
+                  vy: Math.sin(ang) * spd - 40,
+                  life: 0.4 + Math.random() * 0.45,
+                  age: 0,
+                  r: 2 + Math.random() * 4,
+                  color: i % 3 === 0 ? "#fff6c0" : (i % 3 === 1 ? "#ffd700" : "#ff9f1a")
+                });
+              }
+            }
+            if (typeof spawnShockwave === "function") {
+              try { spawnShockwave(cx, cy, 0.35); } catch (e) {}
+            }
           }
         }
         return; // rings skip bird damage / anim

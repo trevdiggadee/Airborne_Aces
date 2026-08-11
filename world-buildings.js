@@ -762,20 +762,76 @@
           player.y = landY;
           player.vy = 0;
           player.rotation = 0;
-          airfieldPhase = "score";
-          airfieldScoreT = 0;
-          airfieldFireworkT = 0;
+          // Drive along runway before full stop (~50% longer rollout)
+          airfieldPhase = "rollout";
+          airfieldRollT = 0;
+          airfieldRollStartX = player.x;
           try {
             if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
-            if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
-            if (typeof spawnVictoryFirework === "function") {
-              spawnVictoryFirework(player.x, player.y - 30);
-              spawnVictoryFirework(W * 0.5, H * 0.3);
-              spawnVictoryFirework(W * 0.7, H * 0.35);
-            }
             if (typeof spawnLandingDust === "function") spawnLandingDust(player.x, landY + ph * 0.3);
           } catch (e) {}
         }
+      }
+      syncAirfieldGlobals();
+
+    // ---- ROLLOUT (drive on runway, then squash stop) ----
+    } else if (airfieldPhase === "rollout") {
+      window.__airborneAirfieldInvuln = true;
+      window.__airborneAirfieldPaused = false;
+      airfieldRollT = (airfieldRollT || 0) + dt;
+      // ~50% longer than a short stop: ~2.4s of taxi then settle
+      const rollDur = 2.4;
+      const u = Math.min(1, airfieldRollT / rollDur);
+      const ease = 1 - Math.pow(1 - u, 2.2); // decelerate into stop
+      const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
+      const landY = H - Math.max(40, th * 0.28) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10);
+      if (typeof player !== "undefined" && player) {
+        const startX = (typeof airfieldRollStartX === "number") ? airfieldRollStartX : W * 0.28;
+        player.x = startX + ease * W * 0.22;
+        player.y = landY;
+        player.vy = 0;
+        player.rotation = 0;
+        // Soft squash while rolling, stronger at the stop
+        if (typeof blimpPersonality !== "undefined" && blimpPersonality) {
+          if (u < 0.92) {
+            blimpPersonality.squashX = 1.04;
+            blimpPersonality.squashY = 0.96;
+          } else {
+            // Squash-style stop
+            const s = (u - 0.92) / 0.08;
+            blimpPersonality.squashX = 1.04 + s * 0.22;
+            blimpPersonality.squashY = 0.96 - s * 0.18;
+          }
+        }
+      }
+      // Keep strip locked under rollout
+      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      if (airfieldRollT >= rollDur) {
+        if (typeof blimpPersonality !== "undefined" && blimpPersonality) {
+          blimpPersonality.squashX = 1.18;
+          blimpPersonality.squashY = 0.82;
+          // recover after a beat via score phase
+          setTimeout(function () {
+            if (blimpPersonality) {
+              blimpPersonality.squashX = 1;
+              blimpPersonality.squashY = 1;
+            }
+          }, 280);
+        }
+        try {
+          if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
+          if (typeof spawnLandingDust === "function" && player) {
+            spawnLandingDust(player.x, (player.y || 0) + 20);
+          }
+          if (typeof spawnVictoryFirework === "function") {
+            spawnVictoryFirework(player.x, player.y - 30);
+            spawnVictoryFirework(W * 0.5, H * 0.3);
+            spawnVictoryFirework(W * 0.7, H * 0.35);
+          }
+        } catch (e) {}
+        airfieldPhase = "score";
+        airfieldScoreT = 0;
+        airfieldFireworkT = 0;
       }
       syncAirfieldGlobals();
 
@@ -785,12 +841,12 @@
       window.__airborneAirfieldInvuln = true;
       airfieldScoreT = (airfieldScoreT || 0) + dt;
       airfieldFireworkT = (airfieldFireworkT || 0) + dt;
-      airfieldStripY = 0;
+      // Keep strip at rest height (don't jump stripY to 0)
       if (typeof player !== "undefined" && player) {
         const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
         const landY = H - Math.max(40, th * 0.28) - (player.h > 0 ? player.h * 0.22 : 10);
         player.y = landY;
-        player.x = W * 0.28;
+        // stay where rollout ended
         player.vy = 0;
         player.rotation = 0;
       }
@@ -1404,7 +1460,7 @@
       clouds.push({
         x: Math.random() * W,
         y: 30 + Math.random() * (H * 0.38),
-        scale: 0.22 + Math.random() * 0.28,
+        scale: 0.11 + Math.random() * 0.14, // ~100% smaller than prior soft clouds
         speed: 0.12 + Math.random() * 0.18,
         alpha: 0.5, // 50% transparent
         imgKey: (img === images.cloud_soft_b) ? "cloud_soft_b"
@@ -1413,6 +1469,7 @@
     }
   }
   function updateClouds(dtScale) {
+    window.__airborneInCloud = false;
     if (worldScrollFrozen()) return;
     if (window.__airborneRuffStage === "intro") return;
     clouds.forEach(c => {
@@ -1428,16 +1485,16 @@
         const dx = Math.abs((px + player.w / 2) - (cx + cw / 2));
         const dy = Math.abs((py + player.h / 2) - (cy + ch / 2));
         if (dx < (cw / 2 + player.w / 2) * 0.78 && dy < (ch / 2 + player.h / 2) * 0.78) {
-          // dtScale is ~dt*60 from main loop
+          window.__airborneInCloud = true;
           const dt = Math.max(0.008, Math.min(0.05, dtScale / 60));
-          maybeEmitCloudWisp(player.x, player.y, dt, 36);
+          if (typeof maybeEmitCloudWisp === "function") maybeEmitCloudWisp(player.x, player.y, dt, 42);
         }
       }
       if (c.x + drawnW < 0) {
         const ni = pickCloudImg();
         c.x = W + 20 + Math.random() * 120;
         c.y = 30 + Math.random() * (H * 0.38);
-        c.scale = 0.22 + Math.random() * 0.28;
+        c.scale = 0.11 + Math.random() * 0.14;
         c.speed = 0.12 + Math.random() * 0.18;
         c.alpha = 0.5;
         c.imgKey = (ni === images.cloud_soft_b) ? "cloud_soft_b"
