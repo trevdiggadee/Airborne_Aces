@@ -30,7 +30,7 @@
 }
 @keyframes otg-logo-breathe {
   0%, 100% { transform: scale(1); filter: contrast(1.05) saturate(1.08) brightness(1); }
-  50% { transform: scale(1.03); filter: contrast(1.08) saturate(1.12) brightness(1.06); }
+  50% { transform: scale(1.02); filter: contrast(1.08) saturate(1.12) brightness(1.08); }
 }
 #otg-loading::before {
   content: '';
@@ -48,40 +48,31 @@
   from { opacity: 0.55; }
   to   { opacity: 1; }
 }
+/* Soft shimmer sweep across the loading image (no hard scan lines) */
 #otg-loading::after {
   content: '';
   position: absolute;
-  inset: -25%;
+  inset: 0;
   z-index: 3;
   pointer-events: none;
-  background:
-    repeating-linear-gradient(
-      118deg,
-      transparent 0px,
-      transparent 14px,
-      rgba(255,255,255,0.015) 14px,
-      rgba(255,255,255,0.015) 15px,
-      transparent 15px,
-      transparent 28px,
-      rgba(180,220,255,0.04) 28px,
-      rgba(180,220,255,0.04) 29px
-    ),
-    repeating-linear-gradient(
-      -18deg,
-      transparent 0px,
-      transparent 36px,
-      rgba(255,255,255,0.02) 36px,
-      rgba(255,255,255,0.02) 37px
-    );
-  animation: otg-load-scan 7s linear infinite;
-  mix-blend-mode: screen;
-  opacity: 0.85;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 12%, #000 88%, transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0%, #000 12%, #000 88%, transparent 100%);
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(255, 255, 255, 0.07) 45%,
+    rgba(200, 230, 255, 0.14) 50%,
+    rgba(255, 255, 255, 0.07) 55%,
+    transparent 60%,
+    transparent 100%
+  );
+  background-size: 220% 100%;
+  animation: otg-img-shimmer 3.6s ease-in-out infinite;
+  mix-blend-mode: soft-light;
 }
-@keyframes otg-load-scan {
-  from { transform: translateX(-10%) translateY(-3%) skewX(-2deg); }
-  to   { transform: translateX(10%) translateY(3%) skewX(-2deg); }
+@keyframes otg-img-shimmer {
+  0%   { background-position: 120% 0; opacity: 0.55; }
+  45%  { opacity: 0.95; }
+  100% { background-position: -120% 0; opacity: 0.55; }
 }
 
 .otg-loading-area {
@@ -112,8 +103,8 @@
 
 .otg-progress-track {
   width: 100%;
-  max-width: 240px;
-  height: 5px;
+  max-width: 252px; /* +5% */
+  height: 8px;     /* thicker bar */
   background: rgba(255,255,255,0.15);
   border-radius: 10px;
   overflow: hidden;
@@ -268,7 +259,8 @@
   justify-content: center;
   text-align: center;
   line-height: 1;
-  padding: 16px 42px;
+  /* lower label ~1% inside the box */
+  padding: 17px 42px 15px;
   min-width: 240px;
   background: rgba(255,255,255,0.08);
   border: 1.5px solid rgba(180,220,255,0.55);

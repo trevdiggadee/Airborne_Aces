@@ -75,7 +75,7 @@
   }
 
   // Alternating loading copy
-  const loadLines = ['WARMING THE ENGINES', 'SPINNING THE PROPELLERS'];
+  const loadLines = ['WARMING THE ENGINES', 'SPINNING THE PROPELLERS', 'DOING IMPORTANT PILOT STUFF', 'CLEARING THE RUNWAY'];
   let loadLineIdx = 0;
   const loadTxtEl = loadingEl.querySelector('.otg-loading-text');
   if (loadTxtEl) loadTxtEl.textContent = loadLines[0];

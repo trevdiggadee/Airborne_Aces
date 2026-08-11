@@ -495,12 +495,15 @@ html, body {
   top: 53.5%;
   left: 50%;
   transform: translate(-50%, -50%);
-  padding: 12px 36px;
+  padding: 12px 36px 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
   line-height: 1;
+  /* nudge label down ~1% inside the box */
+  padding-top: 13px;
+  padding-bottom: 11px;
   background: linear-gradient(180deg, rgba(200,150,80,0.55), rgba(90,55,25,0.5));
   border: 2px solid rgba(255, 210, 140, 0.7);
   border-radius: 10px;
@@ -2842,6 +2845,10 @@ html, body {
   letter-spacing: 0.04em;
   color: #ffe9a8;
   text-shadow: 0 0 8px rgba(212,175,55,0.5);
+  /* Lower number ~1% inside the circle */
+  transform: translateY(1%);
+  position: relative;
+  top: 1px;
 }
 #ruffFlightTrace .ft-label {
   margin-top: 6px;
