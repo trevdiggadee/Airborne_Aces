@@ -248,6 +248,7 @@
           window.__airborneAirfieldPhase === "climb" ||
           window.__airborneAirfieldPhase === "land" ||
           window.__airborneAirfieldPhase === "rollout" ||
+          window.__airborneAirfieldPhase === "skid" ||
           window.__airborneAirfieldPhase === "score" ||
           window.__airborneAirfieldPhase === "done"))) {
       return;

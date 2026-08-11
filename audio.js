@@ -526,6 +526,14 @@
     }
   }
 
+  function sfxAirfieldScreech() {
+    // High tire/skid screech + grit
+    playNoise({ duration: 0.55, vol: 0.22, filterType: "bandpass", filterFreq: 1800, filterFreqEnd: 600, Q: 2.2, reverbSend: 0.15 });
+    playNoise({ duration: 0.4, vol: 0.12, filterType: "highpass", filterFreq: 3200, filterFreqEnd: 1200, Q: 1.4, startDelay: 0.05 });
+    playTone({ freq: 420, duration: 0.35, type: "sawtooth", vol: 0.06, sweep: -280, attack: 0.01, reverbSend: 0.1 });
+    playTone({ freq: 180, duration: 0.28, type: "square", vol: 0.05, sweep: -80, startDelay: 0.08 });
+  }
+
   function sfxAirfieldLand() {
     if (muted || !audioCtx) return;
     playNoise({ duration: 0.35, vol: 0.08, filterType: "lowpass", filterFreq: 600, filterFreqEnd: 120, Q: 0.8 });

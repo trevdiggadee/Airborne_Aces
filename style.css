@@ -2289,8 +2289,8 @@ html, body {
   inset: 0;
   z-index: 90;
   background: #0d0a08;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: stretch;
   flex-direction: column;
 }
 #worldMapScreen.wm-enter {
@@ -2324,14 +2324,16 @@ html, body {
   text-shadow: 0 1px 4px rgba(0,0,0,0.7);
 }
 #worldMapContainer {
-  position: relative;
+  position: absolute;
+  inset: 0;
   width: 100%;
-  max-width: 100vw;
-  max-height: 100vh;
-  aspect-ratio: 1024 / 1536;
-  margin: 0 auto;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  aspect-ratio: auto;
+  margin: 0;
   overflow: hidden;
-  background: #0d0a08 url('airborne_aces_map.jpg') center top / 100% 100% no-repeat;
+  background: #0d0a08 url('airborne_aces_map.jpg') center center / cover no-repeat;
 }
 .wm-player-blimp {
   position: absolute;

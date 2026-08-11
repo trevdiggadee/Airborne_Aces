@@ -267,7 +267,7 @@
   border-radius: 8px; /* rectangle with small rounded edges */
   color: #e8f4ff;
   font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
-  font-size: 19px;
+  font-size: 20px; /* +5% */
   font-weight: 700;
   letter-spacing: 2.5px;
   text-transform: uppercase;

@@ -709,9 +709,9 @@
       const riseDur = 3.0;
       const riseU = Math.min(1, airfieldLandT / riseDur);
       const riseE = 1 - Math.pow(1 - riseU, 2.4);
-      // Rest position lowered ~10% further on screen
-      const restSink = H * 0.08;
-      const startSink = H * 0.55;
+      // Raised ~5% from previous rest
+      const restSink = H * 0.03;
+      const startSink = H * 0.52;
       airfieldStripY = startSink + (restSink - startSink) * riseE;
       if (riseU >= 1) airfieldStripY = restSink;
 
@@ -764,24 +764,74 @@
           player.y = landY;
           player.vy = 0;
           player.rotation = 0;
-          airfieldPhase = "score";
-          airfieldScoreT = 0;
-          airfieldFireworkT = 0;
+          // Brief screeching stop — skid + dust, no long rollout
+          airfieldPhase = "skid";
+          airfieldSkidT = 0;
+          airfieldSkidStartX = player.x;
           try {
             if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
+            if (typeof sfxAirfieldScreech === "function") sfxAirfieldScreech();
             if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
-            if (typeof spawnLandingDust === "function") spawnLandingDust(player.x, landY + ph * 0.3);
-            if (typeof spawnVictoryFirework === "function") {
-              spawnVictoryFirework(player.x, player.y - 30);
-              spawnVictoryFirework(W * 0.5, H * 0.3);
-              spawnVictoryFirework(W * 0.7, H * 0.35);
+            if (typeof spawnLandingDust === "function") {
+              spawnLandingDust(player.x, landY + ph * 0.3);
+              spawnLandingDust(player.x - 20, landY + ph * 0.25);
             }
           } catch (e) {}
         }
       }
       syncAirfieldGlobals();
 
-        // ---- SCORE ----
+    
+    // ---- SKID (short screeching stop) ----
+    } else if (airfieldPhase === "skid") {
+      window.__airborneAirfieldInvuln = true;
+      window.__airborneAirfieldPaused = true;
+      airfieldSkidT = (airfieldSkidT || 0) + dt;
+      const skidDur = 0.85;
+      const u = Math.min(1, airfieldSkidT / skidDur);
+      // Decelerating slide a short distance
+      const ease = 1 - Math.pow(1 - u, 2.4);
+      const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
+      const sinkS = (typeof airfieldStripY === "number") ? airfieldStripY : H * 0.03;
+      const landY = H - Math.max(40, th * 0.28) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10) + sinkS;
+      if (typeof player !== "undefined" && player) {
+        const sx = (typeof airfieldSkidStartX === "number") ? airfieldSkidStartX : W * 0.28;
+        player.x = sx + ease * W * 0.08;
+        player.y = landY;
+        player.vy = 0;
+        // Slight nose-down then settle (no bounce)
+        player.rotation = (1 - u) * 0.08;
+        if (typeof blimpPersonality !== "undefined" && blimpPersonality) {
+          blimpPersonality.squashX = 1;
+          blimpPersonality.squashY = 1;
+        }
+        // Continuous dust while skidding
+        if (u < 0.85 && Math.random() < 0.55) {
+          if (typeof spawnLandingDust === "function") {
+            try {
+              spawnLandingDust(player.x - (player.w || 40) * 0.3, landY + 8);
+            } catch (e) {}
+          }
+        }
+      }
+      if (airfieldSkidT >= skidDur) {
+        try {
+          if (typeof spawnVictoryFirework === "function") {
+            spawnVictoryFirework(player.x, player.y - 30);
+            spawnVictoryFirework(W * 0.5, H * 0.3);
+            spawnVictoryFirework(W * 0.7, H * 0.35);
+          }
+          if (typeof spawnLandingDust === "function" && player) {
+            spawnLandingDust(player.x, landY + 10);
+          }
+        } catch (e) {}
+        airfieldPhase = "score";
+        airfieldScoreT = 0;
+        airfieldFireworkT = 0;
+      }
+      syncAirfieldGlobals();
+
+    // ---- SCORE ----
     } else if (airfieldPhase === "score") {
       window.__airborneAirfieldPaused = true;
       window.__airborneAirfieldInvuln = true;
