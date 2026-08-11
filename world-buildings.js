@@ -491,13 +491,13 @@
           window.__airborneAirfieldBoostPending = false;
           airfieldTakeoffSpeed += 40;
         }
-        // ONLY accelerate while holding — slower ramp = ~30% longer runway
+        // Longer runway (~+30% more) with a bit more top speed while holding
         if (holding) {
-          airfieldTakeoffSpeed += 55 * dt;
+          airfieldTakeoffSpeed += 62 * dt;
         } else {
           airfieldTakeoffSpeed = Math.max(50, airfieldTakeoffSpeed - 40 * dt);
         }
-        if (airfieldTakeoffSpeed > 280) airfieldTakeoffSpeed = 280;
+        if (airfieldTakeoffSpeed > 340) airfieldTakeoffSpeed = 340;
         if (typeof obstacleSpeed !== "undefined") {
           obstacleSpeed = holding ? airfieldTakeoffSpeed : 0;
         }
@@ -516,8 +516,8 @@
           airfieldPhase = "accel";
         }
 
-        // Must be holding — ~30% longer run before liftoff
-        if (holding && (airfieldTakeoffSpeed >= 255 || airfieldPhaseT > 4.8)) {
+        // Must be holding — longer run (~+30%) before liftoff
+        if (holding && (airfieldTakeoffSpeed >= 320 || airfieldPhaseT > 6.2)) {
           airfieldPhase = "climb";
           airfieldPhaseT = 0;
           if (typeof player !== "undefined" && player) airfieldClimbStartY = player.y;
@@ -625,11 +625,12 @@
         if (typeof obstacleSpeed !== "undefined") obstacleSpeed = Math.max(210, obstacleSpeed || 210);
         const sm = document.getElementById("stormMeter");
         if (sm) {
+          // Keep element in layout so CSS opacity can fade in/out
+          sm.style.display = "";
+          sm.style.visibility = "";
           if (window.__airborneAirfieldAllowPowerup) {
-            sm.style.display = ""; sm.style.visibility = "";
             sm.classList.remove("trainingHidden");
           } else {
-            sm.style.display = "none"; sm.style.visibility = "hidden";
             sm.classList.add("trainingHidden");
           }
         }
@@ -695,22 +696,23 @@
     } else if (airfieldPhase === "land") {
       window.__airborneAirfieldInvuln = true;
       airfieldLandT = (airfieldLandT || 0) + dt;
-      if (typeof obstacles !== "undefined") obstacles = [];
-      if (typeof powerup !== "undefined") powerup = null;
+      // Stop new spawns only — let live items scroll off naturally (no pop-disappear)
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      window.__airborneAirfieldObstacles = false;
+      window.__airborneAirfieldRings = false;
       // Spawn landing field once — starts BELOW screen, rises while scrolling left
       if (!airfieldUseLandingArt || !airfieldTiles.length) {
         ensureAirfieldStripVisible();
         airfieldStripY = H * 0.55; // deeper start so top edge stays off-screen longer
       }
-      // Rise into place, then HARD STOP — no more scroll so image end never shows
+      // Rise into place, then HARD STOP — image sits ~20% higher than before
       const riseDur = 3.0;
       const riseU = Math.min(1, airfieldLandT / riseDur);
       const riseE = 1 - Math.pow(1 - riseU, 2.4);
-      const restSink = H * 0.05;
-      const startSink = H * 0.52;
+      // Negative restSink lifts strip up by ~20% of typical strip height
+      const restSink = -H * 0.06;
+      const startSink = H * 0.48;
       airfieldStripY = startSink + (restSink - startSink) * riseE;
-      // Lock vertical once risen (no drift past the art edge)
       if (riseU >= 1) airfieldStripY = restSink;
 
       // Left scroll only until target — then stop (prevents running off the image)

@@ -2743,8 +2743,11 @@ html, body {
   text-align: center;
 }
 
+#stormMeter {
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
 #stormMeter.trainingHidden {
-  display: none !important;
-  visibility: hidden !important;
+  opacity: 0 !important;
+  transform: scale(0.85);
   pointer-events: none !important;
 }

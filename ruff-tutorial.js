@@ -309,13 +309,11 @@
     if (typeof powerup !== "undefined" && name !== "powerup" && name !== "combined") powerup = null;
     const smGate = document.getElementById("stormMeter");
     if (smGate) {
+      smGate.style.display = "";
+      smGate.style.visibility = "";
       if (window.__airborneAirfieldAllowPowerup) {
-        smGate.style.display = "";
-        smGate.style.visibility = "";
         smGate.classList.remove("trainingHidden");
       } else {
-        smGate.style.display = "none";
-        smGate.style.visibility = "hidden";
         smGate.classList.add("trainingHidden");
       }
     }
@@ -857,8 +855,8 @@
     if (typeof stormCharge === "number") stormCharge = 0;
     const sm0 = document.getElementById("stormMeter");
     if (sm0) {
-      sm0.style.visibility = "hidden";
-      sm0.style.display = "none";
+      sm0.style.display = "";
+      sm0.style.visibility = "";
       sm0.classList.add("trainingHidden");
     }
     if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay();
@@ -898,8 +896,8 @@
     if (!window.__airborneAirfieldAllowPowerup) {
       const smx = document.getElementById("stormMeter");
       if (smx) {
-        smx.style.display = "none";
-        smx.style.visibility = "hidden";
+        smx.style.display = "";
+        smx.style.visibility = "";
         smx.classList.add("trainingHidden");
       }
     }
