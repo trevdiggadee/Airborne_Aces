@@ -732,14 +732,16 @@
       const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
       const sink = (typeof airfieldStripY === "number") ? airfieldStripY : 0;
       // Deck sits on the runway band of the bottom-anchored strip
-      const landY = H - Math.max(40, th * 0.28) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10);
+      // landY follows strip height (sink raises strip → lower landY)
+      const landY = H - Math.max(40, th * 0.28) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10) + (sink || 0);
       if (typeof player !== "undefined" && player) {
         const ph = player.h > 0 ? player.h : 40;
         player.vy += 850 * dt;
         if (player.vy > 380) player.vy = 380;
-        const fieldReady = airfieldLandT > 2.8 && sink < H * 0.14;
+        // Ready sooner so landing always completes
+        const fieldReady = airfieldLandT > 1.4;
         if (fieldReady && player.y < landY - 20) {
-          player.vy += 260 * dt;
+          player.vy += 280 * dt;
         }
         player.y += player.vy * dt;
         player.x = W * 0.28;
@@ -751,102 +753,35 @@
         }
         player.rotation = Math.max(-0.25, Math.min(0.28, player.vy / 500));
 
-        if (fieldReady && player.y >= landY - 6) {
+        if (fieldReady && player.y >= landY - 8) {
           airfieldLandContact = (airfieldLandContact || 0) + dt;
         } else {
           airfieldLandContact = 0;
         }
 
-        if (!airfieldDidLand && ((fieldReady && airfieldLandContact >= 0.3) || airfieldLandT > 18)) {
+        if (!airfieldDidLand && ((fieldReady && airfieldLandContact >= 0.25) || airfieldLandT > 12)) {
           airfieldDidLand = true;
           player.y = landY;
           player.vy = 0;
           player.rotation = 0;
-          // Drive along runway before full stop (~50% longer rollout)
-          airfieldPhase = "rollout";
-          airfieldRollT = 0;
-          airfieldRollStartX = player.x;
+          airfieldPhase = "score";
+          airfieldScoreT = 0;
+          airfieldFireworkT = 0;
           try {
             if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
+            if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
             if (typeof spawnLandingDust === "function") spawnLandingDust(player.x, landY + ph * 0.3);
+            if (typeof spawnVictoryFirework === "function") {
+              spawnVictoryFirework(player.x, player.y - 30);
+              spawnVictoryFirework(W * 0.5, H * 0.3);
+              spawnVictoryFirework(W * 0.7, H * 0.35);
+            }
           } catch (e) {}
         }
       }
       syncAirfieldGlobals();
 
-    // ---- ROLLOUT (sliding stop on runway + rear exhaust smoke, no bounce) ----
-    } else if (airfieldPhase === "rollout") {
-      window.__airborneAirfieldInvuln = true;
-      window.__airborneAirfieldPaused = false;
-      airfieldRollT = (airfieldRollT || 0) + dt;
-      if (!window.__airborneRollSmoke) window.__airborneRollSmoke = [];
-      const rollDur = 2.4;
-      const u = Math.min(1, airfieldRollT / rollDur);
-      // Smooth decelerating slide — no vertical bounce / squash
-      const ease = 1 - Math.pow(1 - u, 1.85);
-      const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
-      const landY = H - Math.max(40, th * 0.28) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10);
-      if (typeof player !== "undefined" && player) {
-        const startX = (typeof airfieldRollStartX === "number") ? airfieldRollStartX : W * 0.28;
-        player.x = startX + ease * W * 0.22;
-        player.y = landY; // pinned to deck
-        player.vy = 0;
-        player.rotation = 0;
-        // Keep normal blimp proportions (no squash bounce)
-        if (typeof blimpPersonality !== "undefined" && blimpPersonality) {
-          blimpPersonality.squashX = 1;
-          blimpPersonality.squashY = 1;
-        }
-        // Exhaust smoke from the BACK of the blimp while sliding
-        const rearX = player.x - (player.w || 40) * 0.45;
-        const rearY = player.y + (player.h || 30) * 0.15;
-        const speedFrac = 1 - u;
-        if (Math.random() < 0.55 + speedFrac * 0.4) {
-          for (let s = 0; s < (speedFrac > 0.2 ? 2 : 1); s++) {
-            window.__airborneRollSmoke.push({
-              x: rearX + (Math.random() - 0.5) * 8,
-              y: rearY + (Math.random() - 0.5) * 6,
-              vx: -40 - Math.random() * 70 * speedFrac - 20,
-              vy: -10 - Math.random() * 25,
-              life: 0.55 + Math.random() * 0.55,
-              age: 0,
-              r: 6 + Math.random() * 10,
-              a: 0.35 + Math.random() * 0.25
-            });
-          }
-        }
-      }
-      // Update smoke puffs
-      window.__airborneRollSmoke.forEach(function (p) {
-        p.age += dt;
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
-        p.vy += 15 * dt;
-        p.r += 18 * dt;
-        p.vx *= 0.98;
-      });
-      window.__airborneRollSmoke = window.__airborneRollSmoke.filter(function (p) { return p.age < p.life; });
-
-      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-      if (airfieldRollT >= rollDur) {
-        try {
-          if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
-          if (typeof spawnLandingDust === "function" && player) {
-            spawnLandingDust(player.x, (player.y || 0) + 20);
-          }
-          if (typeof spawnVictoryFirework === "function") {
-            spawnVictoryFirework(player.x, player.y - 30);
-            spawnVictoryFirework(W * 0.5, H * 0.3);
-            spawnVictoryFirework(W * 0.7, H * 0.35);
-          }
-        } catch (e) {}
-        airfieldPhase = "score";
-        airfieldScoreT = 0;
-        airfieldFireworkT = 0;
-      }
-      syncAirfieldGlobals();
-
-    // ---- SCORE ----
+        // ---- SCORE ----
     } else if (airfieldPhase === "score") {
       window.__airborneAirfieldPaused = true;
       window.__airborneAirfieldInvuln = true;
@@ -855,11 +790,15 @@
       // Keep strip at rest height (don't jump stripY to 0)
       if (typeof player !== "undefined" && player) {
         const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
-        const landY = H - Math.max(40, th * 0.28) - (player.h > 0 ? player.h * 0.22 : 10);
+        const sinkS = (typeof airfieldStripY === "number") ? airfieldStripY : -H * 0.02;
+        const landY = H - Math.max(40, th * 0.28) - (player.h > 0 ? player.h * 0.22 : 10) + sinkS;
         player.y = landY;
-        // stay where rollout ended
         player.vy = 0;
         player.rotation = 0;
+        if (typeof blimpPersonality !== "undefined" && blimpPersonality) {
+          blimpPersonality.squashX = 1;
+          blimpPersonality.squashY = 1;
+        }
       }
       // Burst fireworks like level victory
       if (airfieldFireworkT > 0.55) {
@@ -889,22 +828,23 @@
         });
         airfieldFireworks = airfieldFireworks.filter(function(fw) { return fw.age < fw.life; });
       }
-      if (airfieldScoreT >= 4.0) {
-        // Hand off to Ruff report if available, else map
-        if (window.__airborneRuffActive && typeof window.__airborneShowRuffReport === "function") {
-          try { window.__airborneShowRuffReport(); } catch (e) {}
-          airfieldPhase = "done";
-          airfieldMode = false;
-          syncAirfieldGlobals();
-        } else if (window.__airborneRuffActive) {
-          // Trigger report stage
-          window.__airborneRuffStage = "report";
-          airfieldPhase = "done";
-          airfieldMode = false;
-          syncAirfieldGlobals();
-        } else {
-          endAirfieldTrainingToMap();
+      if (airfieldScoreT >= 2.2) {
+        // Always hand off to report / map
+        airfieldPhase = "done";
+        try {
+          if (typeof window.__airborneShowRuffReport === "function") {
+            window.__airborneShowRuffReport();
+          } else if (window.__airborneRuffActive) {
+            window.__airborneRuffStage = "report";
+          } else if (typeof endAirfieldTrainingToMap === "function") {
+            endAirfieldTrainingToMap();
+          }
+        } catch (e) {
+          console.warn("score handoff", e);
+          try { if (typeof endAirfieldTrainingToMap === "function") endAirfieldTrainingToMap(); } catch (e2) {}
         }
+        airfieldMode = false;
+        syncAirfieldGlobals();
       }
       syncAirfieldGlobals();
     }

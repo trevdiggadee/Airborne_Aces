@@ -247,6 +247,7 @@
           window.__airborneAirfieldPhase === "accel" ||
           window.__airborneAirfieldPhase === "climb" ||
           window.__airborneAirfieldPhase === "land" ||
+          window.__airborneAirfieldPhase === "rollout" ||
           window.__airborneAirfieldPhase === "score" ||
           window.__airborneAirfieldPhase === "done"))) {
       return;
@@ -269,12 +270,12 @@
       void healthMeter.offsetWidth;
       healthMeter.classList.add("hit");
     }
-    invulnerableUntil = performance.now() + 1400;
+    invulnerableUntil = performance.now() + 1600;
     try { sfxHit(); } catch (e) {}
-    try { triggerScreenShake(4, 200); } catch (e) {}
+    try { triggerScreenShake(3, 160); } catch (e) {}
     try { spawnHitParticles(player.x, player.y); } catch (e) {}
 
-    // Training: never game-over — soft recover at 0
+    // Training: never game-over — soft recover at 0, longer i-frames (less flicker)
     if (window.__airborneAirfield && window.__airborneAirfieldPhase === "lesson") {
       if (health <= 0) {
         health = MAX_HEALTH;
@@ -283,7 +284,7 @@
           player.y = H * 0.4;
           player.vy = 0;
         }
-        invulnerableUntil = performance.now() + 2000;
+        invulnerableUntil = performance.now() + 2200;
       }
       return;
     }

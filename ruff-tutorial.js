@@ -183,6 +183,19 @@
     });
   }
 
+  function showFlightTraceBanner() {
+    // Level-style banner below dialog
+    const el = titleEl();
+    if (!el) return;
+    el.textContent = "FLIGHT TRACING";
+    el.classList.add("visible", "ft-banner");
+    // Position handled in CSS (.ft-banner)
+    setTimeout(function () {
+      el.classList.remove("visible");
+      setTimeout(function () { el.classList.remove("ft-banner"); }, 400);
+    }, 2400);
+  }
+
   function showFlightTrace() {
     ensureFlightTraceDom();
     const el = document.getElementById("ruffFlightTrace");
@@ -941,6 +954,7 @@
     ruffIntroDone = false;
     ensureSkipHandler();
     showFlightTrace();
+    showFlightTraceBanner();
     setStage("intro");
     // Re-assert after setStage so he is visible immediately
     ruffActive = true;
@@ -1009,7 +1023,7 @@
           nextStage();
         } else if (ruffStage === "powerup") {
           nextStage();
-        } else if (ruffStage === "combined" && ruffStageT > 40) {
+        } else if (ruffStage === "combined" && ruffStageT > 22) {
           nextStage(); // → landing
         }
       }
@@ -1043,23 +1057,23 @@
     } else if (ruffStage === "altitude") {
       // Do NOT wipe obstacles every frame — causes random item disappear
       if (typeof updateMarkers === "function") updateMarkers(dt);
-      if (ruffStageT > 14) nextStage();
+      if (ruffStageT > 9) nextStage();
     } else if (ruffStage === "crystals") {
       updateCrystals(dt);
       if (ruffStats.crystals < 3 && ruffCrystals.length < 2) spawnCrystals(3);
-      if ((ruffStats.crystals >= 3 && ruffCrystals.length === 0 && ruffStageT > 5) || ruffStageT > 22) {
+      if ((ruffStats.crystals >= 3 && ruffCrystals.length === 0 && ruffStageT > 3) || ruffStageT > 14) {
         nextStage();
       }
     } else if (ruffStage === "obstacles") {
       window.__airborneAirfieldObstacles = true;
       if (typeof spawnInterval !== "undefined") spawnInterval = 1.35; // slightly faster birds
       // Keep spawning for most of the stage — only stop near the end
-      if (ruffStageT > 16) {
+      if (ruffStageT > 10) {
         window.__airborneAirfieldObstacles = false;
         if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       }
       const obsCount = (typeof obstacles !== "undefined" && obstacles) ? obstacles.length : 0;
-      if ((ruffStageT > 18 && obsCount === 0) || ruffStageT > 24) {
+      if ((ruffStageT > 11 && obsCount === 0) || ruffStageT > 15) {
         ruffStats.obstaclesAvoided += 2;
         nextStage();
       }
@@ -1146,12 +1160,12 @@
       const ph = window.__airborneAirfieldPhase;
       if (ph === "score" || ph === "done") {
         nextStage();
-      } else if (ruffStageT > 40) {
+      } else if (ruffStageT > 22) {
         nextStage();
       }
     } else if (ruffStage === "report") {
       // report UI handles exit
-    } else if (ruffStageT > 25) {
+    } else if (ruffStageT > 16) {
       // Unknown stage safety
       nextStage();
     }
