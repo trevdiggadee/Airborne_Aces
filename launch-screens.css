@@ -259,8 +259,8 @@
   justify-content: center;
   text-align: center;
   line-height: 1;
-  /* lower label ~1% inside the box */
-  padding: 17px 42px 15px;
+  /* lower label further inside the box */
+  padding: 19px 42px 13px;
   min-width: 240px;
   background: rgba(255,255,255,0.08);
   border: 1.5px solid rgba(180,220,255,0.55);
@@ -298,6 +298,7 @@
 }
 
 .otg-footer {
+  display: none !important; /* removed under Enter Hangar */
   position: absolute;
   bottom: 2.2%;
   left: 0; right: 0;

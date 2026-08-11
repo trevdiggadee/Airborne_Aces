@@ -174,7 +174,7 @@
     // Level-style banner below dialog
     const el = titleEl();
     if (!el) return;
-    el.textContent = "FLIGHT TRACING";
+    el.textContent = "FLIGHT TRAINING";
     el.classList.add("visible", "ft-banner");
     // Position handled in CSS (.ft-banner)
     setTimeout(function () {

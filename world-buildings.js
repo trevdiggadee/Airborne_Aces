@@ -709,9 +709,9 @@
       const riseDur = 3.0;
       const riseU = Math.min(1, airfieldLandT / riseDur);
       const riseE = 1 - Math.pow(1 - riseU, 2.4);
-      // Raised earlier; lower by ~12% of strip height from that position
-      const restSink = -H * 0.02;
-      const startSink = H * 0.50;
+      // Rest position lowered ~10% further on screen
+      const restSink = H * 0.08;
+      const startSink = H * 0.55;
       airfieldStripY = startSink + (restSink - startSink) * riseE;
       if (riseU >= 1) airfieldStripY = restSink;
 

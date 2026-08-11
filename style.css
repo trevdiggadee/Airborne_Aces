@@ -2759,8 +2759,8 @@ html, body {
 /* Flight Trace — circular solid fill meter, bottom-right */
 #ruffFlightTrace {
   position: fixed;
-  /* +3% toward right edge, +5% size, -1% down */
-  right: calc(10px - 3vw);
+  /* shifted left ~10%, size kept */
+  right: calc(10px + 7vw);
   bottom: calc(env(safe-area-inset-bottom, 0px) + 12px - 1vh);
   z-index: 42;
   width: 118px; /* ~5% larger than 112 */
@@ -2863,7 +2863,7 @@ html, body {
   max-width: 118px;
 }
 
-/* FLIGHT TRACING banner — words only, no box */
+/* FLIGHT TRAINING banner — words only, no box */
 #ruffTitleBanner.ft-banner {
   top: calc(env(safe-area-inset-top, 0px) + 78px + 88px + 3vh);
   left: 50%;
