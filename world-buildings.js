@@ -709,9 +709,9 @@
       const riseDur = 3.0;
       const riseU = Math.min(1, airfieldLandT / riseDur);
       const riseE = 1 - Math.pow(1 - riseU, 2.4);
-      // Negative restSink lifts strip up by ~20% of typical strip height
-      const restSink = -H * 0.06;
-      const startSink = H * 0.48;
+      // Raised earlier; lower by ~12% of strip height from that position
+      const restSink = -H * 0.02;
+      const startSink = H * 0.50;
       airfieldStripY = startSink + (restSink - startSink) * riseE;
       if (riseU >= 1) airfieldStripY = restSink;
 
@@ -1383,47 +1383,75 @@
     ctx.restore();
   }
 
-  // ---------- Clouds (decorative, no collision) ----------
+  // ---------- Clouds (decorative soft art, 50% transparent + fly-through mist) ----------
   let clouds = [];
+  function pickCloudImg() {
+    if (typeof images === "undefined" || !images) return null;
+    const a = images.cloud_soft_a;
+    const b = images.cloud_soft_b;
+    const legacy = images.cloud;
+    if (a && a.naturalWidth && b && b.naturalWidth) {
+      return Math.random() < 0.5 ? a : b;
+    }
+    if (a && a.naturalWidth) return a;
+    if (b && b.naturalWidth) return b;
+    return (legacy && legacy.naturalWidth) ? legacy : null;
+  }
   function initClouds() {
     clouds = [];
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 4; i++) {
+      const img = pickCloudImg();
       clouds.push({
         x: Math.random() * W,
-        y: 40 + Math.random() * (H * 0.35),
-        // At least 50% smaller (was 0.4–0.9, now 0.15–0.40)
-        scale: 0.15 + Math.random() * 0.25,
-        speed: 0.15 + Math.random() * 0.2,
-        alpha: 0.35 + Math.random() * 0.3
+        y: 30 + Math.random() * (H * 0.38),
+        scale: 0.22 + Math.random() * 0.28,
+        speed: 0.12 + Math.random() * 0.18,
+        alpha: 0.5, // 50% transparent
+        imgKey: (img === images.cloud_soft_b) ? "cloud_soft_b"
+              : (img === images.cloud_soft_a) ? "cloud_soft_a" : "cloud"
       });
     }
   }
   function updateClouds(dtScale) {
-    // Freeze clouds after touchdown OR before liftoff in training
     if (worldScrollFrozen()) return;
     if (window.__airborneRuffStage === "intro") return;
-    const img = images.cloud;
-    const baseW = (img && img.naturalWidth) ? img.naturalWidth : 256;
     clouds.forEach(c => {
+      const img = (images && images[c.imgKey]) || pickCloudImg() || images.cloud;
+      const baseW = (img && img.naturalWidth) ? img.naturalWidth : 256;
       c.x -= c.speed * dtScale;
-      // Fully off-screen (entire cloud past left edge) before recycling
       const drawnW = baseW * c.scale;
+      const drawnH = ((img && img.naturalHeight) ? img.naturalHeight : 128) * c.scale;
+      // Level-3 style mist when blimp flies through
+      if (typeof player !== "undefined" && player && typeof maybeEmitCloudWisp === "function") {
+        const cx = c.x, cy = c.y, cw = drawnW, ch = drawnH;
+        const px = player.x - player.w / 2, py = player.y - player.h / 2;
+        const dx = Math.abs((px + player.w / 2) - (cx + cw / 2));
+        const dy = Math.abs((py + player.h / 2) - (cy + ch / 2));
+        if (dx < (cw / 2 + player.w / 2) * 0.78 && dy < (ch / 2 + player.h / 2) * 0.78) {
+          // dtScale is ~dt*60 from main loop
+          const dt = Math.max(0.008, Math.min(0.05, dtScale / 60));
+          maybeEmitCloudWisp(player.x, player.y, dt, 36);
+        }
+      }
       if (c.x + drawnW < 0) {
-        c.x = W + 20 + Math.random() * 100;
-        c.y = 40 + Math.random() * (H * 0.35);
-        c.scale = 0.15 + Math.random() * 0.25;
-        c.speed = 0.15 + Math.random() * 0.2;
-        c.alpha = 0.35 + Math.random() * 0.3;
+        const ni = pickCloudImg();
+        c.x = W + 20 + Math.random() * 120;
+        c.y = 30 + Math.random() * (H * 0.38);
+        c.scale = 0.22 + Math.random() * 0.28;
+        c.speed = 0.12 + Math.random() * 0.18;
+        c.alpha = 0.5;
+        c.imgKey = (ni === images.cloud_soft_b) ? "cloud_soft_b"
+                 : (ni === images.cloud_soft_a) ? "cloud_soft_a" : "cloud";
       }
     });
   }
   function drawClouds() {
-    const img = images.cloud;
-    if (!img || !img.naturalWidth) return;
     clouds.forEach(c => {
+      const img = (images && images[c.imgKey]) || images.cloud;
+      if (!img || !img.naturalWidth) return;
       const w = img.naturalWidth * c.scale;
       const h = img.naturalHeight * c.scale;
-      ctx.globalAlpha = c.alpha;
+      ctx.globalAlpha = 0.5; // always 50% transparent
       ctx.drawImage(img, c.x, c.y, w, h);
       ctx.globalAlpha = 1;
     });

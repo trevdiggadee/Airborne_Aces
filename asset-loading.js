@@ -11,6 +11,8 @@
     power_icon_blimp8: "power_icon_blimp8.webp",
     power_icon_blimp9: "power_icon_blimp9.webp",
     cloud:   "cloud.webp?cb=2",
+    cloud_soft_a: "cloud_soft_a.webp",
+    cloud_soft_b: "cloud_soft_b.webp",
     skylineFar: "skylineFar.webp",
     skylineFarL2: "IMG_0845.png",
     skylineFarL3: "IMG_0844.png",
@@ -1433,7 +1435,7 @@
         // game appear stuck.
         const skipFeather =
           /_flight_|player_blimp_|boss_throw_|boss\d+_|rocket_flight_|ship_(pirate|wood|ivory|purple|cargo|lightning)_\d/.test(key) ||
-          /skylineFar|streetrow|Far_Bg|hangar_bg|airborne_aces_map|medal_badge|parallax_mountains|mountains_cutout|airfield_strip|landing_field|ruff_|blue_crystal_/.test(key);
+          /skylineFar|streetrow|Far_Bg|hangar_bg|airborne_aces_map|medal_badge|parallax_mountains|mountains_cutout|airfield_strip|landing_field|ruff_|blue_crystal_|cloud_soft_/.test(key);
         if (skipFeather) {
           images[key] = img;
           settle();

@@ -2589,10 +2589,10 @@ html, body {
   margin-top: 12px;
   text-align: center;
   font-size: 20px;
-  color: rgba(212, 175, 55, 0.55);
+  color: rgba(212, 175, 55, 0.4);
   letter-spacing: 0.08em;
-  opacity: 0.48;
-  text-shadow: 0 0 12px rgba(212,175,55,0.15);
+  opacity: 0.32;
+  text-shadow: 0 0 12px rgba(212,175,55,0.1);
   transition: opacity 0.55s ease, transform 0.55s ease, filter 0.55s ease;
 }
 #ruffReport .final.fadeOut {

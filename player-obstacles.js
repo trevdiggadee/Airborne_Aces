@@ -378,9 +378,31 @@
             score += 5;
             if (document.getElementById("scoreVal")) document.getElementById("scoreVal").textContent = score;
             if (typeof bumpScorePop === "function") bumpScorePop();
-            if (typeof sfxPowerup === "function") sfxPowerup();
+            if (typeof sfxRingCollect === "function") sfxRingCollect();
+            else if (typeof sfxPowerup === "function") sfxPowerup();
             if (typeof spawnComboPopup === "function") spawnComboPopup(cx, cy, "+5 RING!", "#ffd700");
             if (typeof notifyRingCollect === "function") notifyRingCollect();
+            // Gold spark burst when flying through a ring
+            if (typeof particles !== "undefined" && particles && Array.isArray(particles)) {
+              for (let i = 0; i < 18; i++) {
+                const ang = Math.random() * Math.PI * 2;
+                const spd = 60 + Math.random() * 140;
+                particles.push({
+                  x: cx, y: cy,
+                  vx: Math.cos(ang) * spd,
+                  vy: Math.sin(ang) * spd - 30,
+                  life: 0.45 + Math.random() * 0.35,
+                  age: 0,
+                  size: 2.5 + Math.random() * 4,
+                  color: Math.random() > 0.35 ? "#ffd700" : "#fff6c0",
+                  type: "spark"
+                });
+              }
+            }
+            if (typeof spawnHitParticles === "function") {
+              try { spawnHitParticles(cx, cy); } catch (e) {}
+            }
+            o.burstT = 0.35;
           }
         }
         return; // rings skip bird damage / anim

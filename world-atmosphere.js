@@ -512,6 +512,8 @@
   }
 
   function drawPlayerShadow() {
+    // Shadows removed per design
+    return;
     // Soft oval under the blimp — anchors it in the sky
     if (typeof levelEndPhase === "string" && levelEndPhase === "fadeOut") return;
     var groundY = H * 0.92;
