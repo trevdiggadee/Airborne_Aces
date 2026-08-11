@@ -169,16 +169,18 @@
   function ensureFlightTraceDom() {
     const path = document.getElementById("ruffFlightTracePath");
     if (!path || path.childNodes.length) return;
+    const n = TRACE_STAGES.length;
     TRACE_STAGES.forEach(function (st, i) {
-      if (i > 0) {
-        const seg = document.createElement("div");
-        seg.className = "ft-seg";
-        seg.dataset.seg = st;
-        path.appendChild(seg);
-      }
+      // Place nodes around a circle (start at top, clockwise)
+      const ang = (-90 + (i / n) * 360) * Math.PI / 180;
+      const radius = 38; // % of gear
+      const x = 50 + Math.cos(ang) * radius;
+      const y = 50 + Math.sin(ang) * radius;
       const node = document.createElement("div");
       node.className = "ft-node";
       node.dataset.stage = st;
+      node.style.left = x + "%";
+      node.style.top = y + "%";
       path.appendChild(node);
     });
   }
@@ -218,16 +220,17 @@
     showFlightTrace();
     const idx = TRACE_STAGES.indexOf(stage);
     const nodes = document.querySelectorAll("#ruffFlightTracePath .ft-node");
-    const segs = document.querySelectorAll("#ruffFlightTracePath .ft-seg");
+    const gear = document.getElementById("ruffFlightTraceGear");
     nodes.forEach(function (n, i) {
       n.classList.remove("done", "active");
       if (idx < 0) return;
       if (i < idx) n.classList.add("done");
       else if (i === idx) n.classList.add("active");
     });
-    segs.forEach(function (s, i) {
-      s.classList.toggle("done", idx > i);
-    });
+    // Rotate gear slightly as stages progress
+    if (gear && idx >= 0) {
+      gear.style.setProperty("--ft-rot", (idx * (360 / TRACE_STAGES.length)) + "deg");
+    }
     const lab = document.getElementById("ruffFlightTraceLabel");
     if (lab) lab.textContent = TRACE_LABELS[stage] || stage || "Stand by…";
   }

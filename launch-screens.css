@@ -253,7 +253,7 @@
 
 .otg-enter-wrap {
   position: absolute;
-  bottom: 5.5%; /* down another 1% */
+  bottom: 4.5%; /* down another 1% */
   left: 0; right: 0;
   display: flex;
   justify-content: center;
