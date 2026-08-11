@@ -240,6 +240,7 @@
     drawCheckpointPickup();
     drawBossWarning();
     drawBossBanner();
+    if (typeof drawAirfieldRollSmoke === "function") drawAirfieldRollSmoke();
     if (typeof drawAirfieldTip === "function") drawAirfieldTip();
     drawDefeatDebris();
     drawShockwaves();

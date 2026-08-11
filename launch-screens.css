@@ -51,22 +51,37 @@
 #otg-loading::after {
   content: '';
   position: absolute;
-  inset: -20%;
+  inset: -25%;
   z-index: 3;
   pointer-events: none;
-  background: repeating-linear-gradient(
-    115deg,
-    transparent 0px,
-    transparent 40px,
-    rgba(255,255,255,0.03) 40px,
-    rgba(255,255,255,0.03) 42px
-  );
-  animation: otg-load-scan 8s linear infinite;
+  background:
+    repeating-linear-gradient(
+      118deg,
+      transparent 0px,
+      transparent 14px,
+      rgba(255,255,255,0.015) 14px,
+      rgba(255,255,255,0.015) 15px,
+      transparent 15px,
+      transparent 28px,
+      rgba(180,220,255,0.04) 28px,
+      rgba(180,220,255,0.04) 29px
+    ),
+    repeating-linear-gradient(
+      -18deg,
+      transparent 0px,
+      transparent 36px,
+      rgba(255,255,255,0.02) 36px,
+      rgba(255,255,255,0.02) 37px
+    );
+  animation: otg-load-scan 7s linear infinite;
   mix-blend-mode: screen;
+  opacity: 0.85;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 12%, #000 88%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 12%, #000 88%, transparent 100%);
 }
 @keyframes otg-load-scan {
-  from { transform: translateX(-8%) translateY(-4%); }
-  to   { transform: translateX(8%) translateY(4%); }
+  from { transform: translateX(-10%) translateY(-3%) skewX(-2deg); }
+  to   { transform: translateX(10%) translateY(3%) skewX(-2deg); }
 }
 
 .otg-loading-area {
@@ -238,7 +253,7 @@
 
 .otg-enter-wrap {
   position: absolute;
-  bottom: 6.5%; /* down ~1% */
+  bottom: 5.5%; /* down another 1% */
   left: 0; right: 0;
   display: flex;
   justify-content: center;

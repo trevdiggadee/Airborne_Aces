@@ -147,6 +147,78 @@
   };
 
   // ---------- DOM ----------
+
+  const TRACE_STAGES = [
+    "intro", "takeoff", "altitude", "crystals", "obstacles",
+    "shield", "powerup", "rings", "combined", "landing"
+  ];
+  const TRACE_LABELS = {
+    intro: "Radio check",
+    takeoff: "Takeoff",
+    altitude: "Altitude",
+    crystals: "Sky crystals",
+    obstacles: "Obstacles",
+    shield: "Shield",
+    powerup: "Power-up",
+    rings: "Rings",
+    combined: "Combined",
+    landing: "Landing",
+    report: "Flight report"
+  };
+
+  function ensureFlightTraceDom() {
+    const path = document.getElementById("ruffFlightTracePath");
+    if (!path || path.childNodes.length) return;
+    TRACE_STAGES.forEach(function (st, i) {
+      if (i > 0) {
+        const seg = document.createElement("div");
+        seg.className = "ft-seg";
+        seg.dataset.seg = st;
+        path.appendChild(seg);
+      }
+      const node = document.createElement("div");
+      node.className = "ft-node";
+      node.dataset.stage = st;
+      path.appendChild(node);
+    });
+  }
+
+  function showFlightTrace() {
+    ensureFlightTraceDom();
+    const el = document.getElementById("ruffFlightTrace");
+    if (el) {
+      el.classList.add("visible");
+      el.setAttribute("aria-hidden", "false");
+    }
+  }
+
+  function hideFlightTrace() {
+    const el = document.getElementById("ruffFlightTrace");
+    if (el) {
+      el.classList.remove("visible");
+      el.setAttribute("aria-hidden", "true");
+    }
+  }
+
+  function updateFlightTrace(stage) {
+    ensureFlightTraceDom();
+    showFlightTrace();
+    const idx = TRACE_STAGES.indexOf(stage);
+    const nodes = document.querySelectorAll("#ruffFlightTracePath .ft-node");
+    const segs = document.querySelectorAll("#ruffFlightTracePath .ft-seg");
+    nodes.forEach(function (n, i) {
+      n.classList.remove("done", "active");
+      if (idx < 0) return;
+      if (i < idx) n.classList.add("done");
+      else if (i === idx) n.classList.add("active");
+    });
+    segs.forEach(function (s, i) {
+      s.classList.toggle("done", idx > i);
+    });
+    const lab = document.getElementById("ruffFlightTraceLabel");
+    if (lab) lab.textContent = TRACE_LABELS[stage] || stage || "Stand by…";
+  }
+
   function radioEl() { return document.getElementById("ruffRadio"); }
   function radioText() { return document.getElementById("ruffText"); }
   function titleEl() { return document.getElementById("ruffTitleBanner"); }
@@ -303,6 +375,7 @@
     ruffWaitingAvoid = false;
     ruffWaitingRing = 0;
     window.__airborneRuffStage = name;
+    try { updateFlightTrace(name); } catch (e) {}
     window.__airborneAirfieldAllowPowerup = (name === "powerup" || name === "combined");
     if (!window.__airborneAirfieldAllowPowerup && typeof powerup !== "undefined") powerup = null;
     if (name !== "powerup") ruffPowerOrb = null;
@@ -810,6 +883,7 @@
   }
 
   function finishToMap() {
+    try { hideFlightTrace(); } catch (e) {}
     hideRadio();
     stopSpeak();
     const el = reportEl();
@@ -866,6 +940,7 @@
     ruffCombo = 0;
     ruffIntroDone = false;
     ensureSkipHandler();
+    showFlightTrace();
     setStage("intro");
     // Re-assert after setStage so he is visible immediately
     ruffActive = true;

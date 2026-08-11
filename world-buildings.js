@@ -774,50 +774,61 @@
       }
       syncAirfieldGlobals();
 
-    // ---- ROLLOUT (drive on runway, then squash stop) ----
+    // ---- ROLLOUT (sliding stop on runway + rear exhaust smoke, no bounce) ----
     } else if (airfieldPhase === "rollout") {
       window.__airborneAirfieldInvuln = true;
       window.__airborneAirfieldPaused = false;
       airfieldRollT = (airfieldRollT || 0) + dt;
-      // ~50% longer than a short stop: ~2.4s of taxi then settle
+      if (!window.__airborneRollSmoke) window.__airborneRollSmoke = [];
       const rollDur = 2.4;
       const u = Math.min(1, airfieldRollT / rollDur);
-      const ease = 1 - Math.pow(1 - u, 2.2); // decelerate into stop
+      // Smooth decelerating slide — no vertical bounce / squash
+      const ease = 1 - Math.pow(1 - u, 1.85);
       const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
       const landY = H - Math.max(40, th * 0.28) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10);
       if (typeof player !== "undefined" && player) {
         const startX = (typeof airfieldRollStartX === "number") ? airfieldRollStartX : W * 0.28;
         player.x = startX + ease * W * 0.22;
-        player.y = landY;
+        player.y = landY; // pinned to deck
         player.vy = 0;
         player.rotation = 0;
-        // Soft squash while rolling, stronger at the stop
+        // Keep normal blimp proportions (no squash bounce)
         if (typeof blimpPersonality !== "undefined" && blimpPersonality) {
-          if (u < 0.92) {
-            blimpPersonality.squashX = 1.04;
-            blimpPersonality.squashY = 0.96;
-          } else {
-            // Squash-style stop
-            const s = (u - 0.92) / 0.08;
-            blimpPersonality.squashX = 1.04 + s * 0.22;
-            blimpPersonality.squashY = 0.96 - s * 0.18;
+          blimpPersonality.squashX = 1;
+          blimpPersonality.squashY = 1;
+        }
+        // Exhaust smoke from the BACK of the blimp while sliding
+        const rearX = player.x - (player.w || 40) * 0.45;
+        const rearY = player.y + (player.h || 30) * 0.15;
+        const speedFrac = 1 - u;
+        if (Math.random() < 0.55 + speedFrac * 0.4) {
+          for (let s = 0; s < (speedFrac > 0.2 ? 2 : 1); s++) {
+            window.__airborneRollSmoke.push({
+              x: rearX + (Math.random() - 0.5) * 8,
+              y: rearY + (Math.random() - 0.5) * 6,
+              vx: -40 - Math.random() * 70 * speedFrac - 20,
+              vy: -10 - Math.random() * 25,
+              life: 0.55 + Math.random() * 0.55,
+              age: 0,
+              r: 6 + Math.random() * 10,
+              a: 0.35 + Math.random() * 0.25
+            });
           }
         }
       }
-      // Keep strip locked under rollout
+      // Update smoke puffs
+      window.__airborneRollSmoke.forEach(function (p) {
+        p.age += dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 15 * dt;
+        p.r += 18 * dt;
+        p.vx *= 0.98;
+      });
+      window.__airborneRollSmoke = window.__airborneRollSmoke.filter(function (p) { return p.age < p.life; });
+
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       if (airfieldRollT >= rollDur) {
-        if (typeof blimpPersonality !== "undefined" && blimpPersonality) {
-          blimpPersonality.squashX = 1.18;
-          blimpPersonality.squashY = 0.82;
-          // recover after a beat via score phase
-          setTimeout(function () {
-            if (blimpPersonality) {
-              blimpPersonality.squashX = 1;
-              blimpPersonality.squashY = 1;
-            }
-          }, 280);
-        }
         try {
           if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
           if (typeof spawnLandingDust === "function" && player) {
@@ -915,6 +926,23 @@
     return t >= dur;
   }
 
+
+  function drawAirfieldRollSmoke() {
+    const list = window.__airborneRollSmoke;
+    if (!list || !list.length) return;
+    list.forEach(function (p) {
+      const tLife = 1 - p.age / p.life;
+      const alpha = (p.a || 0.3) * tLife;
+      const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+      g.addColorStop(0, "rgba(180,180,180," + (alpha * 0.85) + ")");
+      g.addColorStop(0.45, "rgba(120,120,120," + (alpha * 0.45) + ")");
+      g.addColorStop(1, "rgba(80,80,80,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
 
   function drawAirfieldStrip() {
     if (!airfieldMode) return;
