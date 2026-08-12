@@ -392,27 +392,48 @@
     var data = (typeof BLIMP_DATA !== "undefined") ? BLIMP_DATA[sel] : null;
     var effect = (data && data.effect) || "propeller";
     var style = exhaustStyleFor(effect);
-    // Keep bursts small — large bursts on every tap caused frame hitching
-    var count = burst ? 3 : 1;
-    if (blimpPersonality.exhaustParticles.length > 16) {
-      blimpPersonality.exhaustParticles.splice(0, blimpPersonality.exhaustParticles.length - 12);
+    var isFlame = style.mode === "flame";
+    // Flame ships need a denser plume; still capped for performance
+    var count = burst ? (isFlame ? 4 : 3) : (isFlame ? 2 : 1);
+    var cap = isFlame ? 36 : 16;
+    if (blimpPersonality.exhaustParticles.length > cap) {
+      blimpPersonality.exhaustParticles.splice(0, blimpPersonality.exhaustParticles.length - (cap - 4));
     }
     var exhaustX = player.x - player.w * 0.38;
     var exhaustY = player.y + player.h * 0.12;
     for (var i = 0; i < count; i++) {
       var speedBoost = Math.abs(player.vy) * 0.08;
+      // Core jet flame — ~2x length via higher rearward velocity + longer life
       blimpPersonality.exhaustParticles.push({
-        x: exhaustX + (Math.random() - 0.5) * 8,
-        y: exhaustY + (Math.random() - 0.5) * 6,
-        vx: -(style.drag + Math.random() * 30 + speedBoost) * (burst ? 1.25 : 1),
-        vy: (Math.random() - 0.5) * 18 - style.rise * (0.6 + Math.random() * 0.6),
-        size: style.size * (burst ? 1.25 : 1) * (0.7 + Math.random() * 0.6),
-        alpha: style.alpha * (burst ? 1.1 : 1) * (0.75 + Math.random() * 0.4),
-        life: style.life * (0.65 + Math.random() * 0.4),
+        x: exhaustX + (Math.random() - 0.5) * 6,
+        y: exhaustY + (Math.random() - 0.5) * 5,
+        vx: -(style.drag + Math.random() * 40 + speedBoost) * (burst ? 1.35 : 1),
+        vy: (Math.random() - 0.5) * 14 - style.rise * (0.5 + Math.random() * 0.5),
+        size: style.size * (burst ? 1.3 : 1) * (0.75 + Math.random() * 0.5),
+        alpha: style.alpha * (burst ? 1.15 : 1) * (0.8 + Math.random() * 0.35),
+        life: style.life * (0.75 + Math.random() * 0.45),
         age: 0,
         color: style.color,
-        mode: style.mode
+        mode: style.mode,
+        // Elongate flame particles horizontally for a jet look
+        stretch: isFlame ? (2.2 + Math.random() * 1.4) : 1
       });
+      // Smoke trail behind the flame (only for jet-flame ships)
+      if (isFlame) {
+        blimpPersonality.exhaustParticles.push({
+          x: exhaustX - 10 - Math.random() * 18,
+          y: exhaustY + (Math.random() - 0.5) * 10,
+          vx: -(55 + Math.random() * 50 + speedBoost * 0.6),
+          vy: (Math.random() - 0.5) * 22 - 8,
+          size: 4.5 + Math.random() * 5,
+          alpha: 0.28 + Math.random() * 0.22,
+          life: 0.85 + Math.random() * 0.55,
+          age: 0,
+          color: "55,48,42",
+          mode: "smoke",
+          stretch: 1.3 + Math.random() * 0.6
+        });
+      }
     }
   }
   // Light audio-synced puff (optional) — one small burst only
@@ -476,7 +497,7 @@
     var climbFactor = Math.max(0, -player.vy) / 400;
     var emitRate = 0.16 - diveFactor * 0.03 + climbFactor * 0.03;
     if (effect === "blackSmoke") emitRate *= 0.65;
-    if (effect === "flame") emitRate *= 0.55;
+    if (effect === "flame") emitRate *= 0.38; // denser jet + smoke trail
     if (effect === "steam") emitRate *= 0.8;
     blimpPersonality.exhaustTimer += dt;
     while (blimpPersonality.exhaustTimer > emitRate) {
@@ -509,9 +530,20 @@
       p.age += dt;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.size += (p.mode === "flame" ? 6 : 3) * dt;
-      p.vy -= (p.mode === "steam" ? 18 : 8) * dt;
-      if (p.mode === "flame") p.vx *= (1 - 0.8 * dt);
+      if (p.mode === "flame") {
+        // Keep jet long: slow size growth, light drag so particles travel farther
+        p.size += 4 * dt;
+        p.vx *= (1 - 0.35 * dt);
+        p.vy -= 4 * dt;
+        if (p.stretch) p.stretch += 1.6 * dt;
+      } else if (p.mode === "smoke") {
+        p.size += 7 * dt; // smoke blooms into a trail
+        p.vx *= (1 - 0.55 * dt);
+        p.vy -= 10 * dt;
+      } else {
+        p.size += 3 * dt;
+        p.vy -= (p.mode === "steam" ? 18 : 8) * dt;
+      }
     });
     blimpPersonality.exhaustParticles = blimpPersonality.exhaustParticles.filter(function(p) {
       return p.age < p.life;
@@ -554,19 +586,40 @@
       ctx.restore();
     });
 
-    // Flat fills only — radial gradients per particle were a major multi-tap hitch
+    // Flat fills — flame particles drawn as elongated ellipses (jet plume)
     blimpPersonality.exhaustParticles.forEach(function(p) {
       var tt = 1 - p.age / p.life;
       var a = Math.max(0, p.alpha * tt * tt);
       if (a < 0.02) return;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.save();
       if (p.mode === "flame") {
-        ctx.fillStyle = "rgba(255,150,40," + a + ")";
-      } else {
+        // Hot core → cooler outer, stretched horizontally behind the ship
+        var sx = p.stretch || 2.4;
+        ctx.translate(p.x, p.y);
+        ctx.scale(sx, 1);
+        ctx.beginPath();
+        ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,220,90," + (a * 0.95) + ")";
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(-p.size * 0.15, 0, p.size * 0.7, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,120,30," + (a * 0.85) + ")";
+        ctx.fill();
+      } else if (p.mode === "smoke") {
+        var sx2 = p.stretch || 1.2;
+        ctx.translate(p.x, p.y);
+        ctx.scale(sx2, 1);
+        ctx.beginPath();
+        ctx.arc(0, 0, p.size, 0, Math.PI * 2);
         ctx.fillStyle = "rgba(" + p.color + "," + a + ")";
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(" + p.color + "," + a + ")";
+        ctx.fill();
       }
-      ctx.fill();
+      ctx.restore();
     });
   }
 
