@@ -586,31 +586,38 @@
       ctx.restore();
     });
 
-    // Flat fills — flame particles drawn as elongated ellipses (jet plume)
+    // Teardrop plume shapes — fat nose near engine, tapered tip trailing left
+    function pathTeardrop(len, halfW) {
+      // Local space: tip at -len (rear), bulb near +halfW*0.2 (toward engine)
+      ctx.beginPath();
+      ctx.moveTo(-len, 0); // sharp tip
+      ctx.bezierCurveTo(-len * 0.55, -halfW * 0.35, -len * 0.15, -halfW, halfW * 0.15, -halfW * 0.85);
+      ctx.quadraticCurveTo(halfW * 0.55, 0, halfW * 0.15, halfW * 0.85);
+      ctx.bezierCurveTo(-len * 0.15, halfW, -len * 0.55, halfW * 0.35, -len, 0);
+      ctx.closePath();
+    }
     blimpPersonality.exhaustParticles.forEach(function(p) {
       var tt = 1 - p.age / p.life;
       var a = Math.max(0, p.alpha * tt * tt);
       if (a < 0.02) return;
       ctx.save();
       if (p.mode === "flame") {
-        // Hot core → cooler outer, stretched horizontally behind the ship
-        var sx = p.stretch || 2.4;
+        var len = p.size * (p.stretch || 2.6);
+        var halfW = p.size * 0.85;
         ctx.translate(p.x, p.y);
-        ctx.scale(sx, 1);
-        ctx.beginPath();
-        ctx.arc(0, 0, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(255,220,90," + (a * 0.95) + ")";
+        // Outer cooler flame
+        pathTeardrop(len, halfW);
+        ctx.fillStyle = "rgba(255,110,25," + (a * 0.9) + ")";
         ctx.fill();
-        ctx.beginPath();
-        ctx.arc(-p.size * 0.15, 0, p.size * 0.7, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(255,120,30," + (a * 0.85) + ")";
+        // Hot core (smaller teardrop)
+        pathTeardrop(len * 0.72, halfW * 0.55);
+        ctx.fillStyle = "rgba(255,230,100," + (a * 0.95) + ")";
         ctx.fill();
       } else if (p.mode === "smoke") {
-        var sx2 = p.stretch || 1.2;
+        var len2 = p.size * (p.stretch || 1.8);
+        var halfW2 = p.size * 0.95;
         ctx.translate(p.x, p.y);
-        ctx.scale(sx2, 1);
-        ctx.beginPath();
-        ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+        pathTeardrop(len2, halfW2);
         ctx.fillStyle = "rgba(" + p.color + "," + a + ")";
         ctx.fill();
       } else {
