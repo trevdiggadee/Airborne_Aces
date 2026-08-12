@@ -218,9 +218,15 @@
       meter.classList.add("ft-bounce");
     }
     if (fill) fill.style.setProperty("--ft-progress", deg + "deg");
-    if (pct) pct.textContent = String(Math.round(progress * 100));
+    // Center shows run timer (updated each frame from main loop)
+    if (pct && typeof elapsedMs === "number") {
+      const totalSec = Math.floor(elapsedMs / 1000);
+      const m = Math.floor(totalSec / 60);
+      const s = totalSec % 60;
+      pct.textContent = m + ":" + String(s).padStart(2, "0");
+    }
     const lab = document.getElementById("ruffFlightTraceLabel");
-    if (lab) lab.textContent = TRACE_LABELS[stage] || stage || "Stand by…";
+    if (lab) { lab.textContent = ""; lab.style.display = "none"; }
   }
 
   function radioEl() { return document.getElementById("ruffRadio"); }

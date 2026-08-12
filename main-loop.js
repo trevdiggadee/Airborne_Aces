@@ -136,6 +136,16 @@
     if (state === "playing") {
       elapsedMs = performance.now() - runStartTime;
       updateFlipClock(elapsedMs);
+      // Timer inside flight-progress hub
+      try {
+        const hub = document.getElementById("ruffFlightTracePct");
+        if (hub) {
+          const totalSec = Math.floor(elapsedMs / 1000);
+          const m = Math.floor(totalSec / 60);
+          const s = totalSec % 60;
+          hub.textContent = m + ":" + String(s).padStart(2, "0");
+        }
+      } catch (e) {}
       if (typeof ensureCollectDock === "function") ensureCollectDock();
       else if (typeof updateCollectDock === "function") updateCollectDock();
       if (typeof updateAirfield === "function") updateAirfield(dt);
