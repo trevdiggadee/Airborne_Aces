@@ -912,9 +912,9 @@ html, body {
   /* Heart — left circular badge */
   #healthMeter {
     position: absolute;
-    left: 1.65%; /* +0.10% right */
-    top: 10.35%; /* +0.10% lower */
-    width: 12.7%; /* -3% */
+    left: 1.65%;
+    top: 10.85%; /* +0.5% lower */
+    width: 12.7%;
     height: 78%;
     z-index: 2;
     pointer-events: none;
@@ -942,7 +942,7 @@ html, body {
   .hudRank {
     position: absolute;
     left: 19.25%;
-    top: 20.25%; /* raise 0.5% */
+    top: 18.25%; /* raise 2% */
     width: 16%;
     height: 58%;
     display: flex;
@@ -996,7 +996,7 @@ html, body {
     text-shadow: 0 2px 4px rgba(0,0,0,0.55);
     line-height: 1;
     position: relative;
-    top: 0.5%; /* lower count only */
+    top: 0.75%; /* lower count only */
   }
   #scoreVal.pop {
     animation: scorePop 0.35s ease;
@@ -1010,8 +1010,8 @@ html, body {
   /* Player stats — rings / crystals / power */
   .hudStats {
     position: absolute;
-    left: 78.5%; /* +1% right */
-    top: 18.6%; /* +0.25% lower */
+    left: 78.5%;
+    top: 18.85%; /* +0.25% lower */
     width: 12%;
     height: 66%;
     display: flex;
@@ -2573,11 +2573,9 @@ html, body {
 #ruffRadio {
   position: fixed;
   right: 8px;
-  /* Lowered 2%, under HUD */
   top: calc(env(safe-area-inset-top, 0px) + 20.39vw + 2vh + 8px);
   left: auto;
   bottom: auto;
-  /* ~25% smaller fixed square */
   width: min(168px, 42vw);
   max-width: min(168px, 42vw);
   z-index: 40;
@@ -2592,13 +2590,15 @@ html, body {
   pointer-events: auto;
 }
 #ruffRadio .ruffCard {
-  background: linear-gradient(155deg, rgba(36, 28, 16, 0.72), rgba(14, 24, 38, 0.68));
-  border: 2px solid rgba(212, 175, 55, 0.75);
+  background: linear-gradient(155deg, rgba(36, 28, 16, 0.42), rgba(14, 24, 38, 0.38));
+  border: 1.5px solid rgba(212, 175, 55, 0.55);
   border-radius: 12px;
   width: 100%;
-  min-height: min(168px, 42vw);
+  min-height: min(84px, 21vw); /* 50% height */
+  max-height: min(84px, 21vw);
+  overflow: hidden;
   box-sizing: border-box;
-  padding: 8px 10px;
+  padding: 6px 8px;
   padding: 12px 14px 12px 14px;
   box-shadow:
     0 6px 24px rgba(0,0,0,0.4),
@@ -2671,8 +2671,8 @@ html, body {
 }
 #ruffRadio .ruffText {
   font-family: 'Rockwell', Georgia, serif;
-  font-size: 11px;
-  line-height: 1.35;
+  font-size: 10px;
+  line-height: 1.25;
   color: #f8ecd4;
   margin: 0;
   text-shadow: 0 1px 2px rgba(0,0,0,0.35);
@@ -2983,7 +2983,7 @@ html, body {
   z-index: 2;
 }
 #ruffFlightTrace .ft-hub span {
-  font-size: 11px;
+  font-size: 11.6px; /* +5% */
   font-weight: 700;
   letter-spacing: 0.06em;
   color: #ffe9a8;
@@ -2991,7 +2991,7 @@ html, body {
   font-variant-numeric: tabular-nums;
   font-family: 'Rockwell', Georgia, monospace;
   position: relative;
-  top: 0.1%; /* lower timer slightly */
+  top: 0.35%; /* lower 0.25% more */
 }
 #ruffFlightTrace .ft-label {
   display: none !important;

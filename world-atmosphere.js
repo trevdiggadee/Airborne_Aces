@@ -327,6 +327,13 @@
     let mSpeed = 0.18;
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) mSpeed = 0;
     if (window.__airborneRuffStage === "intro") mSpeed = 0;
+    // Freeze mountains once landing is complete (skid / score / done)
+    const ap = window.__airborneAirfieldPhase || "";
+    if (ap === "skid" || ap === "score" || ap === "done" || ap === "land") {
+      // keep scrolling during approach (land) until touchdown — stop on skid+
+      if (ap === "skid" || ap === "score" || ap === "done") mSpeed = 0;
+    }
+    if (window.__airborneAirfieldDidLand) mSpeed = 0;
     if (!drawMountainParallax._tiles || drawMountainParallax._tileW !== tileW) {
       drawMountainParallax._tiles = [];
       drawMountainParallax._tileW = tileW;

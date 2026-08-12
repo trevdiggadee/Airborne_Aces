@@ -761,6 +761,7 @@
 
         if (!airfieldDidLand && ((fieldReady && airfieldLandContact >= 0.25) || airfieldLandT > 12)) {
           airfieldDidLand = true;
+          window.__airborneAirfieldDidLand = true;
           player.y = landY;
           player.vy = 0;
           player.rotation = 0;
@@ -787,7 +788,7 @@
       window.__airborneAirfieldInvuln = true;
       window.__airborneAirfieldPaused = true;
       airfieldSkidT = (airfieldSkidT || 0) + dt;
-      const skidDur = 1.02; // +20% longer
+      const skidDur = 0.75;
       const u = Math.min(1, airfieldSkidT / skidDur);
       // Decelerating slide further along the strip
       const ease = 1 - Math.pow(1 - u, 2.4);
@@ -878,7 +879,7 @@
         });
         airfieldFireworks = airfieldFireworks.filter(function(fw) { return fw.age < fw.life; });
       }
-      if (airfieldScoreT >= 2.2) {
+      if (airfieldScoreT >= 0.9) {
         // Always hand off to report / map
         airfieldPhase = "done";
         try {
@@ -1010,7 +1011,7 @@
         ctx.fill();
         ctx.restore();
       }
-      if ((airfieldScoreT || 0) < 3.5) {
+      if ((airfieldScoreT || 0) < 1.2) {
         ctx.save();
         ctx.textAlign = "center";
         const fs = Math.floor((typeof W !== "undefined" ? W : 400) * 0.065);
