@@ -379,6 +379,8 @@
             o.collected = true;
             o.scored = true;
             score += 5;
+            window.__airborneCollectRings = (window.__airborneCollectRings || 0) + 1;
+            if (typeof updateCollectDock === "function") updateCollectDock();
             if (document.getElementById("scoreVal")) document.getElementById("scoreVal").textContent = score;
             if (typeof bumpScorePop === "function") bumpScorePop();
             if (typeof sfxRingCollect === "function") sfxRingCollect();

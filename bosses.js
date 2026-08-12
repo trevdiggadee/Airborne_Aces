@@ -220,6 +220,7 @@
   }
 
   function updateStormMeterDisplay(justCharged) {
+    try { if (typeof updateCollectDock === "function") updateCollectDock(); } catch (e) {}
     const stage = Math.min(STORM_ICON_URLS.length - 1, Math.floor(stormCharge / STORM_CHARGE_PER_MILESTONE));
     if (stormIconDisplayEl && stormIconDisplayEl.dataset.stage !== String(stage)) {
       stormIconDisplayEl.dataset.stage = String(stage);

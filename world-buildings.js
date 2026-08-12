@@ -709,9 +709,9 @@
       const riseDur = 3.0;
       const riseU = Math.min(1, airfieldLandT / riseDur);
       const riseE = 1 - Math.pow(1 - riseU, 2.4);
-      // Raised ~5% from previous rest
-      const restSink = H * 0.03;
-      const startSink = H * 0.52;
+      // Raised another ~3%
+      const restSink = H * 0.0;
+      const startSink = H * 0.50;
       airfieldStripY = startSink + (restSink - startSink) * riseE;
       if (riseU >= 1) airfieldStripY = restSink;
 
@@ -787,16 +787,16 @@
       window.__airborneAirfieldInvuln = true;
       window.__airborneAirfieldPaused = true;
       airfieldSkidT = (airfieldSkidT || 0) + dt;
-      const skidDur = 0.85;
+      const skidDur = 1.02; // +20% longer
       const u = Math.min(1, airfieldSkidT / skidDur);
-      // Decelerating slide a short distance
+      // Decelerating slide further along the strip
       const ease = 1 - Math.pow(1 - u, 2.4);
       const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
-      const sinkS = (typeof airfieldStripY === "number") ? airfieldStripY : H * 0.03;
+      const sinkS = (typeof airfieldStripY === "number") ? airfieldStripY : 0;
       const landY = H - Math.max(40, th * 0.28) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10) + sinkS;
       if (typeof player !== "undefined" && player) {
         const sx = (typeof airfieldSkidStartX === "number") ? airfieldSkidStartX : W * 0.28;
-        player.x = sx + ease * W * 0.08;
+        player.x = sx + ease * W * 0.096; // +20% distance
         player.y = landY;
         player.vy = 0;
         // Slight nose-down then settle (no bounce)

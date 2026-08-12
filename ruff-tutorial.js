@@ -599,6 +599,8 @@
       if (Math.abs(c.x - px) < pw + c.r && Math.abs(c.y - py) < ph + c.r) {
         c.collected = true;
         ruffStats.crystals++; playCrystalCollectSfx();
+        window.__airborneCollectCrystals = (window.__airborneCollectCrystals || 0) + 1;
+        if (typeof updateCollectDock === "function") updateCollectDock();
         if (typeof score === "number") score += CRYSTAL_SCORE;
         if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
         if (ruffWaitingCollect > 0) ruffWaitingCollect--;

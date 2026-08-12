@@ -221,6 +221,38 @@
   const bonusHeartsEl = document.getElementById("bonusHearts");
   let health = MAX_HEALTH;
   let invulnerableUntil = 0; // timestamp (ms) — no damage taken before this
+  window.__airborneCollectRings = 0;
+  window.__airborneCollectCrystals = 0;
+
+  function updateCollectDock() {
+    const r = document.getElementById("collectRings");
+    const c = document.getElementById("collectCrystals");
+    const fill = document.getElementById("collectPowerFill");
+    const wrap = document.querySelector("#collectDock .cd-power-wrap");
+    if (r) {
+      const v = String(window.__airborneCollectRings || 0);
+      if (r.textContent !== v) {
+        r.textContent = v;
+        r.classList.remove("pop"); void r.offsetWidth; r.classList.add("pop");
+      }
+    }
+    if (c) {
+      const v = String(window.__airborneCollectCrystals || 0);
+      if (c.textContent !== v) {
+        c.textContent = v;
+        c.classList.remove("pop"); void c.offsetWidth; c.classList.add("pop");
+      }
+    }
+    // Mirror storm charge 0..1
+    let charge = 0;
+    if (typeof stormCharge === "number") {
+      const maxC = (typeof STORM_MAX === "number" && STORM_MAX > 0) ? STORM_MAX : 100;
+      charge = Math.max(0, Math.min(1, stormCharge / maxC));
+    }
+    if (fill) fill.style.width = Math.round(charge * 100) + "%";
+    if (wrap) wrap.classList.toggle("ready", charge >= 0.99);
+  }
+  window.updateCollectDock = updateCollectDock;
 
   function updateHealthDisplay() {
     healthImg.src = HEART_IMAGES[Math.max(0, Math.min(MAX_HEALTH, health))];

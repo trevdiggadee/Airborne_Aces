@@ -7,9 +7,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="format-detection" content="telephone=no" />
 <title>Airborne Aces</title>
-<link rel="stylesheet" href="style.css?v=ruff55">
-<link rel="stylesheet" href="blimp-profile.css?v=ruff55">
-<link rel="stylesheet" href="launch-screens.css?v=ruff55">
+<link rel="stylesheet" href="style.css?v=ruff56">
+<link rel="stylesheet" href="blimp-profile.css?v=ruff56">
+<link rel="stylesheet" href="launch-screens.css?v=ruff56">
 <style id="otg-legacy-splash-hide">#splashScreen{visibility:hidden!important;pointer-events:none!important;}</style>
 </head>
 <body>
@@ -251,7 +251,7 @@
 <div id="gameScreen" style="display:none;">
 <canvas id="gameCanvas"></canvas>
 
-<button id="muteBtn" aria-label="Game settings">⚙</button>
+<!-- mute moved into collectDock -->
 
 <div id="pauseOverlay" class="hidden" aria-hidden="true">
   <div class="pausePanel">
@@ -330,6 +330,26 @@
       </div>
     </div>
   </div>
+</div>
+
+<div id="collectDock" aria-label="Collection meter">
+  <div class="cd-item cd-rings" title="Rings">
+    <div class="cd-icon cd-ring-icon"></div>
+    <span class="cd-val" id="collectRings">0</span>
+  </div>
+  <div class="cd-item cd-crystals" title="Sky Crystals">
+    <div class="cd-icon cd-crystal-icon"></div>
+    <span class="cd-val" id="collectCrystals">0</span>
+  </div>
+  <div class="cd-power-wrap" title="Power">
+    <div class="cd-power-track">
+      <div class="cd-power-fill" id="collectPowerFill"></div>
+    </div>
+    <div class="cd-power-icon" id="collectPowerIcon"></div>
+  </div>
+  <button id="muteBtn" class="cd-mute" aria-label="Pause and settings" type="button">
+    <span class="cd-mute-gear">⚙</span>
+  </button>
 </div>
 
 <div id="stormMeter">
@@ -423,22 +443,22 @@
   </div>
 </div>
 
-<script src="assets-placeholders.js?v=ruff55"></script>
-<script src="blimp-profile.js?v=ruff55"></script>
-<script src="menu-intro.js?v=ruff55"></script>
-<script src="world-map.js?v=ruff55"></script>
-<script src="audio.js?v=ruff55"></script>
-<script src="asset-loading.js?v=ruff55"></script>
-<script src="ruff-tutorial.js?v=ruff55"></script>
-<script src="world-buildings.js?v=ruff55"></script>
-<script src="player-obstacles.js?v=ruff55"></script>
-<script src="bosses.js?v=ruff55"></script>
-<script src="boss-dialogue.js?v=ruff55"></script>
-<script src="effects-combat.js?v=ruff55"></script>
-<script src="gamestate-ui.js?v=ruff55"></script>
-<script src="world-atmosphere.js?v=ruff55"></script>
-<script src="main-loop.js?v=ruff55"></script>
+<script src="assets-placeholders.js?v=ruff56"></script>
+<script src="blimp-profile.js?v=ruff56"></script>
+<script src="menu-intro.js?v=ruff56"></script>
+<script src="world-map.js?v=ruff56"></script>
+<script src="audio.js?v=ruff56"></script>
+<script src="asset-loading.js?v=ruff56"></script>
+<script src="ruff-tutorial.js?v=ruff56"></script>
+<script src="world-buildings.js?v=ruff56"></script>
+<script src="player-obstacles.js?v=ruff56"></script>
+<script src="bosses.js?v=ruff56"></script>
+<script src="boss-dialogue.js?v=ruff56"></script>
+<script src="effects-combat.js?v=ruff56"></script>
+<script src="gamestate-ui.js?v=ruff56"></script>
+<script src="world-atmosphere.js?v=ruff56"></script>
+<script src="main-loop.js?v=ruff56"></script>
 
-<script src="launch-screens.js?v=ruff55"></script>
+<script src="launch-screens.js?v=ruff56"></script>
 </body>
 </html>
