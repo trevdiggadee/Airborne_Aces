@@ -604,10 +604,11 @@
           airfieldPhase = "land";
           airfieldPhaseT = 0;
           airfieldLandT = 0;
+          airfieldDidLand = false;
+          airfieldLandContact = 0;
           window.__airborneAirfieldPaused = false;
           window.__airborneAirfieldInvuln = true;
-          if (typeof obstacles !== "undefined") obstacles = [];
-          if (typeof powerup !== "undefined") powerup = null;
+          // Keep live objects on screen — only stop new spawns
           if (typeof spawnInterval !== "undefined") spawnInterval = 999;
           ensureAirfieldStripVisible();
           airfieldTip = "Tap to flare — land on the strip!";
@@ -650,9 +651,11 @@
         airfieldPhase = "land";
         airfieldPhaseT = 0;
         airfieldLandT = 0;
-        window.__airborneAirfieldPaused = true;
+        airfieldDidLand = false;
+        airfieldLandContact = 0;
+        window.__airborneAirfieldPaused = false;
         window.__airborneAirfieldInvuln = true;
-        if (typeof obstacles !== "undefined") obstacles = [];
+        if (false && typeof obstacles !== "undefined") obstacles = [];
         if (typeof spawnInterval !== "undefined") spawnInterval = 999;
         ensureAirfieldStripVisible();
         airfieldTip = "Prepare to land…";
@@ -789,7 +792,7 @@
       window.__airborneAirfieldInvuln = true;
       window.__airborneAirfieldPaused = true;
       airfieldSkidT = (airfieldSkidT || 0) + dt;
-      const skidDur = 0.4;
+      const skidDur = 0.25;
       const u = Math.min(1, airfieldSkidT / skidDur);
       // Decelerating slide further along the strip
       const ease = 1 - Math.pow(1 - u, 2.4);
@@ -880,22 +883,22 @@
         });
         airfieldFireworks = airfieldFireworks.filter(function(fw) { return fw.age < fw.life; });
       }
-      if (airfieldScoreT >= 0.35) {
-        // Always hand off to report / map
-        airfieldPhase = "done";
+      // Show score report as soon as score phase begins
+      if (!window.__airborneTrainingReportShown) {
+        window.__airborneTrainingReportShown = true;
         try {
           if (typeof window.__airborneShowRuffReport === "function") {
             window.__airborneShowRuffReport();
           } else if (window.__airborneRuffActive) {
             window.__airborneRuffStage = "report";
-          } else if (typeof endAirfieldTrainingToMap === "function") {
-            endAirfieldTrainingToMap();
           }
         } catch (e) {
           console.warn("score handoff", e);
-          try { if (typeof endAirfieldTrainingToMap === "function") endAirfieldTrainingToMap(); } catch (e2) {}
         }
-        airfieldMode = false;
+      }
+      if (airfieldScoreT >= 0.15) {
+        airfieldPhase = "done";
+        // Keep mode until report is visible; map exit is via report continue button
         syncAirfieldGlobals();
       }
       syncAirfieldGlobals();

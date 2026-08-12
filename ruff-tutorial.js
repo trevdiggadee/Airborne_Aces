@@ -914,11 +914,11 @@
     }
   }
   window.__airborneShowRuffReport = function() {
-    if (!ruffActive) {
-      ruffActive = true;
-      window.__airborneRuffActive = true;
-    }
-    setStage("report");
+    ruffActive = true;
+    window.__airborneRuffActive = true;
+    window.__airborneRuffStage = "report";
+    try { setStage("report"); } catch (e) {}
+    try { showFlightReport(); } catch (e2) {}
   };
 
   // ---------- Public API ----------
