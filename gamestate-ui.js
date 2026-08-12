@@ -254,6 +254,28 @@
   }
   window.updateCollectDock = updateCollectDock;
 
+  function ensureCollectDock() {
+    const dock = document.getElementById("collectDock");
+    const mute = document.getElementById("muteBtn");
+    if (!dock) return;
+    dock.style.display = "flex";
+    dock.style.visibility = "visible";
+    dock.style.opacity = "1";
+    dock.style.zIndex = "120";
+    // Keep mute button inside the dock
+    if (mute && mute.parentElement !== dock) {
+      dock.appendChild(mute);
+    }
+    if (mute) {
+      mute.classList.add("cd-mute");
+      if (!mute.querySelector(".cd-mute-gear")) {
+        mute.innerHTML = '<span class="cd-mute-gear">⚙</span>';
+      }
+    }
+    updateCollectDock();
+  }
+  window.ensureCollectDock = ensureCollectDock;
+
   function updateHealthDisplay() {
     healthImg.src = HEART_IMAGES[Math.max(0, Math.min(MAX_HEALTH, health))];
 
@@ -793,7 +815,8 @@
   const muteBtn = document.getElementById("muteBtn");
   if (muteBtn) {
     muteBtn.dataset.mode = "settings";
-    muteBtn.textContent = "⚙";
+    muteBtn.classList.add("cd-mute");
+    muteBtn.innerHTML = '<span class="cd-mute-gear">⚙</span>';
     muteBtn.setAttribute("aria-label", "Pause and settings");
     muteBtn.addEventListener("click", (e) => {
       e.preventDefault();
@@ -808,7 +831,8 @@
         const next = !(typeof muted !== "undefined" && muted);
         if (typeof setMuted === "function") setMuted(next);
         muteBtn.dataset.mode = "settings";
-        muteBtn.textContent = "⚙";
+        muteBtn.classList.add("cd-mute");
+        muteBtn.innerHTML = '<span class="cd-mute-gear">⚙</span>';
       }
     });
   }

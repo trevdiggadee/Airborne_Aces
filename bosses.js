@@ -1041,7 +1041,7 @@
 
   function setHudFade(alpha) {
     const a = Math.max(0, Math.min(1, alpha));
-    ["hudFrame", "stormMeter", "muteBtn"].forEach(function(id) {
+    ["hudFrame", "stormMeter", "muteBtn", "collectDock"].forEach(function(id) {
       const el = document.getElementById(id);
       if (!el) return;
       el.style.opacity = String(a);

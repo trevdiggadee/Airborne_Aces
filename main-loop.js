@@ -136,7 +136,8 @@
     if (state === "playing") {
       elapsedMs = performance.now() - runStartTime;
       updateFlipClock(elapsedMs);
-      if (typeof updateCollectDock === "function") updateCollectDock();
+      if (typeof ensureCollectDock === "function") ensureCollectDock();
+      else if (typeof updateCollectDock === "function") updateCollectDock();
       if (typeof updateAirfield === "function") updateAirfield(dt);
       if (typeof window.__airborneUpdateRuff === "function") window.__airborneUpdateRuff(dt);
       updateBuildings(dtScale);
