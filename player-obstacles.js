@@ -97,15 +97,14 @@
       return;
     }
 
-    // Airfield: scripted phases freeze player; lesson = free flight
+    // Airfield: scripted phases freeze physics; still run exhaust personality
     const afPhase = window.__airborneAirfieldPhase;
     if (window.__airborneAirfield &&
         (afPhase === "taxi" || afPhase === "accel" || afPhase === "climb" ||
-         afPhase === "score" || window.__airborneAirfieldPaused)) {
+         afPhase === "land" || afPhase === "score" || afPhase === "rollout" ||
+         window.__airborneAirfieldPaused)) {
       player.vy = 0;
-      return;
-    }
-    if (window.__airborneAirfield && afPhase === "land") {
+      updateBlimpPersonality(dt);
       return;
     }
     // lesson / training flight falls through to gravity

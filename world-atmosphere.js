@@ -370,11 +370,17 @@
     diveSquashT: 0
   };
 
+  // Continuous jet ribbon + hull damage smoke
+  let jetTrail = [];
+  let damageSmoke = [];
+  const JET_TRAIL_MAX = 18;
+  const DAMAGE_SMOKE_MAX = 28;
+
   function exhaustStyleFor(effect) {
     // Roster-tuned exhaust look
     switch (effect) {
       case "flame":
-        return { color: "255,160,40", size: 3.5, alpha: 0.7, life: 0.35, rise: 4, drag: 70, mode: "flame" };
+        return { color: "255,160,40", size: 5, alpha: 0.9, life: 0.55, rise: 2, drag: 180, mode: "flame" };
       case "steam":
         return { color: "230,240,250", size: 3.2, alpha: 0.45, life: 0.7, rise: 28, drag: 35, mode: "steam" };
       case "blackSmoke":
@@ -392,50 +398,61 @@
     var data = (typeof BLIMP_DATA !== "undefined") ? BLIMP_DATA[sel] : null;
     var effect = (data && data.effect) || "propeller";
     var style = exhaustStyleFor(effect);
-    var isFlame = style.mode === "flame";
-    // Flame ships need a denser plume; still capped for performance
-    var count = burst ? (isFlame ? 4 : 3) : (isFlame ? 2 : 1);
-    var cap = isFlame ? 36 : 16;
-    if (blimpPersonality.exhaustParticles.length > cap) {
-      blimpPersonality.exhaustParticles.splice(0, blimpPersonality.exhaustParticles.length - (cap - 4));
-    }
     var exhaustX = player.x - player.w * 0.38;
     var exhaustY = player.y + player.h * 0.12;
+
+    // Flame ships: sample continuous ribbon nodes (one coherent trail)
+    if (style.mode === "flame") {
+      jetTrail.push({
+        x: exhaustX,
+        y: exhaustY + (Math.random() - 0.5) * 2,
+        w: player.h * 0.22 * (burst ? 1.15 : 1),
+        age: 0,
+        life: 0.55 + Math.random() * 0.12
+      });
+      if (jetTrail.length > JET_TRAIL_MAX) jetTrail.splice(0, jetTrail.length - JET_TRAIL_MAX);
+      // Soft smoke that rides the same trail path (not separate random puffs)
+      if (Math.random() < 0.45 || burst) {
+        blimpPersonality.exhaustParticles.push({
+          x: exhaustX - 8,
+          y: exhaustY,
+          vx: -90 - Math.random() * 40,
+          vy: (Math.random() - 0.5) * 8,
+          size: 5 + Math.random() * 3,
+          alpha: 0.22 + Math.random() * 0.12,
+          life: 0.7 + Math.random() * 0.25,
+          age: 0,
+          color: "50,45,40",
+          mode: "smoke",
+          stretch: 2.0,
+          trail: true // follows ribbon physics
+        });
+      }
+      return;
+    }
+
+    var count = burst ? 3 : 1;
+    if (blimpPersonality.exhaustParticles.length > 16) {
+      blimpPersonality.exhaustParticles.splice(0, blimpPersonality.exhaustParticles.length - 12);
+    }
     for (var i = 0; i < count; i++) {
       var speedBoost = Math.abs(player.vy) * 0.08;
-      // Core jet flame — ~2x length via higher rearward velocity + longer life
       blimpPersonality.exhaustParticles.push({
-        x: exhaustX + (Math.random() - 0.5) * 6,
-        y: exhaustY + (Math.random() - 0.5) * 5,
-        vx: -(style.drag + Math.random() * 40 + speedBoost) * (burst ? 1.35 : 1),
-        vy: (Math.random() - 0.5) * 14 - style.rise * (0.5 + Math.random() * 0.5),
-        size: style.size * (burst ? 1.3 : 1) * (0.75 + Math.random() * 0.5),
-        alpha: style.alpha * (burst ? 1.15 : 1) * (0.8 + Math.random() * 0.35),
-        life: style.life * (0.75 + Math.random() * 0.45),
+        x: exhaustX + (Math.random() - 0.5) * 8,
+        y: exhaustY + (Math.random() - 0.5) * 6,
+        vx: -(style.drag + Math.random() * 30 + speedBoost) * (burst ? 1.25 : 1),
+        vy: (Math.random() - 0.5) * 18 - style.rise * (0.6 + Math.random() * 0.6),
+        size: style.size * (burst ? 1.25 : 1) * (0.7 + Math.random() * 0.6),
+        alpha: style.alpha * (burst ? 1.1 : 1) * (0.75 + Math.random() * 0.4),
+        life: style.life * (0.65 + Math.random() * 0.4),
         age: 0,
         color: style.color,
         mode: style.mode,
-        // Elongate flame particles horizontally for a jet look
-        stretch: isFlame ? (2.2 + Math.random() * 1.4) : 1
+        stretch: 1
       });
-      // Smoke trail behind the flame (only for jet-flame ships)
-      if (isFlame) {
-        blimpPersonality.exhaustParticles.push({
-          x: exhaustX - 10 - Math.random() * 18,
-          y: exhaustY + (Math.random() - 0.5) * 10,
-          vx: -(55 + Math.random() * 50 + speedBoost * 0.6),
-          vy: (Math.random() - 0.5) * 22 - 8,
-          size: 4.5 + Math.random() * 5,
-          alpha: 0.28 + Math.random() * 0.22,
-          life: 0.85 + Math.random() * 0.55,
-          age: 0,
-          color: "55,48,42",
-          mode: "smoke",
-          stretch: 1.3 + Math.random() * 0.6
-        });
-      }
     }
   }
+
   // Light audio-synced puff (optional) — one small burst only
   window.__airborneExhaustBurst = function() {
     try { emitExhaustPuff(true); } catch (e) {}
@@ -492,17 +509,58 @@
       blimpPersonality.propBlurOpacity *= 0.95;
     }
 
-    // Continuous exhaust for every vessel — denser when diving, thinner when climbing
+    // Continuous exhaust — always on (including airfield taxi / takeoff / landing)
     var diveFactor = Math.max(0, player.vy) / MAX_FALL_SPEED;
     var climbFactor = Math.max(0, -player.vy) / 400;
+    var afPhase = (typeof window !== "undefined") ? window.__airborneAirfieldPhase : null;
+    var onRunway = !!(window.__airborneAirfield &&
+      (afPhase === "taxi" || afPhase === "accel" || afPhase === "climb" ||
+       afPhase === "land" || afPhase === "rollout"));
     var emitRate = 0.16 - diveFactor * 0.03 + climbFactor * 0.03;
     if (effect === "blackSmoke") emitRate *= 0.65;
-    if (effect === "flame") emitRate *= 0.38; // denser jet + smoke trail
+    if (effect === "flame") emitRate = onRunway ? 0.045 : 0.05; // solid continuous jet
     if (effect === "steam") emitRate *= 0.8;
+    if (onRunway && effect !== "flame") emitRate *= 0.7; // visible exhaust while driving
     blimpPersonality.exhaustTimer += dt;
     while (blimpPersonality.exhaustTimer > emitRate) {
       blimpPersonality.exhaustTimer -= emitRate;
       emitExhaustPuff(false);
+    }
+
+    // Damage smoke — all ships when health drops below 50%, denser as HP falls
+    var hp = (typeof health === "number") ? health : 4;
+    var maxHp = (typeof MAX_HEALTH === "number") ? MAX_HEALTH : 4;
+    var hpFrac = maxHp > 0 ? (hp / maxHp) : 1;
+    if (hpFrac < 0.5 && maxHp > 0) {
+      // 0 at 50% health → full intensity near 0 health
+      var dmgIntensity = Math.min(1, (0.5 - hpFrac) / 0.5);
+      var dmgRate = 0.22 - dmgIntensity * 0.16; // faster emit when more damaged
+      blimpPersonality._dmgTimer = (blimpPersonality._dmgTimer || 0) + dt;
+      while (blimpPersonality._dmgTimer > dmgRate) {
+        blimpPersonality._dmgTimer -= dmgRate;
+        var count = 1 + Math.floor(dmgIntensity * 2.5);
+        for (var di = 0; di < count; di++) {
+          damageSmoke.push({
+            x: player.x + (Math.random() - 0.55) * player.w * 0.55,
+            y: player.y + (Math.random() - 0.3) * player.h * 0.55,
+            vx: -40 - Math.random() * 50 - dmgIntensity * 30,
+            vy: -20 - Math.random() * 35 - dmgIntensity * 15,
+            size: 3.5 + Math.random() * 4 + dmgIntensity * 4,
+            alpha: 0.25 + dmgIntensity * 0.35 + Math.random() * 0.15,
+            life: 0.7 + Math.random() * 0.6 + dmgIntensity * 0.4,
+            age: 0,
+            // Darker / thicker when more damaged
+            color: dmgIntensity > 0.65
+              ? (Math.random() < 0.4 ? "30,28,26" : "45,40,35")
+              : (Math.random() < 0.5 ? "70,65,58" : "90,85,78")
+          });
+        }
+        if (damageSmoke.length > DAMAGE_SMOKE_MAX) {
+          damageSmoke.splice(0, damageSmoke.length - DAMAGE_SMOKE_MAX);
+        }
+      }
+    } else {
+      blimpPersonality._dmgTimer = 0;
     }
 
     // Speed streaks when falling fast (motion lines)
@@ -526,19 +584,22 @@
       return s.age < s.life;
     });
 
+    // Continuous jet ribbon drift
+    jetTrail.forEach(function(n) {
+      n.age += dt;
+      n.x -= 160 * dt; // stream backward as one body
+      n.y += (Math.sin(n.age * 8) * 6) * dt;
+      n.w *= (1 - 0.55 * dt);
+    });
+    jetTrail = jetTrail.filter(function(n) { return n.age < n.life && n.w > 1; });
+
     blimpPersonality.exhaustParticles.forEach(function(p) {
       p.age += dt;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      if (p.mode === "flame") {
-        // Keep jet long: slow size growth, light drag so particles travel farther
-        p.size += 4 * dt;
-        p.vx *= (1 - 0.35 * dt);
-        p.vy -= 4 * dt;
-        if (p.stretch) p.stretch += 1.6 * dt;
-      } else if (p.mode === "smoke") {
-        p.size += 7 * dt; // smoke blooms into a trail
-        p.vx *= (1 - 0.55 * dt);
+      if (p.mode === "smoke") {
+        p.size += (p.trail ? 5 : 7) * dt;
+        p.vx *= (1 - 0.5 * dt);
         p.vy -= 10 * dt;
       } else {
         p.size += 3 * dt;
@@ -548,6 +609,16 @@
     blimpPersonality.exhaustParticles = blimpPersonality.exhaustParticles.filter(function(p) {
       return p.age < p.life;
     });
+
+    damageSmoke.forEach(function(s) {
+      s.age += dt;
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      s.size += 9 * dt;
+      s.vx *= (1 - 0.4 * dt);
+      s.vy -= 12 * dt;
+    });
+    damageSmoke = damageSmoke.filter(function(s) { return s.age < s.life; });
   }
 
   function drawPlayerShadow() {
@@ -586,36 +657,65 @@
       ctx.restore();
     });
 
-    // Teardrop plume shapes — fat nose near engine, tapered tip trailing left
     function pathTeardrop(len, halfW) {
-      // Local space: tip at -len (rear), bulb near +halfW*0.2 (toward engine)
       ctx.beginPath();
-      ctx.moveTo(-len, 0); // sharp tip
+      ctx.moveTo(-len, 0);
       ctx.bezierCurveTo(-len * 0.55, -halfW * 0.35, -len * 0.15, -halfW, halfW * 0.15, -halfW * 0.85);
       ctx.quadraticCurveTo(halfW * 0.55, 0, halfW * 0.15, halfW * 0.85);
       ctx.bezierCurveTo(-len * 0.15, halfW, -len * 0.55, halfW * 0.35, -len, 0);
       ctx.closePath();
     }
+
+    // One continuous flame ribbon (connected teardrop segments)
+    if (jetTrail.length >= 2) {
+      ctx.save();
+      // Outer glow path
+      ctx.beginPath();
+      ctx.moveTo(jetTrail[0].x, jetTrail[0].y);
+      for (var i = 1; i < jetTrail.length; i++) {
+        var a = jetTrail[i - 1], b = jetTrail[i];
+        var mx = (a.x + b.x) * 0.5, my = (a.y + b.y) * 0.5;
+        ctx.quadraticCurveTo(a.x, a.y, mx, my);
+      }
+      var last = jetTrail[jetTrail.length - 1];
+      ctx.lineTo(last.x, last.y);
+      // Build stroke width along trail
+      for (var j = jetTrail.length - 1; j >= 0; j--) {
+        var node = jetTrail[j];
+        var t = 1 - node.age / node.life;
+        var w = Math.max(1.5, node.w * t);
+        // draw segment glow as teardrop oriented along trail
+        ctx.save();
+        ctx.translate(node.x, node.y);
+        pathTeardrop(w * 2.8, w * 0.55);
+        ctx.fillStyle = "rgba(255,100,20," + (0.55 * t) + ")";
+        ctx.fill();
+        pathTeardrop(w * 2.0, w * 0.32);
+        ctx.fillStyle = "rgba(255,230,90," + (0.85 * t) + ")";
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.restore();
+    } else if (jetTrail.length === 1) {
+      var n0 = jetTrail[0];
+      var t0 = 1 - n0.age / n0.life;
+      ctx.save();
+      ctx.translate(n0.x, n0.y);
+      pathTeardrop(n0.w * 2.8 * t0, n0.w * 0.55 * t0);
+      ctx.fillStyle = "rgba(255,120,30," + (0.7 * t0) + ")";
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Soft smoke riding the same jet path + other exhaust modes
     blimpPersonality.exhaustParticles.forEach(function(p) {
       var tt = 1 - p.age / p.life;
       var a = Math.max(0, p.alpha * tt * tt);
       if (a < 0.02) return;
       ctx.save();
-      if (p.mode === "flame") {
-        var len = p.size * (p.stretch || 2.6);
-        var halfW = p.size * 0.85;
-        ctx.translate(p.x, p.y);
-        // Outer cooler flame
-        pathTeardrop(len, halfW);
-        ctx.fillStyle = "rgba(255,110,25," + (a * 0.9) + ")";
-        ctx.fill();
-        // Hot core (smaller teardrop)
-        pathTeardrop(len * 0.72, halfW * 0.55);
-        ctx.fillStyle = "rgba(255,230,100," + (a * 0.95) + ")";
-        ctx.fill();
-      } else if (p.mode === "smoke") {
+      if (p.mode === "smoke") {
         var len2 = p.size * (p.stretch || 1.8);
-        var halfW2 = p.size * 0.95;
+        var halfW2 = p.size * 0.9;
         ctx.translate(p.x, p.y);
         pathTeardrop(len2, halfW2);
         ctx.fillStyle = "rgba(" + p.color + "," + a + ")";
@@ -626,6 +726,19 @@
         ctx.fillStyle = "rgba(" + p.color + "," + a + ")";
         ctx.fill();
       }
+      ctx.restore();
+    });
+
+    // Hull damage smoke (all blimps, health < 50%)
+    damageSmoke.forEach(function(s) {
+      var tt = 1 - s.age / s.life;
+      var a = Math.max(0, s.alpha * tt * tt);
+      if (a < 0.02) return;
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      pathTeardrop(s.size * 1.9, s.size * 0.85);
+      ctx.fillStyle = "rgba(" + s.color + "," + a + ")";
+      ctx.fill();
       ctx.restore();
     });
   }
