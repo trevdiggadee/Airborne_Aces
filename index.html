@@ -7,9 +7,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="format-detection" content="telephone=no" />
 <title>Airborne Aces</title>
-<link rel="stylesheet" href="style.css?v=ruff59">
-<link rel="stylesheet" href="blimp-profile.css?v=ruff59">
-<link rel="stylesheet" href="launch-screens.css?v=ruff59">
+<link rel="stylesheet" href="style.css?v=ruff60">
+<link rel="stylesheet" href="blimp-profile.css?v=ruff60">
+<link rel="stylesheet" href="launch-screens.css?v=ruff60">
 <style id="otg-legacy-splash-hide">#splashScreen{visibility:hidden!important;pointer-events:none!important;}</style>
 </head>
 <body>
@@ -251,7 +251,6 @@
 <div id="gameScreen" style="display:none;">
 <canvas id="gameCanvas"></canvas>
 
-<!-- mute moved into collectDock -->
 
 <div id="pauseOverlay" class="hidden" aria-hidden="true">
   <div class="pausePanel">
@@ -287,7 +286,7 @@
 </div>
 
 <div id="hudFrame">
-  <img id="hudFrameImg" crossorigin="anonymous" src="hudFrame.webp?cb=2" alt="" />
+  <img id="hudFrameImg" crossorigin="anonymous" src="hudFrame.webp?v=ruff60" alt="" />
 
   <div id="healthMeter">
     <img id="healthImg" crossorigin="anonymous" src="heartPickup.webp?cb=2" alt="Health" />
@@ -295,7 +294,35 @@
 
   <div id="bonusHearts"></div>
 
-  <div class="scoreFrame">SCORE: <span id="scoreVal">0</span></div>
+  <div class="hudRank">
+    <div class="hudRankLabel">PILOT RANK</div>
+    <div class="hudRankName" id="hudRankName">CADET</div>
+  </div>
+
+  <div class="scoreFrame">
+    <div class="scoreLabel">SCORE</div>
+    <div class="scoreValue"><span id="scoreVal">0</span></div>
+  </div>
+
+  <div class="hudStats">
+    <div class="hudStatRow" title="Rings">
+      <span class="hudStatIcon hudStatRing"></span>
+      <span class="hudStatVal" id="collectRings">0</span>
+    </div>
+    <div class="hudStatRow" title="Sky Crystals">
+      <span class="hudStatIcon hudStatCrystal"></span>
+      <span class="hudStatVal" id="collectCrystals">0</span>
+    </div>
+    <div class="hudStatRow" title="Power">
+      <span class="hudStatIcon hudStatPower"></span>
+      <span class="hudStatVal" id="collectPowerPct">0</span>
+    </div>
+  </div>
+
+  <div class="hudAudio">
+    <button type="button" id="musicBtn" class="hudAudioBtn" aria-label="Music">♪</button>
+    <button type="button" id="muteBtn" class="hudAudioBtn" aria-label="Pause and settings">🔊</button>
+  </div>
 
   <div id="timerFrame">
     <div class="flip-clock" id="flipClock">
@@ -330,24 +357,6 @@
       </div>
     </div>
   </div>
-</div>
-
-<div id="collectDock" aria-label="Collection meter">
-  <div class="cd-panel cd-rings" title="Rings">
-    <div class="cd-icon cd-ring-icon" aria-hidden="true"></div>
-    <div class="cd-counter"><span class="cd-digit" id="collectRings">0</span></div>
-  </div>
-  <div class="cd-panel cd-crystals" title="Sky Crystals">
-    <div class="cd-icon cd-crystal-icon" aria-hidden="true"></div>
-    <div class="cd-counter"><span class="cd-digit" id="collectCrystals">0</span></div>
-  </div>
-  <div class="cd-panel cd-power" title="Power">
-    <div class="cd-icon cd-power-icon" aria-hidden="true"></div>
-    <div class="cd-counter"><span class="cd-digit" id="collectPowerPct">0</span></div>
-  </div>
-  <button id="muteBtn" class="cd-mute" aria-label="Pause and settings" type="button">
-    <span class="cd-mute-gear">⚙</span>
-  </button>
 </div>
 
 <div id="stormMeter">
@@ -441,22 +450,22 @@
   </div>
 </div>
 
-<script src="assets-placeholders.js?v=ruff59"></script>
-<script src="blimp-profile.js?v=ruff59"></script>
-<script src="menu-intro.js?v=ruff59"></script>
-<script src="world-map.js?v=ruff59"></script>
-<script src="audio.js?v=ruff59"></script>
-<script src="asset-loading.js?v=ruff59"></script>
-<script src="ruff-tutorial.js?v=ruff59"></script>
-<script src="world-buildings.js?v=ruff59"></script>
-<script src="player-obstacles.js?v=ruff59"></script>
-<script src="bosses.js?v=ruff59"></script>
-<script src="boss-dialogue.js?v=ruff59"></script>
-<script src="effects-combat.js?v=ruff59"></script>
-<script src="gamestate-ui.js?v=ruff59"></script>
-<script src="world-atmosphere.js?v=ruff59"></script>
-<script src="main-loop.js?v=ruff59"></script>
+<script src="assets-placeholders.js?v=ruff60"></script>
+<script src="blimp-profile.js?v=ruff60"></script>
+<script src="menu-intro.js?v=ruff60"></script>
+<script src="world-map.js?v=ruff60"></script>
+<script src="audio.js?v=ruff60"></script>
+<script src="asset-loading.js?v=ruff60"></script>
+<script src="ruff-tutorial.js?v=ruff60"></script>
+<script src="world-buildings.js?v=ruff60"></script>
+<script src="player-obstacles.js?v=ruff60"></script>
+<script src="bosses.js?v=ruff60"></script>
+<script src="boss-dialogue.js?v=ruff60"></script>
+<script src="effects-combat.js?v=ruff60"></script>
+<script src="gamestate-ui.js?v=ruff60"></script>
+<script src="world-atmosphere.js?v=ruff60"></script>
+<script src="main-loop.js?v=ruff60"></script>
 
-<script src="launch-screens.js?v=ruff59"></script>
+<script src="launch-screens.js?v=ruff60"></script>
 </body>
 </html>

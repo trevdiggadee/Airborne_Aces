@@ -885,12 +885,16 @@ html, body {
   /* HUD FRAME — the steampunk leather/brass header art sits at the very top;
      score, timer, and health meter are positioned as percentages of this
      frame's own box, so they scale and stay aligned together at any width */
+
+  /* HUD FRAME — new steampunk plate (full width) */
   #hudFrame {
     position: fixed;
     top: 0;
-    left: 0;
-    width: 100%;
-    height: 20.39vw; /* locked to the height the 68%-width version rendered at */
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(100vw, 560px);
+    height: auto;
+    aspect-ratio: 1220 / 241;
     z-index: 15;
     pointer-events: none;
   }
@@ -901,52 +905,227 @@ html, body {
     width: 100%;
     height: 100%;
     display: block;
-    filter: blur(0.5px);
+    object-fit: fill;
+    pointer-events: none;
   }
 
-  .scoreFrame {
+  /* Heart — left circular badge */
+  #healthMeter {
     position: absolute;
-    left: 24.5%;
-    top: 8%;
-    width: 52.3%;
-    height: 37%;
+    left: 1.8%;
+    top: 10%;
+    width: 14.5%;
+    height: 78%;
+    z-index: 2;
+    pointer-events: none;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #3a2410;
-    font-weight: bold;
-    font-size: clamp(15px, 5vw, 30px);
-    letter-spacing: 0.5px;
-    text-shadow: 0 1px 0 rgba(255,255,255,0.25);
-    line-height: 1;
-    text-align: center;
   }
-
-  /* HEALTH METER — sits inside the frame's heart badge, upper-left */
-  #healthMeter {
-    position: absolute;
-    left: 1%;
-    top: 8%;
-    width: 16.5%;
-    z-index: 2;
-    pointer-events: none;
-    transition: transform 0.1s ease-out;
-  }
-
   #healthMeter img {
     display: block;
-    width: 100%;
-    filter: blur(0.4px);
+    width: 88%;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.45));
   }
-
   #healthMeter.hit {
     animation: healthHitPulse 0.35s ease-out;
   }
-
   @keyframes healthHitPulse {
     0% { transform: scale(1); }
-    30% { transform: scale(1.35); }
+    30% { transform: scale(1.2); }
     100% { transform: scale(1); }
+  }
+
+  /* Pilot rank */
+  .hudRank {
+    position: absolute;
+    left: 18%;
+    top: 18%;
+    width: 16%;
+    height: 64%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .hudRankLabel {
+    font-family: 'Rockwell', 'Rockwell Nova', Georgia, serif;
+    font-size: clamp(7px, 1.6vw, 10px);
+    letter-spacing: 0.18em;
+    color: rgba(200, 180, 140, 0.75);
+    text-transform: uppercase;
+  }
+  .hudRankName {
+    margin-top: 4px;
+    font-family: 'Rockwell', 'Rockwell Nova', Georgia, serif;
+    font-size: clamp(11px, 2.8vw, 16px);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #f0e0b8;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+    text-align: center;
+    line-height: 1.1;
+  }
+
+  /* Score — center plate */
+  .scoreFrame {
+    position: absolute;
+    left: 35.5%;
+    top: 14%;
+    width: 28%;
+    height: 72%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #f5e6c8;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .scoreLabel {
+    font-family: 'Rockwell', Georgia, serif;
+    font-size: clamp(8px, 1.8vw, 11px);
+    letter-spacing: 0.28em;
+    color: rgba(220, 190, 130, 0.85);
+    margin-bottom: 2px;
+  }
+  .scoreValue {
+    font-family: 'Rockwell', 'Rockwell Nova', Georgia, serif;
+    font-weight: 700;
+    font-size: clamp(22px, 6vw, 36px);
+    letter-spacing: 0.04em;
+    color: #f5e6c8;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.55);
+    line-height: 1;
+  }
+  #scoreVal.pop {
+    animation: scorePop 0.35s ease;
+  }
+  @keyframes scorePop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+
+  /* Player stats — rings / crystals / power */
+  .hudStats {
+    position: absolute;
+    left: 65.5%;
+    top: 16%;
+    width: 16%;
+    height: 70%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .hudStatRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 28%;
+  }
+  .hudStatIcon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    display: inline-block;
+  }
+  .hudStatRing {
+    border-radius: 50%;
+    border: 2px solid #e8c040;
+    background: radial-gradient(circle, transparent 40%, #e8c040 42%, #e8c040 58%, transparent 60%);
+    box-sizing: border-box;
+  }
+  .hudStatCrystal {
+    background: linear-gradient(160deg, #c8f0ff, #3da5ff 55%, #1560a8);
+    clip-path: polygon(50% 0%, 90% 30%, 72% 100%, 28% 100%, 10% 30%);
+  }
+  .hudStatPower {
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff0b0, #e0b030 55%, #8a6010);
+    border: 1px solid #f5d76e;
+    box-sizing: border-box;
+  }
+  .hudStatVal {
+    font-family: 'Rockwell', Georgia, serif;
+    font-size: clamp(11px, 2.6vw, 15px);
+    font-weight: 700;
+    color: #f0e0b8;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    min-width: 1.2em;
+  }
+  .hudStatVal.pop {
+    animation: cdDigitPop 0.35s ease;
+    color: #ffe9a8;
+  }
+
+  /* Music + mute — right circular buttons */
+  .hudAudio {
+    position: absolute;
+    right: 2.2%;
+    top: 14%;
+    width: 10%;
+    height: 74%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6%;
+    z-index: 3;
+    pointer-events: auto;
+  }
+  .hudAudioBtn {
+    width: 78%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: #e8d5a8;
+    font-size: clamp(12px, 3vw, 16px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    pointer-events: auto;
+  }
+  .hudAudioBtn:active {
+    transform: scale(0.94);
+  }
+
+  /* Timer tucked small under score area (optional secondary) */
+  #timerFrame {
+    position: absolute;
+    left: 36%;
+    top: 78%;
+    width: 28%;
+    height: 18%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0.85;
+    transform: scale(0.55);
+    transform-origin: center top;
+  }
+
+  #bonusHearts {
+    position: fixed;
+    top: calc(min(100vw, 560px) * 241 / 1220 + 4px);
+    left: 14px;
+    display: flex;
+    gap: 3px;
+    z-index: 16;
+    pointer-events: none;
   }
 
   /* BONUS HEARTS — fixed to the viewport just below the HUD frame, so they
@@ -3043,3 +3222,5 @@ html, body {
 
 
 
+
+#collectDock { display: none !important; visibility: hidden !important; pointer-events: none !important; }

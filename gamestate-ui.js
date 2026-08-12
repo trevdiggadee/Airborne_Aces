@@ -258,52 +258,23 @@
   window.updateCollectDock = updateCollectDock;
 
   function ensureCollectDock() {
-    let dock = document.getElementById("collectDock");
-    if (!dock) {
-      dock = document.createElement("div");
-      dock.id = "collectDock";
-      dock.innerHTML =
-        '<div class="cd-panel cd-rings"><div class="cd-icon cd-ring-icon"></div>' +
-        '<div class="cd-counter"><span class="cd-digit" id="collectRings">0</span></div></div>' +
-        '<div class="cd-panel cd-crystals"><div class="cd-icon cd-crystal-icon"></div>' +
-        '<div class="cd-counter"><span class="cd-digit" id="collectCrystals">0</span></div></div>' +
-        '<div class="cd-panel cd-power"><div class="cd-icon cd-power-icon"></div>' +
-        '<div class="cd-counter"><span class="cd-digit" id="collectPowerPct">0</span></div></div>';
-      const host = document.getElementById("gameScreen") || document.body;
-      host.appendChild(dock);
+    // Collection numbers live on the HUD now — just refresh values
+    const mute = document.getElementById("muteBtn");
+    if (mute) {
+      mute.classList.add("hudAudioBtn");
+      // Keep in HUD audio group
+      const audio = document.querySelector(".hudAudio");
+      if (audio && mute.parentElement !== audio) audio.appendChild(mute);
     }
-    // Under HUD, centered — inline styles as safety net
-    dock.style.cssText =
-      "position:fixed;left:50%;transform:translateX(-50%);" +
-      "top:calc(20.39vw + 6px);bottom:auto;z-index:14;" +
-      "display:flex;align-items:center;justify-content:center;gap:8px;" +
-      "background:none;border:none;box-shadow:none;" +
-      "opacity:1;visibility:visible;pointer-events:auto;";
-
-    let mute = document.getElementById("muteBtn");
-    if (!mute) {
-      mute = document.createElement("button");
-      mute.id = "muteBtn";
-      mute.type = "button";
-      mute.setAttribute("aria-label", "Pause and settings");
-      dock.appendChild(mute);
-    } else if (mute.parentElement !== dock) {
-      dock.appendChild(mute);
-    }
-    mute.classList.add("cd-mute");
-    if (!mute.querySelector(".cd-mute-gear")) {
-      mute.innerHTML = '<span class="cd-mute-gear">⚙</span>';
-    }
-    // Clear any old fixed top positioning
-    mute.style.position = "relative";
-    mute.style.left = "auto";
-    mute.style.right = "auto";
-    mute.style.top = "auto";
-    mute.style.bottom = "auto";
-    mute.style.zIndex = "14";
     updateCollectDock();
   }
   window.ensureCollectDock = ensureCollectDock;
+
+  function updateHudRank(name) {
+    const el = document.getElementById("hudRankName");
+    if (el) el.textContent = name || "CADET";
+  }
+  window.updateHudRank = updateHudRank;
 
   function updateHealthDisplay() {
     healthImg.src = HEART_IMAGES[Math.max(0, Math.min(MAX_HEALTH, health))];
@@ -984,3 +955,28 @@
     });
   }
 
+
+  (function wireMusicBtn() {
+    const btn = document.getElementById("musicBtn");
+    if (!btn) return;
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      try {
+        if (typeof musicVolumePref === "number") {
+          if (musicVolumePref > 0.01) {
+            window.__airborneMusicVolSave = musicVolumePref;
+            musicVolumePref = 0;
+            btn.textContent = "♪̸";
+          } else {
+            musicVolumePref = window.__airborneMusicVolSave || 0.25;
+            btn.textContent = "♪";
+          }
+          if (typeof applyMusicVolume === "function") applyMusicVolume();
+          else if (typeof gameMusic !== "undefined" && gameMusic) {
+            gameMusic.volume = musicVolumePref;
+          }
+        }
+      } catch (err) {}
+    });
+  })();
