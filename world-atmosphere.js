@@ -398,30 +398,31 @@
     var data = (typeof BLIMP_DATA !== "undefined") ? BLIMP_DATA[sel] : null;
     var effect = (data && data.effect) || "propeller";
     var style = exhaustStyleFor(effect);
-    var exhaustX = player.x - player.w * 0.38 + player.w * 0.04; // +4% right total
-    var exhaustY = player.y + player.h * 0.12 - player.h * 0.04; // +4% up total
+    // Line up with rear engine nozzle (aft + slightly below centerline)
+    var exhaustX = player.x - player.w * 0.48;
+    var exhaustY = player.y + player.h * 0.06;
 
     // Flame ships: sample continuous ribbon nodes (one coherent trail)
     if (style.mode === "flame") {
-      // ~2x shorter continuous trail
+      // Medium jet — thicker body, nozzle-aligned, readable size like reference art
       jetTrail.push({
         x: exhaustX,
         y: exhaustY,
-        w: player.h * 0.16 * (burst ? 1.1 : 1),
+        w: player.h * 0.30 * (burst ? 1.15 : 1),
         age: 0,
-        life: 0.20 // half previous length
+        life: 0.30
       });
-      if (jetTrail.length > 12) jetTrail.splice(0, jetTrail.length - 12);
-      // Smoke behind flame — similar soft trail, slightly more frequent
-      if (Math.random() < 0.55 || burst) {
+      if (jetTrail.length > 14) jetTrail.splice(0, jetTrail.length - 14);
+      // Smoke sits just behind the flame tip
+      if (Math.random() < 0.6 || burst) {
         blimpPersonality.exhaustParticles.push({
-          x: exhaustX - 4 - Math.random() * 8,
-          y: exhaustY + (Math.random() - 0.5) * 4,
-          vx: -55 - Math.random() * 35,
-          vy: -6 - Math.random() * 10,
-          size: 5 + Math.random() * 4,
-          alpha: 0.22 + Math.random() * 0.14,
-          life: 0.5 + Math.random() * 0.25,
+          x: exhaustX - 10 - Math.random() * 12,
+          y: exhaustY + (Math.random() - 0.5) * 5,
+          vx: -50 - Math.random() * 30,
+          vy: -5 - Math.random() * 8,
+          size: 6 + Math.random() * 5,
+          alpha: 0.24 + Math.random() * 0.14,
+          life: 0.55 + Math.random() * 0.25,
           age: 0,
           color: "60,55,50",
           mode: "smoke",
@@ -592,9 +593,9 @@
     // Continuous jet ribbon drift
     jetTrail.forEach(function(n) {
       n.age += dt;
-      n.x -= 140 * dt; // shorter reach (2x shorter overall with shorter life)
-      n.y += (Math.sin(n.age * 6) * 3) * dt;
-      n.w *= (1 - 1.4 * dt);
+      n.x -= 170 * dt;
+      n.y += (Math.sin(n.age * 5) * 2.5) * dt;
+      n.w *= (1 - 0.95 * dt);
     });
     jetTrail = jetTrail.filter(function(n) { return n.age < n.life && n.w > 1; });
 
@@ -701,10 +702,10 @@
       ctx.save();
       // Soft outer bloom (diffuse)
       ctx.globalCompositeOperation = "lighter";
-      flameRibbon(0.95, "rgba(255,90,20,0.22)");
-      flameRibbon(0.70, "rgba(255,140,40,0.32)");
-      flameRibbon(0.45, "rgba(255,200,70,0.40)");
-      flameRibbon(0.22, "rgba(255,245,180,0.50)");
+      flameRibbon(1.15, "rgba(255,80,10,0.28)");
+      flameRibbon(0.85, "rgba(255,120,25,0.38)");
+      flameRibbon(0.55, "rgba(255,180,50,0.48)");
+      flameRibbon(0.30, "rgba(255,240,160,0.58)");
       ctx.globalCompositeOperation = "source-over";
       ctx.restore();
     } else if (jetTrail.length === 1) {
