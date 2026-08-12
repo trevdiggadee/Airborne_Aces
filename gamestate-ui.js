@@ -227,8 +227,7 @@
   function updateCollectDock() {
     const r = document.getElementById("collectRings");
     const c = document.getElementById("collectCrystals");
-    const fill = document.getElementById("collectPowerFill");
-    const wrap = document.querySelector("#collectDock .cd-power-wrap");
+    const p = document.getElementById("collectPowerPct");
     if (r) {
       const v = String(window.__airborneCollectRings || 0);
       if (r.textContent !== v) {
@@ -243,47 +242,43 @@
         c.classList.remove("pop"); void c.offsetWidth; c.classList.add("pop");
       }
     }
-    // Mirror storm charge 0..1
     let charge = 0;
     if (typeof stormCharge === "number") {
       const maxC = (typeof STORM_MAX === "number" && STORM_MAX > 0) ? STORM_MAX : 100;
       charge = Math.max(0, Math.min(1, stormCharge / maxC));
     }
-    if (fill) fill.style.width = Math.round(charge * 100) + "%";
-    if (wrap) wrap.classList.toggle("ready", charge >= 0.99);
+    if (p) {
+      const v = String(Math.round(charge * 100));
+      if (p.textContent !== v) {
+        p.textContent = v;
+        p.classList.remove("pop"); void p.offsetWidth; p.classList.add("pop");
+      }
+    }
   }
   window.updateCollectDock = updateCollectDock;
 
   function ensureCollectDock() {
     let dock = document.getElementById("collectDock");
-    // Create dock if missing from DOM
     if (!dock) {
       dock = document.createElement("div");
       dock.id = "collectDock";
-      dock.setAttribute("aria-label", "Collection meter");
       dock.innerHTML =
-        '<div class="cd-item cd-rings" title="Rings">' +
-          '<div class="cd-icon cd-ring-icon"></div>' +
-          '<span class="cd-val" id="collectRings">0</span></div>' +
-        '<div class="cd-item cd-crystals" title="Sky Crystals">' +
-          '<div class="cd-icon cd-crystal-icon"></div>' +
-          '<span class="cd-val" id="collectCrystals">0</span></div>' +
-        '<div class="cd-power-wrap" title="Power">' +
-          '<div class="cd-power-track"><div class="cd-power-fill" id="collectPowerFill"></div></div>' +
-          '<div class="cd-power-icon" id="collectPowerIcon"></div></div>';
-      const gs = document.getElementById("gameScreen") || document.body;
-      gs.appendChild(dock);
+        '<div class="cd-panel cd-rings"><div class="cd-icon cd-ring-icon"></div>' +
+        '<div class="cd-counter"><span class="cd-digit" id="collectRings">0</span></div></div>' +
+        '<div class="cd-panel cd-crystals"><div class="cd-icon cd-crystal-icon"></div>' +
+        '<div class="cd-counter"><span class="cd-digit" id="collectCrystals">0</span></div></div>' +
+        '<div class="cd-panel cd-power"><div class="cd-icon cd-power-icon"></div>' +
+        '<div class="cd-counter"><span class="cd-digit" id="collectPowerPct">0</span></div></div>';
+      const host = document.getElementById("gameScreen") || document.body;
+      host.appendChild(dock);
     }
-    // Force visible styles (inline so nothing can hide it)
+    // Under HUD, centered — inline styles as safety net
     dock.style.cssText =
       "position:fixed;left:50%;transform:translateX(-50%);" +
-      "bottom:calc(env(safe-area-inset-bottom, 0px) + 12px);" +
-      "z-index:125;display:flex;align-items:center;gap:10px;" +
-      "padding:8px 14px;min-width:200px;" +
-      "background:linear-gradient(165deg,rgba(30,24,16,0.92),rgba(12,18,28,0.9));" +
-      "border:1.5px solid rgba(212,175,55,0.6);border-radius:18px;" +
-      "box-shadow:0 6px 24px rgba(0,0,0,0.55);pointer-events:auto;" +
-      "opacity:1;visibility:visible;";
+      "top:calc(20.39vw + 6px);bottom:auto;z-index:14;" +
+      "display:flex;align-items:center;justify-content:center;gap:8px;" +
+      "background:none;border:none;box-shadow:none;" +
+      "opacity:1;visibility:visible;pointer-events:auto;";
 
     let mute = document.getElementById("muteBtn");
     if (!mute) {
@@ -291,23 +286,21 @@
       mute.id = "muteBtn";
       mute.type = "button";
       mute.setAttribute("aria-label", "Pause and settings");
-      document.body.appendChild(mute);
+      dock.appendChild(mute);
+    } else if (mute.parentElement !== dock) {
+      dock.appendChild(mute);
     }
     mute.classList.add("cd-mute");
     if (!mute.querySelector(".cd-mute-gear")) {
       mute.innerHTML = '<span class="cd-mute-gear">⚙</span>';
     }
-    // Pin mute next to dock (fixed coords — never top of screen)
-    mute.style.cssText =
-      "position:fixed !important;left:calc(50% + 110px) !important;" +
-      "right:auto !important;top:auto !important;" +
-      "bottom:calc(env(safe-area-inset-bottom, 0px) + 16px) !important;" +
-      "width:36px !important;height:36px !important;margin:0 !important;" +
-      "border-radius:50% !important;z-index:130 !important;" +
-      "display:flex !important;align-items:center;justify-content:center;" +
-      "background:radial-gradient(circle at 35% 30%,rgba(70,55,30,0.98),rgba(18,16,12,0.98)) !important;" +
-      "border:1.5px solid rgba(212,175,55,0.65) !important;color:#ffe9a8 !important;" +
-      "opacity:1 !important;visibility:visible !important;";
+    // Clear any old fixed top positioning
+    mute.style.position = "relative";
+    mute.style.left = "auto";
+    mute.style.right = "auto";
+    mute.style.top = "auto";
+    mute.style.bottom = "auto";
+    mute.style.zIndex = "14";
     updateCollectDock();
   }
   window.ensureCollectDock = ensureCollectDock;
