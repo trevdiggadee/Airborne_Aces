@@ -816,7 +816,7 @@
   if (muteBtn) {
     muteBtn.dataset.mode = "settings";
     muteBtn.classList.add("cd-mute");
-    muteBtn.innerHTML = '<span class="cd-mute-gear">⚙</span>';
+    muteBtn.innerHTML = '';
     muteBtn.setAttribute("aria-label", "Pause and settings");
     muteBtn.addEventListener("click", (e) => {
       e.preventDefault();
@@ -832,7 +832,7 @@
         if (typeof setMuted === "function") setMuted(next);
         muteBtn.dataset.mode = "settings";
         muteBtn.classList.add("cd-mute");
-        muteBtn.innerHTML = '<span class="cd-mute-gear">⚙</span>';
+        muteBtn.innerHTML = '';
       }
     });
   }

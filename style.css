@@ -912,9 +912,9 @@ html, body {
   /* Heart — left circular badge */
   #healthMeter {
     position: absolute;
-    left: 0.8%; /* shift left 1% */
+    left: 1.3%; /* +0.5% right */
     top: 10%;
-    width: 13.5%; /* ~7% smaller than 14.5 */
+    width: 13.1%; /* -3% size */
     height: 78%;
     z-index: 2;
     pointer-events: none;
@@ -924,7 +924,7 @@ html, body {
   }
   #healthMeter img {
     display: block;
-    width: 82%; /* ~7% smaller */
+    width: 79.5%; /* -3% */
     height: auto;
     object-fit: contain;
     filter: drop-shadow(0 2px 3px rgba(0,0,0,0.45));
@@ -941,8 +941,8 @@ html, body {
   /* Pilot rank */
   .hudRank {
     position: absolute;
-    left: 19.5%; /* +1.5% right */
-    top: 22%;
+    left: 19.25%; /* -0.25% left */
+    top: 21%; /* raise 1% */
     width: 16%;
     height: 58%;
     display: flex;
@@ -968,8 +968,8 @@ html, body {
   /* Score — center plate */
   .scoreFrame {
     position: absolute;
-    left: 39%; /* +3.5% right */
-    top: 15%; /* +1% lower */
+    left: 39.25%; /* +0.25% right */
+    top: 15.5%; /* +0.5% lower */
     width: 28%;
     height: 72%;
     display: flex;
@@ -1008,14 +1008,14 @@ html, body {
   /* Player stats — rings / crystals / power */
   .hudStats {
     position: absolute;
-    left: 70.5%; /* +5% right */
-    top: 18%;
+    left: 72.5%; /* +2% right */
+    top: 18.25%; /* +0.25% lower */
     width: 12%;
     height: 66%;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 1px; /* tighter vertical spacing ~0.5% */
+    gap: 1px;
     pointer-events: none;
     z-index: 2;
   }
@@ -2561,13 +2561,15 @@ html, body {
 
 /* R.U.F.F. Radio UI */
 #ruffRadio {
-  position: absolute;
-  right: 10px;
-  /* Just below HUD (no banner offset) */
-  top: calc(env(safe-area-inset-top, 0px) + 78px);
+  position: fixed;
+  right: 8px;
+  /* Lowered 2%, under HUD */
+  top: calc(env(safe-area-inset-top, 0px) + 20.39vw + 2vh + 8px);
   left: auto;
   bottom: auto;
-  max-width: min(300px, 78vw);
+  /* ~25% smaller fixed square */
+  width: min(168px, 42vw);
+  max-width: min(168px, 42vw);
   z-index: 40;
   pointer-events: none;
   opacity: 0;
@@ -2583,6 +2585,10 @@ html, body {
   background: linear-gradient(155deg, rgba(36, 28, 16, 0.72), rgba(14, 24, 38, 0.68));
   border: 2px solid rgba(212, 175, 55, 0.75);
   border-radius: 12px;
+  width: 100%;
+  min-height: min(168px, 42vw);
+  box-sizing: border-box;
+  padding: 8px 10px;
   padding: 12px 14px 12px 14px;
   box-shadow:
     0 6px 24px rgba(0,0,0,0.4),
@@ -2655,8 +2661,8 @@ html, body {
 }
 #ruffRadio .ruffText {
   font-family: 'Rockwell', Georgia, serif;
-  font-size: 13.5px;
-  line-height: 1.4;
+  font-size: 11px;
+  line-height: 1.35;
   color: #f8ecd4;
   margin: 0;
   text-shadow: 0 1px 2px rgba(0,0,0,0.35);
@@ -2887,11 +2893,11 @@ html, body {
 /* Flight Trace — circular solid fill meter, bottom-right */
 #ruffFlightTrace {
   position: fixed;
-  /* shifted left ~10%, size kept */
-  right: calc(10px + 7vw);
+  /* moved right ~3% */
+  right: calc(10px + 4vw);
   bottom: calc(env(safe-area-inset-bottom, 0px) + 12px - 1vh);
   z-index: 42;
-  width: 118px; /* ~5% larger than 112 */
+  width: 118px;
   pointer-events: none;
   opacity: 0;
   transform: translateY(10px) scale(0.92);
@@ -3188,3 +3194,8 @@ html, body {
 
 
 #collectDock { display: none !important; visibility: hidden !important; pointer-events: none !important; }
+
+/* No custom gear icon on mute — use HUD art only */
+#muteBtn .cd-mute-gear,
+.cd-mute-gear { display: none !important; }
+#muteBtn { font-size: 0 !important; color: transparent !important; background: transparent !important; }
