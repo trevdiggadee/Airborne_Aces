@@ -398,19 +398,19 @@
     var data = (typeof BLIMP_DATA !== "undefined") ? BLIMP_DATA[sel] : null;
     var effect = (data && data.effect) || "propeller";
     var style = exhaustStyleFor(effect);
-    // Line up with rear engine nozzle (aft + slightly below centerline)
-    var exhaustX = player.x - player.w * 0.48;
+    // Rear nozzle, nudged right 5%
+    var exhaustX = player.x - player.w * 0.48 + player.w * 0.05;
     var exhaustY = player.y + player.h * 0.06;
 
     // Flame ships: sample continuous ribbon nodes (one coherent trail)
     if (style.mode === "flame") {
-      // Medium jet — thicker body, nozzle-aligned, readable size like reference art
+      // 50% smaller body
       jetTrail.push({
         x: exhaustX,
         y: exhaustY,
-        w: player.h * 0.30 * (burst ? 1.15 : 1),
+        w: player.h * 0.15 * (burst ? 1.12 : 1),
         age: 0,
-        life: 0.30
+        life: 0.28
       });
       if (jetTrail.length > 14) jetTrail.splice(0, jetTrail.length - 14);
       // Smoke sits just behind the flame tip
@@ -594,7 +594,8 @@
     jetTrail.forEach(function(n) {
       n.age += dt;
       n.x -= 170 * dt;
-      n.y += (Math.sin(n.age * 5) * 2.5) * dt;
+      // ~15% of previous vertical arch
+      n.y += (Math.sin(n.age * 5) * 0.38) * dt;
       n.w *= (1 - 0.95 * dt);
     });
     jetTrail = jetTrail.filter(function(n) { return n.age < n.life && n.w > 1; });
@@ -702,10 +703,10 @@
       ctx.save();
       // Soft outer bloom (diffuse)
       ctx.globalCompositeOperation = "lighter";
-      flameRibbon(1.15, "rgba(255,80,10,0.28)");
-      flameRibbon(0.85, "rgba(255,120,25,0.38)");
-      flameRibbon(0.55, "rgba(255,180,50,0.48)");
-      flameRibbon(0.30, "rgba(255,240,160,0.58)");
+      flameRibbon(1.0, "rgba(255,80,10,0.30)");
+      flameRibbon(0.72, "rgba(255,120,25,0.40)");
+      flameRibbon(0.45, "rgba(255,180,50,0.50)");
+      flameRibbon(0.24, "rgba(255,240,160,0.58)");
       ctx.globalCompositeOperation = "source-over";
       ctx.restore();
     } else if (jetTrail.length === 1) {

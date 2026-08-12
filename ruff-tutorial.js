@@ -492,10 +492,7 @@
       if (typeof spawnInterval !== "undefined") spawnInterval = 1.2;
     } else if (name === "landing") {
       if (ruffLines.length) showRadio(ruffLines[0], 3.0);
-      // hand control to airfield land phase
-      if (typeof airfieldPhase !== "undefined") {
-        // signal world-buildings via window
-      }
+      window.__airborneRuffLandArmed = true;
       window.__airborneRuffRequestLand = true;
     } else if (name === "report") {
       hideRadio();
@@ -904,6 +901,7 @@
     window.__airborneRuffActive = false;
     window.__airborneRuffStage = "idle";
     window.__airborneRuffRequestLand = false;
+    window.__airborneRuffLandArmed = false;
     // Always end airfield cleanly — never leave land/score running
     if (typeof endAirfieldTrainingToMap === "function") {
       endAirfieldTrainingToMap();
@@ -917,8 +915,16 @@
     ruffActive = true;
     window.__airborneRuffActive = true;
     window.__airborneRuffStage = "report";
+    window.__airborneRuffRequestLand = false;
+    try { hideRadio(); } catch (e0) {}
     try { setStage("report"); } catch (e) {}
-    try { showFlightReport(); } catch (e2) {}
+    try { showFlightReport(); } catch (e2) {
+      // Fallback if setStage path failed
+      try {
+        var el = document.getElementById("ruffReport");
+        if (el) el.classList.add("visible");
+      } catch (e3) {}
+    }
   };
 
   // ---------- Public API ----------
@@ -1155,11 +1161,17 @@
         nextStage();
       }
     } else if (ruffStage === "landing") {
-      window.__airborneRuffRequestLand = true;
+      // Request land once — do not spam every frame (causes land/score glitches)
+      if (!window.__airborneRuffLandArmed) {
+        window.__airborneRuffLandArmed = true;
+        window.__airborneRuffRequestLand = true;
+      }
       const ph = window.__airborneAirfieldPhase;
-      if (ph === "score" || ph === "done") {
-        nextStage();
-      } else if (ruffStageT > 22) {
+      // Wait for real touchdown / score — then open report right away
+      if (ph === "score" || ph === "done" || window.__airborneAirfieldDidLand) {
+        nextStage(); // → report
+      } else if (ruffStageT > 35) {
+        // Long failsafe only
         nextStage();
       }
     } else if (ruffStage === "report") {

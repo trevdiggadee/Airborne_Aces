@@ -606,6 +606,8 @@
           airfieldLandT = 0;
           airfieldDidLand = false;
           airfieldLandContact = 0;
+          window.__airborneAirfieldDidLand = false;
+          window.__airborneTrainingReportShown = false;
           window.__airborneAirfieldPaused = false;
           window.__airborneAirfieldInvuln = true;
           // Keep live objects on screen — only stop new spawns
@@ -614,7 +616,12 @@
           airfieldTip = "Tap to flare — land on the strip!";
           syncAirfieldGlobals();
         }
-        return;
+        // Do not return early when already landing — let land/skid/score run
+        if (airfieldPhase === "land" || airfieldPhase === "skid" || airfieldPhase === "score") {
+          /* fall through below by not returning */
+        } else {
+          return;
+        }
       }
       // R.U.F.F. drives stages only when companion is really running
       if (window.__airborneRuffActive) {
@@ -644,8 +651,16 @@
         // Spawn flags only — never null out live pickups mid-frame
         airfieldTip = "";
         syncAirfieldGlobals();
-        return;
+        // Critical: while landing/skid/score, do NOT return — land physics must run
+        if (airfieldPhase === "land" || airfieldPhase === "skid" || airfieldPhase === "score" || airfieldPhase === "done") {
+          // fall through to land/skid/score handlers below
+        } else {
+          return;
+        }
       }
+      if (airfieldPhase === "land" || airfieldPhase === "skid" || airfieldPhase === "score" || airfieldPhase === "done") {
+        // skip legacy lesson timer while landing
+      } else {
       const lessons = AIRFIELD_LESSONS;
       if (airfieldLesson >= lessons.length) {
         airfieldPhase = "land";
@@ -694,6 +709,7 @@
         }
       }
       syncAirfieldGlobals();
+      } // end non-landing lesson branch
 
     // ---- LAND ----
     } else if (airfieldPhase === "land") {
@@ -763,7 +779,7 @@
           airfieldLandContact = 0;
         }
 
-        if (!airfieldDidLand && ((fieldReady && airfieldLandContact >= 0.18) || airfieldLandT > 28)) {
+        if (!airfieldDidLand && ((fieldReady && airfieldLandContact >= 0.12) || airfieldLandT > 28)) {
           airfieldDidLand = true;
           window.__airborneAirfieldDidLand = true;
           player.y = landY;
@@ -792,7 +808,7 @@
       window.__airborneAirfieldInvuln = true;
       window.__airborneAirfieldPaused = true;
       airfieldSkidT = (airfieldSkidT || 0) + dt;
-      const skidDur = 0.25;
+      const skidDur = 0.18;
       const u = Math.min(1, airfieldSkidT / skidDur);
       // Decelerating slide further along the strip
       const ease = 1 - Math.pow(1 - u, 2.4);
@@ -883,24 +899,23 @@
         });
         airfieldFireworks = airfieldFireworks.filter(function(fw) { return fw.age < fw.life; });
       }
-      // Show score report as soon as score phase begins
+      // Score popup immediately on first score frame
       if (!window.__airborneTrainingReportShown) {
         window.__airborneTrainingReportShown = true;
+        window.__airborneAirfieldDidLand = true;
         try {
           if (typeof window.__airborneShowRuffReport === "function") {
             window.__airborneShowRuffReport();
-          } else if (window.__airborneRuffActive) {
-            window.__airborneRuffStage = "report";
+          } else {
+            var el = document.getElementById("ruffReport");
+            if (el) el.classList.add("visible");
           }
         } catch (e) {
           console.warn("score handoff", e);
         }
       }
-      if (airfieldScoreT >= 0.15) {
-        airfieldPhase = "done";
-        // Keep mode until report is visible; map exit is via report continue button
-        syncAirfieldGlobals();
-      }
+      airfieldPhase = "done";
+      syncAirfieldGlobals();
       syncAirfieldGlobals();
     }
       // Final runway pin each frame while on ground phases
