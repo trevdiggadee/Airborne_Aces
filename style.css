@@ -912,9 +912,9 @@ html, body {
   /* Heart — left circular badge */
   #healthMeter {
     position: absolute;
-    left: 1.55%; /* +0.25% right */
-    top: 10.25%; /* +0.25% lower */
-    width: 13.1%;
+    left: 1.65%; /* +0.10% right */
+    top: 10.35%; /* +0.10% lower */
+    width: 12.7%; /* -3% */
     height: 78%;
     z-index: 2;
     pointer-events: none;
@@ -924,7 +924,7 @@ html, body {
   }
   #healthMeter img {
     display: block;
-    width: 79.5%; /* -3% */
+    width: 77.1%; /* -3% */
     height: auto;
     object-fit: contain;
     filter: drop-shadow(0 2px 3px rgba(0,0,0,0.45));
@@ -942,7 +942,7 @@ html, body {
   .hudRank {
     position: absolute;
     left: 19.25%;
-    top: 20.75%; /* raise 0.25% */
+    top: 20.25%; /* raise 0.5% */
     width: 16%;
     height: 58%;
     display: flex;
@@ -996,7 +996,7 @@ html, body {
     text-shadow: 0 2px 4px rgba(0,0,0,0.55);
     line-height: 1;
     position: relative;
-    top: 0.25%; /* lower count only */
+    top: 0.5%; /* lower count only */
   }
   #scoreVal.pop {
     animation: scorePop 0.35s ease;
@@ -1010,8 +1010,8 @@ html, body {
   /* Player stats — rings / crystals / power */
   .hudStats {
     position: absolute;
-    left: 77.5%; /* +5% right */
-    top: 18.35%; /* +0.1% lower */
+    left: 78.5%; /* +1% right */
+    top: 18.6%; /* +0.25% lower */
     width: 12%;
     height: 66%;
     display: flex;
@@ -2903,9 +2903,8 @@ html, body {
 /* Flight Trace — circular solid fill meter, bottom-right */
 #ruffFlightTrace {
   position: fixed;
-  /* shifted right another ~3% */
-  right: calc(10px + 1vw);
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px - 1vh);
+  right: calc(10px + 0vw); /* +1% right */
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px - 1vh + 0.5vh); /* raise 0.5% */
   z-index: 42;
   width: 118px;
   pointer-events: none;
@@ -2991,6 +2990,8 @@ html, body {
   text-shadow: 0 0 8px rgba(212,175,55,0.5);
   font-variant-numeric: tabular-nums;
   font-family: 'Rockwell', Georgia, monospace;
+  position: relative;
+  top: 0.1%; /* lower timer slightly */
 }
 #ruffFlightTrace .ft-label {
   display: none !important;
@@ -3208,3 +3209,24 @@ html, body {
 #muteBtn .cd-mute-gear,
 .cd-mute-gear { display: none !important; }
 #muteBtn { font-size: 0 !important; color: transparent !important; background: transparent !important; }
+
+/* Force-remove any mute/gear chrome */
+#muteBtn,
+#muteBtn.cd-mute,
+#muteBtn.hudAudioBtn,
+.hudAudioBtn {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  text-shadow: none !important;
+}
+#muteBtn .cd-mute-gear,
+.cd-mute-gear,
+#muteBtn::before,
+#muteBtn::after {
+  display: none !important;
+  content: none !important;
+}
