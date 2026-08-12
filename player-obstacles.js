@@ -71,7 +71,12 @@
     if (window.__airborneAirfieldPaused) {
       return;
     }
-    player.vy = FLAP_VELOCITY;
+    // Stronger flare authority during training landing
+    if (window.__airborneAirfield && window.__airborneAirfieldPhase === "land") {
+      player.vy = Math.min(player.vy, FLAP_VELOCITY * 1.15);
+    } else {
+      player.vy = FLAP_VELOCITY;
+    }
     sfxFlap();
     // Visual pulse on every ship (squash kick, fin lag, exhaust)
     if (window.__airborneFlapPulse) window.__airborneFlapPulse();
@@ -101,9 +106,14 @@
     const afPhase = window.__airborneAirfieldPhase;
     if (window.__airborneAirfield &&
         (afPhase === "taxi" || afPhase === "accel" || afPhase === "climb" ||
-         afPhase === "land" || afPhase === "score" || afPhase === "rollout" ||
+         afPhase === "score" || afPhase === "skid" || afPhase === "rollout" ||
          window.__airborneAirfieldPaused)) {
       player.vy = 0;
+      updateBlimpPersonality(dt);
+      return;
+    }
+    // land: player-controlled (updateAirfield integrates); keep exhaust alive
+    if (window.__airborneAirfield && afPhase === "land") {
       updateBlimpPersonality(dt);
       return;
     }
