@@ -398,9 +398,17 @@
     var data = (typeof BLIMP_DATA !== "undefined") ? BLIMP_DATA[sel] : null;
     var effect = (data && data.effect) || "propeller";
     var style = exhaustStyleFor(effect);
-    // Rear nozzle, nudged right 5%
-    var exhaustX = player.x - player.w * 0.48 + player.w * 0.05;
-    var exhaustY = player.y + player.h * 0.06;
+    // Local nozzle offset on the sprite (aft + slightly below center), then +5% right
+    // Rotated by player.rotation so flame stays locked to the engine when climbing/diving
+    var rot = (typeof player.rotation === "number") ? player.rotation : 0;
+    var cosR = Math.cos(rot), sinR = Math.sin(rot);
+    var localX = -player.w * 0.48 + player.w * 0.10; // aft, +5% more right
+    var localY = player.h * 0.06;
+    var exhaustX = player.x + localX * cosR - localY * sinR;
+    var exhaustY = player.y + localX * sinR + localY * cosR;
+    // Stream direction = opposite of nose (local -X in world space)
+    var backX = -cosR;
+    var backY = -sinR;
 
     // Flame ships: sample continuous ribbon nodes (one coherent trail)
     if (style.mode === "flame") {
@@ -410,16 +418,19 @@
         y: exhaustY,
         w: player.h * 0.15 * (burst ? 1.12 : 1),
         age: 0,
-        life: 0.28
+        life: 0.28,
+        bx: backX,
+        by: backY
       });
       if (jetTrail.length > 14) jetTrail.splice(0, jetTrail.length - 14);
-      // Smoke sits just behind the flame tip
+      // Smoke sits just behind the flame tip, along rear axis
       if (Math.random() < 0.6 || burst) {
+        var smokeDist = 10 + Math.random() * 12;
         blimpPersonality.exhaustParticles.push({
-          x: exhaustX - 10 - Math.random() * 12,
-          y: exhaustY + (Math.random() - 0.5) * 5,
-          vx: -50 - Math.random() * 30,
-          vy: -5 - Math.random() * 8,
+          x: exhaustX + backX * smokeDist,
+          y: exhaustY + backY * smokeDist + (Math.random() - 0.5) * 4,
+          vx: backX * (50 + Math.random() * 30),
+          vy: backY * (50 + Math.random() * 30) - 4,
           size: 6 + Math.random() * 5,
           alpha: 0.24 + Math.random() * 0.14,
           life: 0.55 + Math.random() * 0.25,
@@ -442,8 +453,8 @@
       blimpPersonality.exhaustParticles.push({
         x: exhaustX + (Math.random() - 0.5) * 8,
         y: exhaustY + (Math.random() - 0.5) * 6,
-        vx: -(style.drag + Math.random() * 30 + speedBoost) * (burst ? 1.25 : 1),
-        vy: (Math.random() - 0.5) * 18 - style.rise * (0.6 + Math.random() * 0.6),
+        vx: backX * (style.drag + Math.random() * 30 + speedBoost) * (burst ? 1.25 : 1),
+        vy: backY * (style.drag * 0.35) + (Math.random() - 0.5) * 18 - style.rise * (0.6 + Math.random() * 0.6),
         size: style.size * (burst ? 1.25 : 1) * (0.7 + Math.random() * 0.6),
         alpha: style.alpha * (burst ? 1.1 : 1) * (0.75 + Math.random() * 0.4),
         life: style.life * (0.65 + Math.random() * 0.4),
@@ -593,9 +604,11 @@
     // Continuous jet ribbon drift
     jetTrail.forEach(function(n) {
       n.age += dt;
-      n.x -= 170 * dt;
-      // ~15% of previous vertical arch
-      n.y += (Math.sin(n.age * 5) * 0.38) * dt;
+      var bx = (typeof n.bx === "number") ? n.bx : -1;
+      var by = (typeof n.by === "number") ? n.by : 0;
+      // Stream straight back along nozzle axis (very little arch)
+      n.x += bx * 170 * dt;
+      n.y += by * 170 * dt + (Math.sin(n.age * 5) * 0.38) * dt;
       n.w *= (1 - 0.95 * dt);
     });
     jetTrail = jetTrail.filter(function(n) { return n.age < n.life && n.w > 1; });
@@ -681,19 +694,27 @@
       for (var i = 0; i < n; i++) {
         var node = jetTrail[i];
         var t = Math.max(0, 1 - node.age / node.life);
-        // Soft edge falloff toward tip
         var half = Math.max(0.8, node.w * t * halfScale * (0.55 + 0.45 * t));
-        var px = node.x, py = node.y - half;
+        // Perpendicular to stream so thickness stays correct when pitched
+        var bx = (typeof node.bx === "number") ? node.bx : -1;
+        var by = (typeof node.by === "number") ? node.by : 0;
+        var px = node.x - by * half;
+        var py = node.y + bx * half;
         if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
       }
       var tip = jetTrail[n - 1];
       var tipT = Math.max(0, 1 - tip.age / tip.life);
-      ctx.lineTo(tip.x - Math.max(4, tip.w * tipT * 0.9), tip.y);
+      var tbx = (typeof tip.bx === "number") ? tip.bx : -1;
+      var tby = (typeof tip.by === "number") ? tip.by : 0;
+      var tipLen = Math.max(4, tip.w * tipT * 0.9);
+      ctx.lineTo(tip.x + tbx * tipLen, tip.y + tby * tipLen);
       for (var j = n - 1; j >= 0; j--) {
         var node2 = jetTrail[j];
         var t2 = Math.max(0, 1 - node2.age / node2.life);
         var half2 = Math.max(0.8, node2.w * t2 * halfScale * (0.55 + 0.45 * t2));
-        ctx.lineTo(node2.x, node2.y + half2);
+        var bx2 = (typeof node2.bx === "number") ? node2.bx : -1;
+        var by2 = (typeof node2.by === "number") ? node2.by : 0;
+        ctx.lineTo(node2.x + by2 * half2, node2.y - bx2 * half2);
       }
       ctx.closePath();
       ctx.fillStyle = color;
