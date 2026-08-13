@@ -968,12 +968,18 @@
       if (!airfieldTiles || !airfieldTiles.length) return;
     }
     const sink = (typeof airfieldStripY === "number" && isFinite(airfieldStripY)) ? airfieldStripY : 0;
+    // Crop a thin border from the source art so baked white outlines stay hidden
+    const cropPx = Math.max(2, Math.min(8, Math.floor(Math.min(img.naturalWidth, img.naturalHeight) * 0.012)));
+    const sx0 = cropPx;
+    const sy0 = cropPx;
+    const sw0 = Math.max(1, img.naturalWidth - cropPx * 2);
+    const sh0 = Math.max(1, img.naturalHeight - cropPx * 2);
     airfieldTiles.forEach(function(tile) {
       if (!tile) return;
       let tw = tile.w, th = tile.h, tx = tile.x;
       if (!(tw > 0) || !(th > 0) || !isFinite(tx)) {
-        const aspect = img.naturalWidth / img.naturalHeight;
-        th = Math.max(50, Math.min(H * 0.38, H * 0.45)) * 1.07; // +4% height-ish
+        const aspect = sw0 / sh0;
+        th = Math.max(50, Math.min(H * 0.38, H * 0.45)) * 1.07;
         tw = th * aspect;
         tile.w = tw; tile.h = th;
         if (!isFinite(tx)) { tx = 0; tile.x = 0; }
@@ -981,7 +987,10 @@
       // Anchor firmly to bottom of canvas
       const y = H - th + sink;
       if (!isFinite(y) || y > H + 40) return;
-      try { ctx.drawImage(img, tx, y, tw, th); } catch (e) {}
+      try {
+        // Source crop removes white edge pixels from the asset
+        ctx.drawImage(img, sx0, sy0, sw0, sh0, tx, y, tw, th);
+      } catch (e) {}
     });
   }
 
