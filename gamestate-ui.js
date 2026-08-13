@@ -289,7 +289,23 @@
       img.alt = "Bonus heart";
       bonusHeartsEl.appendChild(img);
     }
+    // Critical pulse when at or below 50% of base health
+    if (healthMeter) {
+      if (health > 0 && health <= MAX_HEALTH * 0.5) {
+        healthMeter.classList.add("critical");
+      } else {
+        healthMeter.classList.remove("critical");
+      }
+    }
   }
+
+  function pulseHealthMeter() {
+    if (!healthMeter) return;
+    healthMeter.classList.remove("hit");
+    void healthMeter.offsetWidth;
+    healthMeter.classList.add("hit");
+  }
+  window.pulseHealthMeter = pulseHealthMeter;
 
   function takeHit() {
     if (state !== "playing") return;
@@ -320,11 +336,7 @@
     dodgeStreak = 0;
     if (health < 0) health = 0;
     updateHealthDisplay();
-    if (healthMeter) {
-      healthMeter.classList.remove("hit");
-      void healthMeter.offsetWidth;
-      healthMeter.classList.add("hit");
-    }
+    pulseHealthMeter();
     invulnerableUntil = performance.now() + 1600;
     try { sfxHit(); } catch (e) {}
     try { triggerScreenShake(3, 160); } catch (e) {}

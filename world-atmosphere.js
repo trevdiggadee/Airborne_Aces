@@ -586,12 +586,12 @@
     if (player.vy > 220) {
       if (Math.random() < 0.55) {
         blimpPersonality.speedStreaks.push({
-          x: player.x - player.w * 0.2 + (Math.random() - 0.5) * player.w * 0.5,
+          x: player.x - player.w * 0.15 + (Math.random() - 0.5) * player.w * 0.55,
           y: player.y - player.h * 0.35 + Math.random() * player.h * 0.7,
-          len: 10 + Math.random() * 18 + (player.vy - 220) * 0.04,
-          life: 0.12 + Math.random() * 0.1,
+          len: 14 + Math.random() * 22 + (player.vy - 220) * 0.05,
+          life: 0.16 + Math.random() * 0.12,
           age: 0,
-          alpha: 0.2 + Math.min(0.35, (player.vy - 220) / 900)
+          alpha: 0.28 + Math.min(0.4, (player.vy - 220) / 850)
         });
       }
     }
@@ -682,21 +682,46 @@
     ctx.restore();
   }
 
-  function drawBlimpPersonality() {
-    // Speed streaks (behind body)
-    blimpPersonality.speedStreaks.forEach(function(s) {
-      var t = 1 - s.age / s.life;
-      ctx.save();
-      ctx.globalAlpha = s.alpha * t;
-      ctx.strokeStyle = "rgba(255,255,255,0.75)";
-      ctx.lineWidth = 1.4;
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(s.x, s.y - s.len * 0.2);
-      ctx.lineTo(s.x, s.y + s.len * 0.8);
-      ctx.stroke();
-      ctx.restore();
-    });
+  function drawBlimpPersonality(exhaustOnly) {
+    // exhaustOnly === true  → flame/smoke on top of sprite (additive)
+    // exhaustOnly === false → streaks behind only
+    // exhaustOnly undefined → both (compat)
+    var drawStreaks = (exhaustOnly !== true);
+    var drawExhaust = (exhaustOnly !== false);
+
+    if (drawStreaks) {
+      // Nicer speed streaks — soft gradient, tapered, slight glow
+      blimpPersonality.speedStreaks.forEach(function(s) {
+        var t = 1 - s.age / s.life;
+        var a = Math.max(0, s.alpha * t * t);
+        if (a < 0.02) return;
+        ctx.save();
+        ctx.lineCap = "round";
+        // Outer glow
+        ctx.globalAlpha = a * 0.35;
+        ctx.strokeStyle = "rgba(180,220,255,0.9)";
+        ctx.lineWidth = 3.2;
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y - s.len * 0.15);
+        ctx.lineTo(s.x, s.y + s.len * 0.95);
+        ctx.stroke();
+        // Core streak
+        ctx.globalAlpha = a * 0.9;
+        var grad = ctx.createLinearGradient(s.x, s.y - s.len * 0.15, s.x, s.y + s.len * 0.95);
+        grad.addColorStop(0, "rgba(255,255,255,0)");
+        grad.addColorStop(0.25, "rgba(255,255,255,0.95)");
+        grad.addColorStop(1, "rgba(200,230,255,0)");
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y - s.len * 0.15);
+        ctx.lineTo(s.x, s.y + s.len * 0.95);
+        ctx.stroke();
+        ctx.restore();
+      });
+    }
+
+    if (!drawExhaust) return;
 
     function pathTeardrop(len, halfW) {
       ctx.beginPath();
@@ -743,7 +768,7 @@
     }
     if (jetTrail.length >= 2) {
       ctx.save();
-      // Soft outer bloom (diffuse)
+      // Additive blend so flame merges into the ship artwork
       ctx.globalCompositeOperation = "lighter";
       flameRibbon(1.0, "rgba(255,80,10,0.30)");
       flameRibbon(0.72, "rgba(255,120,25,0.40)");
@@ -773,6 +798,7 @@
       var a = Math.max(0, p.alpha * tt * tt);
       if (a < 0.02) return;
       ctx.save();
+      if (p.trail) ctx.globalCompositeOperation = "lighter";
       if (p.mode === "smoke") {
         var len2 = p.size * (p.stretch || 1.8);
         var halfW2 = p.size * 0.9;

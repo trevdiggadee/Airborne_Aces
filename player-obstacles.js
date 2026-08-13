@@ -180,8 +180,8 @@
     const blurVy = player.vy > 180 ? player.vy * 1.1 : player.vy;
     drawMotionBlur(img, player.x, player.y, player.w, player.h, player.rotation, -blurVy * 0.35, blurVy);
 
-    // Exhaust + streaks behind the body
-    if (typeof drawBlimpPersonality === "function") drawBlimpPersonality();
+    // Streaks + prop behind body; flame drawn on top after sprite for seamless blend
+    if (typeof drawBlimpPersonality === "function") drawBlimpPersonality(false);
     if (typeof drawBlimpPropBlur === "function") drawBlimpPropBlur();
 
     ctx.save();
@@ -203,6 +203,8 @@
     }
     ctx.drawImage(img, -player.w / 2, -player.h / 2, player.w, player.h);
     ctx.restore();
+    // Flame layered on top with additive blend so it merges into the nozzle
+    if (typeof drawBlimpPersonality === "function") drawBlimpPersonality(true);
     } catch (e) { console.warn("drawPlayer", e); }
   }
 
@@ -793,16 +795,23 @@
       sfxHeart();
       if (health < MAX_HEALTH) {
         health = Math.min(MAX_HEALTH, health + 1);
+        if (typeof pulseHealthMeter === "function") pulseHealthMeter();
         updateHealthDisplay();
-        healthMeter.classList.remove("hit");
-        void healthMeter.offsetWidth;
-        healthMeter.classList.add("hit");
+        if (typeof pulseHealthMeter === "function") pulseHealthMeter();
+        else if (healthMeter) {
+          healthMeter.classList.remove("hit");
+          void healthMeter.offsetWidth;
+          healthMeter.classList.add("hit");
+        }
       } else if (health < MAX_HEALTH + MAX_BONUS_HEARTS) {
         health++;
         updateHealthDisplay();
-        healthMeter.classList.remove("hit");
-        void healthMeter.offsetWidth;
-        healthMeter.classList.add("hit");
+        if (typeof pulseHealthMeter === "function") pulseHealthMeter();
+        else if (healthMeter) {
+          healthMeter.classList.remove("hit");
+          void healthMeter.offsetWidth;
+          healthMeter.classList.add("hit");
+        }
       }
       healPickup = null;
     }
