@@ -402,8 +402,8 @@
     // Rotated by player.rotation so flame stays locked to the engine when climbing/diving
     var rot = (typeof player.rotation === "number") ? player.rotation : 0;
     var cosR = Math.cos(rot), sinR = Math.sin(rot);
-    var localX = -player.w * 0.48 + player.w * 0.13; // aft, +3% more right
-    var localY = player.h * 0.06 - player.h * 0.03; // +3% up
+    var localX = -player.w * 0.48 + player.w * 0.14; // +1% more right
+    var localY = player.h * 0.06 - player.h * 0.04; // +1% more up
     var exhaustX = player.x + localX * cosR - localY * sinR;
     var exhaustY = player.y + localX * sinR + localY * cosR;
     // Stream direction = opposite of nose (local -X in world space)
@@ -552,23 +552,26 @@
         blimpPersonality._dmgTimer -= dmgRate;
         var count = 1 + Math.floor(dmgIntensity * 2.5);
         for (var di = 0; di < count; di++) {
-          // Soft shield-like wisps: cool blue-grey, rising, expanding
+          // Flame/soot smoke — warm grey and orange-brown, rising
           var ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.2;
           var spd = 20 + Math.random() * 40 + dmgIntensity * 20;
+          var sootRoll = Math.random();
+          var col = sootRoll < 0.35
+            ? (dmgIntensity > 0.6 ? "35,30,28" : "55,48,42")
+            : sootRoll < 0.7
+              ? (dmgIntensity > 0.6 ? "50,42,36" : "90,70,50")
+              : (dmgIntensity > 0.6 ? "70,45,30" : "140,90,50"); // ember-tinted
           damageSmoke.push({
             x: player.x + (Math.random() - 0.5) * player.w * 0.4,
             y: player.y + (Math.random() - 0.15) * player.h * 0.4,
-            vx: Math.cos(ang) * spd * 0.3 - 8,
+            vx: Math.cos(ang) * spd * 0.3 - 10,
             vy: Math.sin(ang) * spd,
             size: 7 + Math.random() * 7 + dmgIntensity * 6,
-            alpha: 0.22 + dmgIntensity * 0.28 + Math.random() * 0.12,
+            alpha: 0.28 + dmgIntensity * 0.32 + Math.random() * 0.12,
             life: 0.7 + Math.random() * 0.5 + dmgIntensity * 0.35,
             age: 0,
             growth: 1.6 + Math.random() * 0.9,
-            // Cyan-tinted like shield glow → greyer as damage rises
-            color: dmgIntensity > 0.65
-              ? (Math.random() < 0.5 ? "70,85,95" : "55,70,80")
-              : (Math.random() < 0.5 ? "120,170,200" : "100,150,185")
+            color: col
           });
         }
         if (damageSmoke.length > DAMAGE_SMOKE_MAX) {
@@ -601,23 +604,29 @@
     });
 
     // Continuous jet ribbon drift
-    // Rebuild trail in ship-local space so length stays constant while climbing/diving
+    // Rebuild trail in ship-local space — fixed length, slight curve on climb/dive
     (function() {
       var rot = (typeof player.rotation === "number") ? player.rotation : 0;
       var cosR = Math.cos(rot), sinR = Math.sin(rot);
-      var lx = -player.w * 0.48 + player.w * 0.13;
-      var ly = player.h * 0.06 - player.h * 0.03;
+      var lx = -player.w * 0.48 + player.w * 0.14;
+      var ly = player.h * 0.06 - player.h * 0.04;
       var ex = player.x + lx * cosR - ly * sinR;
       var ey = player.y + lx * sinR + ly * cosR;
       var bx = -cosR, by = -sinR;
-      var streamSpeed = 165; // fixed — not affected by climb/dive speed
+      // Perpendicular for curve (up relative to stream)
+      var px = -by, py = bx;
+      var streamSpeed = 165;
+      // Curve amount from pitch: climb (rot<0) curves one way, dive the other
+      var curveAmt = Math.max(-1, Math.min(1, rot * 2.2 + (player.vy || 0) / 800));
       jetTrail.forEach(function(n) {
         n.age += dt;
         n.along = (n.along || 0) + streamSpeed * dt;
-        // Slight shimmer only (no length change)
-        var shimmer = Math.sin(n.age * 5) * 0.35;
-        n.x = ex + bx * n.along - by * shimmer;
-        n.y = ey + by * n.along + bx * shimmer;
+        var u = Math.min(1, n.along / 55); // stronger curve toward tip
+        // Slight arc while climbing/diving — still same overall length
+        var curve = curveAmt * u * u * 10;
+        var shimmer = Math.sin(n.age * 5) * 0.3;
+        n.x = ex + bx * n.along + px * (curve + shimmer);
+        n.y = ey + by * n.along + py * (curve + shimmer);
         n.bx = bx;
         n.by = by;
         n.w *= (1 - 0.9 * dt);
