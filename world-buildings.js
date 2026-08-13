@@ -968,8 +968,8 @@
       if (!airfieldTiles || !airfieldTiles.length) return;
     }
     const sink = (typeof airfieldStripY === "number" && isFinite(airfieldStripY)) ? airfieldStripY : 0;
-    // Crop a thin border from the source art so baked white outlines stay hidden
-    const cropPx = Math.max(2, Math.min(8, Math.floor(Math.min(img.naturalWidth, img.naturalHeight) * 0.012)));
+    // Aggressive edge crop — white outlines on strip art are often several px thick
+    const cropPx = Math.max(8, Math.min(28, Math.floor(Math.min(img.naturalWidth, img.naturalHeight) * 0.035)));
     const sx0 = cropPx;
     const sy0 = cropPx;
     const sw0 = Math.max(1, img.naturalWidth - cropPx * 2);
@@ -1548,15 +1548,55 @@
       }
     });
   }
+  // Soft-edge helper so baked black outlines on cloud art fade out
+  let _cloudSoftCanvas = null;
+  function drawCloudSoft(img, dx, dy, dw, dh, alpha) {
+    if (!img || !img.naturalWidth || dw < 2 || dh < 2) return;
+    if (!_cloudSoftCanvas) _cloudSoftCanvas = document.createElement("canvas");
+    const oc = _cloudSoftCanvas;
+    const ow = Math.max(2, Math.ceil(dw));
+    const oh = Math.max(2, Math.ceil(dh));
+    if (oc.width !== ow || oc.height !== oh) {
+      oc.width = ow;
+      oc.height = oh;
+    }
+    const octx = oc.getContext("2d");
+    octx.clearRect(0, 0, ow, oh);
+    // Slight source crop to shave hard black borders
+    const cpx = Math.max(1, Math.min(6, Math.floor(Math.min(img.naturalWidth, img.naturalHeight) * 0.02)));
+    octx.drawImage(
+      img,
+      cpx, cpx,
+      Math.max(1, img.naturalWidth - cpx * 2),
+      Math.max(1, img.naturalHeight - cpx * 2),
+      0, 0, ow, oh
+    );
+    // Feathered elliptical mask — fades edges to transparent
+    octx.globalCompositeOperation = "destination-in";
+    const g = octx.createRadialGradient(
+      ow * 0.5, oh * 0.5, Math.min(ow, oh) * 0.18,
+      ow * 0.5, oh * 0.5, Math.min(ow, oh) * 0.58
+    );
+    g.addColorStop(0, "rgba(0,0,0,1)");
+    g.addColorStop(0.55, "rgba(0,0,0,0.85)");
+    g.addColorStop(0.82, "rgba(0,0,0,0.35)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    octx.fillStyle = g;
+    octx.fillRect(0, 0, ow, oh);
+    octx.globalCompositeOperation = "source-over";
+    ctx.save();
+    ctx.globalAlpha = (alpha != null) ? alpha : 0.5;
+    ctx.drawImage(oc, dx, dy);
+    ctx.restore();
+  }
+
   function drawClouds() {
     clouds.forEach(c => {
       const img = (images && images[c.imgKey]) || images.cloud;
       if (!img || !img.naturalWidth) return;
       const w = img.naturalWidth * c.scale;
       const h = img.naturalHeight * c.scale;
-      ctx.globalAlpha = 0.5; // always 50% transparent
-      ctx.drawImage(img, c.x, c.y, w, h);
-      ctx.globalAlpha = 1;
+      drawCloudSoft(img, c.x, c.y, w, h, 0.5);
     });
   }
 
