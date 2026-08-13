@@ -968,8 +968,8 @@
       if (!airfieldTiles || !airfieldTiles.length) return;
     }
     const sink = (typeof airfieldStripY === "number" && isFinite(airfieldStripY)) ? airfieldStripY : 0;
-    // Aggressive edge crop — white outlines on strip art are often several px thick
-    const cropPx = Math.max(8, Math.min(28, Math.floor(Math.min(img.naturalWidth, img.naturalHeight) * 0.035)));
+    // Heavy crop — white matte edges can be thick on exported strip art
+    const cropPx = Math.max(16, Math.min(48, Math.floor(Math.min(img.naturalWidth, img.naturalHeight) * 0.06)));
     const sx0 = cropPx;
     const sy0 = cropPx;
     const sw0 = Math.max(1, img.naturalWidth - cropPx * 2);
@@ -988,8 +988,10 @@
       const y = H - th + sink;
       if (!isFinite(y) || y > H + 40) return;
       try {
-        // Source crop removes white edge pixels from the asset
-        ctx.drawImage(img, sx0, sy0, sw0, sh0, tx, y, tw, th);
+        // Source crop + tiny dest overscan so any leftover fringe sits outside the tile
+        const ox = tw * 0.012;
+        const oy = th * 0.012;
+        ctx.drawImage(img, sx0, sy0, sw0, sh0, tx - ox, y - oy, tw + ox * 2, th + oy * 2);
       } catch (e) {}
     });
   }
@@ -1548,7 +1550,7 @@
       }
     });
   }
-  // Soft-edge helper so baked black outlines on cloud art fade out
+  // Soft rectangular edge fade on all 4 sides (light — not a heavy vignette)
   let _cloudSoftCanvas = null;
   function drawCloudSoft(img, dx, dy, dw, dh, alpha) {
     if (!img || !img.naturalWidth || dw < 2 || dh < 2) return;
@@ -1562,8 +1564,8 @@
     }
     const octx = oc.getContext("2d");
     octx.clearRect(0, 0, ow, oh);
-    // Slight source crop to shave hard black borders
-    const cpx = Math.max(1, Math.min(6, Math.floor(Math.min(img.naturalWidth, img.naturalHeight) * 0.02)));
+    // Tiny source crop only (hard black 1–3px borders)
+    const cpx = Math.max(1, Math.min(4, Math.floor(Math.min(img.naturalWidth, img.naturalHeight) * 0.012)));
     octx.drawImage(
       img,
       cpx, cpx,
@@ -1571,17 +1573,26 @@
       Math.max(1, img.naturalHeight - cpx * 2),
       0, 0, ow, oh
     );
-    // Feathered elliptical mask — fades edges to transparent
+    // Uniform soft frame on ALL sides — ~8% of each dimension, gentle
+    const fx = Math.max(4, ow * 0.08);
+    const fy = Math.max(4, oh * 0.08);
     octx.globalCompositeOperation = "destination-in";
-    const g = octx.createRadialGradient(
-      ow * 0.5, oh * 0.5, Math.min(ow, oh) * 0.18,
-      ow * 0.5, oh * 0.5, Math.min(ow, oh) * 0.58
-    );
-    g.addColorStop(0, "rgba(0,0,0,1)");
-    g.addColorStop(0.55, "rgba(0,0,0,0.85)");
-    g.addColorStop(0.82, "rgba(0,0,0,0.35)");
-    g.addColorStop(1, "rgba(0,0,0,0)");
-    octx.fillStyle = g;
+    // Build soft rect mask: opaque center, fade on each edge
+    // Horizontal band
+    const gx = octx.createLinearGradient(0, 0, ow, 0);
+    gx.addColorStop(0, "rgba(0,0,0,0)");
+    gx.addColorStop(Math.min(0.5, fx / ow), "rgba(0,0,0,1)");
+    gx.addColorStop(Math.max(0.5, 1 - fx / ow), "rgba(0,0,0,1)");
+    gx.addColorStop(1, "rgba(0,0,0,0)");
+    octx.fillStyle = gx;
+    octx.fillRect(0, 0, ow, oh);
+    // Vertical band (multiply-style via destination-in again)
+    const gy = octx.createLinearGradient(0, 0, 0, oh);
+    gy.addColorStop(0, "rgba(0,0,0,0)");
+    gy.addColorStop(Math.min(0.5, fy / oh), "rgba(0,0,0,1)");
+    gy.addColorStop(Math.max(0.5, 1 - fy / oh), "rgba(0,0,0,1)");
+    gy.addColorStop(1, "rgba(0,0,0,0)");
+    octx.fillStyle = gy;
     octx.fillRect(0, 0, ow, oh);
     octx.globalCompositeOperation = "source-over";
     ctx.save();
