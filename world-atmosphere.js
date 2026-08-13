@@ -402,8 +402,8 @@
     // Rotated by player.rotation so flame stays locked to the engine when climbing/diving
     var rot = (typeof player.rotation === "number") ? player.rotation : 0;
     var cosR = Math.cos(rot), sinR = Math.sin(rot);
-    var localX = -player.w * 0.48 + player.w * 0.10; // aft, +5% more right
-    var localY = player.h * 0.06;
+    var localX = -player.w * 0.48 + player.w * 0.13; // aft, +3% more right
+    var localY = player.h * 0.06 - player.h * 0.03; // +3% up
     var exhaustX = player.x + localX * cosR - localY * sinR;
     var exhaustY = player.y + localX * sinR + localY * cosR;
     // Stream direction = opposite of nose (local -X in world space)
@@ -414,15 +414,14 @@
     if (style.mode === "flame") {
       // 50% smaller body
       jetTrail.push({
-        x: exhaustX,
-        y: exhaustY,
+        along: 0, // distance behind nozzle — fixed-length trail in ship space
         w: player.h * 0.15 * (burst ? 1.12 : 1),
         age: 0,
-        life: 0.28,
+        life: 0.26, // constant visual length (alongMax = speed * life)
         bx: backX,
         by: backY
       });
-      if (jetTrail.length > 14) jetTrail.splice(0, jetTrail.length - 14);
+      if (jetTrail.length > 12) jetTrail.splice(0, jetTrail.length - 12);
       // Smoke sits just behind the flame tip, along rear axis
       if (Math.random() < 0.6 || burst) {
         var smokeDist = 10 + Math.random() * 12;
@@ -531,7 +530,7 @@
        afPhase === "land" || afPhase === "rollout"));
     var emitRate = 0.16 - diveFactor * 0.03 + climbFactor * 0.03;
     if (effect === "blackSmoke") emitRate *= 0.65;
-    if (effect === "flame") emitRate = onRunway ? 0.028 : 0.032; // denser samples for short continuous jet
+    if (effect === "flame") emitRate = 0.030; // fixed cadence → constant trail density/length
     if (effect === "steam") emitRate *= 0.8;
     if (onRunway && effect !== "flame") emitRate *= 0.7; // visible exhaust while driving
     blimpPersonality.exhaustTimer += dt;
@@ -602,16 +601,29 @@
     });
 
     // Continuous jet ribbon drift
-    jetTrail.forEach(function(n) {
-      n.age += dt;
-      var bx = (typeof n.bx === "number") ? n.bx : -1;
-      var by = (typeof n.by === "number") ? n.by : 0;
-      // Stream straight back along nozzle axis (very little arch)
-      n.x += bx * 170 * dt;
-      n.y += by * 170 * dt + (Math.sin(n.age * 5) * 0.38) * dt;
-      n.w *= (1 - 0.95 * dt);
-    });
-    jetTrail = jetTrail.filter(function(n) { return n.age < n.life && n.w > 1; });
+    // Rebuild trail in ship-local space so length stays constant while climbing/diving
+    (function() {
+      var rot = (typeof player.rotation === "number") ? player.rotation : 0;
+      var cosR = Math.cos(rot), sinR = Math.sin(rot);
+      var lx = -player.w * 0.48 + player.w * 0.13;
+      var ly = player.h * 0.06 - player.h * 0.03;
+      var ex = player.x + lx * cosR - ly * sinR;
+      var ey = player.y + lx * sinR + ly * cosR;
+      var bx = -cosR, by = -sinR;
+      var streamSpeed = 165; // fixed — not affected by climb/dive speed
+      jetTrail.forEach(function(n) {
+        n.age += dt;
+        n.along = (n.along || 0) + streamSpeed * dt;
+        // Slight shimmer only (no length change)
+        var shimmer = Math.sin(n.age * 5) * 0.35;
+        n.x = ex + bx * n.along - by * shimmer;
+        n.y = ey + by * n.along + bx * shimmer;
+        n.bx = bx;
+        n.by = by;
+        n.w *= (1 - 0.9 * dt);
+      });
+      jetTrail = jetTrail.filter(function(n) { return n.age < n.life && n.w > 1; });
+    })();
 
     blimpPersonality.exhaustParticles.forEach(function(p) {
       p.age += dt;
