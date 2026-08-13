@@ -850,7 +850,9 @@
 
     if (final) {
       final.textContent = "FINAL SCORE  0";
-      final.style.opacity = "0.75";
+      final.style.opacity = "1";
+      final.style.filter = "none";
+      final.style.color = "#f0d878";
       final.classList.remove("fadeOut");
     }
     if (rankBanner) {

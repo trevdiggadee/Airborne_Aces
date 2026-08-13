@@ -301,9 +301,17 @@
 
   function pulseHealthMeter() {
     if (!healthMeter) return;
-    healthMeter.classList.remove("hit");
-    void healthMeter.offsetWidth;
-    healthMeter.classList.add("hit");
+    try {
+      healthMeter.classList.remove("hit");
+      // Force reflow so animation always restarts
+      void healthMeter.offsetWidth;
+      healthMeter.classList.add("hit");
+      // Safety: clear hit class after animation so critical pulse can resume
+      clearTimeout(pulseHealthMeter._t);
+      pulseHealthMeter._t = setTimeout(function() {
+        if (healthMeter) healthMeter.classList.remove("hit");
+      }, 520);
+    } catch (e) {}
   }
   window.pulseHealthMeter = pulseHealthMeter;
 
