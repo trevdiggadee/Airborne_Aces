@@ -171,16 +171,25 @@
   }
 
   function showFlightTraceBanner() {
-    // Level-style banner below dialog
     const el = titleEl();
     if (!el) return;
-    el.textContent = "FLIGHT TRAINING";
+    el.innerHTML =
+      '<span class="ft-gear ft-gear-l" aria-hidden="true"></span>' +
+      '<span class="ft-banner-text">FLIGHT TRAINING</span>' +
+      '<span class="ft-gear ft-gear-r" aria-hidden="true"></span>';
+    el.classList.remove("ft-out");
     el.classList.add("visible", "ft-banner");
-    // Position handled in CSS (.ft-banner)
-    setTimeout(function () {
+    // Fade in, hold, fade out
+    clearTimeout(showFlightTraceBanner._t1);
+    clearTimeout(showFlightTraceBanner._t2);
+    showFlightTraceBanner._t1 = setTimeout(function () {
+      el.classList.add("ft-out");
       el.classList.remove("visible");
-      setTimeout(function () { el.classList.remove("ft-banner"); }, 400);
-    }, 2400);
+      showFlightTraceBanner._t2 = setTimeout(function () {
+        el.classList.remove("ft-banner", "ft-out");
+        el.innerHTML = "";
+      }, 550);
+    }, 2600);
   }
 
   function showFlightTrace() {

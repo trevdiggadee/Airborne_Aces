@@ -582,28 +582,8 @@
       blimpPersonality._dmgTimer = 0;
     }
 
-    // Speed streaks — trigger on any fast vertical motion (dive or strong climb)
-    var streakSpeed = Math.abs(player.vy);
-    if (streakSpeed > 140) {
-      if (Math.random() < 0.7) {
-        blimpPersonality.speedStreaks.push({
-          x: player.x - player.w * 0.1 + (Math.random() - 0.5) * player.w * 0.6,
-          y: player.y - player.h * 0.4 + Math.random() * player.h * 0.8,
-          len: 18 + Math.random() * 28 + (streakSpeed - 140) * 0.06,
-          life: 0.2 + Math.random() * 0.14,
-          age: 0,
-          alpha: 0.4 + Math.min(0.45, (streakSpeed - 140) / 700),
-          climbing: player.vy < 0
-        });
-      }
-    }
-    blimpPersonality.speedStreaks.forEach(function(s) {
-      s.age += dt;
-      s.y += player.vy * 0.15 * dt;
-    });
-    blimpPersonality.speedStreaks = blimpPersonality.speedStreaks.filter(function(s) {
-      return s.age < s.life;
-    });
+    // Motion speed-streaks removed (user: redesign text STREAK popup instead)
+    blimpPersonality.speedStreaks = [];
 
     // Continuous jet ribbon drift
     // Rebuild trail in ship-local space — fixed length, slight curve on climb/dive
@@ -691,49 +671,7 @@
     var drawStreaks = (exhaustOnly !== true);
     var drawExhaust = (exhaustOnly !== false);
 
-    if (drawStreaks) {
-      // Bold motion streaks — bright pop with soft glow
-      blimpPersonality.speedStreaks.forEach(function(s) {
-        var t = 1 - s.age / s.life;
-        var a = Math.max(0, s.alpha * (0.35 + 0.65 * t)); // brighter on pop-in
-        if (a < 0.03) return;
-        var y0 = s.climbing ? (s.y + s.len * 0.95) : (s.y - s.len * 0.15);
-        var y1 = s.climbing ? (s.y - s.len * 0.15) : (s.y + s.len * 0.95);
-        ctx.save();
-        ctx.lineCap = "round";
-        // Wide soft bloom
-        ctx.globalAlpha = a * 0.45;
-        ctx.strokeStyle = "rgba(160,210,255,1)";
-        ctx.lineWidth = 5.5;
-        ctx.beginPath();
-        ctx.moveTo(s.x, y0);
-        ctx.lineTo(s.x, y1);
-        ctx.stroke();
-        // Mid glow
-        ctx.globalAlpha = a * 0.7;
-        ctx.strokeStyle = "rgba(220,240,255,1)";
-        ctx.lineWidth = 3.0;
-        ctx.beginPath();
-        ctx.moveTo(s.x, y0);
-        ctx.lineTo(s.x, y1);
-        ctx.stroke();
-        // Hot white core
-        ctx.globalAlpha = Math.min(1, a * 1.1);
-        var grad = ctx.createLinearGradient(s.x, y0, s.x, y1);
-        grad.addColorStop(0, "rgba(255,255,255,0)");
-        grad.addColorStop(0.2, "rgba(255,255,255,1)");
-        grad.addColorStop(0.7, "rgba(230,245,255,0.85)");
-        grad.addColorStop(1, "rgba(180,210,255,0)");
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = 1.8;
-        ctx.beginPath();
-        ctx.moveTo(s.x, y0);
-        ctx.lineTo(s.x, y1);
-        ctx.stroke();
-        ctx.restore();
-      });
-    }
-
+    // motion streaks disabled
     if (!drawExhaust) return;
 
     function pathTeardrop(len, halfW) {

@@ -223,7 +223,14 @@
   let dodgeStreak = 0;
   let comboPopups = []; // floating "GRAZE!" / "5x STREAK!" text
   function spawnComboPopup(x, y, text, color) {
-    comboPopups.push({ x, y, text, color, born: performance.now(), life: 900 });
+    comboPopups.push({
+      x: W * 0.5,
+      y: H * 0.28,
+      text: text,
+      color: color || "#f0d878",
+      born: performance.now(),
+      life: 1400
+    });
   }
 
   function updateComboPopups() {
@@ -235,20 +242,80 @@
     const now = performance.now();
     ctx.save();
     ctx.textAlign = "center";
-    ctx.font = "bold " + Math.max(14, Math.min(20, W * 0.05)) + "px Georgia, serif";
-    // No drop shadow on blimps (gameplay + training)
-    ctx.shadowColor = "transparent";
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
+    ctx.textBaseline = "middle";
     comboPopups.forEach(p => {
       const t = (now - p.born) / p.life;
-      const y = p.y - t * 36;
-      ctx.globalAlpha = Math.max(0, 1 - t);
-      ctx.fillStyle = p.color;
-      ctx.fillText(p.text, p.x, y);
+      // Fade in → hold → fade out
+      let a = 1;
+      if (t < 0.12) a = t / 0.12;
+      else if (t > 0.7) a = Math.max(0, 1 - (t - 0.7) / 0.3);
+      const pop = t < 0.18 ? (0.85 + 0.2 * (t / 0.18)) : 1;
+      const y = p.y - Math.min(18, t * 22);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.translate(p.x, y);
+      ctx.scale(pop, pop);
+      // Banner plate
+      const fs = Math.max(15, Math.min(26, W * 0.055));
+      ctx.font = "bold " + fs + "px Rockwell, Georgia, serif";
+      const tw = ctx.measureText(p.text).width;
+      const bw = tw + 56;
+      const bh = fs * 1.55;
+      // Soft glow behind
+      ctx.fillStyle = "rgba(120, 40, 20, 0.35)";
+      roundRectPath(ctx, -bw / 2 - 4, -bh / 2 - 4, bw + 8, bh + 8, 12);
+      ctx.fill();
+      // Brass banner
+      const g = ctx.createLinearGradient(0, -bh / 2, 0, bh / 2);
+      g.addColorStop(0, "rgba(55, 36, 22, 0.92)");
+      g.addColorStop(0.5, "rgba(40, 26, 16, 0.94)");
+      g.addColorStop(1, "rgba(30, 18, 10, 0.92)");
+      ctx.fillStyle = g;
+      roundRectPath(ctx, -bw / 2, -bh / 2, bw, bh, 10);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(212, 175, 55, 0.85)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // Tiny gear ticks left/right
+      ctx.fillStyle = "rgba(212,175,55,0.75)";
+      for (let side of [-1, 1]) {
+        const gx = side * (bw / 2 - 14);
+        ctx.beginPath();
+        for (let i = 0; i < 8; i++) {
+          const ang = (i / 8) * Math.PI * 2 + now / 280;
+          const r = i % 2 === 0 ? 7 : 4.5;
+          const px = gx + Math.cos(ang) * r;
+          const py = Math.sin(ang) * r;
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(gx, 0, 2.2, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(30,18,10,0.9)";
+        ctx.fill();
+        ctx.fillStyle = "rgba(212,175,55,0.75)";
+      }
+      // Text
+      ctx.fillStyle = p.color || "#f0d878";
+      ctx.shadowColor = "rgba(0,0,0,0.55)";
+      ctx.shadowBlur = 4;
+      ctx.fillText(p.text, 0, 1);
+      ctx.shadowBlur = 0;
+      ctx.restore();
     });
     ctx.restore();
+  }
+
+  function roundRectPath(ctx, x, y, w, h, r) {
+    const rr = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
   }
 
   function pickObstacleType() {

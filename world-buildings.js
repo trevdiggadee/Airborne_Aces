@@ -1508,8 +1508,7 @@
   }
   function updateClouds(dtScale) {
     window.__airborneInCloud = false;
-    if (worldScrollFrozen()) return;
-    if (window.__airborneRuffStage === "intro") return;
+    // Clouds always drift — even during intro, landing, or frozen world scroll
     clouds.forEach(c => {
       const img = (images && images[c.imgKey]) || pickCloudImg() || images.cloud;
       const baseW = (img && img.naturalWidth) ? img.naturalWidth : 256;

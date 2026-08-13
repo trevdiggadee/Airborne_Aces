@@ -2732,20 +2732,25 @@ html, body {
   display: none !important;
 }
 #ruffTitleBanner {
-  position: absolute;
-  top: 28%;
+  position: fixed;
+  top: 42%;
   left: 50%;
-  transform: translateX(-50%);
-  z-index: 35;
+  transform: translate(-50%, -50%);
+  z-index: 40;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.5s ease;
   font-family: 'Rockwell', Georgia, serif;
   font-size: 18px;
   letter-spacing: 0.18em;
   color: #f5e6c8;
   text-shadow: 0 2px 12px rgba(0,0,0,0.6);
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  white-space: nowrap;
 }
 #ruffTitleBanner.visible { opacity: 1; }
 #ruffReport {
@@ -3062,28 +3067,60 @@ html, body {
   max-width: 118px;
 }
 
-/* FLIGHT TRAINING banner — words only, no box */
+/* FLIGHT TRAINING — centered one-line banner with spinning gears */
 #ruffTitleBanner.ft-banner {
-  top: calc(env(safe-area-inset-top, 0px) + 78px + 88px + 3vh);
+  top: 48%;
   left: 50%;
-  transform: translateX(-50%);
-  font-size: clamp(15px, 4.2vw, 20px);
-  letter-spacing: 0.32em;
+  transform: translate(-50%, -50%);
+  font-size: clamp(16px, 4.5vw, 22px);
+  letter-spacing: 0.28em;
   color: #ffe9a8;
   text-shadow:
-    0 2px 8px rgba(0,0,0,0.65),
-    0 0 18px rgba(212,175,55,0.55),
-    0 0 32px rgba(61,165,255,0.25);
-  padding: 0;
-  background: none;
-  border: none;
-  border-radius: 0;
-  animation: ftBannerIn 0.55s cubic-bezier(0.22, 1.4, 0.36, 1) both;
+    0 2px 8px rgba(0,0,0,0.7),
+    0 0 18px rgba(212,175,55,0.55);
+  padding: 12px 22px;
+  background: linear-gradient(180deg, rgba(55,36,22,0.88), rgba(28,18,10,0.92));
+  border: 2px solid rgba(212,175,55,0.75);
+  border-radius: 14px;
+  box-shadow:
+    0 8px 28px rgba(0,0,0,0.45),
+    0 0 24px rgba(212,175,55,0.18);
+  animation: ftBannerIn 0.6s cubic-bezier(0.22, 1.35, 0.36, 1) both;
+}
+#ruffTitleBanner.ft-banner.ft-out {
+  animation: ftBannerOut 0.5s ease forwards;
+}
+#ruffTitleBanner.ft-banner .ft-banner-text {
+  white-space: nowrap;
+  line-height: 1;
+}
+#ruffTitleBanner.ft-banner .ft-gear {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  background:
+    radial-gradient(circle at center, #3a2410 28%, transparent 30%),
+    repeating-conic-gradient(from 0deg, #d4af37 0deg 18deg, #8a6a28 18deg 36deg);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(212,175,55,0.45);
+  animation: ftGearSpin 2.8s linear infinite;
+}
+#ruffTitleBanner.ft-banner .ft-gear-r {
+  animation-direction: reverse;
+  animation-duration: 3.4s;
+}
+@keyframes ftGearSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 @keyframes ftBannerIn {
-  0%   { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(0.92); }
-  60%  { opacity: 1; transform: translateX(-50%) translateY(2px) scale(1.03); }
-  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  0%   { opacity: 0; transform: translate(-50%, -56%) scale(0.9); }
+  55%  { opacity: 1; transform: translate(-50%, -49%) scale(1.04); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes ftBannerOut {
+  0%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -44%) scale(0.94); }
 }
 
   60%  { opacity: 1; transform: translateX(-50%) translateY(2px) scale(1.03); }
