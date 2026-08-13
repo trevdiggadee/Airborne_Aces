@@ -272,9 +272,11 @@
 
   function updateHudRank(name) {
     const el = document.getElementById("hudRankName");
-    if (el) el.textContent = name || "CADET";
+    if (el) el.textContent = (name || "ROOKIE").toUpperCase();
   }
   window.updateHudRank = updateHudRank;
+  // Default rank label during play
+  try { updateHudRank("Rookie"); } catch (e) {}
 
   function updateHealthDisplay() {
     healthImg.src = HEART_IMAGES[Math.max(0, Math.min(MAX_HEALTH, health))];

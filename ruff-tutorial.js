@@ -9,7 +9,7 @@
   const CRYSTAL_FRAME_COUNT = 25;
   const CRYSTAL_SCORE = 15;
 
-  // Pilot rank progression (wire thresholds later; training always Cadet for now)
+  // Pilot rank progression — HUD shows Rookie until end-of-level rank-up
   const PILOT_RANKS = [
     { id: 0, name: "Cadet",           title: "Starting pilot",   minScore: 0 },
     { id: 1, name: "Air Scout",       title: "Learning the skies", minScore: 500 },
@@ -47,6 +47,9 @@
   let ruffFrame = 0;
   let ruffFrameT = 0;
   let ruffX = 0;
+  let ruffJetParticles = [];
+  let ruffSpeakLines = [];
+  let ruffMotionGhosts = [];
   let ruffY = 0;
   let ruffSpeakClose = 0;
   let ruffTilt = 0;
@@ -740,6 +743,18 @@
       ruffY = startY + (destY - startY) * ease + Math.sin(ruffIntroFlyT * 4) * 6 * (1 - ease);
       ruffTilt = -0.25 * (1 - ease) + Math.sin(ruffBob * 1.3) * 0.08;
       ruffScalePulse = 1.05 + (1 - ease) * 0.2 + Math.sin(ruffBob * 2.1) * 0.03;
+      // Jetpack during intro fly-in
+      if (Math.random() < 0.9) {
+        ruffJetParticles.push({
+          x: ruffX - 12, y: ruffY + 16,
+          vx: -60 - Math.random() * 40, vy: 25 + Math.random() * 30,
+          life: 0.3, age: 0, r: 3 + Math.random() * 3, hot: true
+        });
+      }
+      ruffJetParticles.forEach(function (p) {
+        p.age += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.r *= (1 - dt);
+      });
+      ruffJetParticles = ruffJetParticles.filter(function (p) { return p.age < p.life; });
       if (!ruffIntroLineArmed && ruffIntroFlyT > 0.35 && ruffLines.length) {
         ruffIntroLineArmed = true;
         ruffLineIdx = 0;
@@ -762,13 +777,66 @@
     ruffTilt = Math.sin(ruffBob * 1.3) * 0.12 + Math.sin(ruffBob * 0.5) * 0.04;
     ruffScalePulse = 1 + Math.sin(ruffBob * 2.1) * 0.03;
     if (ruffSpeakClose > 0) ruffSpeakClose = Math.max(0, ruffSpeakClose - dt * 0.5);
+
+    // Jetpack exhaust (behind / slightly below)
+    if (Math.random() < 0.85) {
+      for (let j = 0; j < 2; j++) {
+        ruffJetParticles.push({
+          x: ruffX - 14 + (Math.random() - 0.5) * 8,
+          y: ruffY + 18 + (Math.random() - 0.5) * 6,
+          vx: -40 - Math.random() * 50,
+          vy: 20 + Math.random() * 35,
+          life: 0.25 + Math.random() * 0.25,
+          age: 0,
+          r: 2.5 + Math.random() * 3.5,
+          hot: Math.random() < 0.55
+        });
+      }
+    }
+    if (ruffJetParticles.length > 40) ruffJetParticles.splice(0, ruffJetParticles.length - 40);
+    ruffJetParticles.forEach(function (p) {
+      p.age += dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 40 * dt;
+      p.r *= (1 - 1.2 * dt);
+    });
+    ruffJetParticles = ruffJetParticles.filter(function (p) { return p.age < p.life && p.r > 0.4; });
+
+    // Motion ghosts (afterimage)
+    if (Math.random() < 0.35) {
+      ruffMotionGhosts.push({ x: ruffX, y: ruffY, age: 0, life: 0.22, tilt: ruffTilt });
+    }
+    ruffMotionGhosts.forEach(function (g) { g.age += dt; });
+    ruffMotionGhosts = ruffMotionGhosts.filter(function (g) { return g.age < g.life; });
+    if (ruffMotionGhosts.length > 8) ruffMotionGhosts.splice(0, ruffMotionGhosts.length - 8);
+
+    // Speaking: small black lines from mouth area
+    const radio = document.getElementById("ruffRadio");
+    const speaking = radio && radio.classList.contains("speaking");
+    if (speaking && Math.random() < 0.55) {
+      ruffSpeakLines.push({
+        x: ruffX + 10 + Math.random() * 6,
+        y: ruffY + 6 + (Math.random() - 0.5) * 8,
+        vx: 25 + Math.random() * 35,
+        vy: (Math.random() - 0.5) * 20,
+        life: 0.18 + Math.random() * 0.15,
+        age: 0,
+        len: 4 + Math.random() * 7
+      });
+    }
+    ruffSpeakLines.forEach(function (s) {
+      s.age += dt;
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+    });
+    ruffSpeakLines = ruffSpeakLines.filter(function (s) { return s.age < s.life; });
     } catch (e) { console.warn("updateRuffCompanion", e); }
   }
 
   function drawRuffCompanion() {
     if (!ruffActive || typeof ctx === "undefined") return;
     if (ruffStage === "report") return;
-    // Clamp on-screen so he never vanishes off the side
     const maxX = (typeof W !== "undefined" ? W : 400) - 20;
     const maxY = (typeof H !== "undefined" ? H : 600) - 20;
     let dx = ruffX, dy = ruffY;
@@ -781,27 +849,63 @@
     const key = "ruff_" + String(idx).padStart(2, "0");
     let img = (typeof images !== "undefined") ? images[key] : null;
     if (!img || !img.naturalWidth) {
-      // fallback any loaded ruff frame
       for (let i = 1; i <= RUFF_FRAME_COUNT; i++) {
         const k2 = "ruff_" + String(i).padStart(2, "0");
         if (images && images[k2] && images[k2].naturalWidth) { img = images[k2]; break; }
       }
     }
-    const size = Math.max(90, (typeof player !== "undefined" && player ? player.h * 1.55 : 98)); // ~25% smaller
+    const size = Math.max(90, (typeof player !== "undefined" && player ? player.h * 1.55 : 98));
     const sc = size * (ruffScalePulse || 1);
+
+    // Jetpack particles (world space, behind body)
+    ruffJetParticles.forEach(function (p) {
+      const t = 1 - p.age / p.life;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, t * 0.85);
+      ctx.fillStyle = p.hot ? "rgba(255,160,40,0.9)" : "rgba(80,70,65,0.7)";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(0.5, p.r * t), 0, Math.PI * 2);
+      ctx.fill();
+      if (p.hot) {
+        ctx.globalCompositeOperation = "lighter";
+        ctx.fillStyle = "rgba(255,230,120,0.5)";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(0.4, p.r * 0.45 * t), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+
+    // Motion ghosts
+    ruffMotionGhosts.forEach(function (g) {
+      const t = 1 - g.age / g.life;
+      ctx.save();
+      ctx.globalAlpha = 0.18 * t;
+      ctx.translate(g.x, g.y);
+      ctx.rotate(g.tilt || 0);
+      if (img && img.naturalWidth) {
+        ctx.drawImage(img, -sc / 2, -sc / 2, sc, sc);
+      } else {
+        ctx.fillStyle = "#c4a35a";
+        ctx.beginPath();
+        ctx.arc(0, 0, sc * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+
     ctx.save();
     ctx.translate(dx, dy);
     ctx.rotate(ruffTilt || 0);
-    ctx.globalAlpha = 0.25;
-    ctx.fillStyle = "rgba(212,175,55,0.55)";
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = "rgba(212,175,55,0.5)";
     ctx.beginPath();
-    ctx.arc(-6, 4, sc * 0.3, 0, Math.PI * 2);
+    ctx.arc(-6, 4, sc * 0.28, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
     if (img && img.naturalWidth) {
       ctx.drawImage(img, -sc / 2, -sc / 2, sc, sc);
     } else {
-      // Visible brass robot placeholder if assets not loaded yet
       ctx.fillStyle = "#c4a35a";
       ctx.strokeStyle = "#4a3210";
       ctx.lineWidth = 3;
@@ -809,13 +913,23 @@
       ctx.arc(0, 0, sc * 0.42, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = "#2a1a08";
-      ctx.font = "bold " + Math.floor(sc * 0.18) + "px sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText("R.U.F.F.", 0, 0);
     }
     ctx.restore();
+
+    // Speak lines from mouth (small black dashes)
+    ruffSpeakLines.forEach(function (s) {
+      const t = 1 - s.age / s.life;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, t);
+      ctx.strokeStyle = "rgba(15,12,10,0.85)";
+      ctx.lineWidth = 1.6;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      ctx.lineTo(s.x + s.len * t, s.y + (s.vy * 0.02));
+      ctx.stroke();
+      ctx.restore();
+    });
   }
 
   // ---------- Flight report ----------
@@ -849,6 +963,10 @@
     }
     if (rankNameEl) rankNameEl.textContent = (pilotRank.name || "Cadet").toUpperCase();
     if (rankTitleEl) rankTitleEl.textContent = pilotRank.title || "Starting pilot";
+    // Rank-up reveal: was Rookie during flight
+    try {
+      if (typeof updateHudRank === "function") updateHudRank(pilotRank.name || "Cadet");
+    } catch (e) {}
     if (medalImg) {
       const src = (typeof images !== "undefined" && images.medal_badge && images.medal_badge.src)
         ? images.medal_badge.src

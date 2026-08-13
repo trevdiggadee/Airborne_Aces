@@ -245,77 +245,54 @@
     ctx.textBaseline = "middle";
     comboPopups.forEach(p => {
       const t = (now - p.born) / p.life;
-      // Fade in → hold → fade out
       let a = 1;
-      if (t < 0.12) a = t / 0.12;
-      else if (t > 0.7) a = Math.max(0, 1 - (t - 0.7) / 0.3);
-      const pop = t < 0.18 ? (0.85 + 0.2 * (t / 0.18)) : 1;
-      const y = p.y - Math.min(18, t * 22);
+      if (t < 0.15) a = t / 0.15;
+      else if (t > 0.72) a = Math.max(0, 1 - (t - 0.72) / 0.28);
+      const pop = t < 0.2 ? (0.75 + 0.3 * (t / 0.2)) : 1;
+      const y = H * 0.26;
       ctx.save();
       ctx.globalAlpha = a;
-      ctx.translate(p.x, y);
+      ctx.translate(W * 0.5, y);
       ctx.scale(pop, pop);
-      // Banner plate
-      const fs = Math.max(15, Math.min(26, W * 0.055));
-      ctx.font = "bold " + fs + "px Rockwell, Georgia, serif";
-      const tw = ctx.measureText(p.text).width;
-      const bw = tw + 56;
-      const bh = fs * 1.55;
-      // Soft glow behind
-      ctx.fillStyle = "rgba(120, 40, 20, 0.35)";
-      roundRectPath(ctx, -bw / 2 - 4, -bh / 2 - 4, bw + 8, bh + 8, 12);
+      // Circular badge
+      const R = Math.max(48, Math.min(70, W * 0.14));
+      ctx.beginPath();
+      ctx.arc(0, 0, R + 4, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(80, 25, 15, 0.35)";
       ctx.fill();
-      // Brass banner
-      const g = ctx.createLinearGradient(0, -bh / 2, 0, bh / 2);
-      g.addColorStop(0, "rgba(55, 36, 22, 0.92)");
-      g.addColorStop(0.5, "rgba(40, 26, 16, 0.94)");
-      g.addColorStop(1, "rgba(30, 18, 10, 0.92)");
+      const g = ctx.createRadialGradient(0, -R * 0.2, R * 0.1, 0, 0, R);
+      g.addColorStop(0, "rgba(70, 45, 28, 0.95)");
+      g.addColorStop(1, "rgba(28, 16, 10, 0.95)");
+      ctx.beginPath();
+      ctx.arc(0, 0, R, 0, Math.PI * 2);
       ctx.fillStyle = g;
-      roundRectPath(ctx, -bw / 2, -bh / 2, bw, bh, 10);
       ctx.fill();
-      ctx.strokeStyle = "rgba(212, 175, 55, 0.85)";
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(212, 175, 55, 0.9)";
+      ctx.lineWidth = 2.5;
       ctx.stroke();
-      // Tiny gear ticks left/right
-      ctx.fillStyle = "rgba(212,175,55,0.75)";
-      for (let side of [-1, 1]) {
-        const gx = side * (bw / 2 - 14);
-        ctx.beginPath();
-        for (let i = 0; i < 8; i++) {
-          const ang = (i / 8) * Math.PI * 2 + now / 280;
-          const r = i % 2 === 0 ? 7 : 4.5;
-          const px = gx + Math.cos(ang) * r;
-          const py = Math.sin(ang) * r;
-          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-        }
-        ctx.closePath();
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(gx, 0, 2.2, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(30,18,10,0.9)";
-        ctx.fill();
-        ctx.fillStyle = "rgba(212,175,55,0.75)";
-      }
-      // Text
+      // Inner ring
+      ctx.beginPath();
+      ctx.arc(0, 0, R * 0.78, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(212, 175, 55, 0.35)";
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      // Text (wrapped lightly if long)
+      const fs = Math.max(12, Math.min(18, W * 0.042));
+      ctx.font = "bold " + fs + "px Rockwell, Georgia, serif";
       ctx.fillStyle = p.color || "#f0d878";
-      ctx.shadowColor = "rgba(0,0,0,0.55)";
-      ctx.shadowBlur = 4;
-      ctx.fillText(p.text, 0, 1);
+      ctx.shadowColor = "rgba(0,0,0,0.5)";
+      ctx.shadowBlur = 3;
+      const lines = String(p.text).split(" ");
+      if (lines.length > 2) {
+        ctx.fillText(lines.slice(0, 2).join(" "), 0, -fs * 0.35);
+        ctx.fillText(lines.slice(2).join(" "), 0, fs * 0.55);
+      } else {
+        ctx.fillText(p.text, 0, 1);
+      }
       ctx.shadowBlur = 0;
       ctx.restore();
     });
     ctx.restore();
-  }
-
-  function roundRectPath(ctx, x, y, w, h, r) {
-    const rr = Math.min(r, w / 2, h / 2);
-    ctx.beginPath();
-    ctx.moveTo(x + rr, y);
-    ctx.arcTo(x + w, y, x + w, y + h, rr);
-    ctx.arcTo(x + w, y + h, x, y + h, rr);
-    ctx.arcTo(x, y + h, x, y, rr);
-    ctx.arcTo(x, y, x + w, y, rr);
-    ctx.closePath();
   }
 
   function pickObstacleType() {
@@ -463,32 +440,27 @@
             if (typeof bumpScorePop === "function") bumpScorePop();
             if (typeof sfxRingCollect === "function") sfxRingCollect();
             else if (typeof sfxPowerup === "function") sfxPowerup();
-            if (typeof spawnComboPopup === "function") spawnComboPopup(cx, cy, "+5 RING!", "#ffd700");
             if (typeof notifyRingCollect === "function") notifyRingCollect();
-            // Explosive gold/white spark ring burst
-            o.burstT = 0.45;
+            // Small black dust puffs (no gold ring banner / spark burst)
+            o.burstT = 0.35;
             o.burstX = cx;
             o.burstY = cy;
-            if (typeof spawnHitParticles === "function") {
-              try { spawnHitParticles(cx, cy); } catch (e) {}
-            }
             if (typeof hitParticles !== "undefined" && hitParticles && Array.isArray(hitParticles)) {
-              for (let i = 0; i < 28; i++) {
-                const ang = (Math.PI * 2 * i) / 28 + Math.random() * 0.2;
-                const spd = 90 + Math.random() * 180;
+              for (let i = 0; i < 14; i++) {
+                const ang = Math.random() * Math.PI * 2;
+                const spd = 25 + Math.random() * 55;
                 hitParticles.push({
-                  x: cx, y: cy,
+                  type: "dust",
+                  x: cx + (Math.random() - 0.5) * 8,
+                  y: cy + (Math.random() - 0.5) * 8,
                   vx: Math.cos(ang) * spd,
-                  vy: Math.sin(ang) * spd - 40,
-                  life: 0.4 + Math.random() * 0.45,
+                  vy: Math.sin(ang) * spd - 15,
+                  life: 0.35 + Math.random() * 0.35,
                   age: 0,
-                  r: 2 + Math.random() * 4,
-                  color: i % 3 === 0 ? "#fff6c0" : (i % 3 === 1 ? "#ffd700" : "#ff9f1a")
+                  r: 1.2 + Math.random() * 2.4,
+                  color: Math.random() < 0.5 ? "#1a1512" : "#2c241c"
                 });
               }
-            }
-            if (typeof spawnShockwave === "function") {
-              try { spawnShockwave(cx, cy, 0.35); } catch (e) {}
             }
           }
         }

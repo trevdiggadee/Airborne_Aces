@@ -1241,9 +1241,19 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
       p.age += dt;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      if (p.type === "smoke") {
+      if (p.type === "dust") {
+        p.vy += 30 * dt;
+        p.vx *= (1 - 1.5 * dt);
+        if (p.r) p.r *= (1 - 0.8 * dt);
+      } else if (p.type === "smoke") {
         p.vy -= 20 * dt; // smoke drifts upward, slowing its own rise
         p.vx *= 0.96;
+      } else if (p.type === "dust") {
+        ctx.globalAlpha = Math.max(0, 1 - p.age / p.life);
+        ctx.fillStyle = p.color || "#1a1512";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(0.5, p.r || 2), 0, Math.PI * 2);
+        ctx.fill();
       } else if (p.type === "feather") {
         // light flutter: side-to-side drift + slow fall + spin
         p.vx += Math.sin(p.age * p.flutter + p.rot) * 90 * dt;
@@ -1348,6 +1358,12 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         ctx.fillStyle = grad;
         ctx.beginPath();
         ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (p.type === "dust") {
+        ctx.globalAlpha = Math.max(0, 1 - p.age / p.life);
+        ctx.fillStyle = p.color || "#1a1512";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(0.5, p.r || 2), 0, Math.PI * 2);
         ctx.fill();
       } else if (p.type === "feather") {
         ctx.globalAlpha = Math.max(0, t) * 0.9;
