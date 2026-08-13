@@ -3093,6 +3093,9 @@ html, body {
 #ruffTitleBanner.ft-banner .ft-banner-text {
   white-space: nowrap;
   line-height: 1;
+  position: relative;
+  top: 3%;
+  opacity: 0.82;
 }
 #ruffTitleBanner.ft-banner .ft-gear {
   width: 22px;

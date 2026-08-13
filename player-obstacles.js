@@ -249,29 +249,30 @@
       if (t < 0.14) a = t / 0.14;
       else if (t > 0.7) a = Math.max(0, 1 - (t - 0.7) / 0.3);
       const pop = t < 0.18 ? (0.7 + 0.4 * (t / 0.18)) : 1;
-      const spin = (now - p.born) / 180;
+      // Slower spin
+      const spin = (now - p.born) / 520;
       ctx.save();
       ctx.globalAlpha = a;
       ctx.translate(W * 0.5, H * 0.24);
       ctx.scale(pop, pop);
-      // Smaller burgundy spinning gear
-      const R = Math.max(22, Math.min(32, W * 0.065));
-      ctx.rotate(spin);
-      // Soft glow
+      const R = Math.max(24, Math.min(34, W * 0.068));
+      // Outer soft pulse
+      const pulse = 1 + 0.04 * Math.sin(now / 200);
       ctx.beginPath();
-      ctx.arc(0, 0, R * 1.25, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(90, 20, 35, 0.3)";
+      ctx.arc(0, 0, R * 1.35 * pulse, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(110, 30, 48, 0.22)";
       ctx.fill();
-      // Gear teeth
+      ctx.rotate(spin);
+      // Redesigned gear — thicker rim, fewer cleaner teeth, brass rim highlight
+      const teeth = 8;
       ctx.beginPath();
-      const teeth = 10;
       for (let i = 0; i < teeth; i++) {
         const a0 = (i / teeth) * Math.PI * 2;
-        const a1 = ((i + 0.35) / teeth) * Math.PI * 2;
-        const a2 = ((i + 0.5) / teeth) * Math.PI * 2;
-        const a3 = ((i + 0.85) / teeth) * Math.PI * 2;
+        const a1 = ((i + 0.28) / teeth) * Math.PI * 2;
+        const a2 = ((i + 0.42) / teeth) * Math.PI * 2;
+        const a3 = ((i + 0.72) / teeth) * Math.PI * 2;
         const rOut = R;
-        const rIn = R * 0.72;
+        const rIn = R * 0.78;
         if (i === 0) ctx.moveTo(Math.cos(a0) * rIn, Math.sin(a0) * rIn);
         ctx.lineTo(Math.cos(a0) * rOut, Math.sin(a0) * rOut);
         ctx.lineTo(Math.cos(a1) * rOut, Math.sin(a1) * rOut);
@@ -279,34 +280,41 @@
         ctx.lineTo(Math.cos(a3) * rIn, Math.sin(a3) * rIn);
       }
       ctx.closePath();
-      const g = ctx.createRadialGradient(-R * 0.2, -R * 0.2, R * 0.1, 0, 0, R);
-      g.addColorStop(0, "#8a2f42");
-      g.addColorStop(0.55, "#5c1a2a");
-      g.addColorStop(1, "#3a101c");
+      const g = ctx.createRadialGradient(-R * 0.25, -R * 0.25, 2, 0, 0, R);
+      g.addColorStop(0, "#a33d55");
+      g.addColorStop(0.45, "#6e2236");
+      g.addColorStop(1, "#2e0c16");
       ctx.fillStyle = g;
       ctx.fill();
-      ctx.strokeStyle = "rgba(140, 50, 65, 0.9)";
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "rgba(160, 70, 90, 0.95)";
+      ctx.lineWidth = 1.8;
       ctx.stroke();
-      // Hub
+      // Inner disc
       ctx.beginPath();
-      ctx.arc(0, 0, R * 0.38, 0, Math.PI * 2);
-      ctx.fillStyle = "#4a1522";
+      ctx.arc(0, 0, R * 0.52, 0, Math.PI * 2);
+      const g2 = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 0.52);
+      g2.addColorStop(0, "#7a2a3c");
+      g2.addColorStop(1, "#3d121e");
+      ctx.fillStyle = g2;
       ctx.fill();
-      ctx.strokeStyle = "rgba(180, 90, 100, 0.7)";
+      ctx.strokeStyle = "rgba(200, 120, 130, 0.45)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      // Hub + bolt
+      ctx.beginPath();
+      ctx.arc(0, 0, R * 0.2, 0, Math.PI * 2);
+      ctx.fillStyle = "#1e0a10";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(212, 175, 55, 0.55)";
       ctx.lineWidth = 1.2;
       ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(0, 0, R * 0.14, 0, Math.PI * 2);
-      ctx.fillStyle = "#2a0c14";
-      ctx.fill();
-      // Number only (counter-rotate so text stays upright)
+      // Number upright
       ctx.rotate(-spin);
-      const fs = Math.max(13, Math.min(18, R * 0.55));
+      const fs = Math.max(14, Math.min(19, R * 0.58));
       ctx.font = "bold " + fs + "px Rockwell, Georgia, serif";
-      ctx.fillStyle = "#f5e6c8";
-      ctx.shadowColor = "rgba(0,0,0,0.45)";
-      ctx.shadowBlur = 3;
+      ctx.fillStyle = "#f8ecd8";
+      ctx.shadowColor = "rgba(0,0,0,0.5)";
+      ctx.shadowBlur = 4;
       ctx.fillText(String(p.text), 0, 1);
       ctx.shadowBlur = 0;
       ctx.restore();
@@ -706,18 +714,39 @@
           ctx.stroke();
           ctx.restore();
         }
-        // Bronze hoop
-        strokeOval(rx, ry, Math.max(5, r * 0.16), "#b08d57", 1);
-        strokeOval(rx * 0.72, ry * 0.88, Math.max(2.5, r * 0.07), "rgba(205, 170, 125, 0.95)", 1);
-        strokeOval(rx * 1.15, ry * 1.08, Math.max(7, r * 0.22), "#8a6914", 0.35);
-        // Soft highlight
-        ctx.globalAlpha = 0.65 + 0.25 * Math.sin((o.spin || 0) * 3);
-        ctx.fillStyle = "#e8d4a8";
+        // Brighter bronze hoop + glow
+        const spin = o.spin || 0;
+        ctx.save();
+        ctx.globalAlpha = 0.35 + 0.15 * Math.sin(spin * 2.5);
+        ctx.shadowColor = "rgba(212, 175, 55, 0.65)";
+        ctx.shadowBlur = 14;
+        strokeOval(rx * 1.05, ry * 1.02, Math.max(8, r * 0.24), "#c4a35a", 0.55);
+        ctx.shadowBlur = 0;
+        ctx.restore();
+        strokeOval(rx, ry, Math.max(5, r * 0.16), "#d4b06a", 1);
+        strokeOval(rx * 0.72, ry * 0.88, Math.max(2.5, r * 0.07), "rgba(240, 220, 170, 0.95)", 1);
+        strokeOval(rx * 1.12, ry * 1.06, Math.max(6, r * 0.2), "#a67c2a", 0.4);
+        // Traveling sparkle on the rim
+        const sparkA = spin * 1.8;
+        const sx = Math.sin(sparkA) * rx * 0.95;
+        const sy = Math.cos(sparkA) * ry * 0.95;
+        ctx.globalAlpha = 0.75 + 0.25 * Math.sin(spin * 4);
+        ctx.fillStyle = "#fff4c8";
         ctx.beginPath();
-        ctx.arc(0, -ry * 0.92, 2.5, 0, Math.PI * 2);
+        ctx.arc(sx, sy, 2.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 0.55;
+        ctx.beginPath();
+        ctx.arc(-sx * 0.9, -sy * 0.9, 2.0, 0, Math.PI * 2);
+        ctx.fill();
+        // Top/bottom highlights
+        ctx.globalAlpha = 0.7 + 0.25 * Math.sin(spin * 3);
+        ctx.fillStyle = "#f0e0b8";
+        ctx.beginPath();
+        ctx.arc(0, -ry * 0.92, 2.6, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(0, ry * 0.92, 2.5, 0, Math.PI * 2);
+        ctx.arc(0, ry * 0.92, 2.6, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
         return;
