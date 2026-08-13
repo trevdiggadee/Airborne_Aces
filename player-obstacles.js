@@ -246,49 +246,68 @@
     comboPopups.forEach(p => {
       const t = (now - p.born) / p.life;
       let a = 1;
-      if (t < 0.15) a = t / 0.15;
-      else if (t > 0.72) a = Math.max(0, 1 - (t - 0.72) / 0.28);
-      const pop = t < 0.2 ? (0.75 + 0.3 * (t / 0.2)) : 1;
-      const y = H * 0.26;
+      if (t < 0.14) a = t / 0.14;
+      else if (t > 0.7) a = Math.max(0, 1 - (t - 0.7) / 0.3);
+      const pop = t < 0.18 ? (0.7 + 0.4 * (t / 0.18)) : 1;
+      const spin = (now - p.born) / 180;
       ctx.save();
       ctx.globalAlpha = a;
-      ctx.translate(W * 0.5, y);
+      ctx.translate(W * 0.5, H * 0.24);
       ctx.scale(pop, pop);
-      // Circular badge
-      const R = Math.max(48, Math.min(70, W * 0.14));
+      // Smaller burgundy spinning gear
+      const R = Math.max(22, Math.min(32, W * 0.065));
+      ctx.rotate(spin);
+      // Soft glow
       ctx.beginPath();
-      ctx.arc(0, 0, R + 4, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(80, 25, 15, 0.35)";
+      ctx.arc(0, 0, R * 1.25, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(90, 20, 35, 0.3)";
       ctx.fill();
-      const g = ctx.createRadialGradient(0, -R * 0.2, R * 0.1, 0, 0, R);
-      g.addColorStop(0, "rgba(70, 45, 28, 0.95)");
-      g.addColorStop(1, "rgba(28, 16, 10, 0.95)");
+      // Gear teeth
       ctx.beginPath();
-      ctx.arc(0, 0, R, 0, Math.PI * 2);
+      const teeth = 10;
+      for (let i = 0; i < teeth; i++) {
+        const a0 = (i / teeth) * Math.PI * 2;
+        const a1 = ((i + 0.35) / teeth) * Math.PI * 2;
+        const a2 = ((i + 0.5) / teeth) * Math.PI * 2;
+        const a3 = ((i + 0.85) / teeth) * Math.PI * 2;
+        const rOut = R;
+        const rIn = R * 0.72;
+        if (i === 0) ctx.moveTo(Math.cos(a0) * rIn, Math.sin(a0) * rIn);
+        ctx.lineTo(Math.cos(a0) * rOut, Math.sin(a0) * rOut);
+        ctx.lineTo(Math.cos(a1) * rOut, Math.sin(a1) * rOut);
+        ctx.lineTo(Math.cos(a2) * rIn, Math.sin(a2) * rIn);
+        ctx.lineTo(Math.cos(a3) * rIn, Math.sin(a3) * rIn);
+      }
+      ctx.closePath();
+      const g = ctx.createRadialGradient(-R * 0.2, -R * 0.2, R * 0.1, 0, 0, R);
+      g.addColorStop(0, "#8a2f42");
+      g.addColorStop(0.55, "#5c1a2a");
+      g.addColorStop(1, "#3a101c");
       ctx.fillStyle = g;
       ctx.fill();
-      ctx.strokeStyle = "rgba(212, 175, 55, 0.9)";
-      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = "rgba(140, 50, 65, 0.9)";
+      ctx.lineWidth = 1.5;
       ctx.stroke();
-      // Inner ring
+      // Hub
       ctx.beginPath();
-      ctx.arc(0, 0, R * 0.78, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(212, 175, 55, 0.35)";
+      ctx.arc(0, 0, R * 0.38, 0, Math.PI * 2);
+      ctx.fillStyle = "#4a1522";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(180, 90, 100, 0.7)";
       ctx.lineWidth = 1.2;
       ctx.stroke();
-      // Text (wrapped lightly if long)
-      const fs = Math.max(12, Math.min(18, W * 0.042));
+      ctx.beginPath();
+      ctx.arc(0, 0, R * 0.14, 0, Math.PI * 2);
+      ctx.fillStyle = "#2a0c14";
+      ctx.fill();
+      // Number only (counter-rotate so text stays upright)
+      ctx.rotate(-spin);
+      const fs = Math.max(13, Math.min(18, R * 0.55));
       ctx.font = "bold " + fs + "px Rockwell, Georgia, serif";
-      ctx.fillStyle = p.color || "#f0d878";
-      ctx.shadowColor = "rgba(0,0,0,0.5)";
+      ctx.fillStyle = "#f5e6c8";
+      ctx.shadowColor = "rgba(0,0,0,0.45)";
       ctx.shadowBlur = 3;
-      const lines = String(p.text).split(" ");
-      if (lines.length > 2) {
-        ctx.fillText(lines.slice(0, 2).join(" "), 0, -fs * 0.35);
-        ctx.fillText(lines.slice(2).join(" "), 0, fs * 0.55);
-      } else {
-        ctx.fillText(p.text, 0, 1);
-      }
+      ctx.fillText(String(p.text), 0, 1);
       ctx.shadowBlur = 0;
       ctx.restore();
     });
@@ -441,24 +460,25 @@
             if (typeof sfxRingCollect === "function") sfxRingCollect();
             else if (typeof sfxPowerup === "function") sfxPowerup();
             if (typeof notifyRingCollect === "function") notifyRingCollect();
-            // Small black dust puffs (no gold ring banner / spark burst)
+            // Gold dust puffs on ring collect
             o.burstT = 0.35;
             o.burstX = cx;
             o.burstY = cy;
             if (typeof hitParticles !== "undefined" && hitParticles && Array.isArray(hitParticles)) {
-              for (let i = 0; i < 14; i++) {
+              for (let i = 0; i < 16; i++) {
                 const ang = Math.random() * Math.PI * 2;
-                const spd = 25 + Math.random() * 55;
+                const spd = 28 + Math.random() * 60;
+                const golds = ["#d4af37", "#c9a227", "#e6c35c", "#b8860b", "#f0d878"];
                 hitParticles.push({
                   type: "dust",
                   x: cx + (Math.random() - 0.5) * 8,
                   y: cy + (Math.random() - 0.5) * 8,
                   vx: Math.cos(ang) * spd,
-                  vy: Math.sin(ang) * spd - 15,
-                  life: 0.35 + Math.random() * 0.35,
+                  vy: Math.sin(ang) * spd - 18,
+                  life: 0.4 + Math.random() * 0.35,
                   age: 0,
-                  r: 1.2 + Math.random() * 2.4,
-                  color: Math.random() < 0.5 ? "#1a1512" : "#2c241c"
+                  r: 1.4 + Math.random() * 2.6,
+                  color: golds[i % golds.length]
                 });
               }
             }
@@ -638,7 +658,7 @@
           score += STREAK_BONUS;
           document.getElementById("scoreVal").textContent = score;
           bumpScorePop();
-          spawnComboPopup(player.x, player.y - player.h * 0.9, dodgeStreak + "x STREAK! +" + STREAK_BONUS, "#800000");
+          spawnComboPopup(player.x, player.y - player.h * 0.9, String(dodgeStreak), "#6b1c2a");
           sfxStreak();
         }
       }
@@ -686,12 +706,13 @@
           ctx.stroke();
           ctx.restore();
         }
-        strokeOval(rx, ry, Math.max(5, r * 0.16), "#e8c84a", 1);
-        strokeOval(rx * 0.72, ry * 0.88, Math.max(2.5, r * 0.07), "rgba(255, 245, 180, 0.9)", 1);
-        strokeOval(rx * 1.15, ry * 1.08, Math.max(7, r * 0.22), "#ffd700", 0.3);
-        // Sparkle at top/bottom
-        ctx.globalAlpha = 0.7 + 0.3 * Math.sin((o.spin || 0) * 3);
-        ctx.fillStyle = "#fff6c0";
+        // Bronze hoop
+        strokeOval(rx, ry, Math.max(5, r * 0.16), "#b08d57", 1);
+        strokeOval(rx * 0.72, ry * 0.88, Math.max(2.5, r * 0.07), "rgba(205, 170, 125, 0.95)", 1);
+        strokeOval(rx * 1.15, ry * 1.08, Math.max(7, r * 0.22), "#8a6914", 0.35);
+        // Soft highlight
+        ctx.globalAlpha = 0.65 + 0.25 * Math.sin((o.spin || 0) * 3);
+        ctx.fillStyle = "#e8d4a8";
         ctx.beginPath();
         ctx.arc(0, -ry * 0.92, 2.5, 0, Math.PI * 2);
         ctx.fill();
