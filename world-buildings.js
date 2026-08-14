@@ -968,17 +968,11 @@
       if (!airfieldTiles || !airfieldTiles.length) return;
     }
     const sink = (typeof airfieldStripY === "number" && isFinite(airfieldStripY)) ? airfieldStripY : 0;
-    // Heavy crop — white matte edges can be thick on exported strip art
-    const cropPx = Math.max(16, Math.min(48, Math.floor(Math.min(img.naturalWidth, img.naturalHeight) * 0.06)));
-    const sx0 = cropPx;
-    const sy0 = cropPx;
-    const sw0 = Math.max(1, img.naturalWidth - cropPx * 2);
-    const sh0 = Math.max(1, img.naturalHeight - cropPx * 2);
     airfieldTiles.forEach(function(tile) {
       if (!tile) return;
       let tw = tile.w, th = tile.h, tx = tile.x;
       if (!(tw > 0) || !(th > 0) || !isFinite(tx)) {
-        const aspect = sw0 / sh0;
+        const aspect = img.naturalWidth / img.naturalHeight;
         th = Math.max(50, Math.min(H * 0.38, H * 0.45)) * 1.07;
         tw = th * aspect;
         tile.w = tw; tile.h = th;
@@ -987,12 +981,7 @@
       // Anchor firmly to bottom of canvas
       const y = H - th + sink;
       if (!isFinite(y) || y > H + 40) return;
-      try {
-        // Source crop + tiny dest overscan so any leftover fringe sits outside the tile
-        const ox = tw * 0.012;
-        const oy = th * 0.012;
-        ctx.drawImage(img, sx0, sy0, sw0, sh0, tx - ox, y - oy, tw + ox * 2, th + oy * 2);
-      } catch (e) {}
+      try { ctx.drawImage(img, tx, y, tw, th); } catch (e) {}
     });
   }
 
@@ -1550,64 +1539,15 @@
       }
     });
   }
-  // Soft rectangular edge fade on all 4 sides (light — not a heavy vignette)
-  let _cloudSoftCanvas = null;
-  function drawCloudSoft(img, dx, dy, dw, dh, alpha) {
-    if (!img || !img.naturalWidth || dw < 2 || dh < 2) return;
-    if (!_cloudSoftCanvas) _cloudSoftCanvas = document.createElement("canvas");
-    const oc = _cloudSoftCanvas;
-    const ow = Math.max(2, Math.ceil(dw));
-    const oh = Math.max(2, Math.ceil(dh));
-    if (oc.width !== ow || oc.height !== oh) {
-      oc.width = ow;
-      oc.height = oh;
-    }
-    const octx = oc.getContext("2d");
-    octx.clearRect(0, 0, ow, oh);
-    // Tiny source crop only (hard black 1–3px borders)
-    const cpx = Math.max(1, Math.min(4, Math.floor(Math.min(img.naturalWidth, img.naturalHeight) * 0.012)));
-    octx.drawImage(
-      img,
-      cpx, cpx,
-      Math.max(1, img.naturalWidth - cpx * 2),
-      Math.max(1, img.naturalHeight - cpx * 2),
-      0, 0, ow, oh
-    );
-    // Uniform soft frame on ALL sides — ~8% of each dimension, gentle
-    const fx = Math.max(4, ow * 0.08);
-    const fy = Math.max(4, oh * 0.08);
-    octx.globalCompositeOperation = "destination-in";
-    // Build soft rect mask: opaque center, fade on each edge
-    // Horizontal band
-    const gx = octx.createLinearGradient(0, 0, ow, 0);
-    gx.addColorStop(0, "rgba(0,0,0,0)");
-    gx.addColorStop(Math.min(0.5, fx / ow), "rgba(0,0,0,1)");
-    gx.addColorStop(Math.max(0.5, 1 - fx / ow), "rgba(0,0,0,1)");
-    gx.addColorStop(1, "rgba(0,0,0,0)");
-    octx.fillStyle = gx;
-    octx.fillRect(0, 0, ow, oh);
-    // Vertical band (multiply-style via destination-in again)
-    const gy = octx.createLinearGradient(0, 0, 0, oh);
-    gy.addColorStop(0, "rgba(0,0,0,0)");
-    gy.addColorStop(Math.min(0.5, fy / oh), "rgba(0,0,0,1)");
-    gy.addColorStop(Math.max(0.5, 1 - fy / oh), "rgba(0,0,0,1)");
-    gy.addColorStop(1, "rgba(0,0,0,0)");
-    octx.fillStyle = gy;
-    octx.fillRect(0, 0, ow, oh);
-    octx.globalCompositeOperation = "source-over";
-    ctx.save();
-    ctx.globalAlpha = (alpha != null) ? alpha : 0.5;
-    ctx.drawImage(oc, dx, dy);
-    ctx.restore();
-  }
-
   function drawClouds() {
     clouds.forEach(c => {
       const img = (images && images[c.imgKey]) || images.cloud;
       if (!img || !img.naturalWidth) return;
       const w = img.naturalWidth * c.scale;
       const h = img.naturalHeight * c.scale;
-      drawCloudSoft(img, c.x, c.y, w, h, 0.5);
+      ctx.globalAlpha = 0.5;
+      ctx.drawImage(img, c.x, c.y, w, h);
+      ctx.globalAlpha = 1;
     });
   }
 
