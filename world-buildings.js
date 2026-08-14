@@ -207,8 +207,8 @@
     const tile = { x: startX, w: ww, h: hh, startX: startX };
     airfieldTiles.push(tile);
     airfieldFlags = []; // flags disabled
-    airfieldLights = [];
-    seedAirfieldLightsForTile(tile, false);
+    airfieldLights = []; // lights disabled
+    // seedAirfieldLightsForTile(tile, false);
   }
 
   function ensureAirfieldStripVisible() {
@@ -228,8 +228,8 @@
     const landTile = { x: startX, w: w, h: h, startX: startX };
     airfieldTiles = [landTile];
     airfieldFlags = []; // flags disabled
-    airfieldLights = [];
-    seedAirfieldLightsForTile(landTile, true);
+    airfieldLights = []; // lights disabled
+    // seedAirfieldLightsForTile(landTile, true);
   }
 
   function beginAirfieldTraining() {
@@ -381,7 +381,7 @@
 
     airfieldPhaseT = (airfieldPhaseT || 0) + dt;
     updateAirfieldFlags(dt);
-    updateAirfieldLights(dt);
+    // updateAirfieldLights(dt); // lights disabled
     syncAirfieldGlobals();
     window.__airborneAirfieldBlockBoss = true;
 
@@ -1209,8 +1209,8 @@
       if (!isFinite(y) || y > H + 40) return;
       try { ctx.drawImage(img, tx, y, tw, th); } catch (e) {}
     });
-    // Runway edge lights (flags disabled)
-    drawAirfieldLightsLayer(sink);
+    // Runway edge lights disabled
+    // drawAirfieldLightsLayer(sink);
   }
 
   function drawAirfieldShadow() {
