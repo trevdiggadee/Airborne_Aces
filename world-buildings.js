@@ -153,7 +153,9 @@
   let airfieldPhase = null; // taxi | accel | climb | lesson | done
   let airfieldTiles = [];
   let airfieldFlags = [];
+  let airfieldLights = [];
   let airfieldWindT = 0;
+  let airfieldLightT = 0;
   let airfieldTip = "";
   let airfieldTipAge = 0;
   let airfieldPhaseT = 0;
@@ -204,8 +206,9 @@
     const startX = (W || 300) * 0.05 - ww * 0.08;
     const tile = { x: startX, w: ww, h: hh, startX: startX };
     airfieldTiles.push(tile);
-    airfieldFlags = [];
-    seedAirfieldFlagsForTile(tile, false);
+    airfieldFlags = []; // flags disabled
+    airfieldLights = [];
+    seedAirfieldLightsForTile(tile, false);
   }
 
   function ensureAirfieldStripVisible() {
@@ -224,8 +227,9 @@
     const startX = W * 0.55;
     const landTile = { x: startX, w: w, h: h, startX: startX };
     airfieldTiles = [landTile];
-    airfieldFlags = [];
-    seedAirfieldFlagsForTile(landTile, true);
+    airfieldFlags = []; // flags disabled
+    airfieldLights = [];
+    seedAirfieldLightsForTile(landTile, true);
   }
 
   function beginAirfieldTraining() {
@@ -377,6 +381,7 @@
 
     airfieldPhaseT = (airfieldPhaseT || 0) + dt;
     updateAirfieldFlags(dt);
+    updateAirfieldLights(dt);
     syncAirfieldGlobals();
     window.__airborneAirfieldBlockBoss = true;
 
@@ -442,7 +447,7 @@
         airfieldTiles = (airfieldTiles || []).filter(function(tile) {
           return tile && tile.x + (tile.w || 0) > -20;
         });
-        if (!airfieldTiles.length) { airfieldStripGone = true; airfieldFlags = []; }
+        if (!airfieldTiles.length) { airfieldStripGone = true; airfieldFlags = []; airfieldLights = []; }
       }
 
       // Progress through the one image (0 = start, 1 = fully scrolled past)
@@ -964,6 +969,85 @@
   }
 
 
+
+  // ---------- Runway edge lights (soft sequential blink L→R) ----------
+  function seedAirfieldLightsForTile(tile, isLanding) {
+    if (!tile || !tile.w) return;
+    airfieldLights = [];
+    // Align to painted edge-light rows on strip art (1500×~245 source)
+    // Upper row sits on near-side edge of runway surface; lower on far edge.
+    // Tuned as fractions of drawn tile so they track scroll/scale with the image.
+    const upperY = isLanding ? 0.40 : 0.38;
+    const lowerY = isLanding ? 0.76 : 0.74;
+    const count = isLanding ? 14 : 16; // lights per edge
+    const x0 = 0.06;
+    const x1 = 0.94;
+    for (let row = 0; row < 2; row++) {
+      const fy = row === 0 ? upperY : lowerY;
+      for (let i = 0; i < count; i++) {
+        const fx = x0 + (x1 - x0) * (i / (count - 1));
+        airfieldLights.push({
+          tile: tile,
+          fx: fx,
+          fy: fy,
+          index: i,          // for left→right chase
+          row: row,
+          phaseBias: i * 0.22 + row * 0.08
+        });
+      }
+    }
+  }
+
+  function updateAirfieldLights(dt) {
+    if (!airfieldMode) return;
+    airfieldLightT += dt;
+  }
+
+  function drawAirfieldLightsLayer(sink) {
+    if (!airfieldLights || !airfieldLights.length) return;
+    const t = airfieldLightT || 0;
+    // Chase speed: full L→R cycle ~2.4s
+    const chaseSpeed = 2.6;
+    airfieldLights.forEach(function(L) {
+      const tile = L.tile;
+      if (!tile) return;
+      const tw = tile.w, th = tile.h, tx = tile.x;
+      if (!(tw > 0) || !(th > 0)) return;
+      const y0 = H - th + (sink || 0);
+      const lx = tx + L.fx * tw;
+      const ly = y0 + L.fy * th;
+      // Soft sequential pulse traveling left → right
+      // Each light peaks when the wave reaches its index
+      const wave = (t * chaseSpeed - L.phaseBias);
+      // Smooth raised-cosine blink (soft, not harsh strobe)
+      const s = 0.5 + 0.5 * Math.sin(wave);
+      const soft = s * s; // bias toward dimmer base, soft peaks
+      const glow = 0.22 + 0.78 * soft;
+      const radius = Math.max(2.2, Math.min(5.5, th * 0.028));
+
+      ctx.save();
+      // Outer bloom
+      const g = ctx.createRadialGradient(lx, ly, 0, lx, ly, radius * 3.2);
+      g.addColorStop(0, "rgba(255, 220, 140," + (0.55 * glow) + ")");
+      g.addColorStop(0.35, "rgba(255, 180, 60," + (0.28 * glow) + ")");
+      g.addColorStop(1, "rgba(255, 140, 40, 0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(lx, ly, radius * 3.2, 0, Math.PI * 2);
+      ctx.fill();
+      // Core lamp
+      const g2 = ctx.createRadialGradient(lx, ly, 0, lx, ly, radius);
+      g2.addColorStop(0, "rgba(255, 250, 220," + (0.95 * glow) + ")");
+      g2.addColorStop(0.45, "rgba(255, 200, 90," + (0.75 * glow) + ")");
+      g2.addColorStop(1, "rgba(220, 140, 40," + (0.15 * glow) + ")");
+      ctx.fillStyle = g2;
+      ctx.beginPath();
+      ctx.arc(lx, ly, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+  }
+
   function seedAirfieldFlagsForTile(tile, isLanding) {
     if (!tile || !tile.w) return;
     // Place a few runway-style flags along the strip (world x relative to tile)
@@ -1125,8 +1209,8 @@
       if (!isFinite(y) || y > H + 40) return;
       try { ctx.drawImage(img, tx, y, tw, th); } catch (e) {}
     });
-    // Animated wind flags layered on top of strip art
-    drawAirfieldFlagsLayer(sink);
+    // Runway edge lights (flags disabled)
+    drawAirfieldLightsLayer(sink);
   }
 
   function drawAirfieldShadow() {
