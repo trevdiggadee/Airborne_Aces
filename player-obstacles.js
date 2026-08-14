@@ -449,6 +449,21 @@
       if (o.isRing || o.type === "gold_ring") {
         o.spin = (o.spin || 0) + dt * 2.2;
         o.bobPhase = (o.bobPhase || 0) + dt * 1.6;
+        // Expand pulse after blimp flies through
+        if (o.passed) {
+          o.expandT = Math.min(1, (o.expandT || 0) + dt / 0.38);
+          // ease out: grow to 1.32 then settle to 1.12
+          const t = o.expandT;
+          const peak = 1.32;
+          const settle = 1.12;
+          if (t < 0.55) {
+            const u = t / 0.55;
+            o.expandScale = 1 + (peak - 1) * (1 - Math.pow(1 - u, 2));
+          } else {
+            const u = (t - 0.55) / 0.45;
+            o.expandScale = peak + (settle - peak) * Math.min(1, u);
+          }
+        }
         // Collect ring by flying through center
         if (!o.collected) {
           const cx = o.x + o.w / 2;
@@ -459,6 +474,9 @@
           const dy = (player.y - cy) / ry;
           if (dx * dx + dy * dy < 1) {
             o.collected = true;
+            o.passed = true;
+            o.expandT = 0;       // expand anim 0→1
+            o.expandScale = 1;
             o.scored = true;
             score += 5;
             window.__airborneCollectRings = (window.__airborneCollectRings || 0) + 1;
@@ -694,10 +712,13 @@
   function drawObstacles() {
     obstacles.forEach(o => {
       if (o.isRing || o.type === "gold_ring") {
-        if (o.collected) return;
+        // Stay visible after pass-through — color change + expand, then scroll off
         const cx = o.x + o.w / 2;
         const cy = o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8);
-        const r = o.r || o.w / 2;
+        const baseR = o.r || o.w / 2;
+        const esc = o.expandScale || 1;
+        const r = baseR * esc;
+        const passed = !!o.passed;
         ctx.save();
         ctx.translate(cx, cy);
         // Sideways hoop (vertical ellipse via scale+arc) — Safari safe
@@ -714,24 +735,31 @@
           ctx.stroke();
           ctx.restore();
         }
-        // Brighter bronze hoop + glow
         const spin = o.spin || 0;
+        // Colors: bronze before pass, bright emerald/cyan after
+        const cOuter = passed ? "#2ecc71" : "#c4a35a";
+        const cMain  = passed ? "#3dde8a" : "#d4b06a";
+        const cInner = passed ? "rgba(180, 255, 220, 0.95)" : "rgba(240, 220, 170, 0.95)";
+        const cRim   = passed ? "#1a9e55" : "#a67c2a";
+        const glow   = passed ? "rgba(46, 204, 113, 0.75)" : "rgba(212, 175, 55, 0.65)";
+        const spark  = passed ? "#d8ffe8" : "#fff4c8";
+        const hi     = passed ? "#b8ffd8" : "#f0e0b8";
         ctx.save();
         ctx.globalAlpha = 0.35 + 0.15 * Math.sin(spin * 2.5);
-        ctx.shadowColor = "rgba(212, 175, 55, 0.65)";
-        ctx.shadowBlur = 14;
-        strokeOval(rx * 1.05, ry * 1.02, Math.max(8, r * 0.24), "#c4a35a", 0.55);
+        ctx.shadowColor = glow;
+        ctx.shadowBlur = passed ? 18 : 14;
+        strokeOval(rx * 1.05, ry * 1.02, Math.max(8, r * 0.24), cOuter, 0.55);
         ctx.shadowBlur = 0;
         ctx.restore();
-        strokeOval(rx, ry, Math.max(5, r * 0.16), "#d4b06a", 1);
-        strokeOval(rx * 0.72, ry * 0.88, Math.max(2.5, r * 0.07), "rgba(240, 220, 170, 0.95)", 1);
-        strokeOval(rx * 1.12, ry * 1.06, Math.max(6, r * 0.2), "#a67c2a", 0.4);
+        strokeOval(rx, ry, Math.max(5, r * 0.16), cMain, 1);
+        strokeOval(rx * 0.72, ry * 0.88, Math.max(2.5, r * 0.07), cInner, 1);
+        strokeOval(rx * 1.12, ry * 1.06, Math.max(6, r * 0.2), cRim, 0.4);
         // Traveling sparkle on the rim
         const sparkA = spin * 1.8;
         const sx = Math.sin(sparkA) * rx * 0.95;
         const sy = Math.cos(sparkA) * ry * 0.95;
         ctx.globalAlpha = 0.75 + 0.25 * Math.sin(spin * 4);
-        ctx.fillStyle = "#fff4c8";
+        ctx.fillStyle = spark;
         ctx.beginPath();
         ctx.arc(sx, sy, 2.8, 0, Math.PI * 2);
         ctx.fill();
@@ -741,7 +769,7 @@
         ctx.fill();
         // Top/bottom highlights
         ctx.globalAlpha = 0.7 + 0.25 * Math.sin(spin * 3);
-        ctx.fillStyle = "#f0e0b8";
+        ctx.fillStyle = hi;
         ctx.beginPath();
         ctx.arc(0, -ry * 0.92, 2.6, 0, Math.PI * 2);
         ctx.fill();
