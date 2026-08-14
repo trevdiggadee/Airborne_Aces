@@ -228,8 +228,9 @@
     const startX = W * 0.55;
     const landTile = { x: startX, w: w, h: h, startX: startX };
     airfieldTiles = [landTile];
-    airfieldFlags = []; // flags disabled
+    airfieldFlags = [];
     airfieldLights = []; // lights disabled
+    seedAirfieldFlagsForTile(landTile, true);
     // seedAirfieldLightsForTile(landTile, true);
   }
 
@@ -1051,17 +1052,46 @@
 
   function seedAirfieldFlagsForTile(tile, isLanding) {
     if (!tile || !tile.w) return;
-    // Single windsock sprite: right of the first building where blimp starts (takeoff only)
-    if (isLanding) return;
+    if (isLanding) {
+      // Checkered finish flags on landing strip — both sides of runway
+      airfieldFlags.push({
+        tile: tile,
+        fx: 0.18,
+        fy: 0.55,
+        frame: 0,
+        frameT: 0,
+        fps: 12,
+        sheet: "finish_flag",
+        cols: 5,
+        rows: 5
+      });
+      airfieldFlags.push({
+        tile: tile,
+        fx: 0.82,
+        fy: 0.55,
+        frame: 3,
+        frameT: 0,
+        fps: 12,
+        sheet: "finish_flag",
+        cols: 5,
+        rows: 5
+      });
+      return;
+    }
+    // Windsock on takeoff strip
     airfieldFlags.push({
       tile: tile,
-      fx: 0.22,          // left — right of airport building, above runway dirt
-      fy: 0.67,          // lowered another 5% — pole base on dirt above the runway
+      fx: 0.22,
+      fy: 0.69,
       frame: 0,
       frameT: 0,
-      fps: 14
+      fps: 14,
+      sheet: "wind_flag_left",
+      cols: 6,
+      rows: 6
     });
   }
+
 
   function updateAirfieldFlags(dt) {
     if (!airfieldMode) return;
@@ -1072,7 +1102,8 @@
       const fps = f.fps || 14;
       if (f.frameT >= 1 / fps) {
         const steps = Math.floor(f.frameT * fps);
-        f.frame = ((f.frame || 0) + steps) % 36;
+        const total = (f.cols || 6) * (f.rows || 6);
+        f.frame = ((f.frame || 0) + steps) % total;
         f.frameT -= steps / fps;
       }
     });
@@ -1080,11 +1111,11 @@
 
   function drawAirfieldFlag(f, tileX, tileY, tileW, tileH) {
     if (!f || !ctx) return;
-    const sheet = (typeof images !== "undefined" && images) ? images.wind_flag_left : null;
+    const key = f.sheet || "wind_flag_left";
+    const sheet = (typeof images !== "undefined" && images) ? images[key] : null;
     if (!sheet || !sheet.naturalWidth || !sheet.naturalHeight) return;
 
-    // 6 cols x 6 rows sprite sheet
-    const cols = 6, rows = 6, total = cols * rows;
+    const cols = f.cols || 6, rows = f.rows || 6, total = cols * rows;
     const fw = sheet.naturalWidth / cols;
     const fh = sheet.naturalHeight / rows;
     const frame = ((f.frame | 0) % total + total) % total;
