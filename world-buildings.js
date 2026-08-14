@@ -1056,7 +1056,7 @@
     airfieldFlags.push({
       tile: tile,
       fx: 0.22,          // left — right of airport building, above runway dirt
-      fy: 0.62,          // lowered 10% — pole base on dirt above the runway
+      fy: 0.67,          // lowered another 5% — pole base on dirt above the runway
       frame: 0,
       frameT: 0,
       fps: 14
