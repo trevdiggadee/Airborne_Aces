@@ -152,6 +152,8 @@
   let airfieldMode = false;
   let airfieldPhase = null; // taxi | accel | climb | lesson | done
   let airfieldTiles = [];
+  let airfieldFlags = [];
+  let airfieldWindT = 0;
   let airfieldTip = "";
   let airfieldTipAge = 0;
   let airfieldPhaseT = 0;
@@ -200,7 +202,10 @@
     let ww = Math.max(120, hh * aspect);
     // Single image, no loop — start slightly left so runway is under blimp
     const startX = (W || 300) * 0.05 - ww * 0.08;
-    airfieldTiles.push({ x: startX, w: ww, h: hh, startX: startX });
+    const tile = { x: startX, w: ww, h: hh, startX: startX };
+    airfieldTiles.push(tile);
+    airfieldFlags = [];
+    seedAirfieldFlagsForTile(tile, false);
   }
 
   function ensureAirfieldStripVisible() {
@@ -217,7 +222,10 @@
     let w = h * aspect;
     // Start further right so approach travels ~30% more distance
     const startX = W * 0.55;
-    airfieldTiles = [{ x: startX, w: w, h: h, startX: startX }];
+    const landTile = { x: startX, w: w, h: h, startX: startX };
+    airfieldTiles = [landTile];
+    airfieldFlags = [];
+    seedAirfieldFlagsForTile(landTile, true);
   }
 
   function beginAirfieldTraining() {
@@ -368,6 +376,7 @@
     if (!(dt > 0) || !isFinite(dt)) dt = 0.016;
 
     airfieldPhaseT = (airfieldPhaseT || 0) + dt;
+    updateAirfieldFlags(dt);
     syncAirfieldGlobals();
     window.__airborneAirfieldBlockBoss = true;
 
@@ -433,7 +442,7 @@
         airfieldTiles = (airfieldTiles || []).filter(function(tile) {
           return tile && tile.x + (tile.w || 0) > -20;
         });
-        if (!airfieldTiles.length) airfieldStripGone = true;
+        if (!airfieldTiles.length) { airfieldStripGone = true; airfieldFlags = []; }
       }
 
       // Progress through the one image (0 = start, 1 = fully scrolled past)
@@ -954,6 +963,139 @@
     });
   }
 
+
+  function seedAirfieldFlagsForTile(tile, isLanding) {
+    if (!tile || !tile.w) return;
+    // Place a few runway-style flags along the strip (world x relative to tile)
+    // Positions as fractions of strip width so they track the scrolling image
+    const spots = isLanding
+      ? [0.18, 0.42, 0.68, 0.88]
+      : [0.22, 0.48, 0.72, 0.9];
+    spots.forEach(function(fx, i) {
+      airfieldFlags.push({
+        tile: tile,
+        fx: fx, // 0–1 along tile width
+        fy: 0.12 + (i % 2) * 0.04, // near top of strip art
+        side: (i % 2 === 0) ? 1 : -1, // alternate lean
+        phase: Math.random() * Math.PI * 2,
+        speed: 2.2 + Math.random() * 1.4,
+        len: 0.85 + Math.random() * 0.25,
+        hue: i % 3 // slight color variation
+      });
+    });
+  }
+
+  function updateAirfieldFlags(dt) {
+    if (!airfieldMode) return;
+    airfieldWindT += dt;
+    // Flags follow their tile reference automatically via fx
+  }
+
+  function drawAirfieldFlag(f, tileX, tileY, tileW, tileH) {
+    if (!f || !ctx) return;
+    const baseX = tileX + f.fx * tileW;
+    const baseY = tileY + f.fy * tileH;
+    // Pole height relative to strip
+    const poleH = Math.max(18, tileH * 0.38);
+    const poleX = baseX;
+    const poleTop = baseY - poleH;
+    const poleBot = baseY + tileH * 0.02;
+
+    // Wind: multi-frequency cloth ripple
+    const t = airfieldWindT * f.speed + f.phase;
+    const wind = 0.55 + 0.45 * Math.sin(airfieldWindT * 0.7 + f.phase);
+    const flagW = Math.max(16, tileW * 0.035) * f.len;
+    const flagH = Math.max(10, poleH * 0.42);
+    const segs = 8;
+
+    // Pole
+    ctx.save();
+    ctx.strokeStyle = "rgba(55, 45, 35, 0.95)";
+    ctx.lineWidth = Math.max(2, tileH * 0.012);
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(poleX, poleBot);
+    ctx.lineTo(poleX, poleTop);
+    ctx.stroke();
+    // Pole tip
+    ctx.fillStyle = "rgba(40, 32, 24, 0.95)";
+    ctx.beginPath();
+    ctx.arc(poleX, poleTop, Math.max(1.5, tileH * 0.01), 0, Math.PI * 2);
+    ctx.fill();
+
+    // Cloth — horizontal segments with progressive wind lag
+    const dir = f.side >= 0 ? 1 : -1;
+    // Colors: steampunk runway — burgundy / cream / navy stripes
+    const palettes = [
+      ["#7a1f2e", "#c9a66b", "#7a1f2e"],
+      ["#2c3d5c", "#e8dcc8", "#2c3d5c"],
+      ["#5c4030", "#d4b878", "#5c4030"]
+    ];
+    const pal = palettes[f.hue % palettes.length];
+
+    // Soft shadow under flag
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.ellipse(poleX + dir * flagW * 0.35, poleBot + 2, flagW * 0.4, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Draw flag as ribbon of quads
+    for (let s = 0; s < segs; s++) {
+      const u0 = s / segs;
+      const u1 = (s + 1) / segs;
+      // Wave amplitude grows toward free end
+      const wave0 = Math.sin(t * 2.1 + u0 * 4.2) * (4 + 7 * u0) * wind;
+      const wave1 = Math.sin(t * 2.1 + u1 * 4.2) * (4 + 7 * u1) * wind;
+      const droop0 = u0 * u0 * 5 * wind;
+      const droop1 = u1 * u1 * 5 * wind;
+      const x0 = poleX + dir * (u0 * flagW);
+      const x1 = poleX + dir * (u1 * flagW);
+      const yTop0 = poleTop + wave0 * 0.35 + droop0 * 0.15;
+      const yTop1 = poleTop + wave1 * 0.35 + droop1 * 0.15;
+      const yBot0 = poleTop + flagH + wave0 + droop0;
+      const yBot1 = poleTop + flagH + wave1 + droop1;
+
+      // Stripe by segment
+      const stripe = Math.floor(u0 * 3) % 3;
+      ctx.fillStyle = pal[stripe];
+      ctx.beginPath();
+      ctx.moveTo(x0, yTop0);
+      ctx.lineTo(x1, yTop1);
+      ctx.lineTo(x1, yBot1);
+      ctx.lineTo(x0, yBot0);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // Cloth edge highlight
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let s = 0; s <= segs; s++) {
+      const u = s / segs;
+      const wave = Math.sin(t * 2.1 + u * 4.2) * (4 + 7 * u) * wind;
+      const droop = u * u * 5 * wind;
+      const x = poleX + dir * (u * flagW);
+      const y = poleTop + wave * 0.35 + droop * 0.15;
+      if (s === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawAirfieldFlagsLayer(sink) {
+    if (!airfieldFlags || !airfieldFlags.length) return;
+    airfieldFlags.forEach(function(f) {
+      const tile = f.tile;
+      if (!tile) return;
+      const tw = tile.w, th = tile.h, tx = tile.x;
+      if (!(tw > 0) || !(th > 0)) return;
+      const y = H - th + (sink || 0);
+      drawAirfieldFlag(f, tx, y, tw, th);
+    });
+  }
+
   function drawAirfieldStrip() {
     if (!airfieldMode) return;
     if (typeof images === "undefined" || !images) return;
@@ -983,6 +1125,8 @@
       if (!isFinite(y) || y > H + 40) return;
       try { ctx.drawImage(img, tx, y, tw, th); } catch (e) {}
     });
+    // Animated wind flags layered on top of strip art
+    drawAirfieldFlagsLayer(sink);
   }
 
   function drawAirfieldShadow() {
