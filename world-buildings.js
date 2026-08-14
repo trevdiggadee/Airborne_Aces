@@ -1055,8 +1055,8 @@
     if (isLanding) return;
     airfieldFlags.push({
       tile: tile,
-      fx: 0.30,          // just right of the leftmost hangar cluster
-      fy: 0.02,          // base near top of strip art (pole grows upward)
+      fx: 0.22,          // left — right of airport building, above runway dirt
+      fy: 0.52,          // lower — pole base on dirt above the runway
       frame: 0,
       frameT: 0,
       fps: 14
@@ -1093,17 +1093,17 @@
     const sx = col * fw;
     const sy = row * fh;
 
-    // Scale flag so pole height is ~42% of strip height
-    const targetH = Math.max(28, tileH * 0.55);
+    // Scale: pole sits on dirt, flag not oversized
+    const targetH = Math.max(24, tileH * 0.42);
     const scale = targetH / fh;
     const dw = fw * scale;
     const dh = fh * scale;
 
-    // Anchor: bottom of pole sits on the strip surface at (fx, fy)
+    // Anchor: bottom of pole base on dirt at (fx, fy)
     const baseX = tileX + f.fx * tileW;
     const baseY = tileY + f.fy * tileH;
-    const dx = baseX - dw * 0.22; // pole is slightly left inside the frame
-    const dy = baseY - dh * 0.96; // almost full pole above the base
+    const dx = baseX - dw * 0.28; // pole column is left-of-center in frame
+    const dy = baseY - dh * 0.98; // pole foot on the dirt
 
     try {
       ctx.save();
@@ -1139,8 +1139,6 @@
       if (!airfieldTiles || !airfieldTiles.length) return;
     }
     const sink = (typeof airfieldStripY === "number" && isFinite(airfieldStripY)) ? airfieldStripY : 0;
-    // Windsock BEHIND the strip art
-    drawAirfieldFlagsLayer(sink);
     airfieldTiles.forEach(function(tile) {
       if (!tile) return;
       let tw = tile.w, th = tile.h, tx = tile.x;
@@ -1156,6 +1154,8 @@
       if (!isFinite(y) || y > H + 40) return;
       try { ctx.drawImage(img, tx, y, tw, th); } catch (e) {}
     });
+    // Windsock IN FRONT of strip, on dirt above runway
+    drawAirfieldFlagsLayer(sink);
     // Runway edge lights disabled
     // drawAirfieldLightsLayer(sink);
   }
