@@ -714,6 +714,11 @@
         c.collected = true;
         ruffStats.coins = (ruffStats.coins || 0) + 1;
         window.__airborneCollectCoins = (window.__airborneCollectCoins || 0) + 1;
+        // HUD third slot is coins (element id collectPowerPct)
+        try {
+          const coinEl = document.getElementById("collectPowerPct");
+          if (coinEl) coinEl.textContent = String(window.__airborneCollectCoins);
+        } catch (e) {}
         if (typeof updateCollectDock === "function") updateCollectDock();
         if (typeof score === "number") score += COIN_SCORE;
         if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
@@ -1207,6 +1212,12 @@
     if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay();
     ruffStats = { crystals: 0, coins: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, landingStars: 3 };
     ruffCrystals = [];
+    ruffCoins = [];
+    window.__airborneCollectCoins = 0;
+    try {
+      const coinEl = document.getElementById("collectPowerPct");
+      if (coinEl) coinEl.textContent = "0";
+    } catch (e) {}
     ruffMarkers = [];
     ruffCombo = 0;
     ruffIntroDone = false;
@@ -1453,6 +1464,7 @@
     }
     drawMarkers();
     drawCrystals();
+    try { drawTrainingCoins(); } catch (e) {}
     drawSparkles();
     drawRuffCompanion();
   }
