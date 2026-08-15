@@ -335,7 +335,7 @@
   }
 
   function spawnGoldRing() {
-    const r = Math.min(70, W * 0.16); // larger so blimp clearly flies through
+    const r = Math.min(34, W * 0.08); // half previous size
     const groundY = groundLevelY();
     const minY = H * 0.12;
     const maxY = groundY - H * 0.22;
@@ -979,7 +979,7 @@
         const cx = o.x + o.w / 2;
         const cy = o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8);
         // Larger hoop so the blimp clearly fits through
-        const baseR = (o.r || o.w / 2) * 1.35;
+        const baseR = (o.r || o.w / 2) * 1.0;
         const esc = o.expandScale || 1;
         const rad = baseR * esc;
         const passed = !!o.passed;

@@ -393,6 +393,9 @@
   function setStage(name) {
     ruffStage = name;
     ruffStageT = 0;
+    ruffLessonPendingNext = false;
+    ruffLessonClearing = false;
+    ruffLessonPauseT = 0;
     ruffLineIdx = 0;
     ruffLines = DIALOGUE[name] ? DIALOGUE[name].slice() : [];
     ruffWaitingInput = false;
@@ -547,6 +550,75 @@
       return;
     }
     setStage(STAGE_ORDER[i + 1]);
+  }
+
+  // Gate: wait until lesson items leave/collected, then 2s pause, then nextStage
+  var ruffLessonClearing = false;
+  var ruffLessonPauseT = 0;
+  var ruffLessonPendingNext = false;
+
+  function stopLessonSpawns() {
+    window.__airborneAirfieldObstacles = false;
+    window.__airborneAirfieldRings = false;
+    if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+  }
+
+  function lessonItemsPending() {
+    var pending = 0;
+    try {
+      if (ruffCrystals && ruffCrystals.length) {
+        pending += ruffCrystals.filter(function (c) { return c && !c.collected && c.x > -60; }).length;
+      }
+      if (ruffCoins && ruffCoins.length) {
+        pending += ruffCoins.filter(function (c) { return c && !c.collected && c.x > -60; }).length;
+      }
+      if (typeof obstacles !== "undefined" && obstacles && obstacles.length) {
+        pending += obstacles.filter(function (o) {
+          return o && o.x + (o.w || 0) > -40;
+        }).length;
+      }
+      if (window.__airborneFirePickup && !window.__airborneFirePickup.collected && window.__airborneFirePickup.x > -60) {
+        pending += 1;
+      }
+      if (typeof shieldPickup !== "undefined" && shieldPickup && shieldPickup.x > -50) {
+        pending += 1;
+      }
+      if (typeof powerup !== "undefined" && powerup && powerup.x > -50) {
+        pending += 1;
+      }
+    } catch (e) {}
+    return pending;
+  }
+
+  function requestNextStage() {
+    // Start clearing current lesson items
+    if (!ruffLessonPendingNext) {
+      ruffLessonPendingNext = true;
+      ruffLessonClearing = true;
+      ruffLessonPauseT = 0;
+      stopLessonSpawns();
+    }
+  }
+
+  function tickLessonGate(dt) {
+    if (!ruffLessonPendingNext) return;
+    if (ruffLessonClearing) {
+      stopLessonSpawns();
+      if (lessonItemsPending() > 0) {
+        ruffLessonPauseT = 0;
+        return; // still clearing
+      }
+      // Items gone — start 2s pause
+      ruffLessonClearing = false;
+      ruffLessonPauseT = 0;
+    }
+    ruffLessonPauseT += dt;
+    if (ruffLessonPauseT >= 2.0) {
+      ruffLessonPendingNext = false;
+      ruffLessonClearing = false;
+      ruffLessonPauseT = 0;
+      nextStage();
+    }
   }
 
   // ---------- Crystals ----------
@@ -1340,27 +1412,32 @@
     } else if (ruffStage === "altitude") {
       // Do NOT wipe obstacles every frame — causes random item disappear
       if (typeof updateMarkers === "function") updateMarkers(dt);
-      if (ruffStageT > 9) nextStage();
+      if (!ruffLessonPendingNext && ruffStageT > 9) requestNextStage();
     } else if (ruffStage === "crystals") {
       updateCrystals(dt);
       updateTrainingCoins(dt);
-      if (ruffStats.crystals < 3 && ruffCrystals.length < 2) spawnCrystals(3);
-      if (ruffCoins.length < 2) spawnTrainingCoins(4);
-      if ((ruffStats.crystals >= 3 && ruffCrystals.length === 0 && ruffStageT > 3) || ruffStageT > 14) {
-        nextStage();
+      if (!ruffLessonPendingNext) {
+        if (ruffStats.crystals < 3 && ruffCrystals.length < 2) spawnCrystals(3);
+        if (ruffCoins.length < 2) spawnTrainingCoins(4);
+        if ((ruffStats.crystals >= 3 && ruffCrystals.length === 0 && ruffStageT > 3) || ruffStageT > 14) {
+          requestNextStage();
+        }
       }
     } else if (ruffStage === "obstacles") {
-      window.__airborneAirfieldObstacles = true;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 1.35; // slightly faster birds
-      // Keep spawning for most of the stage — only stop near the end
-      if (ruffStageT > 10) {
-        window.__airborneAirfieldObstacles = false;
-        if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-      }
-      const obsCount = (typeof obstacles !== "undefined" && obstacles) ? obstacles.length : 0;
-      if ((ruffStageT > 11 && obsCount === 0) || ruffStageT > 15) {
-        ruffStats.obstaclesAvoided += 2;
-        nextStage();
+      if (ruffLessonPendingNext) {
+        stopLessonSpawns();
+      } else {
+        window.__airborneAirfieldObstacles = true;
+        if (typeof spawnInterval !== "undefined") spawnInterval = 1.35;
+        if (ruffStageT > 10) {
+          window.__airborneAirfieldObstacles = false;
+          if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+        }
+        const obsCount = (typeof obstacles !== "undefined" && obstacles) ? obstacles.length : 0;
+        if ((ruffStageT > 11 && obsCount === 0) || ruffStageT > 15) {
+          ruffStats.obstaclesAvoided += 2;
+          requestNextStage();
+        }
       }
     } else if (ruffStage === "shield") {
       ruffCrystals = [];
@@ -1383,9 +1460,8 @@
         window.__airborneAirfieldObstacles = false;
         if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       }
-      if (ruffStageT > 16) {
-        if (typeof obstacles !== "undefined") obstacles = [];
-        nextStage();
+      if (!ruffLessonPendingNext && ruffStageT > 16) {
+        requestNextStage();
       }
     } else if (ruffStage === "powerup") {
       ruffCrystals = [];
@@ -1418,9 +1494,9 @@
         window.__airborneAirfieldObstacles = false;
         if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       }
-      if ((typeof stormActive !== "undefined" && stormActive && ruffStageT > 5) || ruffStageT > 18) {
+      if (!ruffLessonPendingNext && ((typeof stormActive !== "undefined" && stormActive && ruffStageT > 5) || ruffStageT > 18)) {
         window.__airborneAirfieldObstacles = false;
-        nextStage();
+        requestNextStage();
       }
     } else if (ruffStage === "rings") {
       ruffCrystals = [];
@@ -1436,9 +1512,8 @@
       const ringLeft = (typeof obstacles !== "undefined" && obstacles)
         ? obstacles.filter(function (o) { return o && (o.isRing || o.type === "gold_ring") && !o.collected; }).length
         : 0;
-      if ((ruffStats.rings >= 4 && ringLeft === 0 && ruffStageT > 6) || ruffStageT > 18) {
-        if (typeof obstacles !== "undefined") obstacles = [];
-        nextStage();
+      if (!ruffLessonPendingNext && ((ruffStats.rings >= 4 && ringLeft === 0 && ruffStageT > 6) || ruffStageT > 18)) {
+        requestNextStage();
       }
     } else if (ruffStage === "combined") {
       updateCrystals(dt);
@@ -1454,11 +1529,8 @@
       if (ruffCrystals.length < 1 && ruffStageT > 3) spawnCrystals(2);
       // Last lesson before landing — coin rain
       if (ruffCoins.length < 3 && ruffStageT > 1.5) spawnTrainingCoins(5);
-      if (ruffStageT > 18) {
-        ruffCrystals = [];
-        ruffCoins = [];
-        if (typeof obstacles !== "undefined") obstacles = [];
-        nextStage();
+      if (!ruffLessonPendingNext && ruffStageT > 18) {
+        requestNextStage();
       }
     } else if (ruffStage === "landing") {
       // Request land once — do not spam every frame (causes land/score glitches)

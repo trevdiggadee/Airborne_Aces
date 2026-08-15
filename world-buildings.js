@@ -831,11 +831,11 @@
       if (!airfieldTiles || !airfieldTiles.length) {
         try { ensureAirfieldStripVisible(); } catch (e) {}
       }
-      const skidDur = 5.0;
+      const skidDur = 50.0; // ~10x longer runway drive
       const u = Math.min(1, airfieldSkidT / skidDur);
-      const ease = 1 - Math.pow(1 - u, 1.6);
-      // Takeoff-matching scroll under the blimp
-      const driveSpd = Math.max(airfieldTakeoffSpeed || 210, 220) * (1.2 - 0.7 * ease);
+      const ease = 1 - Math.pow(1 - u, 1.4);
+      // Strong continuous scroll like takeoff (slow only at the very end)
+      const driveSpd = Math.max(airfieldTakeoffSpeed || 210, 230) * (u < 0.85 ? 1.15 : (1.15 - 0.9 * ((u - 0.85) / 0.15)));
       (airfieldTiles || []).forEach(function(tile) {
         if (!tile) return;
         tile.x -= driveSpd * dt;
@@ -848,7 +848,7 @@
       if (typeof player !== "undefined" && player) {
         const sx = (typeof airfieldSkidStartX === "number") ? airfieldSkidStartX : W * 0.28;
         // Visible roll toward end of strip
-        player.x = sx + ease * W * 0.42;
+        player.x = sx + ease * W * 0.55;
         player.y = landY;
         player.vy = 0;
         player.rotation = (1 - u) * 0.06;
@@ -929,26 +929,40 @@
         });
         airfieldFireworks = airfieldFireworks.filter(function(fw) { return fw.age < fw.life; });
       }
-      // Hold on strip briefly, then score popup (always from here)
-      if (!window.__airborneTrainingReportShown && airfieldScoreT > 3.5) {
+      // Hold briefly on strip then ALWAYS show score
+      if (!window.__airborneTrainingReportShown && airfieldScoreT > 2.0) {
         window.__airborneTrainingReportShown = true;
         window.__airborneTrainingReportReady = true;
         window.__airborneAirfieldDidLand = true;
         try {
           if (typeof window.__airborneShowRuffReport === "function") {
             window.__airborneShowRuffReport();
-          } else if (typeof showFlightReport === "function") {
-            showFlightReport();
-          } else {
-            var el = document.getElementById("ruffReport");
-            if (el) el.classList.add("visible");
+          }
+        } catch (e) {}
+        try {
+          if (typeof showFlightReport === "function") showFlightReport();
+        } catch (e2) {}
+        try {
+          var el = document.getElementById("ruffReport");
+          if (el) {
+            el.classList.add("visible");
+            el.style.display = "flex";
+            el.style.visibility = "visible";
+            el.style.opacity = "1";
+            el.style.zIndex = "80";
+          }
+        } catch (e3) {}
+        try {
+          // noop catch align with original structure
+          if (false) {
           }
         } catch (e) {
           console.warn("score handoff", e);
         }
+        airfieldPhase = "done";
+        syncAirfieldGlobals();
       }
-      airfieldPhase = "done";
-      syncAirfieldGlobals();
+      // Stay in score phase until report fires (do NOT set done every frame)
       syncAirfieldGlobals();
     }
       // Final runway pin each frame while on ground phases
