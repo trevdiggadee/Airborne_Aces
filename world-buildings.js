@@ -1204,30 +1204,8 @@
   }
 
   function drawAirfieldShadow() {
-    try {
-      if (!airfieldMode || typeof player === "undefined" || !player) return;
-      if (airfieldPhase === "score" || airfieldPhase === "lesson") return;
-      const gy = groundLevelY();
-      const frac = Math.max(0, Math.min(1, airfieldAltFrac || 0));
-      const scale = 1 - frac * 0.75;
-      const alpha = 0.35 * (1 - frac * 0.65);
-      if (scale < 0.15 || alpha < 0.05) return;
-      const pw = player.w > 0 ? player.w : 50;
-      const sw = pw * 0.8 * scale;
-      const sh = Math.max(4, sw * 0.18);
-      const sx = player.x || W * 0.22;
-      const sy = gy - 2;
-      if (!isFinite(sx) || !isFinite(sy) || !isFinite(sw)) return;
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = "rgba(20,16,10,1)";
-      ctx.translate(sx, sy);
-      ctx.scale(1, Math.max(0.2, sh / Math.max(1, sw)));
-      ctx.beginPath();
-      ctx.arc(0, 0, Math.max(2, sw / 2), 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    } catch (e) {}
+    // Disabled — no blimp ground shadow
+    return;
   }
 
   function drawAirfieldTip() {

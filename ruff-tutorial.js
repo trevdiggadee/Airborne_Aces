@@ -65,6 +65,8 @@
   };
   let ruffCrystals = [];
   let ruffCoins = [];
+    ruffAirship = null;
+    window.__airborneAirshipCleared = false;
   const COIN_SCORE = 10;
   let ruffMarkers = [];
   let ruffCombo = 0;
@@ -681,14 +683,94 @@
   }
 
 
+
+  let ruffAirship = null;
+
+  function spawnTrainingAirship() {
+    if (ruffAirship) return;
+    const ww = (typeof W !== "undefined" ? W : 400);
+    const hh = (typeof H !== "undefined" ? H : 600);
+    // 35% of screen width
+    const w = ww * 0.35;
+    const h = w * (314 / 648); // frame aspect ~5x5 sheet
+    ruffAirship = {
+      x: ww + 40,
+      y: hh * 0.38,
+      w: w,
+      h: h,
+      frame: 0,
+      frameT: 0,
+      cols: 5,
+      rows: 5,
+      // slow scroll
+      speed: 48
+    };
+  }
+
+  function updateTrainingAirship(dt) {
+    if (!ruffAirship) return;
+    const a = ruffAirship;
+    a.x -= a.speed * dt;
+    a.frameT += dt;
+    const fd = 1 / 12;
+    while (a.frameT >= fd) {
+      a.frameT -= fd;
+      a.frame = (a.frame + 1) % (a.cols * a.rows);
+    }
+    // soft bob
+    a.y = (typeof H !== "undefined" ? H : 600) * 0.38 + Math.sin((a.frameT + a.x * 0.01) * 1.2) * 8;
+    // Collision — avoid the airship (no shield check for training)
+    if (typeof player !== "undefined" && player && typeof takeHit === "function") {
+      const px = player.x, py = player.y;
+      const pw = player.w * 0.35, ph = player.h * 0.35;
+      if (px + pw > a.x + a.w * 0.1 && px - pw < a.x + a.w * 0.9 &&
+          py + ph > a.y + a.h * 0.15 && py - ph < a.y + a.h * 0.85) {
+        if (!a.hitCooldown || a.hitCooldown <= 0) {
+          a.hitCooldown = 1.2;
+          try { takeHit(); } catch (e) {}
+        }
+      }
+    }
+    if (a.hitCooldown > 0) a.hitCooldown -= dt;
+    // off screen left
+    if (a.x + a.w < -20) {
+      ruffAirship = null;
+      window.__airborneAirshipCleared = true;
+    }
+  }
+
+  function drawTrainingAirship() {
+    if (!ruffAirship || typeof ctx === "undefined") return;
+    const a = ruffAirship;
+    const sheet = (typeof images !== "undefined") ? images.training_airship : null;
+    if (!sheet || !sheet.naturalWidth) {
+      // fallback silhouette
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = "#4a3a28";
+      ctx.fillRect(a.x, a.y, a.w, a.h);
+      ctx.restore();
+      return;
+    }
+    const fw = sheet.naturalWidth / a.cols;
+    const fh = sheet.naturalHeight / a.rows;
+    const fr = a.frame % (a.cols * a.rows);
+    const col = fr % a.cols;
+    const row = Math.floor(fr / a.cols);
+    ctx.save();
+    ctx.drawImage(sheet, col * fw, row * fh, fw, fh, a.x, a.y, a.w, a.h);
+    ctx.restore();
+  }
+
+
   function spawnTrainingCoins(n) {
     n = n || 4;
     const groundY = (typeof groundLevelY === "function") ? groundLevelY() : (typeof H !== "undefined" ? H * 0.78 : 400);
     for (let i = 0; i < n; i++) {
       ruffCoins.push({
-        x: (typeof W !== "undefined" ? W : 400) + 40 + i * (70 + Math.random() * 50),
-        y: (typeof H !== "undefined" ? H : 600) * (0.22 + Math.random() * 0.42),
-        r: 14,
+        x: (typeof W !== "undefined" ? W : 400) + 40 + i * (90 + Math.random() * 60),
+        y: (typeof H !== "undefined" ? H : 600) * (0.18 + Math.random() * 0.48),
+        r: 18,
         spin: Math.random() * Math.PI * 2,
         bob: Math.random() * Math.PI * 2,
         collected: false,
@@ -743,75 +825,71 @@
     if (!ruffCoins.length || typeof ctx === "undefined") return;
     ruffCoins.forEach(function (c) {
       if (c.collected) return;
-      const by = c.y + Math.sin(c.bob) * 5;
-      const squash = 0.55 + 0.45 * Math.abs(Math.cos(c.spin)); // spin edge-on illusion
+      const by = c.y + Math.sin(c.bob) * 6;
+      const spin = c.spin || 0;
+      // thickness from spin — thick face when facing camera
+      const face = 0.35 + 0.65 * Math.abs(Math.cos(spin));
+      const pulse = 1 + 0.06 * Math.sin(spin * 2);
+      const R = c.r * pulse;
       ctx.save();
       ctx.translate(c.x, by);
-      ctx.scale(squash, 1);
-      // outer glow
-      ctx.globalAlpha = 0.35;
-      ctx.fillStyle = "#ffd700";
+      // outer gold aura
+      ctx.globalAlpha = 0.4 + 0.2 * Math.sin(spin * 3);
+      const aura = ctx.createRadialGradient(0, 0, R * 0.4, 0, 0, R * 2.1);
+      aura.addColorStop(0, "rgba(255, 215, 80, 0.55)");
+      aura.addColorStop(0.5, "rgba(255, 180, 40, 0.18)");
+      aura.addColorStop(1, "rgba(255, 160, 0, 0)");
+      ctx.fillStyle = aura;
       ctx.beginPath();
-      ctx.arc(0, 0, c.r * 1.35, 0, Math.PI * 2);
+      ctx.arc(0, 0, R * 2.1, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
-      // rim
-      const g = ctx.createRadialGradient(-c.r * 0.3, -c.r * 0.35, 1, 0, 0, c.r);
-      g.addColorStop(0, "#fff6c8");
-      g.addColorStop(0.35, "#ffd700");
-      g.addColorStop(0.75, "#d4a017");
-      g.addColorStop(1, "#8a6a0a");
-      ctx.fillStyle = g;
+      // coin body (ellipse for spin)
+      ctx.scale(face, 1);
+      const body = ctx.createRadialGradient(-R * 0.3, -R * 0.35, 1, 0, 0, R);
+      body.addColorStop(0, "#fff6c0");
+      body.addColorStop(0.25, "#ffd700");
+      body.addColorStop(0.55, "#e8b923");
+      body.addColorStop(0.85, "#b8860b");
+      body.addColorStop(1, "#6b4e08");
+      ctx.fillStyle = body;
       ctx.beginPath();
-      ctx.arc(0, 0, c.r, 0, Math.PI * 2);
+      ctx.arc(0, 0, R, 0, Math.PI * 2);
       ctx.fill();
-      // inner ring
-      ctx.strokeStyle = "rgba(140, 100, 20, 0.7)";
-      ctx.lineWidth = Math.max(1.5, c.r * 0.12);
+      // milled edge ring
+      ctx.strokeStyle = "rgba(90, 60, 10, 0.75)";
+      ctx.lineWidth = Math.max(1.5, R * 0.1);
       ctx.beginPath();
-      ctx.arc(0, 0, c.r * 0.72, 0, Math.PI * 2);
+      ctx.arc(0, 0, R * 0.92, 0, Math.PI * 2);
       ctx.stroke();
-      // embossed star / AA mark
-      ctx.fillStyle = "rgba(120, 80, 10, 0.85)";
+      ctx.strokeStyle = "rgba(255, 230, 140, 0.7)";
+      ctx.lineWidth = Math.max(1, R * 0.06);
       ctx.beginPath();
-      const sr = c.r * 0.28;
-      for (let i = 0; i < 5; i++) {
-        const a = -Math.PI / 2 + i * Math.PI * 2 / 5;
-        const x = Math.cos(a) * sr;
-        const y = Math.sin(a) * sr;
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        const a2 = a + Math.PI / 5;
-        ctx.lineTo(Math.cos(a2) * sr * 0.45, Math.sin(a2) * sr * 0.45);
-      }
-      ctx.closePath();
-      ctx.fill();
-      // specular
-      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      ctx.arc(0, 0, R * 0.78, 0, Math.PI * 2);
+      ctx.stroke();
+      // AA emboss
+      ctx.fillStyle = "rgba(100, 70, 15, 0.9)";
+      ctx.font = "bold " + Math.max(9, R * 0.7) + "px Rockwell, Georgia, serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("★", 0, 1);
+      // specular glint
+      ctx.fillStyle = "rgba(255,255,255,0.65)";
       ctx.beginPath();
-      ctx.ellipse(-c.r * 0.28, -c.r * 0.32, c.r * 0.28, c.r * 0.16, -0.4, 0, Math.PI * 2);
+      ctx.ellipse(-R * 0.3, -R * 0.32, R * 0.28, R * 0.14, -0.5, 0, Math.PI * 2);
       ctx.fill();
-      ctx.restore();
-    });
-  }
-
-
-  function drawCrystals() {
-    if (!ruffCrystals.length || typeof ctx === "undefined") return;
-    ruffCrystals.forEach(function (c) {
-      if (c.collected) return;
-      const key = "blue_crystal_" + String(c.frame + 1).padStart(2, "0");
-      const img = (typeof images !== "undefined") ? images[key] : null;
-      const s = c.r * 2.2;
-      if (img && img.naturalWidth) {
-        ctx.drawImage(img, c.x - s / 2, c.y - s / 2, s, s);
-      } else {
-        ctx.save();
-        ctx.fillStyle = "#4fc3f7";
+      // orbiting sparkles
+      for (let i = 0; i < 3; i++) {
+        const a = spin * 1.5 + i * (Math.PI * 2 / 3);
+        const sx = Math.cos(a) * R * 1.35;
+        const sy = Math.sin(a) * R * 0.9;
+        ctx.globalAlpha = 0.5 + 0.5 * Math.sin(spin * 4 + i);
+        ctx.fillStyle = "#fff8d0";
         ctx.beginPath();
-        ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+        ctx.arc(sx, sy, 1.8, 0, Math.PI * 2);
         ctx.fill();
-        ctx.restore();
       }
+      ctx.restore();
     });
   }
 
@@ -1410,12 +1488,18 @@
     } else if (ruffStage === "combined") {
       updateCrystals(dt);
       updateTrainingCoins(dt);
-      if (ruffCrystals.length < 1 && ruffStageT > 3) spawnCrystals(2);
-      // Last lesson before landing — coin rain
-      if (ruffCoins.length < 3 && ruffStageT > 1.5) spawnTrainingCoins(5);
-      if (ruffStageT > 18) {
+      updateTrainingAirship(dt);
+      if (ruffCrystals.length < 1 && ruffStageT > 2) spawnCrystals(2);
+      if (ruffCoins.length < 3 && ruffStageT > 1.0) spawnTrainingCoins(5);
+      // Big industrial airship — avoid it; scrolls slowly
+      if (!ruffAirship && ruffStageT > 2.5) spawnTrainingAirship();
+      // Stay in lesson until airship is fully off-screen (or long failsafe)
+      const airshipDone = window.__airborneAirshipCleared || (!ruffAirship && ruffStageT > 8);
+      if (airshipDone && ruffStageT > 10) {
         ruffCrystals = [];
         ruffCoins = [];
+        ruffAirship = null;
+        window.__airborneAirshipCleared = false;
         if (typeof obstacles !== "undefined") obstacles = [];
         nextStage();
       }
@@ -1453,6 +1537,8 @@
     }
     drawMarkers();
     drawCrystals();
+    drawTrainingCoins();
+    drawTrainingAirship();
     drawSparkles();
     drawRuffCompanion();
   }

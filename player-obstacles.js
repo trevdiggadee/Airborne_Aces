@@ -176,9 +176,8 @@
       ctx.restore();
       return;
     }
-    // Stronger motion blur when diving fast
-    const blurVy = player.vy > 180 ? player.vy * 1.1 : player.vy;
-    drawMotionBlur(img, player.x, player.y, player.w, player.h, player.rotation, -blurVy * 0.35, blurVy);
+    // Motion blur removed — was reading as a shadow on the blimp
+    // (kept function available for obstacles)
 
     // Streaks + prop behind body; flame drawn on top after sprite for seamless blend
     if (typeof drawBlimpPersonality === "function") drawBlimpPersonality(false);
