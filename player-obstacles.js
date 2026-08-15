@@ -451,17 +451,33 @@
         o.bobPhase = (o.bobPhase || 0) + dt * 1.6;
         // Expand pulse after blimp flies through
         if (o.passed) {
-          o.expandT = Math.min(1, (o.expandT || 0) + dt / 0.38);
-          // ease out: grow to 1.32 then settle to 1.12
+          o.expandT = Math.min(1, (o.expandT || 0) + dt / 0.45);
+          // ease out: grow to 1.38 then settle to 1.15
           const t = o.expandT;
-          const peak = 1.32;
-          const settle = 1.12;
+          const peak = 1.38;
+          const settle = 1.15;
           if (t < 0.55) {
             const u = t / 0.55;
             o.expandScale = 1 + (peak - 1) * (1 - Math.pow(1 - u, 2));
           } else {
             const u = (t - 0.55) / 0.45;
             o.expandScale = peak + (settle - peak) * Math.min(1, u);
+          }
+          // Ghost trail samples — fading after-images as ring scrolls away
+          if (!o.ghosts) o.ghosts = [];
+          o.ghostSpawnT = (o.ghostSpawnT || 0) + dt;
+          if (o.ghostSpawnT >= 0.05 && o.ghosts.length < 8) {
+            o.ghostSpawnT = 0;
+            o.ghosts.push({
+              x: o.x + o.w / 2,
+              y: o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8),
+              scale: o.expandScale || 1,
+              life: 0.55
+            });
+          }
+          for (let gi = o.ghosts.length - 1; gi >= 0; gi--) {
+            o.ghosts[gi].life -= dt;
+            if (o.ghosts[gi].life <= 0) o.ghosts.splice(gi, 1);
           }
         }
         // Collect ring by flying through center
@@ -477,6 +493,8 @@
             o.passed = true;
             o.expandT = 0;       // expand anim 0→1
             o.expandScale = 1;
+            o.ghosts = [];
+            o.ghostSpawnT = 0;
             o.scored = true;
             score += 5;
             window.__airborneCollectRings = (window.__airborneCollectRings || 0) + 1;
@@ -712,13 +730,37 @@
   function drawObstacles() {
     obstacles.forEach(o => {
       if (o.isRing || o.type === "gold_ring") {
-        // Stay visible after pass-through — color change + expand, then scroll off
+        // Stay visible after pass-through — color change + expand + ghost trails
         const cx = o.x + o.w / 2;
         const cy = o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8);
         const baseR = o.r || o.w / 2;
         const esc = o.expandScale || 1;
         const r = baseR * esc;
         const passed = !!o.passed;
+        function strokeOvalAt(ox, oy, rx_, ry_, lw, color, a) {
+          ctx.save();
+          ctx.translate(ox, oy);
+          ctx.globalAlpha = a != null ? a : 1;
+          ctx.strokeStyle = color;
+          ctx.lineWidth = lw;
+          ctx.beginPath();
+          ctx.scale(rx_ / ry_, 1);
+          ctx.arc(0, 0, ry_, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+        // Ghost trails (behind live ring)
+        if (o.ghosts && o.ghosts.length) {
+          for (let gi = 0; gi < o.ghosts.length; gi++) {
+            const g = o.ghosts[gi];
+            const ga = Math.max(0, g.life / 0.55) * 0.45;
+            const gr = baseR * (g.scale || 1) * (0.92 + 0.08 * (1 - g.life / 0.55));
+            const gx = gr * 0.28;
+            const gy = gr * 1.05;
+            strokeOvalAt(g.x, g.y, gx * 1.05, gy * 1.02, Math.max(5, gr * 0.18), "#2ecc71", ga * 0.5);
+            strokeOvalAt(g.x, g.y, gx, gy, Math.max(3, gr * 0.12), "#3dde8a", ga);
+          }
+        }
         ctx.save();
         ctx.translate(cx, cy);
         // Sideways hoop (vertical ellipse via scale+arc) — Safari safe
