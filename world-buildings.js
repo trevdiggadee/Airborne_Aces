@@ -741,7 +741,7 @@
         airfieldStripY = H * 0.55; // deeper start so top edge stays off-screen longer
       }
       // Rise into place, then HARD STOP — extended so landing art is visible longer
-      const riseDur = 3.0; // 50% faster rise
+      const riseDur = 4.5;
       const riseU = Math.min(1, airfieldLandT / riseDur);
       const riseE = 1 - Math.pow(1 - riseU, 2.4);
       // Raised another ~3%
@@ -751,7 +751,7 @@
       if (riseU >= 1) airfieldStripY = restSink;
 
       // Slower approach so you can see flags/windsock longer
-      const approachSpd = 93; // 50% faster approach
+      const approachSpd = 62;
       (airfieldTiles || []).forEach(function(tile) {
         if (!tile) return;
         // Stop earlier so the runway stays fully under the blimp with margin
@@ -772,12 +772,12 @@
       if (typeof player !== "undefined" && player) {
         const ph = player.h > 0 ? player.h : 40;
         // Player-controlled landing: mild gravity so taps (flap) have clear effect
-        player.vy += 780 * dt; // 50% faster descent
-        if (player.vy > 480) player.vy = 480;
-        const fieldReady = airfieldLandT > 1.45; // 50% sooner
+        player.vy += 520 * dt;
+        if (player.vy > 320) player.vy = 320;
+        const fieldReady = airfieldLandT > 2.2;
         // gentle assist only when high above deck after strip is in place
         if (fieldReady && player.y < landY - 90) {
-          player.vy += 180 * dt;
+          player.vy += 120 * dt;
         }
         player.y += player.vy * dt;
         player.x = W * 0.28;
@@ -819,21 +819,24 @@
       syncAirfieldGlobals();
 
     
-    // ---- SKID (short screeching stop) ----
+    // ---- SKID (drive along runway to end of strip, then stop) ----
     } else if (airfieldPhase === "skid") {
       window.__airborneAirfieldInvuln = true;
       window.__airborneAirfieldPaused = true;
       airfieldSkidT = (airfieldSkidT || 0) + dt;
-      const skidDur = 2.8;
+      // Longer drive so blimp rolls toward end of visible strip
+      const skidDur = 6.5;
       const u = Math.min(1, airfieldSkidT / skidDur);
-      // Decelerating slide further along the strip
-      const ease = 1 - Math.pow(1 - u, 2.4);
+      // Ease-out so it slows into a stop at the end
+      const ease = 1 - Math.pow(1 - u, 2.2);
       const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
       const sinkS = (typeof airfieldStripY === "number") ? airfieldStripY : 0;
       const landY = H - Math.max(40, th * 0.28) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10) + sinkS;
       if (typeof player !== "undefined" && player) {
         const sx = (typeof airfieldSkidStartX === "number") ? airfieldSkidStartX : W * 0.28;
-        player.x = sx + ease * W * 0.096; // +20% distance
+        // Drive from touchdown point almost to right edge of runway (~75% screen)
+        const endX = Math.min(W * 0.78, sx + W * 0.48);
+        player.x = sx + (endX - sx) * ease;
         player.y = landY;
         player.vy = 0;
         // Slight nose-down then settle (no bounce)
