@@ -915,8 +915,8 @@
         });
         airfieldFireworks = airfieldFireworks.filter(function(fw) { return fw.age < fw.life; });
       }
-      // Score popup immediately on first score frame
-      if (!window.__airborneTrainingReportShown) {
+      // Hold on strip ~10s after stop, then score popup
+      if (!window.__airborneTrainingReportShown && airfieldScoreT > 10) {
         window.__airborneTrainingReportShown = true;
         window.__airborneAirfieldDidLand = true;
         try {

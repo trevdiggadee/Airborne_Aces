@@ -699,8 +699,8 @@
 
   function updateTrainingCoins(dt) {
     if (!ruffCoins.length) return;
-    let spd = (typeof obstacleSpeed === "number" && obstacleSpeed > 40) ? obstacleSpeed : 200;
-    spd = Math.max(160, spd);
+    let spd = (typeof obstacleSpeed === "number" && obstacleSpeed > 40) ? obstacleSpeed * 0.55 : 110;
+    spd = Math.max(70, Math.min(120, spd)); // slower coins
     const px = (typeof player !== "undefined" && player) ? player.x : 0;
     const py = (typeof player !== "undefined" && player) ? player.y : 0;
     const pw = (typeof player !== "undefined" && player) ? player.w * 0.42 : 20;

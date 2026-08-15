@@ -435,6 +435,218 @@
     });
   }
 
+  
+  // ---------- FIRE POWER-UP (window-scoped so it never ReferenceErrors) ----------
+  (function initFirePowerSystem() {
+    if (window.__airborneFireInited) return;
+    window.__airborneFireInited = true;
+    window.__airborneFirePowerActive = false;
+    window.__airborneFirePowerUntil = 0;
+    window.__airborneFirePickup = null;
+    window.__airborneFireAura = [];
+    window.__airborneFireTrail = [];
+
+    window.__airborneSpawnFirePickup = function (x, y) {
+      window.__airborneFirePickup = {
+        x: (typeof x === "number") ? x : ((typeof W !== "undefined" ? W : 400) + 60),
+        y: (typeof y === "number") ? y : ((typeof H !== "undefined" ? H : 600) * (0.28 + Math.random() * 0.32)),
+        r: 24,
+        bob: Math.random() * Math.PI * 2,
+        pulse: 0,
+        speed: 125
+      };
+    };
+
+    window.__airborneEmitFireBurst = function (x, y) {
+      for (let i = 0; i < 12; i++) {
+        window.__airborneFireTrail.push({
+          x: x, y: y,
+          vx: (Math.random() - 0.5) * 130,
+          vy: -50 - Math.random() * 90,
+          life: 0.4 + Math.random() * 0.3,
+          age: 0,
+          r: 4 + Math.random() * 6,
+          smoke: false
+        });
+      }
+    };
+
+    window.__airborneEmitFireTrail = function (x, y) {
+      if (Math.random() > 0.65) return;
+      window.__airborneFireTrail.push({
+        x: x + (Math.random() - 0.5) * 12,
+        y: y,
+        vx: (Math.random() - 0.5) * 25,
+        vy: -15 - Math.random() * 35,
+        life: 0.3 + Math.random() * 0.25,
+        age: 0,
+        r: 3 + Math.random() * 5,
+        smoke: Math.random() < 0.4
+      });
+    };
+
+    window.__airborneUpdateFirePower = function (dt) {
+      const pickup = window.__airborneFirePickup;
+      if (pickup && !pickup.collected) {
+        pickup.x -= (pickup.speed || 125) * dt;
+        pickup.bob += dt * 2.4;
+        pickup.pulse = (pickup.pulse || 0) + dt * 5;
+        if (typeof player !== "undefined" && player) {
+          const dx = Math.abs(player.x - pickup.x);
+          const dy = Math.abs(player.y - (pickup.y + Math.sin(pickup.bob) * 10));
+          if (dx < player.w * 0.45 + pickup.r && dy < player.h * 0.45 + pickup.r) {
+            pickup.collected = true;
+            window.__airborneFirePowerActive = true;
+            window.__airborneFirePowerUntil = performance.now() + 9000;
+            try {
+              if (typeof score === "number") {
+                score += 25;
+                const el = document.getElementById("scoreVal");
+                if (el) el.textContent = String(score);
+                if (typeof bumpScorePop === "function") bumpScorePop();
+              }
+              if (typeof sfxPowerup === "function") sfxPowerup();
+            } catch (e) {}
+          }
+        }
+        if (pickup.x < -70) window.__airborneFirePickup = null;
+      }
+      if (window.__airborneFirePowerActive && performance.now() > window.__airborneFirePowerUntil) {
+        window.__airborneFirePowerActive = false;
+      }
+      // Aura particles
+      if (window.__airborneFirePowerActive && typeof player !== "undefined" && player) {
+        for (let i = 0; i < 2; i++) {
+          const ang = Math.random() * Math.PI * 2;
+          const rad = player.w * (0.3 + Math.random() * 0.35);
+          window.__airborneFireAura.push({
+            x: player.x + Math.cos(ang) * rad,
+            y: player.y + Math.sin(ang) * rad * 0.65,
+            vx: (Math.random() - 0.5) * 35,
+            vy: -35 - Math.random() * 50,
+            life: 0.3 + Math.random() * 0.25,
+            age: 0,
+            r: 3 + Math.random() * 5
+          });
+        }
+      }
+      const aura = window.__airborneFireAura;
+      for (let i = aura.length - 1; i >= 0; i--) {
+        const p = aura[i];
+        p.age += dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        if (p.age >= p.life) aura.splice(i, 1);
+      }
+      if (aura.length > 60) aura.splice(0, aura.length - 60);
+      const trail = window.__airborneFireTrail;
+      for (let i = trail.length - 1; i >= 0; i--) {
+        const p = trail[i];
+        p.age += dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 35 * dt;
+        if (p.smoke) p.r += 16 * dt;
+        if (p.age >= p.life) trail.splice(i, 1);
+      }
+      if (trail.length > 120) trail.splice(0, trail.length - 120);
+    };
+
+    window.__airborneDrawFirePower = function () {
+      if (typeof ctx === "undefined") return;
+      const pickup = window.__airborneFirePickup;
+      if (pickup && !pickup.collected) {
+        const y = pickup.y + Math.sin(pickup.bob) * 10;
+        const pulse = 1 + Math.sin(pickup.pulse || 0) * 0.12;
+        const R = pickup.r * pulse;
+        ctx.save();
+        const g = ctx.createRadialGradient(pickup.x, y, 2, pickup.x, y, R * 2.5);
+        g.addColorStop(0, "rgba(255,220,80,0.9)");
+        g.addColorStop(0.35, "rgba(255,120,20,0.55)");
+        g.addColorStop(0.7, "rgba(220,40,10,0.22)");
+        g.addColorStop(1, "rgba(180,20,0,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(pickup.x, y, R * 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        const g2 = ctx.createRadialGradient(pickup.x - 3, y - 4, 0, pickup.x, y, R);
+        g2.addColorStop(0, "#fff6c8");
+        g2.addColorStop(0.35, "#ffb030");
+        g2.addColorStop(0.75, "#ff4a10");
+        g2.addColorStop(1, "rgba(120,10,0,0.25)");
+        ctx.fillStyle = g2;
+        ctx.beginPath();
+        ctx.arc(pickup.x, y, R, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      if (window.__airborneFirePowerActive && typeof player !== "undefined" && player) {
+        ctx.save();
+        const tnow = performance.now() * 0.001;
+        for (let i = 0; i < 8; i++) {
+          const a = tnow * 3 + i * (Math.PI * 2 / 8);
+          const x = player.x + Math.cos(a) * player.w * 0.55;
+          const y = player.y + Math.sin(a * 1.3) * player.h * 0.48;
+          const gr = ctx.createRadialGradient(x, y, 0, x, y, 12);
+          gr.addColorStop(0, "rgba(255,240,120,0.65)");
+          gr.addColorStop(0.5, "rgba(255,100,20,0.3)");
+          gr.addColorStop(1, "rgba(255,40,0,0)");
+          ctx.fillStyle = gr;
+          ctx.beginPath();
+          ctx.arc(x, y, 12, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+      (window.__airborneFireAura || []).forEach(function (p) {
+        const u = 1 - p.age / p.life;
+        if (u <= 0) return;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, u);
+        const gr = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+        gr.addColorStop(0, "rgba(255,230,120,0.9)");
+        gr.addColorStop(0.5, "rgba(255,100,20,0.5)");
+        gr.addColorStop(1, "rgba(200,30,0,0)");
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+      (window.__airborneFireTrail || []).forEach(function (p) {
+        const u = 1 - p.age / p.life;
+        if (u <= 0) return;
+        ctx.save();
+        if (p.smoke) {
+          ctx.globalAlpha = u * 0.4;
+          ctx.fillStyle = "rgba(40,35,30,1)";
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.globalAlpha = u * 0.9;
+          const gr = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+          gr.addColorStop(0, "rgba(255,240,160,1)");
+          gr.addColorStop(0.4, "rgba(255,120,30,0.9)");
+          gr.addColorStop(1, "rgba(180,30,0,0)");
+          ctx.fillStyle = gr;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      });
+    };
+  })();
+
+  function updateFirePower(dt) {
+    try { if (window.__airborneUpdateFirePower) window.__airborneUpdateFirePower(dt); } catch (e) {}
+  }
+  function drawFirePower() {
+    try { if (window.__airborneDrawFirePower) window.__airborneDrawFirePower(); } catch (e) {}
+  }
+
+
   function updateObstacles(dt) {
     try { updateFirePower(dt); } catch (e) {}
     if (!bossActive && !bonusActive && !bonusPending && !(typeof isLevelEndActive === "function" && isLevelEndActive())) {
@@ -447,7 +659,20 @@
 
     const frameDuration = 1 / OBSTACLE_ANIM_FPS;
     obstacles.forEach(o => {
-      o.x -= obstacleSpeed * (window.__airborneAirfield && window.__airborneAirfieldObstacles ? 1.18 : 1) * (o.speedMult || 1) * dt;
+      if (o.onFire) {
+        o.vy = (typeof o.vy === "number" ? o.vy : 60) + 480 * dt;
+        if (o.vy > 560) o.vy = 560;
+        o.y += o.vy * dt;
+        o.x -= Math.max(40, obstacleSpeed * 0.3) * dt;
+        o.rot = (o.rot || 0) + dt * 3.5;
+        try {
+          if (typeof window.__airborneEmitFireTrail === "function") {
+            window.__airborneEmitFireTrail(o.x + o.w * 0.5, o.y + o.h * 0.3);
+          }
+        } catch (e) {}
+      } else {
+        o.x -= obstacleSpeed * (window.__airborneAirfield && window.__airborneAirfieldObstacles ? 1.18 : 1) * (o.speedMult || 1) * dt;
+      }
       if (o.isRing || o.type === "gold_ring") {
         o.spin = (o.spin || 0) + dt * 2.2;
         o.bobPhase = (o.bobPhase || 0) + dt * 1.6;
@@ -724,7 +949,7 @@
           // never damage from rings
         } else if (o.onFire) {
           // already burning — no damage
-        } else if (firePowerActive || window.__airborneFirePowerActive) {
+        } else if (window.__airborneFirePowerActive) {
           // Ignite obstacle — catches fire, falls off screen
           o.onFire = true;
           o.vy = 80 + Math.random() * 40;
@@ -734,19 +959,11 @@
             document.getElementById("scoreVal").textContent = score;
             if (typeof bumpScorePop === "function") bumpScorePop();
           } catch (e) {}
-          // burst of fire
-          for (let fi = 0; fi < 10; fi++) {
-            fireTrailParticles.push({
-              x: o.x + o.w * 0.5,
-              y: o.y + o.h * 0.4,
-              vx: (Math.random() - 0.5) * 120,
-              vy: -60 - Math.random() * 80,
-              life: 0.4 + Math.random() * 0.3,
-              age: 0,
-              r: 4 + Math.random() * 6,
-              smoke: false
-            });
-          }
+          try {
+            if (typeof window.__airborneEmitFireBurst === "function") {
+              window.__airborneEmitFireBurst(o.x + o.w * 0.5, o.y + o.h * 0.4);
+            }
+          } catch (e) {}
         } else {
           takeHit();
         }
@@ -855,28 +1072,24 @@
       const drawY = o.y + Math.sin(o.bobPhase) * o.bobAmount;
       const speed = obstacleSpeed * (o.speedMult || 1);
       drawMotionBlur(img, o.x + o.w / 2, drawY + o.h / 2, o.w, o.h, 0, speed, 0);
-      ctx.save();
       if (o.onFire) {
+        ctx.save();
         ctx.translate(o.x + o.w / 2, drawY + o.h / 2);
         ctx.rotate(o.rot || 0);
         ctx.drawImage(img, -o.w / 2, -o.h / 2, o.w, o.h);
-        // fire tint overlay
-        ctx.globalCompositeOperation = "source-atop";
-        ctx.fillStyle = "rgba(255, 80, 10, 0.45)";
-        ctx.fillRect(-o.w / 2, -o.h / 2, o.w, o.h);
+        // orange glow only (no source-atop — was blanking sprites)
         ctx.globalCompositeOperation = "lighter";
-        const fg = ctx.createRadialGradient(0, -o.h * 0.2, 2, 0, 0, o.w * 0.6);
-        fg.addColorStop(0, "rgba(255,240,120,0.7)");
-        fg.addColorStop(0.5, "rgba(255,100,20,0.35)");
+        const fg = ctx.createRadialGradient(0, -o.h * 0.15, 2, 0, 0, o.w * 0.7);
+        fg.addColorStop(0, "rgba(255,230,100,0.55)");
+        fg.addColorStop(0.45, "rgba(255,90,15,0.3)");
         fg.addColorStop(1, "rgba(255,40,0,0)");
         ctx.fillStyle = fg;
         ctx.beginPath();
-        ctx.arc(0, -o.h * 0.15, o.w * 0.55, 0, Math.PI * 2);
+        ctx.arc(0, -o.h * 0.1, o.w * 0.6, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       } else {
         ctx.drawImage(img, o.x, drawY, o.w, o.h);
-        ctx.restore();
       }
       // Brief white flash on impact
       if (o.hitFlash && o.hitFlash > 0) {
