@@ -444,15 +444,19 @@
     if (name === "intro") {
       ruffIntroFly = true;
       ruffIntroFlyT = 0;
-      // Start just off right edge so first frames are almost visible
-      ruffX = (typeof W !== "undefined" ? W : 400) * 0.92;
-      ruffY = (typeof H !== "undefined" ? H : 600) * 0.22;
+      // Visible on right side immediately
+      ruffX = (typeof W !== "undefined" ? W : 400) * 0.78;
+      ruffY = (typeof H !== "undefined" ? H : 600) * 0.28;
       ruffLineIdx = 0;
       ruffLineT = 0;
-      ruffLineDuration = 3.5;
+      ruffLineDuration = 3.2;
       ruffSpeechDone = true;
-      ruffIntroLineArmed = false;
-      ruffScalePulse = 1.15;
+      ruffIntroLineArmed = true;
+      ruffScalePulse = 1.25;
+      // Speak first line right away so training is never silent/empty
+      if (ruffLines.length) {
+        try { showRadio(ruffLines[0], 3.2); } catch (e) {}
+      }
     } else if (name === "takeoff") {
       ruffIntroFly = false;
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
@@ -1415,8 +1419,8 @@
           showRadio(ruffLines[ruffLineIdx], 3.2);
         }
       }
-      if ((ruffIntroLineArmed && ruffLineIdx >= ruffLines.length && ruffLineT > 1.0) ||
-          ruffStageT > 12) {
+      if ((ruffIntroLineArmed && ruffLineIdx >= ruffLines.length && ruffLineT > 0.8) ||
+          ruffStageT > 5.5) {
         ruffIntroFly = false;
         nextStage(); // → takeoff — runway unlocks
         console.log("[R.U.F.F.] intro done → takeoff");
@@ -1574,11 +1578,17 @@
   }
 
   function drawRuff() {
+    if (window.__airborneRuffActive || window.__airborneAirfield) {
+      ruffActive = true;
+    }
     if (!ruffActive && window.__airborneRuffActive) {
       ruffActive = true;
       if (!ruffStage || ruffStage === "idle") ruffStage = window.__airborneRuffStage || "intro";
     }
     if (!ruffActive) return;
+    // Never leave him off-screen
+    if (!(ruffX > 0) || !isFinite(ruffX)) ruffX = (typeof W !== "undefined" ? W : 400) * 0.75;
+    if (!(ruffY > 0) || !isFinite(ruffY)) ruffY = (typeof H !== "undefined" ? H : 600) * 0.28;
     if (!window.__ruffDrawLogged) {
       window.__ruffDrawLogged = true;
       console.log("[R.U.F.F.] drawing", ruffStage, Math.round(ruffX), Math.round(ruffY));
@@ -1649,6 +1659,16 @@
     }
   };
 
+  window.__airborneForceRuffTakeoff = function() {
+    ruffActive = true;
+    window.__airborneRuffActive = true;
+    if (ruffStage === "intro" || ruffStage === "idle" || !ruffStage) {
+      try { setStage("takeoff"); } catch (e) {
+        ruffStage = "takeoff";
+        window.__airborneRuffStage = "takeoff";
+      }
+    }
+  };
   window.__airborneForceRuffAltitude = function() {
     ruffActive = true;
     window.__airborneRuffActive = true;

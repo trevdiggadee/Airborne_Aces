@@ -409,15 +409,26 @@
     const holding = !!window.__airborneAirfieldHold;
     if (!(airfieldTakeoffSpeed > 0)) airfieldTakeoffSpeed = 50;
 
-    // Retry Ruff start a few times early — not every frame forever
-    if (!window.__airborneRuffActive && airfieldRunwayT > 0.8 && airfieldRunwayT < 6) {
+    // Ensure Ruff starts once
+    if (!window.__airborneRuffActive && airfieldRunwayT > 0.3 && airfieldRunwayT < 4) {
       try {
         if (typeof window.__airborneBeginRuff === "function") window.__airborneBeginRuff();
       } catch (e) {}
     }
-    // If intro hangs, unlock runway but let Ruff module advance stages
-    if ((window.__airborneRuffStage === "intro" || !window.__airborneRuffActive) && airfieldRunwayT > 14) {
+    // Hard unlock after brief intro so player is never stuck
+    if (airfieldRunwayT > 6) {
       window.__airborneAirfieldPaused = false;
+      if (window.__airborneRuffStage === "intro" || !window.__airborneRuffStage) {
+        try {
+          if (typeof window.__airborneForceRuffTakeoff === "function") {
+            window.__airborneForceRuffTakeoff();
+          } else {
+            window.__airborneRuffStage = "takeoff";
+          }
+        } catch (e) {
+          window.__airborneRuffStage = "takeoff";
+        }
+      }
     }
 
     // Scroll strip LEFT only (single image, no loop).
@@ -428,7 +439,7 @@
       const ruffSt = window.__airborneRuffStage || "intro";
       const introActive = (ruffSt === "intro") && !!window.__airborneRuffActive;
       // Safety: never freeze strip more than ~12s from training start
-      const introTimedOut = (airfieldRunwayT || 0) > 12;
+      const introTimedOut = (airfieldRunwayT || 0) > 5;
       const introStill = introActive && !introTimedOut;
       let scrollSpd = 0;
       if (!introStill) {
@@ -479,7 +490,7 @@
       window.__airborneAirfieldInvuln = true;
 
       const ruffSt = window.__airborneRuffStage || "intro";
-      const introLock = (ruffSt === "intro") && !!window.__airborneRuffActive && (airfieldRunwayT || 0) < 12;
+      const introLock = (ruffSt === "intro") && !!window.__airborneRuffActive && (airfieldRunwayT || 0) < 5;
 
       if (introLock) {
         // Wait for R.U.F.F. intro — strip frozen, blimp on deck
@@ -496,7 +507,7 @@
           player.vy = 0;
           player.rotation = 0;
         }
-        airfieldTip = "";
+        airfieldTip = "R.U.F.F. is briefing you…";
         syncAirfieldGlobals();
       } else {
         // Drive + liftoff
