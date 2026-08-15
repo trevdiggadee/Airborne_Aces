@@ -1215,6 +1215,9 @@
     ruffCrystals = [];
     ruffCoins = [];
     window.__airborneCollectCoins = 0;
+    window.__airborneFireSpawned = false;
+    window.__airborneFireSpawned2 = false;
+    window.__airborneFirePowerActive = false;
     try {
       if (typeof updateCollectDock === "function") updateCollectDock();
       const coinEl = document.getElementById("collectPowerPct");
@@ -1280,6 +1283,15 @@
     }
     updateRuffCompanion(dt);
     updateSparkles(dt);
+    // ALWAYS scroll remaining coins so they never freeze after a lesson ends
+    try {
+      if (ruffCoins && ruffCoins.length) {
+        updateTrainingCoins(dt);
+        ruffCoins = ruffCoins.filter(function (c) {
+          return c && !c.collected && c.x > -80;
+        });
+      }
+    } catch (e) {}
 
     // Auto-advance dialogue lines
     if (ruffLines.length && ruffLineIdx < ruffLines.length &&
@@ -1378,6 +1390,14 @@
     } else if (ruffStage === "powerup") {
       ruffCrystals = [];
       window.__airborneAirfieldAllowPowerup = true;
+      if (!window.__airborneFireSpawned) {
+        window.__airborneFireSpawned = true;
+        try {
+          if (typeof window.__airborneSpawnFirePickup === "function") {
+            window.__airborneSpawnFirePickup();
+          }
+        } catch (e) {}
+      }
       const sm = document.getElementById("stormMeter");
       if (sm) {
         sm.style.display = "";
@@ -1423,6 +1443,14 @@
     } else if (ruffStage === "combined") {
       updateCrystals(dt);
       updateTrainingCoins(dt);
+      if (ruffStageT > 4 && !window.__airborneFireSpawned2) {
+        window.__airborneFireSpawned2 = true;
+        try {
+          if (typeof window.__airborneSpawnFirePickup === "function") {
+            window.__airborneSpawnFirePickup();
+          }
+        } catch (e) {}
+      }
       if (ruffCrystals.length < 1 && ruffStageT > 3) spawnCrystals(2);
       // Last lesson before landing — coin rain
       if (ruffCoins.length < 3 && ruffStageT > 1.5) spawnTrainingCoins(5);

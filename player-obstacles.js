@@ -436,6 +436,7 @@
   }
 
   function updateObstacles(dt) {
+    try { updateFirePower(dt); } catch (e) {}
     if (!bossActive && !bonusActive && !bonusPending && !(typeof isLevelEndActive === "function" && isLevelEndActive())) {
       spawnTimer += dt;
       if (spawnTimer >= spawnInterval) {
@@ -650,7 +651,7 @@
       }
     });
 
-    obstacles = obstacles.filter(o => o.x + o.w > -20);
+    obstacles = obstacles.filter(o => o.x + o.w > -20 && (!o.onFire || o.y < H + 80));
 
     // scoring + collision
     obstacles.forEach(o => {
@@ -721,6 +722,31 @@
         }
         if (o.isRing || o.type === "gold_ring") {
           // never damage from rings
+        } else if (o.onFire) {
+          // already burning — no damage
+        } else if (firePowerActive || window.__airborneFirePowerActive) {
+          // Ignite obstacle — catches fire, falls off screen
+          o.onFire = true;
+          o.vy = 80 + Math.random() * 40;
+          o.scored = true;
+          score += 3;
+          try {
+            document.getElementById("scoreVal").textContent = score;
+            if (typeof bumpScorePop === "function") bumpScorePop();
+          } catch (e) {}
+          // burst of fire
+          for (let fi = 0; fi < 10; fi++) {
+            fireTrailParticles.push({
+              x: o.x + o.w * 0.5,
+              y: o.y + o.h * 0.4,
+              vx: (Math.random() - 0.5) * 120,
+              vy: -60 - Math.random() * 80,
+              life: 0.4 + Math.random() * 0.3,
+              age: 0,
+              r: 4 + Math.random() * 6,
+              smoke: false
+            });
+          }
         } else {
           takeHit();
         }
@@ -729,6 +755,7 @@
   }
 
   function drawObstacles() {
+    try { drawFirePower(); } catch (e) {}
     obstacles.forEach(o => {
       if (o.isRing || o.type === "gold_ring") {
         // Stay visible after pass-through — color change + expand + ghost trails
@@ -828,7 +855,29 @@
       const drawY = o.y + Math.sin(o.bobPhase) * o.bobAmount;
       const speed = obstacleSpeed * (o.speedMult || 1);
       drawMotionBlur(img, o.x + o.w / 2, drawY + o.h / 2, o.w, o.h, 0, speed, 0);
-      ctx.drawImage(img, o.x, drawY, o.w, o.h);
+      ctx.save();
+      if (o.onFire) {
+        ctx.translate(o.x + o.w / 2, drawY + o.h / 2);
+        ctx.rotate(o.rot || 0);
+        ctx.drawImage(img, -o.w / 2, -o.h / 2, o.w, o.h);
+        // fire tint overlay
+        ctx.globalCompositeOperation = "source-atop";
+        ctx.fillStyle = "rgba(255, 80, 10, 0.45)";
+        ctx.fillRect(-o.w / 2, -o.h / 2, o.w, o.h);
+        ctx.globalCompositeOperation = "lighter";
+        const fg = ctx.createRadialGradient(0, -o.h * 0.2, 2, 0, 0, o.w * 0.6);
+        fg.addColorStop(0, "rgba(255,240,120,0.7)");
+        fg.addColorStop(0.5, "rgba(255,100,20,0.35)");
+        fg.addColorStop(1, "rgba(255,40,0,0)");
+        ctx.fillStyle = fg;
+        ctx.beginPath();
+        ctx.arc(0, -o.h * 0.15, o.w * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      } else {
+        ctx.drawImage(img, o.x, drawY, o.w, o.h);
+        ctx.restore();
+      }
       // Brief white flash on impact
       if (o.hitFlash && o.hitFlash > 0) {
         ctx.save();

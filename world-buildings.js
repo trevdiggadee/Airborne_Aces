@@ -741,7 +741,7 @@
         airfieldStripY = H * 0.55; // deeper start so top edge stays off-screen longer
       }
       // Rise into place, then HARD STOP — extended so landing art is visible longer
-      const riseDur = 4.5;
+      const riseDur = 3.0; // 50% faster rise
       const riseU = Math.min(1, airfieldLandT / riseDur);
       const riseE = 1 - Math.pow(1 - riseU, 2.4);
       // Raised another ~3%
@@ -751,7 +751,7 @@
       if (riseU >= 1) airfieldStripY = restSink;
 
       // Slower approach so you can see flags/windsock longer
-      const approachSpd = 62;
+      const approachSpd = 93; // 50% faster approach
       (airfieldTiles || []).forEach(function(tile) {
         if (!tile) return;
         // Stop earlier so the runway stays fully under the blimp with margin
@@ -772,12 +772,12 @@
       if (typeof player !== "undefined" && player) {
         const ph = player.h > 0 ? player.h : 40;
         // Player-controlled landing: mild gravity so taps (flap) have clear effect
-        player.vy += 520 * dt;
-        if (player.vy > 320) player.vy = 320;
-        const fieldReady = airfieldLandT > 2.2;
+        player.vy += 780 * dt; // 50% faster descent
+        if (player.vy > 480) player.vy = 480;
+        const fieldReady = airfieldLandT > 1.45; // 50% sooner
         // gentle assist only when high above deck after strip is in place
         if (fieldReady && player.y < landY - 90) {
-          player.vy += 120 * dt;
+          player.vy += 180 * dt;
         }
         player.y += player.vy * dt;
         player.x = W * 0.28;
