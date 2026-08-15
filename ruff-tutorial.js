@@ -65,8 +65,6 @@
   };
   let ruffCrystals = [];
   let ruffCoins = [];
-    ruffAirship = null;
-    window.__airborneAirshipCleared = false;
   const COIN_SCORE = 10;
   let ruffMarkers = [];
   let ruffCombo = 0;
@@ -179,8 +177,25 @@
   }
 
   function showFlightTraceBanner() {
-    // Banner disabled per design
-    return;
+    const el = titleEl();
+    if (!el) return;
+    el.innerHTML =
+      '<span class="ft-gear ft-gear-l" aria-hidden="true"></span>' +
+      '<span class="ft-banner-text">FLIGHT TRAINING</span>' +
+      '<span class="ft-gear ft-gear-r" aria-hidden="true"></span>';
+    el.classList.remove("ft-out");
+    el.classList.add("visible", "ft-banner");
+    // Fade in, hold, fade out
+    clearTimeout(showFlightTraceBanner._t1);
+    clearTimeout(showFlightTraceBanner._t2);
+    showFlightTraceBanner._t1 = setTimeout(function () {
+      el.classList.add("ft-out");
+      el.classList.remove("visible");
+      showFlightTraceBanner._t2 = setTimeout(function () {
+        el.classList.remove("ft-banner", "ft-out");
+        el.innerHTML = "";
+      }, 550);
+    }, 2600);
   }
 
   function showFlightTrace() {
@@ -427,39 +442,39 @@
     if (name === "intro") {
       ruffIntroFly = true;
       ruffIntroFlyT = 0;
-      // Visible on right side immediately
-      ruffX = (typeof W !== "undefined" ? W : 400) * 0.78;
-      ruffY = (typeof H !== "undefined" ? H : 600) * 0.28;
+      // Start just off right edge so first frames are almost visible
+      ruffX = (typeof W !== "undefined" ? W : 400) * 0.92;
+      ruffY = (typeof H !== "undefined" ? H : 600) * 0.22;
       ruffLineIdx = 0;
       ruffLineT = 0;
-      ruffLineDuration = 3.2;
+      ruffLineDuration = 3.5;
       ruffSpeechDone = true;
-      ruffIntroLineArmed = true;
-      ruffScalePulse = 1.25;
-      // Speak first line right away so training is never silent/empty
-      if (ruffLines.length) {
-        try { showRadio(ruffLines[0], 3.2); } catch (e) {}
-      }
+      ruffIntroLineArmed = false;
+      ruffScalePulse = 1.15;
     } else if (name === "takeoff") {
       ruffIntroFly = false;
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
       ruffWaitingInput = true;
       window.__airborneAirfieldPaused = false;
-      // Never reset runway progress — was killing takeoff mid-roll
+      window.__airborneResetRunway = true;
+      // Reset runway drive so intro duration doesn't auto-liftoff
+      try {
+        if (typeof airfieldDriveDist !== "undefined") airfieldDriveDist = 0;
+        if (typeof airfieldPhaseT !== "undefined") airfieldPhaseT = 0;
+        if (typeof airfieldTakeoffSpeed !== "undefined") airfieldTakeoffSpeed = 50;
+        if (typeof airfieldPhase !== "undefined") airfieldPhase = "taxi";
+      } catch (e) {}
+      window.__airborneAirfieldPhase = "taxi";
+      window.__airborneResetRunway = true;
       try {
         if (typeof sfxAirfieldEngineStart === "function") sfxAirfieldEngineStart();
         if (typeof sfxAirfieldWindStart === "function") sfxAirfieldWindStart();
       } catch (e) {}
     } else if (name === "altitude") {
-      ruffIntroFly = false;
-      if (ruffLines.length) showRadio(ruffLines[0], 3.5);
-      else showRadio("Your blimp doesn't just go up. You control how high she flies.", 3.5);
-      try { spawnAltitudeMarkers(); } catch (e) {}
-      window.__airborneTrainingFlight = true;
+      if (ruffLines.length) showRadio(ruffLines[0], 3.0);
+      spawnAltitudeMarkers();
     } else if (name === "crystals") {
       if (ruffLines.length) showRadio(ruffLines[0], 3.0);
-      ruffCrystals = [];
-      ruffCoins = [];
       spawnCrystals(5);
       spawnTrainingCoins(6);
       ruffWaitingCollect = 3;
@@ -536,12 +551,11 @@
 
   // ---------- Crystals ----------
   function spawnCrystals(n) {
-    n = n || 3;
-    const baseX = (typeof W !== "undefined" ? W : 400) + 60;
+    ruffCrystals = [];
     for (let i = 0; i < n; i++) {
       ruffCrystals.push({
-        x: baseX + i * (110 + Math.random() * 40) + ruffCrystals.length * 20,
-        y: (typeof H !== "undefined" ? H : 600) * (0.22 + Math.random() * 0.42),
+        x: (typeof W !== "undefined" ? W : 400) + 80 + i * 140,
+        y: (typeof H !== "undefined" ? H : 600) * (0.28 + Math.random() * 0.35),
         r: 18,
         frame: Math.floor(Math.random() * CRYSTAL_FRAME_COUNT),
         frameT: 0,
@@ -667,94 +681,14 @@
   }
 
 
-
-  let ruffAirship = null;
-
-  function spawnTrainingAirship() {
-    if (ruffAirship) return;
-    const ww = (typeof W !== "undefined" ? W : 400);
-    const hh = (typeof H !== "undefined" ? H : 600);
-    // 35% of screen width
-    const w = ww * 0.35;
-    const h = w * (314 / 648); // frame aspect ~5x5 sheet
-    ruffAirship = {
-      x: ww + 40,
-      y: hh * 0.38,
-      w: w,
-      h: h,
-      frame: 0,
-      frameT: 0,
-      cols: 5,
-      rows: 5,
-      // slow scroll
-      speed: 48
-    };
-  }
-
-  function updateTrainingAirship(dt) {
-    if (!ruffAirship) return;
-    const a = ruffAirship;
-    a.x -= a.speed * dt;
-    a.frameT += dt;
-    const fd = 1 / 12;
-    while (a.frameT >= fd) {
-      a.frameT -= fd;
-      a.frame = (a.frame + 1) % (a.cols * a.rows);
-    }
-    // soft bob
-    a.y = (typeof H !== "undefined" ? H : 600) * 0.38 + Math.sin((a.frameT + a.x * 0.01) * 1.2) * 8;
-    // Collision — avoid the airship (no shield check for training)
-    if (typeof player !== "undefined" && player && typeof takeHit === "function") {
-      const px = player.x, py = player.y;
-      const pw = player.w * 0.35, ph = player.h * 0.35;
-      if (px + pw > a.x + a.w * 0.1 && px - pw < a.x + a.w * 0.9 &&
-          py + ph > a.y + a.h * 0.15 && py - ph < a.y + a.h * 0.85) {
-        if (!a.hitCooldown || a.hitCooldown <= 0) {
-          a.hitCooldown = 1.2;
-          try { takeHit(); } catch (e) {}
-        }
-      }
-    }
-    if (a.hitCooldown > 0) a.hitCooldown -= dt;
-    // off screen left
-    if (a.x + a.w < -20) {
-      ruffAirship = null;
-      window.__airborneAirshipCleared = true;
-    }
-  }
-
-  function drawTrainingAirship() {
-    if (!ruffAirship || typeof ctx === "undefined") return;
-    const a = ruffAirship;
-    const sheet = (typeof images !== "undefined") ? images.training_airship : null;
-    if (!sheet || !sheet.naturalWidth) {
-      // fallback silhouette
-      ctx.save();
-      ctx.globalAlpha = 0.85;
-      ctx.fillStyle = "#4a3a28";
-      ctx.fillRect(a.x, a.y, a.w, a.h);
-      ctx.restore();
-      return;
-    }
-    const fw = sheet.naturalWidth / a.cols;
-    const fh = sheet.naturalHeight / a.rows;
-    const fr = a.frame % (a.cols * a.rows);
-    const col = fr % a.cols;
-    const row = Math.floor(fr / a.cols);
-    ctx.save();
-    ctx.drawImage(sheet, col * fw, row * fh, fw, fh, a.x, a.y, a.w, a.h);
-    ctx.restore();
-  }
-
-
   function spawnTrainingCoins(n) {
     n = n || 4;
     const groundY = (typeof groundLevelY === "function") ? groundLevelY() : (typeof H !== "undefined" ? H * 0.78 : 400);
     for (let i = 0; i < n; i++) {
       ruffCoins.push({
-        x: (typeof W !== "undefined" ? W : 400) + 40 + i * (90 + Math.random() * 60),
-        y: (typeof H !== "undefined" ? H : 600) * (0.18 + Math.random() * 0.48),
-        r: 18,
+        x: (typeof W !== "undefined" ? W : 400) + 40 + i * (70 + Math.random() * 50),
+        y: (typeof H !== "undefined" ? H : 600) * (0.22 + Math.random() * 0.42),
+        r: 14,
         spin: Math.random() * Math.PI * 2,
         bob: Math.random() * Math.PI * 2,
         collected: false,
@@ -809,76 +743,75 @@
     if (!ruffCoins.length || typeof ctx === "undefined") return;
     ruffCoins.forEach(function (c) {
       if (c.collected) return;
-      const by = c.y + Math.sin(c.bob) * 6;
-      const spin = c.spin || 0;
-      // thickness from spin — thick face when facing camera
-      const face = 0.35 + 0.65 * Math.abs(Math.cos(spin));
-      const pulse = 1 + 0.06 * Math.sin(spin * 2);
-      const R = c.r * pulse;
+      const by = c.y + Math.sin(c.bob) * 5;
+      const squash = 0.55 + 0.45 * Math.abs(Math.cos(c.spin)); // spin edge-on illusion
       ctx.save();
       ctx.translate(c.x, by);
-      // outer gold aura
-      ctx.globalAlpha = 0.4 + 0.2 * Math.sin(spin * 3);
-      const aura = ctx.createRadialGradient(0, 0, R * 0.4, 0, 0, R * 2.1);
-      aura.addColorStop(0, "rgba(255, 215, 80, 0.55)");
-      aura.addColorStop(0.5, "rgba(255, 180, 40, 0.18)");
-      aura.addColorStop(1, "rgba(255, 160, 0, 0)");
-      ctx.fillStyle = aura;
+      ctx.scale(squash, 1);
+      // outer glow
+      ctx.globalAlpha = 0.35;
+      ctx.fillStyle = "#ffd700";
       ctx.beginPath();
-      ctx.arc(0, 0, R * 2.1, 0, Math.PI * 2);
+      ctx.arc(0, 0, c.r * 1.35, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
-      // coin body (ellipse for spin)
-      ctx.scale(face, 1);
-      const body = ctx.createRadialGradient(-R * 0.3, -R * 0.35, 1, 0, 0, R);
-      body.addColorStop(0, "#fff6c0");
-      body.addColorStop(0.25, "#ffd700");
-      body.addColorStop(0.55, "#e8b923");
-      body.addColorStop(0.85, "#b8860b");
-      body.addColorStop(1, "#6b4e08");
-      ctx.fillStyle = body;
+      // rim
+      const g = ctx.createRadialGradient(-c.r * 0.3, -c.r * 0.35, 1, 0, 0, c.r);
+      g.addColorStop(0, "#fff6c8");
+      g.addColorStop(0.35, "#ffd700");
+      g.addColorStop(0.75, "#d4a017");
+      g.addColorStop(1, "#8a6a0a");
+      ctx.fillStyle = g;
       ctx.beginPath();
-      ctx.arc(0, 0, R, 0, Math.PI * 2);
+      ctx.arc(0, 0, c.r, 0, Math.PI * 2);
       ctx.fill();
-      // milled edge ring
-      ctx.strokeStyle = "rgba(90, 60, 10, 0.75)";
-      ctx.lineWidth = Math.max(1.5, R * 0.1);
+      // inner ring
+      ctx.strokeStyle = "rgba(140, 100, 20, 0.7)";
+      ctx.lineWidth = Math.max(1.5, c.r * 0.12);
       ctx.beginPath();
-      ctx.arc(0, 0, R * 0.92, 0, Math.PI * 2);
+      ctx.arc(0, 0, c.r * 0.72, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.strokeStyle = "rgba(255, 230, 140, 0.7)";
-      ctx.lineWidth = Math.max(1, R * 0.06);
+      // embossed star / AA mark
+      ctx.fillStyle = "rgba(120, 80, 10, 0.85)";
       ctx.beginPath();
-      ctx.arc(0, 0, R * 0.78, 0, Math.PI * 2);
-      ctx.stroke();
-      // AA emboss
-      ctx.fillStyle = "rgba(100, 70, 15, 0.9)";
-      ctx.font = "bold " + Math.max(9, R * 0.7) + "px Rockwell, Georgia, serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText("★", 0, 1);
-      // specular glint
-      ctx.fillStyle = "rgba(255,255,255,0.65)";
-      ctx.beginPath();
-      ctx.save();
-      ctx.translate(-R * 0.3, -R * 0.32);
-      ctx.rotate(-0.5);
-      ctx.scale(1, 0.5);
-      ctx.arc(0, 0, R * 0.28, 0, Math.PI * 2);
-      ctx.restore();
-      ctx.fill();
-      // orbiting sparkles
-      for (let i = 0; i < 3; i++) {
-        const a = spin * 1.5 + i * (Math.PI * 2 / 3);
-        const sx = Math.cos(a) * R * 1.35;
-        const sy = Math.sin(a) * R * 0.9;
-        ctx.globalAlpha = 0.5 + 0.5 * Math.sin(spin * 4 + i);
-        ctx.fillStyle = "#fff8d0";
-        ctx.beginPath();
-        ctx.arc(sx, sy, 1.8, 0, Math.PI * 2);
-        ctx.fill();
+      const sr = c.r * 0.28;
+      for (let i = 0; i < 5; i++) {
+        const a = -Math.PI / 2 + i * Math.PI * 2 / 5;
+        const x = Math.cos(a) * sr;
+        const y = Math.sin(a) * sr;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        const a2 = a + Math.PI / 5;
+        ctx.lineTo(Math.cos(a2) * sr * 0.45, Math.sin(a2) * sr * 0.45);
       }
+      ctx.closePath();
+      ctx.fill();
+      // specular
+      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      ctx.beginPath();
+      ctx.ellipse(-c.r * 0.28, -c.r * 0.32, c.r * 0.28, c.r * 0.16, -0.4, 0, Math.PI * 2);
+      ctx.fill();
       ctx.restore();
+    });
+  }
+
+
+  function drawCrystals() {
+    if (!ruffCrystals.length || typeof ctx === "undefined") return;
+    ruffCrystals.forEach(function (c) {
+      if (c.collected) return;
+      const key = "blue_crystal_" + String(c.frame + 1).padStart(2, "0");
+      const img = (typeof images !== "undefined") ? images[key] : null;
+      const s = c.r * 2.2;
+      if (img && img.naturalWidth) {
+        ctx.drawImage(img, c.x - s / 2, c.y - s / 2, s, s);
+      } else {
+        ctx.save();
+        ctx.fillStyle = "#4fc3f7";
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     });
   }
 
@@ -1044,7 +977,7 @@
         if (images && images[k2] && images[k2].naturalWidth) { img = images[k2]; break; }
       }
     }
-    const size = Math.max(110, (typeof player !== "undefined" && player ? player.h * 1.85 : 120));
+    const size = Math.max(90, (typeof player !== "undefined" && player ? player.h * 1.55 : 98));
     const sc = size * (ruffScalePulse || 1);
 
     // Jetpack particles (world space, behind body)
@@ -1096,19 +1029,13 @@
     if (img && img.naturalWidth) {
       ctx.drawImage(img, -sc / 2, -sc / 2, sc, sc);
     } else {
-      // Visible fallback so training never has an "invisible" instructor
-      ctx.fillStyle = "#d4a84b";
-      ctx.strokeStyle = "#3a2810";
+      ctx.fillStyle = "#c4a35a";
+      ctx.strokeStyle = "#4a3210";
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.arc(0, 0, sc * 0.42, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = "#1a1208";
-      ctx.font = "bold " + Math.max(12, sc * 0.22) + "px sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText("R.U.F.F.", 0, 0);
     }
     ctx.restore();
 
@@ -1255,91 +1182,61 @@
 
   // ---------- Public API ----------
   function beginRuffTraining() {
-    // Always mark active FIRST so airfield never falls into legacy ring-only lessons
     ruffActive = true;
     window.__airborneRuffActive = true;
     window.__airborneRuffStage = "intro";
-    ruffStage = "intro";
-    try {
-      console.log("[R.U.F.F.] beginRuffTraining");
-      ruffX = (typeof W !== "undefined" ? W : 400) * 0.8;
-      ruffY = (typeof H !== "undefined" ? H : 600) * 0.26;
-      ruffIntroFly = true;
-      ruffIntroFlyT = 0;
-      ruffIntroLineArmed = false;
-      ruffScalePulse = 1.25;
-      ruffFrame = 0;
-      ruffFrameT = 0;
-      ruffStageT = 0;
-      ruffLineIdx = 0;
-      ruffLineT = 0;
-      window.__airborneAirfieldAllowPowerup = false;
-      window.__airborneAirfieldRings = false;
-      window.__airborneAirfieldObstacles = false;
-      try { if (typeof powerup !== "undefined") powerup = null; } catch (e) {}
-      try { if (typeof shieldPickup !== "undefined") shieldPickup = null; } catch (e) {}
-      try { if (typeof stormCharge === "number") stormCharge = 0; } catch (e) {}
-      try {
-        const sm0 = document.getElementById("stormMeter");
-        if (sm0) {
-          sm0.style.display = "";
-          sm0.style.visibility = "";
-          sm0.classList.add("trainingHidden");
-        }
-      } catch (e) {}
-      try { if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay(); } catch (e) {}
-      ruffStats = { crystals: 0, coins: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, landingStars: 3 };
-      ruffCrystals = [];
-      ruffCoins = [];
-      ruffAirship = null;
-      window.__airborneAirshipCleared = false;
-      ruffMarkers = [];
-      ruffCombo = 0;
-      ruffIntroDone = false;
-      ruffSpeechDone = true;
-      try { ensureSkipHandler(); } catch (e) {}
-      try { showFlightTrace(); } catch (e) {}
-      try { showFlightTraceBanner(); } catch (e) {}
-      try { setStage("intro"); } catch (e) { console.warn("setStage intro", e); }
-      // Re-assert visibility after setStage
-      ruffActive = true;
-      window.__airborneRuffActive = true;
-      window.__airborneRuffStage = "intro";
-      ruffStage = "intro";
-      ruffIntroFly = true;
-      ruffIntroFlyT = 0;
-      ruffX = (typeof W !== "undefined" ? W : 400) * 0.78;
-      ruffY = (typeof H !== "undefined" ? H : 600) * 0.24;
-      ruffScalePulse = 1.3;
-      // Seed dialogue if setStage failed to
-      if (!ruffLines || !ruffLines.length) {
-        ruffLines = (DIALOGUE.intro || []).slice();
-        ruffLineIdx = 0;
-        if (ruffLines.length) {
-          try { showRadio(ruffLines[0], 3.2); ruffIntroLineArmed = true; } catch (e) {}
-        }
-      }
-      console.log("[R.U.F.F.] on screen at", Math.round(ruffX), Math.round(ruffY), "lines", ruffLines.length);
-      // Guarantee first line is visible
-      if (ruffLines.length) {
-        try { showRadio(ruffLines[0], 3.2); } catch (e) {}
-      }
-    } catch (e) {
-      console.error("[R.U.F.F.] begin failed", e);
-      ruffActive = true;
-      window.__airborneRuffActive = true;
-      window.__airborneRuffStage = "intro";
-      ruffStage = "intro";
-      try { showRadio("Testing… testing… can you hear me, rookie?", 3.2); } catch (e2) {}
+    console.log("[R.U.F.F.] beginRuffTraining active=", ruffActive);
+    // Visible start position (right side)
+    ruffX = (typeof W !== "undefined" ? W : 400) * 0.85;
+    ruffY = (typeof H !== "undefined" ? H : 600) * 0.28;
+    ruffIntroFly = true;
+    ruffIntroFlyT = 0;
+    ruffIntroLineArmed = false;
+    ruffScalePulse = 1.2;
+    ruffFrame = 0;
+    window.__airborneAirfieldAllowPowerup = false;
+    if (typeof powerup !== "undefined") powerup = null;
+    if (typeof shieldPickup !== "undefined") shieldPickup = null;
+    if (typeof stormCharge === "number") stormCharge = 0;
+    const sm0 = document.getElementById("stormMeter");
+    if (sm0) {
+      sm0.style.display = "";
+      sm0.style.visibility = "";
+      sm0.classList.add("trainingHidden");
     }
+    if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay();
+    ruffStats = { crystals: 0, coins: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, landingStars: 3 };
+    ruffCrystals = [];
+    ruffMarkers = [];
+    ruffCombo = 0;
+    ruffIntroDone = false;
+    ensureSkipHandler();
+    showFlightTrace();
+    showFlightTraceBanner();
+    setStage("intro");
+    // Re-assert after setStage so he is visible immediately
+    ruffActive = true;
+    window.__airborneRuffActive = true;
+    window.__airborneRuffStage = "intro";
+    ruffIntroFly = true;
+    ruffIntroFlyT = 0;
+    ruffX = (typeof W !== "undefined" ? W : 400) * 0.8;
+    ruffY = (typeof H !== "undefined" ? H : 600) * 0.26;
+    ruffScalePulse = 1.25;
+    console.log("[R.U.F.F.] on screen at", Math.round(ruffX), Math.round(ruffY));
   }
 
   function updateRuff(dt) {
-    if (window.__airborneRuffActive) ruffActive = true;
+    if (!ruffActive && window.__airborneRuffActive) {
+      ruffActive = true;
+      if (!ruffStage || ruffStage === "idle") {
+        ruffStage = window.__airborneRuffStage || "intro";
+        if (ruffStage === "intro") {
+          ruffIntroFly = true;
+        }
+      }
+    }
     if (!ruffActive) return;
-    // Always publish stage so airfield can read it
-    window.__airborneRuffActive = true;
-    if (ruffStage) window.__airborneRuffStage = ruffStage;
     ruffStageT += dt;
     ruffLineT += dt;
     // Keep power icon suppressed until power lesson
@@ -1400,43 +1297,32 @@
           showRadio(ruffLines[ruffLineIdx], 3.2);
         }
       }
-      if ((ruffIntroLineArmed && ruffLineIdx >= ruffLines.length && ruffLineT > 0.6) ||
-          ruffStageT > 2.2) {
+      if ((ruffIntroLineArmed && ruffLineIdx >= ruffLines.length && ruffLineT > 1.2) ||
+          ruffStageT > 16) {
         ruffIntroFly = false;
-        nextStage(); // → takeoff
+        nextStage(); // → takeoff — runway unlocks only after this
         console.log("[R.U.F.F.] intro done → takeoff");
       }
     }
 
-    // Stage logic — hard timeouts so training never freezes on empty sky
+    // Stage logic — every stage has a hard timeout so training never freezes
     if (ruffStage === "takeoff") {
       const ph = window.__airborneAirfieldPhase;
-      if (ph === "lesson" || ph === "climb" || ruffStageT > 6) {
-        nextStage(); // → altitude
+      // Only advance after actual climb/lesson — never skip runway on a timer
+      if (ph === "lesson" || (ph === "climb" && ruffStageT > 3)) {
+        nextStage();
       }
     } else if (ruffStage === "altitude") {
+      // Do NOT wipe obstacles every frame — causes random item disappear
       if (typeof updateMarkers === "function") updateMarkers(dt);
-      window.__airborneAirfieldPaused = false;
-      window.__airborneAirfieldRings = false;
-      window.__airborneAirfieldObstacles = false;
-      window.__airborneTrainingFlight = true;
-      // Speak altitude lines if radio empty
-      if (ruffStageT < 0.2 && ruffLines.length) {
-        try { showRadio(ruffLines[0], 3.5); } catch (e) {}
-      }
-      if (ruffStageT > 7) nextStage(); // → crystals
+      if (ruffStageT > 9) nextStage();
     } else if (ruffStage === "crystals") {
-      window.__airborneAirfieldPaused = false;
-      window.__airborneAirfieldRings = false;
-      window.__airborneAirfieldObstacles = false;
-      if (typeof obstacleSpeed !== "undefined" && obstacleSpeed < 180) obstacleSpeed = 210;
       updateCrystals(dt);
       updateTrainingCoins(dt);
-      // Top up only when sparse — spawnCrystals appends (no wipe)
-      if (ruffCrystals.length < 1 && ruffStageT < 12) spawnCrystals(3);
-      if (ruffCoins.length < 1 && ruffStageT < 12) spawnTrainingCoins(3);
-      if ((ruffStats.crystals >= 3 && ruffCrystals.length === 0 && ruffStageT > 4) || ruffStageT > 16) {
-        nextStage(); // → obstacles
+      if (ruffStats.crystals < 3 && ruffCrystals.length < 2) spawnCrystals(3);
+      if (ruffCoins.length < 2) spawnTrainingCoins(4);
+      if ((ruffStats.crystals >= 3 && ruffCrystals.length === 0 && ruffStageT > 3) || ruffStageT > 14) {
+        nextStage();
       }
     } else if (ruffStage === "obstacles") {
       window.__airborneAirfieldObstacles = true;
@@ -1524,18 +1410,12 @@
     } else if (ruffStage === "combined") {
       updateCrystals(dt);
       updateTrainingCoins(dt);
-      updateTrainingAirship(dt);
-      if (ruffCrystals.length < 1 && ruffStageT > 2) spawnCrystals(2);
-      if (ruffCoins.length < 3 && ruffStageT > 1.0) spawnTrainingCoins(5);
-      // Big industrial airship — avoid it; scrolls slowly
-      if (!ruffAirship && ruffStageT > 2.5) spawnTrainingAirship();
-      // Stay in lesson until airship is fully off-screen (or long failsafe)
-      const airshipDone = window.__airborneAirshipCleared || (!ruffAirship && ruffStageT > 8);
-      if (airshipDone && ruffStageT > 10) {
+      if (ruffCrystals.length < 1 && ruffStageT > 3) spawnCrystals(2);
+      // Last lesson before landing — coin rain
+      if (ruffCoins.length < 3 && ruffStageT > 1.5) spawnTrainingCoins(5);
+      if (ruffStageT > 18) {
         ruffCrystals = [];
         ruffCoins = [];
-        ruffAirship = null;
-        window.__airborneAirshipCleared = false;
         if (typeof obstacles !== "undefined") obstacles = [];
         nextStage();
       }
@@ -1562,27 +1442,19 @@
   }
 
   function drawRuff() {
-    if (window.__airborneRuffActive || window.__airborneAirfield) {
-      ruffActive = true;
-    }
     if (!ruffActive && window.__airborneRuffActive) {
       ruffActive = true;
       if (!ruffStage || ruffStage === "idle") ruffStage = window.__airborneRuffStage || "intro";
     }
     if (!ruffActive) return;
-    // Never leave him off-screen
-    if (!(ruffX > 0) || !isFinite(ruffX)) ruffX = (typeof W !== "undefined" ? W : 400) * 0.75;
-    if (!(ruffY > 0) || !isFinite(ruffY)) ruffY = (typeof H !== "undefined" ? H : 600) * 0.28;
     if (!window.__ruffDrawLogged) {
       window.__ruffDrawLogged = true;
       console.log("[R.U.F.F.] drawing", ruffStage, Math.round(ruffX), Math.round(ruffY));
     }
-    try { drawMarkers(); } catch (e) {}
-    try { drawCrystals(); } catch (e) {}
-    try { drawTrainingCoins(); } catch (e) { console.warn("coins draw", e); }
-    try { drawTrainingAirship(); } catch (e) { console.warn("airship draw", e); }
-    try { drawSparkles(); } catch (e) {}
-    try { drawRuffCompanion(); } catch (e) { console.warn("ruff draw", e); }
+    drawMarkers();
+    drawCrystals();
+    drawSparkles();
+    drawRuffCompanion();
   }
 
   function drawPowerOrb() {
@@ -1643,46 +1515,13 @@
     }
   };
 
-  window.__airborneRuffOnAirborne = function() {
-    // Called when climb finishes — jump into real flight lessons
-    ruffActive = true;
-    window.__airborneRuffActive = true;
-    ruffIntroFly = false;
-    const st = ruffStage || window.__airborneRuffStage || "intro";
-    if (st === "intro" || st === "takeoff" || st === "idle" || !st) {
-      try {
-        setStage("altitude");
-      } catch (e) {
-        ruffStage = "altitude";
-        window.__airborneRuffStage = "altitude";
-        ruffStageT = 0;
-        ruffLines = (DIALOGUE.altitude || []).slice();
-        ruffLineIdx = 0;
-        if (ruffLines.length) {
-          try { showRadio(ruffLines[0], 3.5); } catch (e2) {}
-        }
-      }
-    }
-    console.log("[R.U.F.F.] onAirborne →", ruffStage);
-  };
-  window.__airborneForceRuffTakeoff = function() {
-    ruffActive = true;
-    window.__airborneRuffActive = true;
-    if (ruffStage === "intro" || ruffStage === "idle" || !ruffStage) {
-      try { setStage("takeoff"); } catch (e) {
-        ruffStage = "takeoff";
-        window.__airborneRuffStage = "takeoff";
-      }
-    }
-  };
   window.__airborneForceRuffAltitude = function() {
-    ruffActive = true;
-    window.__airborneRuffActive = true;
-    if (ruffStage === "intro" || ruffStage === "takeoff" || ruffStage === "idle" || !ruffStage) {
-      try { setStage("altitude"); } catch (e) {
-        ruffStage = "altitude";
-        window.__airborneRuffStage = "altitude";
-      }
+    if (!ruffActive) {
+      ruffActive = true;
+      window.__airborneRuffActive = true;
+    }
+    if (ruffStage === "intro" || ruffStage === "takeoff" || ruffStage === "idle") {
+      setStage("altitude");
     }
   };
   window.__airborneBeginRuff = beginRuffTraining;

@@ -529,8 +529,34 @@
       blimpPersonality.propSpeed = 25 + Math.abs(player.vy) * 0.04;
       blimpPersonality.propAngle += blimpPersonality.propSpeed * dt;
       blimpPersonality.propBlurOpacity = Math.min(0.9, 0.5 + Math.abs(player.vy) * 0.001);
-      // Prop smoke disabled (was reading as a dark shadow behind the propeller)
-      blimpPersonality.propSmoke = [];
+      // Smoke puffs off the spinning prop
+      if (!blimpPersonality.propSmoke) blimpPersonality.propSmoke = [];
+      blimpPersonality.propSmokeT = (blimpPersonality.propSmokeT || 0) + dt;
+      if (blimpPersonality.propSmokeT > 0.07) {
+        blimpPersonality.propSmokeT = 0;
+        var ppx = player.x - player.w * 0.34;
+        var ppy = player.y + player.h * 0.05 + (Math.random() - 0.5) * player.h * 0.25;
+        blimpPersonality.propSmoke.push({
+          x: ppx,
+          y: ppy,
+          vx: -40 - Math.random() * 50,
+          vy: (Math.random() - 0.5) * 25 - 8,
+          size: 4 + Math.random() * 7,
+          age: 0,
+          life: 0.35 + Math.random() * 0.35,
+          alpha: 0.35 + Math.random() * 0.25
+        });
+      }
+      blimpPersonality.propSmoke.forEach(function(p) {
+        p.age += dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.size += 10 * dt;
+        p.vx *= 0.98;
+      });
+      blimpPersonality.propSmoke = blimpPersonality.propSmoke.filter(function(p) {
+        return p.age < p.life;
+      });
     } else {
       blimpPersonality.propBlurOpacity *= 0.95;
       blimpPersonality.propSmoke = [];
@@ -845,42 +871,80 @@
 
     var px = player.x - player.w * 0.32;
     var py = player.y + player.h * 0.05;
-    var r = player.w * 0.16;
+    var r = player.w * 0.18;
     var t = (typeof performance !== 'undefined' ? performance.now() : Date.now()) * 0.001;
 
-    // Light spinning blades only — no dark disc/shadow behind prop
     ctx.save();
     ctx.translate(px, py);
     ctx.rotate(blimpPersonality.propAngle);
-    ctx.globalAlpha = blimpPersonality.propBlurOpacity * 0.55;
+    ctx.globalAlpha = blimpPersonality.propBlurOpacity;
+
+    // Disc blur
+    var grad = ctx.createRadialGradient(0, 0, r * 0.15, 0, 0, r * 1.05);
+    grad.addColorStop(0, 'rgba(30,25,20,0.35)');
+    grad.addColorStop(0.55, 'rgba(40,32,28,0.18)');
+    grad.addColorStop(1, 'rgba(40,30,20,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Spinning blades
     for (var i = 0; i < 3; i++) {
       var angle = (i / 3) * Math.PI * 2 + blimpPersonality.propAngle * 2;
       ctx.save();
       ctx.rotate(angle);
-      ctx.fillStyle = 'rgba(200, 190, 175, 0.35)';
-      ctx.fillRect(-r * 0.06, -r, r * 0.12, r * 2);
+      ctx.fillStyle = 'rgba(45,38,32,0.32)';
+      ctx.fillRect(-r * 0.08, -r, r * 0.16, r * 2);
       ctx.restore();
     }
     ctx.restore();
 
-    // Light wind streaks (no dark shadow blobs)
+    // Dark animated wind streaks peeling off the prop (world space, leftward)
     ctx.save();
-    for (var s = 0; s < 5; s++) {
+    for (var s = 0; s < 7; s++) {
       var phase = t * (2.8 + s * 0.35) + s * 1.1;
-      var sx = px - r * 0.15 - (s * 6 + (phase % 1) * 22);
-      var sy = py + Math.sin(phase * 2.1 + s) * r * 0.5;
-      var len = 8 + (s % 3) * 4;
-      var a = (0.18 + 0.1 * Math.sin(phase * 1.7)) * blimpPersonality.propBlurOpacity;
-      ctx.globalAlpha = Math.max(0.04, a);
-      ctx.strokeStyle = 'rgba(180, 175, 165, 0.7)';
-      ctx.lineWidth = 1.1;
+      var sx = px - r * 0.2 - (s * 7 + (phase % 1) * 28);
+      var sy = py + Math.sin(phase * 2.1 + s) * r * 0.55;
+      var len = 10 + (s % 3) * 5 + Math.sin(phase) * 4;
+      var a = (0.22 + 0.12 * Math.sin(phase * 1.7)) * blimpPersonality.propBlurOpacity;
+      ctx.globalAlpha = Math.max(0.05, a);
+      ctx.strokeStyle = 'rgba(35, 32, 28, 0.85)';
+      ctx.lineWidth = 1.4 + (s % 2) * 0.6;
       ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(sx, sy);
-      ctx.quadraticCurveTo(sx - len * 0.4, sy + Math.sin(phase) * 2, sx - len, sy);
+      ctx.quadraticCurveTo(sx - len * 0.4, sy + Math.sin(phase) * 3, sx - len, sy + Math.cos(phase * 0.8) * 2);
+      ctx.stroke();
+      // secondary darker hairline
+      ctx.globalAlpha = a * 0.55;
+      ctx.strokeStyle = 'rgba(20, 18, 16, 0.9)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(sx + 2, sy + 1.5);
+      ctx.lineTo(sx - len * 0.7, sy + 1.5);
       ctx.stroke();
     }
     ctx.restore();
+
+    // Soft smoke puffs drifting back from prop
+    if (!blimpPersonality.propSmoke) blimpPersonality.propSmoke = [];
+    // (spawn handled in update; draw here)
+    (blimpPersonality.propSmoke || []).forEach(function(p) {
+      var u = 1 - p.age / p.life;
+      if (u <= 0) return;
+      ctx.save();
+      ctx.globalAlpha = p.alpha * u * u * blimpPersonality.propBlurOpacity;
+      var g2 = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+      g2.addColorStop(0, 'rgba(55,50,45,' + (0.55 * u) + ')');
+      g2.addColorStop(0.5, 'rgba(40,36,32,' + (0.25 * u) + ')');
+      g2.addColorStop(1, 'rgba(30,28,25,0)');
+      ctx.fillStyle = g2;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
   }
 
   // =====================================================================
