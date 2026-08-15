@@ -820,32 +820,38 @@
       syncAirfieldGlobals();
 
     
-    // ---- SKID (drive like takeoff: strip scrolls under fixed-x blimp to end) ----
+    // ---- SKID (drive like takeoff: strip scrolls under blimp + blimp rolls forward) ----
     } else if (airfieldPhase === "skid") {
       window.__airborneAirfieldInvuln = true;
       window.__airborneAirfieldPaused = true;
+      airfieldPhase = "skid";
+      syncAirfieldGlobals();
       airfieldSkidT = (airfieldSkidT || 0) + dt;
-      // Same pace as takeoff scroll so it feels identical to lift-off drive
-      const skidDur = 5.5;
+      // Ensure landing strip tiles exist so scroll is visible
+      if (!airfieldTiles || !airfieldTiles.length) {
+        try { ensureAirfieldStripVisible(); } catch (e) {}
+      }
+      const skidDur = 5.0;
       const u = Math.min(1, airfieldSkidT / skidDur);
-      const ease = 1 - Math.pow(1 - u, 1.8); // mild ease-out
-      const driveSpd = Math.max(airfieldTakeoffSpeed || 210, 210) * (1.15 - 0.55 * ease);
-      // Scroll strip left under the blimp (same illusion as beginning runway)
+      const ease = 1 - Math.pow(1 - u, 1.6);
+      // Takeoff-matching scroll under the blimp
+      const driveSpd = Math.max(airfieldTakeoffSpeed || 210, 220) * (1.2 - 0.7 * ease);
       (airfieldTiles || []).forEach(function(tile) {
         if (!tile) return;
         tile.x -= driveSpd * dt;
       });
+      // Keep strip Y locked at rest (runway under feet)
+      airfieldStripY = (typeof airfieldStripY === "number") ? airfieldStripY : 0;
       const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
-      const sinkS = (typeof airfieldStripY === "number") ? airfieldStripY : 0;
+      const sinkS = airfieldStripY || 0;
       const landY = H - Math.max(40, th * 0.28) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10) + sinkS;
       if (typeof player !== "undefined" && player) {
-        // Keep blimp planted on deck; slight forward creep like taxi
         const sx = (typeof airfieldSkidStartX === "number") ? airfieldSkidStartX : W * 0.28;
-        player.x = sx + ease * W * 0.12;
+        // Visible roll toward end of strip
+        player.x = sx + ease * W * 0.42;
         player.y = landY;
         player.vy = 0;
-        // Slight nose-down then settle (no bounce)
-        player.rotation = (1 - u) * 0.08;
+        player.rotation = (1 - u) * 0.06;
         if (typeof blimpPersonality !== "undefined" && blimpPersonality) {
           blimpPersonality.squashX = 1;
           blimpPersonality.squashY = 1;
@@ -923,14 +929,16 @@
         });
         airfieldFireworks = airfieldFireworks.filter(function(fw) { return fw.age < fw.life; });
       }
-      // Hold on strip ~10s after stop, then score popup
-      if (!window.__airborneTrainingReportShown && airfieldScoreT > 10) {
+      // Hold on strip briefly, then score popup (always from here)
+      if (!window.__airborneTrainingReportShown && airfieldScoreT > 3.5) {
         window.__airborneTrainingReportShown = true;
         window.__airborneTrainingReportReady = true;
         window.__airborneAirfieldDidLand = true;
         try {
           if (typeof window.__airborneShowRuffReport === "function") {
             window.__airborneShowRuffReport();
+          } else if (typeof showFlightReport === "function") {
+            showFlightReport();
           } else {
             var el = document.getElementById("ruffReport");
             if (el) el.classList.add("visible");

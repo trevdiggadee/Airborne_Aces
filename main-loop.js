@@ -252,6 +252,7 @@
     drawBlimpHeadlight();
     if (typeof drawAirfieldShadow === "function") drawAirfieldShadow();
     drawPlayer();
+    try { if (typeof drawRingFronts === "function") drawRingFronts(); else if (window.__airborneDrawRingFronts) window.__airborneDrawRingFronts(); } catch (e) {}
     // Soft clouds in FRONT of mountains + blimp (50% alpha) — fly-through like L3
     drawClouds();
     // R.U.F.F. on top of world (not under strip/mountains)

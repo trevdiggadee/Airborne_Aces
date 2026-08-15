@@ -335,7 +335,7 @@
   }
 
   function spawnGoldRing() {
-    const r = Math.min(48, W * 0.11);
+    const r = Math.min(70, W * 0.16); // larger so blimp clearly flies through
     const groundY = groundLevelY();
     const minY = H * 0.12;
     const maxY = groundY - H * 0.22;
@@ -975,95 +975,62 @@
     try { drawFirePower(); } catch (e) {}
     obstacles.forEach(o => {
       if (o.isRing || o.type === "gold_ring") {
-        // Stay visible after pass-through — color change + expand + ghost trails
+        // BACK half only — front half drawn later (drawRingFronts) so blimp flies THROUGH
         const cx = o.x + o.w / 2;
         const cy = o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8);
-        const baseR = o.r || o.w / 2;
+        // Larger hoop so the blimp clearly fits through
+        const baseR = (o.r || o.w / 2) * 1.35;
         const esc = o.expandScale || 1;
-        const r = baseR * esc;
+        const rad = baseR * esc;
         const passed = !!o.passed;
-        function strokeOvalAt(ox, oy, rx_, ry_, lw, color, a) {
-          ctx.save();
-          ctx.translate(ox, oy);
-          ctx.globalAlpha = a != null ? a : 1;
-          ctx.strokeStyle = color;
-          ctx.lineWidth = lw;
-          ctx.beginPath();
-          ctx.scale(rx_ / ry_, 1);
-          ctx.arc(0, 0, ry_, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.restore();
-        }
-        // Ghost trails (behind live ring)
+        const rx = rad * 0.32;
+        const ry = rad * 1.12;
+        const cOuter = passed ? "#2ecc71" : "#d4a84b";
+        const cMain  = passed ? "#3dde8a" : "#e8c060";
+        const cRim   = passed ? "#1a9e55" : "#b8860b";
+        const glow   = passed ? "rgba(46, 204, 113, 0.75)" : "rgba(212, 175, 55, 0.7)";
+        // Ghost trails
         if (o.ghosts && o.ghosts.length) {
           for (let gi = 0; gi < o.ghosts.length; gi++) {
             const g = o.ghosts[gi];
-            const ga = Math.max(0, g.life / 0.55) * 0.45;
-            const gr = baseR * (g.scale || 1) * (0.92 + 0.08 * (1 - g.life / 0.55));
-            const gx = gr * 0.28;
-            const gy = gr * 1.05;
-            strokeOvalAt(g.x, g.y, gx * 1.05, gy * 1.02, Math.max(5, gr * 0.18), "#2ecc71", ga * 0.5);
-            strokeOvalAt(g.x, g.y, gx, gy, Math.max(3, gr * 0.12), "#3dde8a", ga);
+            const ga = Math.max(0, g.life / 0.55) * 0.4;
+            const gr = baseR * (g.scale || 1);
+            ctx.save();
+            ctx.translate(g.x, g.y);
+            ctx.globalAlpha = ga;
+            ctx.strokeStyle = "#3dde8a";
+            ctx.lineWidth = Math.max(3, gr * 0.12);
+            ctx.beginPath();
+            ctx.scale((gr * 0.32) / (gr * 1.12), 1);
+            ctx.arc(0, 0, gr * 1.12, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
           }
         }
+        // BACK half of hoop (left side — far edge, behind blimp)
         ctx.save();
         ctx.translate(cx, cy);
-        // Sideways hoop (vertical ellipse via scale+arc) — Safari safe
-        const rx = r * 0.28;
-        const ry = r * 1.05;
-        function strokeOval(rx_, ry_, lw, color, a) {
+        ctx.shadowColor = glow;
+        ctx.shadowBlur = 12;
+        function strokeBack(lw, color, a) {
           ctx.save();
           ctx.globalAlpha = a != null ? a : 1;
           ctx.strokeStyle = color;
           ctx.lineWidth = lw;
           ctx.beginPath();
-          ctx.scale(rx_ / ry_, 1);
-          ctx.arc(0, 0, ry_, 0, Math.PI * 2);
+          ctx.scale(rx / ry, 1);
+          // π/2 → 3π/2 = left/back half
+          ctx.arc(0, 0, ry, Math.PI * 0.5, Math.PI * 1.5, false);
           ctx.stroke();
           ctx.restore();
         }
-        const spin = o.spin || 0;
-        // Colors: bronze before pass, bright emerald/cyan after
-        const cOuter = passed ? "#2ecc71" : "#c4a35a";
-        const cMain  = passed ? "#3dde8a" : "#d4b06a";
-        const cInner = passed ? "rgba(180, 255, 220, 0.95)" : "rgba(240, 220, 170, 0.95)";
-        const cRim   = passed ? "#1a9e55" : "#a67c2a";
-        const glow   = passed ? "rgba(46, 204, 113, 0.75)" : "rgba(212, 175, 55, 0.65)";
-        const spark  = passed ? "#d8ffe8" : "#fff4c8";
-        const hi     = passed ? "#b8ffd8" : "#f0e0b8";
-        ctx.save();
-        ctx.globalAlpha = 0.35 + 0.15 * Math.sin(spin * 2.5);
-        ctx.shadowColor = glow;
-        ctx.shadowBlur = passed ? 18 : 14;
-        strokeOval(rx * 1.05, ry * 1.02, Math.max(8, r * 0.24), cOuter, 0.55);
+        strokeBack(Math.max(7, rad * 0.2), cOuter, 0.55);
+        strokeBack(Math.max(5, rad * 0.14), cMain, 1);
+        strokeBack(Math.max(3, rad * 0.08), cRim, 0.7);
         ctx.shadowBlur = 0;
         ctx.restore();
-        strokeOval(rx, ry, Math.max(5, r * 0.16), cMain, 1);
-        strokeOval(rx * 0.72, ry * 0.88, Math.max(2.5, r * 0.07), cInner, 1);
-        strokeOval(rx * 1.12, ry * 1.06, Math.max(6, r * 0.2), cRim, 0.4);
-        // Traveling sparkle on the rim
-        const sparkA = spin * 1.8;
-        const sx = Math.sin(sparkA) * rx * 0.95;
-        const sy = Math.cos(sparkA) * ry * 0.95;
-        ctx.globalAlpha = 0.75 + 0.25 * Math.sin(spin * 4);
-        ctx.fillStyle = spark;
-        ctx.beginPath();
-        ctx.arc(sx, sy, 2.8, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 0.55;
-        ctx.beginPath();
-        ctx.arc(-sx * 0.9, -sy * 0.9, 2.0, 0, Math.PI * 2);
-        ctx.fill();
-        // Top/bottom highlights
-        ctx.globalAlpha = 0.7 + 0.25 * Math.sin(spin * 3);
-        ctx.fillStyle = hi;
-        ctx.beginPath();
-        ctx.arc(0, -ry * 0.92, 2.6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(0, ry * 0.92, 2.6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+        // Stash for front-half pass after player
+        o._ringFront = { cx: cx, cy: cy, rx: rx, ry: ry, rad: rad, passed: passed };
         return;
       }
       const frames = OBSTACLE_ANIM_SETS[o.type];
@@ -1170,7 +1137,52 @@
   let healPickup = null;
   let healSpawnTimer = 6 + Math.random() * 5; // first one arrives a little sooner
 
-  function spawnHealPickup() {
+  
+  function drawRingFronts() {
+    if (typeof obstacles === "undefined" || !obstacles || !obstacles.length) return;
+    if (typeof ctx === "undefined") return;
+    obstacles.forEach(function (o) {
+      if (!(o.isRing || o.type === "gold_ring")) return;
+      const f = o._ringFront;
+      if (!f) return;
+      const cOuter = f.passed ? "#2ecc71" : "#d4a84b";
+      const cMain  = f.passed ? "#4aee9a" : "#f0d070";
+      const cRim   = f.passed ? "#1a9e55" : "#b8860b";
+      const glow   = f.passed ? "rgba(46, 204, 113, 0.85)" : "rgba(255, 210, 80, 0.75)";
+      ctx.save();
+      ctx.translate(f.cx, f.cy);
+      ctx.shadowColor = glow;
+      ctx.shadowBlur = 14;
+      function strokeFront(lw, color, a) {
+        ctx.save();
+        ctx.globalAlpha = a != null ? a : 1;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lw;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.scale(f.rx / f.ry, 1);
+        // -π/2 → π/2 = right/front half (drawn ON TOP of blimp)
+        ctx.arc(0, 0, f.ry, -Math.PI * 0.5, Math.PI * 0.5, false);
+        ctx.stroke();
+        ctx.restore();
+      }
+      strokeFront(Math.max(8, f.rad * 0.22), cOuter, 0.65);
+      strokeFront(Math.max(6, f.rad * 0.16), cMain, 1);
+      strokeFront(Math.max(3, f.rad * 0.09), cRim, 0.85);
+      // Bright highlight on the near rim
+      ctx.globalAlpha = 0.9;
+      ctx.strokeStyle = f.passed ? "#d8ffe8" : "#fff4c8";
+      ctx.lineWidth = Math.max(2, f.rad * 0.05);
+      ctx.beginPath();
+      ctx.scale(f.rx / f.ry, 1);
+      ctx.arc(0, 0, f.ry, -0.35, 0.35, false);
+      ctx.stroke();
+      ctx.restore();
+    });
+  }
+  window.__airborneDrawRingFronts = drawRingFronts;
+
+function spawnHealPickup() {
     if (window.__airborneAirfield) return; // no hearts during training
     const img = images.heartPickup;
     let aspect = imgAspect(img);

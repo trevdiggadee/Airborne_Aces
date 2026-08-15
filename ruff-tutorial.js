@@ -1467,11 +1467,12 @@
         window.__airborneRuffRequestLand = true;
       }
       const ph = window.__airborneAirfieldPhase;
-      // Only after score phase has held long enough (set by world-buildings)
+      // Report when world-buildings signals ready, or failsafe
       if (window.__airborneTrainingReportReady || ph === "done") {
-        nextStage(); // → report
-      } else if (ruffStageT > 55) {
-        // Long failsafe only
+        nextStage(); // → report → showFlightReport
+      } else if (ruffStageT > 40) {
+        // Failsafe — force report
+        try { if (typeof showFlightReport === "function") showFlightReport(); } catch (e) {}
         nextStage();
       }
     } else if (ruffStage === "report") {
