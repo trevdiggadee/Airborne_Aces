@@ -133,26 +133,36 @@
     
     updatePlayerBlimpAnimation(dt);
 
-    if (state === "playing") {
+    // Always tick airfield/Ruff when training is active (even if state glitched)
+    if (window.__airborneAirfield || window.__airborneRuffActive) {
+      const _updAf0 = (typeof window.updateAirfield === "function") ? window.updateAirfield
+        : (typeof updateAirfield === "function") ? updateAirfield : null;
+      if (_updAf0) { try { _updAf0(dt); } catch (e) { console.warn("updAf", e); } }
+      if (typeof window.__airborneUpdateRuff === "function") {
+        try { window.__airborneUpdateRuff(dt); } catch (e) { console.warn("updRuff", e); }
+      }
+    }
+    if (state === "playing" || window.__airbornePlaying || window.__airborneAirfield) {
       elapsedMs = performance.now() - runStartTime;
       updateFlipClock(elapsedMs);
-      // Timer inside flight-progress hub
       try {
         const hub = document.getElementById("ruffFlightTracePct");
         if (hub) {
           const totalSec = Math.floor(elapsedMs / 1000);
-          const m = Math.floor(totalSec / 60);
+          const mm = Math.floor(totalSec / 60);
           const s = totalSec % 60;
-          hub.textContent = m + ":" + String(s).padStart(2, "0");
+          hub.textContent = mm + ":" + String(s).padStart(2, "0");
         }
       } catch (e) {}
       if (typeof ensureCollectDock === "function") ensureCollectDock();
       else if (typeof updateCollectDock === "function") updateCollectDock();
-      // Prefer window exports (reliable across script scopes)
-      const _updAf = (typeof window.updateAirfield === "function") ? window.updateAirfield
-        : (typeof updateAirfield === "function") ? updateAirfield : null;
-      if (_updAf) _updAf(dt);
-      if (typeof window.__airborneUpdateRuff === "function") window.__airborneUpdateRuff(dt);
+      // Playing-path updates (skip duplicate airfield if already ticked above)
+      if (!(window.__airborneAirfield || window.__airborneRuffActive)) {
+        const _updAf = (typeof window.updateAirfield === "function") ? window.updateAirfield
+          : (typeof updateAirfield === "function") ? updateAirfield : null;
+        if (_updAf) _updAf(dt);
+        if (typeof window.__airborneUpdateRuff === "function") window.__airborneUpdateRuff(dt);
+      }
       updateBuildings(dtScale);
       updatePowerlines(dtScale);
       updateSketchSkyline(dtScale);

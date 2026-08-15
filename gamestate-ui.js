@@ -493,7 +493,11 @@
         (typeof beginAirfieldTraining === "function" ? beginAirfieldTraining : null);
       if (startTrain) {
         try {
+          state = "playing";
+          window.__airbornePlaying = true;
           startTrain();
+          state = "playing";
+          window.__airborneAirfield = true;
           console.log("[Airborne] Training started", window.__airborneAirfield, window.__airborneAirfieldPhase, window.__airborneRuffStage);
         } catch (err) {
           console.error("[Airborne] Training failed", err);
