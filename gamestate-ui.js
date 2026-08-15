@@ -862,11 +862,8 @@
   let pendingStart = false;
   function bridgeStart() {
     if (assetsLoaded === assetKeys.length) {
-      if (window.__airbornePendingMapLevel && Number(window.__airbornePendingMapLevel) >= 1) {
-        startGame();
-      } else {
-        startTutorial();
-      }
+      // Always go straight into gameplay / airfield training (skip old tip overlay)
+      startGame();
     } else {
       pendingStart = true;
     }

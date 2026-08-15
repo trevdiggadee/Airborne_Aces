@@ -476,6 +476,7 @@
     } else if (name === "crystals") {
       if (ruffLines.length) showRadio(ruffLines[0], 3.0);
       spawnCrystals(5);
+      spawnTrainingCoins(6);
       ruffWaitingCollect = 3;
     } else if (name === "obstacles") {
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
@@ -713,7 +714,13 @@
         c.collected = true;
         ruffStats.coins = (ruffStats.coins || 0) + 1;
         window.__airborneCollectCoins = (window.__airborneCollectCoins || 0) + 1;
-        if (typeof updateCollectDock === "function") updateCollectDock();
+        try {
+          if (typeof updateCollectDock === "function") updateCollectDock();
+          else {
+            const coinEl = document.getElementById("collectPowerPct");
+            if (coinEl) coinEl.textContent = String(window.__airborneCollectCoins);
+          }
+        } catch (e) {}
         if (typeof score === "number") score += COIN_SCORE;
         if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
         try {
@@ -1206,6 +1213,13 @@
     if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay();
     ruffStats = { crystals: 0, coins: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, landingStars: 3 };
     ruffCrystals = [];
+    ruffCoins = [];
+    window.__airborneCollectCoins = 0;
+    try {
+      if (typeof updateCollectDock === "function") updateCollectDock();
+      const coinEl = document.getElementById("collectPowerPct");
+      if (coinEl) coinEl.textContent = "0";
+    } catch (e) {}
     ruffMarkers = [];
     ruffCombo = 0;
     ruffIntroDone = false;
@@ -1317,7 +1331,9 @@
       if (ruffStageT > 9) nextStage();
     } else if (ruffStage === "crystals") {
       updateCrystals(dt);
+      updateTrainingCoins(dt);
       if (ruffStats.crystals < 3 && ruffCrystals.length < 2) spawnCrystals(3);
+      if (ruffCoins.length < 2) spawnTrainingCoins(4);
       if ((ruffStats.crystals >= 3 && ruffCrystals.length === 0 && ruffStageT > 3) || ruffStageT > 14) {
         nextStage();
       }
@@ -1450,6 +1466,7 @@
     }
     drawMarkers();
     drawCrystals();
+    try { drawTrainingCoins(); } catch (e) {}
     drawSparkles();
     drawRuffCompanion();
   }
