@@ -240,6 +240,7 @@
     try { if (typeof state !== "undefined") state = "playing"; } catch (e) {}
     window.__airborneAirfield = true;
     window.__airborneAirfieldPhase = "taxi";
+    window.__airborneRuffBooted = false;
     // Start R.U.F.F. FIRST so he appears before any runway motion
     window.__airborneRuffStage = "intro";
     if (typeof window.__airborneBeginRuff === "function") {
@@ -388,11 +389,12 @@
     // Keep flags on every frame so main-loop keeps ticking us
     window.__airborneAirfield = true;
     if (!window.__airborneAirfieldPhase) window.__airborneAirfieldPhase = airfieldPhase;
-    // Ensure Ruff is alive during training
-    if (!window.__airborneRuffActive) {
+    // Boot Ruff ONCE (re-calling begin resets intro and kills lessons)
+    if (!window.__airborneRuffBooted) {
+      window.__airborneRuffBooted = true;
       try {
         if (typeof window.__airborneBeginRuff === "function") window.__airborneBeginRuff();
-      } catch (e) {}
+      } catch (e) { console.warn("Ruff boot", e); }
     }
     updateAirfieldFlags(dt);
     syncAirfieldGlobals();
@@ -560,6 +562,14 @@
         airfieldLesson = 0;
         airfieldLessonT = 0;
         airfieldSub = "practice";
+        window.__airborneAirfieldPhase = "lesson";
+        window.__airborneTrainingFlight = true;
+        // Hand off to Ruff lessons (altitude+)
+        try {
+          if (typeof window.__airborneRuffOnAirborne === "function") {
+            window.__airborneRuffOnAirborne();
+          }
+        } catch (e) { console.warn("Ruff airborne", e); }
         if (typeof player !== "undefined" && player) {
           player.x = W * 0.28;
           player.y = H * 0.4;

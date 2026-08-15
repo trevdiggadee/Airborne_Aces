@@ -451,8 +451,11 @@
         if (typeof sfxAirfieldWindStart === "function") sfxAirfieldWindStart();
       } catch (e) {}
     } else if (name === "altitude") {
-      if (ruffLines.length) showRadio(ruffLines[0], 3.0);
-      spawnAltitudeMarkers();
+      ruffIntroFly = false;
+      if (ruffLines.length) showRadio(ruffLines[0], 3.5);
+      else showRadio("Your blimp doesn't just go up. You control how high she flies.", 3.5);
+      try { spawnAltitudeMarkers(); } catch (e) {}
+      window.__airborneTrainingFlight = true;
     } else if (name === "crystals") {
       if (ruffLines.length) showRadio(ruffLines[0], 3.0);
       ruffCrystals = [];
@@ -1317,13 +1320,17 @@
         }
       }
       console.log("[R.U.F.F.] on screen at", Math.round(ruffX), Math.round(ruffY), "lines", ruffLines.length);
+      // Guarantee first line is visible
+      if (ruffLines.length) {
+        try { showRadio(ruffLines[0], 3.2); } catch (e) {}
+      }
     } catch (e) {
       console.error("[R.U.F.F.] begin failed", e);
-      // Still keep active so training is not ring-only fallback
       ruffActive = true;
       window.__airborneRuffActive = true;
       window.__airborneRuffStage = "intro";
       ruffStage = "intro";
+      try { showRadio("Testing… testing… can you hear me, rookie?", 3.2); } catch (e2) {}
     }
   }
 
@@ -1394,9 +1401,9 @@
         }
       }
       if ((ruffIntroLineArmed && ruffLineIdx >= ruffLines.length && ruffLineT > 0.6) ||
-          ruffStageT > 3.0) {
+          ruffStageT > 2.2) {
         ruffIntroFly = false;
-        nextStage(); // → takeoff — runway unlocks
+        nextStage(); // → takeoff
         console.log("[R.U.F.F.] intro done → takeoff");
       }
     }
@@ -1404,17 +1411,20 @@
     // Stage logic — hard timeouts so training never freezes on empty sky
     if (ruffStage === "takeoff") {
       const ph = window.__airborneAirfieldPhase;
-      // Advance once airborne OR after failsafe time
-      if (ph === "lesson" || ph === "climb" || ruffStageT > 20) {
+      if (ph === "lesson" || ph === "climb" || ruffStageT > 6) {
         nextStage(); // → altitude
       }
     } else if (ruffStage === "altitude") {
       if (typeof updateMarkers === "function") updateMarkers(dt);
-      // Ensure free flight
       window.__airborneAirfieldPaused = false;
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = false;
-      if (ruffStageT > 8) nextStage(); // → crystals
+      window.__airborneTrainingFlight = true;
+      // Speak altitude lines if radio empty
+      if (ruffStageT < 0.2 && ruffLines.length) {
+        try { showRadio(ruffLines[0], 3.5); } catch (e) {}
+      }
+      if (ruffStageT > 7) nextStage(); // → crystals
     } else if (ruffStage === "crystals") {
       window.__airborneAirfieldPaused = false;
       window.__airborneAirfieldRings = false;
@@ -1633,6 +1643,28 @@
     }
   };
 
+  window.__airborneRuffOnAirborne = function() {
+    // Called when climb finishes — jump into real flight lessons
+    ruffActive = true;
+    window.__airborneRuffActive = true;
+    ruffIntroFly = false;
+    const st = ruffStage || window.__airborneRuffStage || "intro";
+    if (st === "intro" || st === "takeoff" || st === "idle" || !st) {
+      try {
+        setStage("altitude");
+      } catch (e) {
+        ruffStage = "altitude";
+        window.__airborneRuffStage = "altitude";
+        ruffStageT = 0;
+        ruffLines = (DIALOGUE.altitude || []).slice();
+        ruffLineIdx = 0;
+        if (ruffLines.length) {
+          try { showRadio(ruffLines[0], 3.5); } catch (e2) {}
+        }
+      }
+    }
+    console.log("[R.U.F.F.] onAirborne →", ruffStage);
+  };
   window.__airborneForceRuffTakeoff = function() {
     ruffActive = true;
     window.__airborneRuffActive = true;
