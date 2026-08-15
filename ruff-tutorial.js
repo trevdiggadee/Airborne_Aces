@@ -491,9 +491,9 @@
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       if (typeof powerup !== "undefined") powerup = null;
       ruffPowerOrb = null;
-      if (typeof STORM_MAX === "number") stormCharge = STORM_MAX;
-      else if (typeof stormCharge === "number") stormCharge = 100;
-      if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay(true);
+      // Do NOT auto-fill storm — fireball is the training power-up (avoids storm screen dim)
+      if (typeof stormCharge === "number") stormCharge = 0;
+      if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay(false);
     } else if (name === "rings") {
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
       window.__airborneAirfieldRings = true;
@@ -699,8 +699,8 @@
 
   function updateTrainingCoins(dt) {
     if (!ruffCoins.length) return;
-    let spd = (typeof obstacleSpeed === "number" && obstacleSpeed > 40) ? obstacleSpeed * 0.55 : 110;
-    spd = Math.max(70, Math.min(120, spd)); // slower coins
+    // Constant coin speed all training stages (never tied to obstacleSpeed)
+    const spd = 95;
     const px = (typeof player !== "undefined" && player) ? player.x : 0;
     const py = (typeof player !== "undefined" && player) ? player.y : 0;
     const pw = (typeof player !== "undefined" && player) ? player.w * 0.42 : 20;
@@ -1467,10 +1467,10 @@
         window.__airborneRuffRequestLand = true;
       }
       const ph = window.__airborneAirfieldPhase;
-      // Wait for real touchdown / score — then open report right away
-      if (ph === "score" || ph === "done" || window.__airborneAirfieldDidLand) {
+      // Only after score phase has held long enough (set by world-buildings)
+      if (window.__airborneTrainingReportReady || ph === "done") {
         nextStage(); // → report
-      } else if (ruffStageT > 35) {
+      } else if (ruffStageT > 55) {
         // Long failsafe only
         nextStage();
       }

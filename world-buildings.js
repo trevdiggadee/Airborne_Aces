@@ -624,6 +624,7 @@
           airfieldLandContact = 0;
           window.__airborneAirfieldDidLand = false;
           window.__airborneTrainingReportShown = false;
+          window.__airborneTrainingReportReady = false;
           window.__airborneAirfieldPaused = false;
           window.__airborneAirfieldInvuln = true;
           // Keep live objects on screen — only stop new spawns
@@ -741,7 +742,7 @@
         airfieldStripY = H * 0.55; // deeper start so top edge stays off-screen longer
       }
       // Rise into place, then HARD STOP — extended so landing art is visible longer
-      const riseDur = 4.5;
+      const riseDur = 2.8; // snappy like climb
       const riseU = Math.min(1, airfieldLandT / riseDur);
       const riseE = 1 - Math.pow(1 - riseU, 2.4);
       // Raised another ~3%
@@ -751,7 +752,7 @@
       if (riseU >= 1) airfieldStripY = restSink;
 
       // Slower approach so you can see flags/windsock longer
-      const approachSpd = 62;
+      const approachSpd = 210; // match takeoff scroll speed
       (airfieldTiles || []).forEach(function(tile) {
         if (!tile) return;
         // Stop earlier so the runway stays fully under the blimp with margin
@@ -772,12 +773,12 @@
       if (typeof player !== "undefined" && player) {
         const ph = player.h > 0 ? player.h : 40;
         // Player-controlled landing: mild gravity so taps (flap) have clear effect
-        player.vy += 520 * dt;
-        if (player.vy > 320) player.vy = 320;
-        const fieldReady = airfieldLandT > 2.2;
-        // gentle assist only when high above deck after strip is in place
-        if (fieldReady && player.y < landY - 90) {
-          player.vy += 120 * dt;
+        player.vy += 680 * dt;
+        if (player.vy > 420) player.vy = 420;
+        const fieldReady = airfieldLandT > 1.6;
+        // assist toward deck once strip is ready
+        if (fieldReady && player.y < landY - 70) {
+          player.vy += 160 * dt;
         }
         player.y += player.vy * dt;
         player.x = W * 0.28;
@@ -819,24 +820,28 @@
       syncAirfieldGlobals();
 
     
-    // ---- SKID (drive along runway to end of strip, then stop) ----
+    // ---- SKID (drive like takeoff: strip scrolls under fixed-x blimp to end) ----
     } else if (airfieldPhase === "skid") {
       window.__airborneAirfieldInvuln = true;
       window.__airborneAirfieldPaused = true;
       airfieldSkidT = (airfieldSkidT || 0) + dt;
-      // Longer drive so blimp rolls toward end of visible strip
-      const skidDur = 6.5;
+      // Same pace as takeoff scroll so it feels identical to lift-off drive
+      const skidDur = 5.5;
       const u = Math.min(1, airfieldSkidT / skidDur);
-      // Ease-out so it slows into a stop at the end
-      const ease = 1 - Math.pow(1 - u, 2.2);
+      const ease = 1 - Math.pow(1 - u, 1.8); // mild ease-out
+      const driveSpd = Math.max(airfieldTakeoffSpeed || 210, 210) * (1.15 - 0.55 * ease);
+      // Scroll strip left under the blimp (same illusion as beginning runway)
+      (airfieldTiles || []).forEach(function(tile) {
+        if (!tile) return;
+        tile.x -= driveSpd * dt;
+      });
       const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
       const sinkS = (typeof airfieldStripY === "number") ? airfieldStripY : 0;
       const landY = H - Math.max(40, th * 0.28) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10) + sinkS;
       if (typeof player !== "undefined" && player) {
+        // Keep blimp planted on deck; slight forward creep like taxi
         const sx = (typeof airfieldSkidStartX === "number") ? airfieldSkidStartX : W * 0.28;
-        // Drive from touchdown point almost to right edge of runway (~75% screen)
-        const endX = Math.min(W * 0.78, sx + W * 0.48);
-        player.x = sx + (endX - sx) * ease;
+        player.x = sx + ease * W * 0.12;
         player.y = landY;
         player.vy = 0;
         // Slight nose-down then settle (no bounce)
@@ -921,6 +926,7 @@
       // Hold on strip ~10s after stop, then score popup
       if (!window.__airborneTrainingReportShown && airfieldScoreT > 10) {
         window.__airborneTrainingReportShown = true;
+        window.__airborneTrainingReportReady = true;
         window.__airborneAirfieldDidLand = true;
         try {
           if (typeof window.__airborneShowRuffReport === "function") {

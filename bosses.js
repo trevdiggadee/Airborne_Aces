@@ -722,16 +722,20 @@
 
   function drawStorm() {
     if (!stormActive) return;
+    // Training: no screen-dim atmosphere
+    const skipDim = !!(window.__airborneAirfield || window.__airborneRuffActive);
 
     // ---- Swarm of spinning power icons ----
     if (stormMode === "swarm" || stormMode === "missile") {
       ctx.save();
       // brief warm/electric atmosphere
       const dusk = ctx.createLinearGradient(0, 0, 0, H);
-      dusk.addColorStop(0, "rgba(40,22,10,0.28)");
-      dusk.addColorStop(1, "rgba(20,10,5,0.05)");
-      ctx.fillStyle = dusk;
-      ctx.fillRect(0, 0, W, H);
+      if (!skipDim) {
+        dusk.addColorStop(0, "rgba(40,22,10,0.28)");
+        dusk.addColorStop(1, "rgba(20,10,5,0.05)");
+        ctx.fillStyle = dusk;
+        ctx.fillRect(0, 0, W, H);
+      }
 
       stormSwarm.forEach(function(p) {
         if (p.delay && p.age < p.delay) return;
