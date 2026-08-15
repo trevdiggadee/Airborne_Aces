@@ -148,7 +148,10 @@
       } catch (e) {}
       if (typeof ensureCollectDock === "function") ensureCollectDock();
       else if (typeof updateCollectDock === "function") updateCollectDock();
-      if (typeof updateAirfield === "function") updateAirfield(dt);
+      // Prefer window exports (reliable across script scopes)
+      const _updAf = (typeof window.updateAirfield === "function") ? window.updateAirfield
+        : (typeof updateAirfield === "function") ? updateAirfield : null;
+      if (_updAf) _updAf(dt);
       if (typeof window.__airborneUpdateRuff === "function") window.__airborneUpdateRuff(dt);
       updateBuildings(dtScale);
       updatePowerlines(dtScale);

@@ -74,6 +74,11 @@
   }
 
   function startTutorial() {
+    // Old overlay tutorial disabled — airfield training IS the tutorial
+    // Jump straight into gameplay so updateAirfield runs (needs state === "playing")
+    ensureAudio();
+    startGame();
+    return;
     state = "tutorial";
     injectTutorialStyle();
     ensureAudio();
@@ -862,11 +867,7 @@
   let pendingStart = false;
   function bridgeStart() {
     if (assetsLoaded === assetKeys.length) {
-      if (window.__airbornePendingMapLevel && Number(window.__airbornePendingMapLevel) >= 1) {
-        startGame();
-      } else {
-        startTutorial();
-      }
+      startGame();
     } else {
       pendingStart = true;
     }
@@ -877,11 +878,7 @@
   window.__airborneOnAssetsReady = function() {
     if (!pendingStart) return;
     pendingStart = false;
-    if (window.__airbornePendingMapLevel && Number(window.__airbornePendingMapLevel) >= 1) {
-      startGame();
-    } else {
-      startTutorial();
-    }
+    startGame();
   };
 
   function handleInput(e) {

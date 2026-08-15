@@ -237,6 +237,9 @@
   function beginAirfieldTraining() {
     airfieldMode = true;
     airfieldPhase = "taxi";
+    try { if (typeof state !== "undefined") state = "playing"; } catch (e) {}
+    window.__airborneAirfield = true;
+    window.__airborneAirfieldPhase = "taxi";
     // Start R.U.F.F. FIRST so he appears before any runway motion
     window.__airborneRuffStage = "intro";
     if (typeof window.__airborneBeginRuff === "function") {
@@ -500,10 +503,9 @@
       }
       if (airfieldTakeoffSpeed > 380) airfieldTakeoffSpeed = 380;
 
-      // FAILSAFE: if player has been on runway a while with any interaction, keep rolling
-      // FAILSAFE 2: if stuck > 10s, auto-accelerate so training cannot soft-lock
-      if ((airfieldRunwayT || 0) > 10 && airfieldTakeoffSpeed < 200) {
-        airfieldTakeoffSpeed = Math.min(300, (airfieldTakeoffSpeed || 40) + 80 * dt);
+      // AUTO-ROLL: after 2s always start building speed (training cannot soft-lock)
+      if ((airfieldRunwayT || 0) > 2.0) {
+        airfieldTakeoffSpeed = Math.max(airfieldTakeoffSpeed || 0, 40) + 90 * dt;
         airfieldPhase = "accel";
       }
 
@@ -522,12 +524,11 @@
         } catch (e) {}
       }
 
-      // Liftoff conditions — any of these
+      // Liftoff: speed OR time on runway (auto after ~4.5s)
       const ready =
-        airfieldTakeoffSpeed >= 220 ||
-        (isHold && (airfieldHoldTime || 0) >= 2.0) ||
-        (airfieldPhaseT > 5 && airfieldTakeoffSpeed >= 150) ||
-        ((airfieldRunwayT || 0) > 14 && airfieldTakeoffSpeed >= 100);
+        airfieldTakeoffSpeed >= 200 ||
+        (isHold && (airfieldHoldTime || 0) >= 1.2) ||
+        ((airfieldRunwayT || 0) > 4.5);
 
       if (ready) {
         airfieldPhase = "climb";
