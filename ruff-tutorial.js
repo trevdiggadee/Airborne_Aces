@@ -876,7 +876,12 @@
       // specular glint
       ctx.fillStyle = "rgba(255,255,255,0.65)";
       ctx.beginPath();
-      ctx.ellipse(-R * 0.3, -R * 0.32, R * 0.28, R * 0.14, -0.5, 0, Math.PI * 2);
+      ctx.save();
+      ctx.translate(-R * 0.3, -R * 0.32);
+      ctx.rotate(-0.5);
+      ctx.scale(1, 0.5);
+      ctx.arc(0, 0, R * 0.28, 0, Math.PI * 2);
+      ctx.restore();
       ctx.fill();
       // orbiting sparkles
       for (let i = 0; i < 3; i++) {
@@ -1285,6 +1290,9 @@
     if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay();
     ruffStats = { crystals: 0, coins: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, landingStars: 3 };
     ruffCrystals = [];
+    ruffCoins = [];
+    ruffAirship = null;
+    window.__airborneAirshipCleared = false;
     ruffMarkers = [];
     ruffCombo = 0;
     ruffIntroDone = false;
@@ -1535,12 +1543,12 @@
       window.__ruffDrawLogged = true;
       console.log("[R.U.F.F.] drawing", ruffStage, Math.round(ruffX), Math.round(ruffY));
     }
-    drawMarkers();
-    drawCrystals();
-    drawTrainingCoins();
-    drawTrainingAirship();
-    drawSparkles();
-    drawRuffCompanion();
+    try { drawMarkers(); } catch (e) {}
+    try { drawCrystals(); } catch (e) {}
+    try { drawTrainingCoins(); } catch (e) { console.warn("coins draw", e); }
+    try { drawTrainingAirship(); } catch (e) { console.warn("airship draw", e); }
+    try { drawSparkles(); } catch (e) {}
+    try { drawRuffCompanion(); } catch (e) { console.warn("ruff draw", e); }
   }
 
   function drawPowerOrb() {
