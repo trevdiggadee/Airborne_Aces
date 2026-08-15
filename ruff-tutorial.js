@@ -604,13 +604,22 @@
     if (!ruffLessonPendingNext) return;
     if (ruffLessonClearing) {
       stopLessonSpawns();
-      if (lessonItemsPending() > 0) {
-        ruffLessonPauseT = 0;
-        return; // still clearing
+      ruffLessonPauseT += dt;
+      // Force-clear after 6s so we never soft-lock on a stuck item
+      if (lessonItemsPending() > 0 && ruffLessonPauseT < 6.0) {
+        // keep items scrolling
+        try { updateCrystals(dt); } catch (e) {}
+        try { updateTrainingCoins(dt); } catch (e) {}
+        return;
       }
-      // Items gone — start 2s pause
+      // Items gone (or timeout) — begin 2s pause
       ruffLessonClearing = false;
       ruffLessonPauseT = 0;
+      // hard-clear leftovers so next lesson is clean
+      try {
+        ruffCrystals = (ruffCrystals || []).filter(function (c) { return c && !c.collected && c.x > -60; });
+        ruffCoins = (ruffCoins || []).filter(function (c) { return c && !c.collected && c.x > -60; });
+      } catch (e) {}
     }
     ruffLessonPauseT += dt;
     if (ruffLessonPauseT >= 2.0) {
@@ -1327,6 +1336,7 @@
     if (!ruffActive) return;
     ruffStageT += dt;
     ruffLineT += dt;
+    try { tickLessonGate(dt); } catch (e) {}
     // Keep power icon suppressed until power lesson
     if (!window.__airborneAirfieldAllowPowerup) {
       const smx = document.getElementById("stormMeter");

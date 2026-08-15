@@ -450,10 +450,13 @@
       window.__airborneFirePickup = {
         x: (typeof x === "number") ? x : ((typeof W !== "undefined" ? W : 400) + 60),
         y: (typeof y === "number") ? y : ((typeof H !== "undefined" ? H : 600) * (0.28 + Math.random() * 0.32)),
-        r: 24,
+        r: 28,
         bob: Math.random() * Math.PI * 2,
         pulse: 0,
-        speed: 125
+        speed: 125,
+        frame: 0,
+        frameT: 0,
+        embers: []
       };
     };
 
@@ -491,6 +494,36 @@
         pickup.x -= (pickup.speed || 125) * dt;
         pickup.bob += dt * 2.4;
         pickup.pulse = (pickup.pulse || 0) + dt * 5;
+        // 6x6 sheet = 36 frames
+        pickup.frameT = (pickup.frameT || 0) + dt;
+        const fd = 1 / 14;
+        while (pickup.frameT >= fd) {
+          pickup.frameT -= fd;
+          pickup.frame = ((pickup.frame || 0) + 1) % 36;
+        }
+        // Spawn small embers
+        if (!pickup.embers) pickup.embers = [];
+        if (Math.random() < 0.7) {
+          const ang = -Math.PI * 0.5 + (Math.random() - 0.5) * 1.2;
+          pickup.embers.push({
+            x: pickup.x + (Math.random() - 0.5) * 16,
+            y: pickup.y + Math.sin(pickup.bob) * 10 + 6,
+            vx: Math.cos(ang) * (20 + Math.random() * 40),
+            vy: Math.sin(ang) * (30 + Math.random() * 50) - 20,
+            life: 0.35 + Math.random() * 0.35,
+            age: 0,
+            r: 1.5 + Math.random() * 2.5
+          });
+        }
+        for (let ei = pickup.embers.length - 1; ei >= 0; ei--) {
+          const e = pickup.embers[ei];
+          e.age += dt;
+          e.x += e.vx * dt;
+          e.y += e.vy * dt;
+          e.vy += 40 * dt;
+          if (e.age >= e.life) pickup.embers.splice(ei, 1);
+        }
+        if (pickup.embers.length > 40) pickup.embers.splice(0, pickup.embers.length - 40);
         if (typeof player !== "undefined" && player) {
           const dx = Math.abs(player.x - pickup.x);
           const dy = Math.abs(player.y - (pickup.y + Math.sin(pickup.bob) * 10));
@@ -557,27 +590,57 @@
       const pickup = window.__airborneFirePickup;
       if (pickup && !pickup.collected) {
         const y = pickup.y + Math.sin(pickup.bob) * 10;
-        const pulse = 1 + Math.sin(pickup.pulse || 0) * 0.12;
+        const pulse = 1 + Math.sin(pickup.pulse || 0) * 0.08;
         const R = pickup.r * pulse;
         ctx.save();
-        const g = ctx.createRadialGradient(pickup.x, y, 2, pickup.x, y, R * 2.5);
-        g.addColorStop(0, "rgba(255,220,80,0.9)");
-        g.addColorStop(0.35, "rgba(255,120,20,0.55)");
-        g.addColorStop(0.7, "rgba(220,40,10,0.22)");
+        // Soft glow under sprite
+        const g = ctx.createRadialGradient(pickup.x, y, 2, pickup.x, y, R * 2.2);
+        g.addColorStop(0, "rgba(255,180,40,0.55)");
+        g.addColorStop(0.5, "rgba(255,80,10,0.2)");
         g.addColorStop(1, "rgba(180,20,0,0)");
         ctx.fillStyle = g;
         ctx.beginPath();
-        ctx.arc(pickup.x, y, R * 2.5, 0, Math.PI * 2);
+        ctx.arc(pickup.x, y, R * 2.2, 0, Math.PI * 2);
         ctx.fill();
-        const g2 = ctx.createRadialGradient(pickup.x - 3, y - 4, 0, pickup.x, y, R);
-        g2.addColorStop(0, "#fff6c8");
-        g2.addColorStop(0.35, "#ffb030");
-        g2.addColorStop(0.75, "#ff4a10");
-        g2.addColorStop(1, "rgba(120,10,0,0.25)");
-        ctx.fillStyle = g2;
-        ctx.beginPath();
-        ctx.arc(pickup.x, y, R, 0, Math.PI * 2);
-        ctx.fill();
+        // Animated spritesheet 6x6
+        const sheet = (typeof images !== "undefined" && images) ? images.fireball_sheet : null;
+        if (sheet && sheet.naturalWidth) {
+          const cols = 6, rows = 6;
+          const fw = sheet.naturalWidth / cols;
+          const fh = sheet.naturalHeight / rows;
+          const fr = (pickup.frame || 0) % 36;
+          const col = fr % cols;
+          const row = Math.floor(fr / cols) % rows;
+          const dw = R * 2.4;
+          const dh = R * 2.4;
+          ctx.drawImage(sheet, col * fw, row * fh, fw, fh, pickup.x - dw / 2, y - dh / 2, dw, dh);
+        } else {
+          // fallback orb
+          const g2 = ctx.createRadialGradient(pickup.x - 3, y - 4, 0, pickup.x, y, R);
+          g2.addColorStop(0, "#fff6c8");
+          g2.addColorStop(0.35, "#ffb030");
+          g2.addColorStop(0.75, "#ff4a10");
+          g2.addColorStop(1, "rgba(120,10,0,0.25)");
+          ctx.fillStyle = g2;
+          ctx.beginPath();
+          ctx.arc(pickup.x, y, R, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        // Embers
+        (pickup.embers || []).forEach(function (e) {
+          const u = 1 - e.age / e.life;
+          if (u <= 0) return;
+          ctx.globalAlpha = Math.max(0, u);
+          const eg = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.r);
+          eg.addColorStop(0, "rgba(255,240,160,1)");
+          eg.addColorStop(0.5, "rgba(255,120,30,0.8)");
+          eg.addColorStop(1, "rgba(200,40,0,0)");
+          ctx.fillStyle = eg;
+          ctx.beginPath();
+          ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.globalAlpha = 1;
         ctx.restore();
       }
       if (window.__airborneFirePowerActive && typeof player !== "undefined" && player) {
