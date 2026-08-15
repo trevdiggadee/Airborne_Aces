@@ -1265,64 +1265,102 @@
 
   // ---------- Public API ----------
   function beginRuffTraining() {
+    // Always mark active FIRST so airfield never falls into legacy ring-only lessons
     ruffActive = true;
     window.__airborneRuffActive = true;
     window.__airborneRuffStage = "intro";
-    console.log("[R.U.F.F.] beginRuffTraining active=", ruffActive);
-    // Visible start position (right side)
-    ruffX = (typeof W !== "undefined" ? W : 400) * 0.85;
-    ruffY = (typeof H !== "undefined" ? H : 600) * 0.28;
-    ruffIntroFly = true;
-    ruffIntroFlyT = 0;
-    ruffIntroLineArmed = false;
-    ruffScalePulse = 1.2;
-    ruffFrame = 0;
-    window.__airborneAirfieldAllowPowerup = false;
-    if (typeof powerup !== "undefined") powerup = null;
-    if (typeof shieldPickup !== "undefined") shieldPickup = null;
-    if (typeof stormCharge === "number") stormCharge = 0;
-    const sm0 = document.getElementById("stormMeter");
-    if (sm0) {
-      sm0.style.display = "";
-      sm0.style.visibility = "";
-      sm0.classList.add("trainingHidden");
+    ruffStage = "intro";
+    try {
+      console.log("[R.U.F.F.] beginRuffTraining");
+      ruffX = (typeof W !== "undefined" ? W : 400) * 0.8;
+      ruffY = (typeof H !== "undefined" ? H : 600) * 0.26;
+      ruffIntroFly = true;
+      ruffIntroFlyT = 0;
+      ruffIntroLineArmed = false;
+      ruffScalePulse = 1.25;
+      ruffFrame = 0;
+      ruffFrameT = 0;
+      ruffStageT = 0;
+      ruffLineIdx = 0;
+      ruffLineT = 0;
+      window.__airborneAirfieldAllowPowerup = false;
+      window.__airborneAirfieldRings = false;
+      window.__airborneAirfieldObstacles = false;
+      try { if (typeof powerup !== "undefined") powerup = null; } catch (e) {}
+      try { if (typeof shieldPickup !== "undefined") shieldPickup = null; } catch (e) {}
+      try { if (typeof stormCharge === "number") stormCharge = 0; } catch (e) {}
+      try {
+        const sm0 = document.getElementById("stormMeter");
+        if (sm0) {
+          sm0.style.display = "";
+          sm0.style.visibility = "";
+          sm0.classList.add("trainingHidden");
+        }
+      } catch (e) {}
+      try { if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay(); } catch (e) {}
+      ruffStats = { crystals: 0, coins: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, landingStars: 3 };
+      ruffCrystals = [];
+      ruffCoins = [];
+      ruffAirship = null;
+      window.__airborneAirshipCleared = false;
+      ruffMarkers = [];
+      ruffCombo = 0;
+      ruffIntroDone = false;
+      ruffSpeechDone = true;
+      try { ensureSkipHandler(); } catch (e) {}
+      try { showFlightTrace(); } catch (e) {}
+      try { showFlightTraceBanner(); } catch (e) {}
+      try { setStage("intro"); } catch (e) { console.warn("setStage intro", e); }
+      // Re-assert visibility after setStage
+      ruffActive = true;
+      window.__airborneRuffActive = true;
+      window.__airborneRuffStage = "intro";
+      ruffStage = "intro";
+      ruffIntroFly = true;
+      ruffIntroFlyT = 0;
+      ruffX = (typeof W !== "undefined" ? W : 400) * 0.78;
+      ruffY = (typeof H !== "undefined" ? H : 600) * 0.24;
+      ruffScalePulse = 1.3;
+      // Seed dialogue if setStage failed to
+      if (!ruffLines || !ruffLines.length) {
+        ruffLines = (DIALOGUE.intro || []).slice();
+        ruffLineIdx = 0;
+        if (ruffLines.length) {
+          try { showRadio(ruffLines[0], 3.2); ruffIntroLineArmed = true; } catch (e) {}
+        }
+      }
+      console.log("[R.U.F.F.] on screen at", Math.round(ruffX), Math.round(ruffY), "lines", ruffLines.length);
+    } catch (e) {
+      console.error("[R.U.F.F.] begin failed", e);
+      // Still keep active so training is not ring-only fallback
+      ruffActive = true;
+      window.__airborneRuffActive = true;
+      window.__airborneRuffStage = "intro";
+      ruffStage = "intro";
     }
-    if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay();
-    ruffStats = { crystals: 0, coins: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, landingStars: 3 };
-    ruffCrystals = [];
-    ruffCoins = [];
-    ruffAirship = null;
-    window.__airborneAirshipCleared = false;
-    ruffMarkers = [];
-    ruffCombo = 0;
-    ruffIntroDone = false;
-    ensureSkipHandler();
-    showFlightTrace();
-    showFlightTraceBanner();
-    setStage("intro");
-    // Re-assert after setStage so he is visible immediately
-    ruffActive = true;
-    window.__airborneRuffActive = true;
-    window.__airborneRuffStage = "intro";
-    ruffIntroFly = true;
-    ruffIntroFlyT = 0;
-    ruffX = (typeof W !== "undefined" ? W : 400) * 0.8;
-    ruffY = (typeof H !== "undefined" ? H : 600) * 0.26;
-    ruffScalePulse = 1.25;
-    console.log("[R.U.F.F.] on screen at", Math.round(ruffX), Math.round(ruffY));
   }
 
   function updateRuff(dt) {
-    if (!ruffActive && window.__airborneRuffActive) {
+    // Recover if airfield marked active but local flag was lost
+    if (window.__airborneRuffActive) ruffActive = true;
+    if (!ruffActive && window.__airborneRuffStage && window.__airborneRuffStage !== "idle") {
       ruffActive = true;
-      if (!ruffStage || ruffStage === "idle") {
-        ruffStage = window.__airborneRuffStage || "intro";
-        if (ruffStage === "intro") {
-          ruffIntroFly = true;
-        }
-      }
+      window.__airborneRuffActive = true;
     }
     if (!ruffActive) return;
+    // Keep internal stage in sync if airfield forced a window stage change
+    if (window.__airborneRuffStage && window.__airborneRuffStage !== ruffStage &&
+        window.__airborneRuffStage !== "idle") {
+      // Only adopt airfield-forced stages that are forward jumps we expect
+      const order = STAGE_ORDER;
+      const cur = order.indexOf(ruffStage);
+      const win = order.indexOf(window.__airborneRuffStage);
+      if (win > cur && win - cur <= 2) {
+        try { setStage(window.__airborneRuffStage); } catch (e) { ruffStage = window.__airborneRuffStage; }
+      }
+    }
+    // Mirror internal stage out
+    if (ruffStage) window.__airborneRuffStage = ruffStage;
     ruffStageT += dt;
     ruffLineT += dt;
     // Keep power icon suppressed until power lesson

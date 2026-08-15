@@ -409,13 +409,15 @@
     const holding = !!window.__airborneAirfieldHold;
     if (!(airfieldTakeoffSpeed > 0)) airfieldTakeoffSpeed = 50;
 
-    // Give Ruff time to appear; only unlock if intro hangs too long
-    if (window.__airborneRuffStage === "intro" && airfieldRunwayT > 18) {
-      window.__airborneRuffStage = "takeoff";
-      window.__airborneAirfieldPaused = false;
-      console.log("[Airborne] intro timeout → takeoff");
+    // Keep trying to start Ruff; do not skip him
+    if (!window.__airborneRuffActive && airfieldRunwayT > 1.5) {
+      try {
+        if (typeof window.__airborneBeginRuff === "function") window.__airborneBeginRuff();
+      } catch (e) {}
     }
-    if ((!window.__airborneRuffStage || window.__airborneRuffStage === "idle") && airfieldRunwayT > 8) {
+    // Intro hang failsafe only after a long wait — and still via Ruff module
+    if (window.__airborneRuffStage === "intro" && airfieldRunwayT > 28) {
+      console.log("[Airborne] intro long timeout → nudge takeoff via Ruff");
       window.__airborneRuffStage = "takeoff";
       window.__airborneAirfieldPaused = false;
     }
@@ -676,7 +678,20 @@
       }
       if (airfieldPhase === "land" || airfieldPhase === "skid" || airfieldPhase === "score" || airfieldPhase === "done") {
         // skip legacy lesson timer while landing
+      } else if (!window.__airborneRuffActive) {
+        // Ruff should drive training — never fall into ring-only legacy lessons
+        window.__airborneAirfieldRings = false;
+        window.__airborneAirfieldObstacles = false;
+        if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+        airfieldTip = "Waiting for instructor…";
+        try {
+          if (typeof window.__airborneBeginRuff === "function") window.__airborneBeginRuff();
+        } catch (e) { console.warn(e); }
+        syncAirfieldGlobals();
+        return;
       } else {
+      // Legacy AIRFIELD_LESSONS path disabled while Ruff is present
+      return;
       const lessons = AIRFIELD_LESSONS;
       if (airfieldLesson >= lessons.length) {
         airfieldPhase = "land";
