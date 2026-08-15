@@ -179,25 +179,8 @@
   }
 
   function showFlightTraceBanner() {
-    const el = titleEl();
-    if (!el) return;
-    el.innerHTML =
-      '<span class="ft-gear ft-gear-l" aria-hidden="true"></span>' +
-      '<span class="ft-banner-text">FLIGHT TRAINING</span>' +
-      '<span class="ft-gear ft-gear-r" aria-hidden="true"></span>';
-    el.classList.remove("ft-out");
-    el.classList.add("visible", "ft-banner");
-    // Fade in, hold, fade out
-    clearTimeout(showFlightTraceBanner._t1);
-    clearTimeout(showFlightTraceBanner._t2);
-    showFlightTraceBanner._t1 = setTimeout(function () {
-      el.classList.add("ft-out");
-      el.classList.remove("visible");
-      showFlightTraceBanner._t2 = setTimeout(function () {
-        el.classList.remove("ft-banner", "ft-out");
-        el.innerHTML = "";
-      }, 550);
-    }, 2600);
+    // Banner disabled per design
+    return;
   }
 
   function showFlightTrace() {
@@ -462,16 +445,18 @@
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
       ruffWaitingInput = true;
       window.__airborneAirfieldPaused = false;
-      window.__airborneResetRunway = true;
-      // Reset runway drive so intro duration doesn't auto-liftoff
-      try {
-        if (typeof airfieldDriveDist !== "undefined") airfieldDriveDist = 0;
-        if (typeof airfieldPhaseT !== "undefined") airfieldPhaseT = 0;
-        if (typeof airfieldTakeoffSpeed !== "undefined") airfieldTakeoffSpeed = 50;
-        if (typeof airfieldPhase !== "undefined") airfieldPhase = "taxi";
-      } catch (e) {}
-      window.__airborneAirfieldPhase = "taxi";
-      window.__airborneResetRunway = true;
+      // Do NOT reset runway if player already rolling — avoids killing takeoff
+      const ph = window.__airborneAirfieldPhase;
+      if (ph !== "accel" && ph !== "climb" && ph !== "lesson") {
+        window.__airborneResetRunway = true;
+        try {
+          if (typeof airfieldDriveDist !== "undefined") airfieldDriveDist = 0;
+          if (typeof airfieldPhaseT !== "undefined") airfieldPhaseT = 0;
+          if (typeof airfieldTakeoffSpeed !== "undefined") airfieldTakeoffSpeed = 50;
+          if (typeof airfieldPhase !== "undefined") airfieldPhase = "taxi";
+        } catch (e) {}
+        window.__airborneAirfieldPhase = "taxi";
+      }
       try {
         if (typeof sfxAirfieldEngineStart === "function") sfxAirfieldEngineStart();
         if (typeof sfxAirfieldWindStart === "function") sfxAirfieldWindStart();

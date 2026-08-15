@@ -264,7 +264,7 @@
     window.__airborneAirfieldBoostPending = false;
     window.__airborneScriptedPose = null;
     window.__airborneAirfieldInvuln = true;
-    window.__airborneAirfieldPaused = true; // locked until intro done
+    window.__airborneAirfieldPaused = false; // runway ready immediately
     window.__airborneTrainingFlight = false;
     window.__airborneClimbAlmostDone = false;
     window.__airborneAirfieldBlockBoss = true;
@@ -274,7 +274,7 @@
     if (typeof levelEndPad !== "undefined") levelEndPad = null;
     if (typeof levelEndActive !== "undefined") levelEndActive = false;
 
-    airfieldTip = "HOLD the screen to take off!";
+    airfieldTip = "";
     syncAirfieldGlobals();
     initAirfieldStrip();
     buildings = [];
@@ -409,47 +409,26 @@
     const holding = !!window.__airborneAirfieldHold;
     if (!(airfieldTakeoffSpeed > 0)) airfieldTakeoffSpeed = 50;
 
-    // Ensure Ruff starts once
-    if (!window.__airborneRuffActive && airfieldRunwayT > 0.3 && airfieldRunwayT < 4) {
+    // Start Ruff once early (does not lock runway)
+    if (!window.__airborneRuffActive && airfieldRunwayT > 0.2 && airfieldRunwayT < 2.5) {
       try {
         if (typeof window.__airborneBeginRuff === "function") window.__airborneBeginRuff();
       } catch (e) {}
     }
-    // Hard unlock after brief intro so player is never stuck
-    if (airfieldRunwayT > 3) {
-      window.__airborneAirfieldPaused = false;
-      if (window.__airborneRuffStage === "intro" || !window.__airborneRuffStage) {
-        try {
-          if (typeof window.__airborneForceRuffTakeoff === "function") {
-            window.__airborneForceRuffTakeoff();
-          } else {
-            window.__airborneRuffStage = "takeoff";
-          }
-        } catch (e) {
-          window.__airborneRuffStage = "takeoff";
-        }
-      }
-    }
+    window.__airborneAirfieldPaused = false;
 
     // Scroll strip LEFT only (single image, no loop).
     // Sink gradually only toward the END of the image.
     if (airfieldPhase === "taxi" || airfieldPhase === "accel" || airfieldPhase === "climb" ||
         airfieldPhase === "lesson") {
       // Freeze strip only during active intro (not forever if Ruff fails)
-      const ruffSt = window.__airborneRuffStage || "intro";
-      const introActive = (ruffSt === "intro") && !!window.__airborneRuffActive;
-      // Safety: never freeze strip more than ~12s from training start
-      const introTimedOut = (airfieldRunwayT || 0) > 2.5;
-      const introStill = introActive && !introTimedOut;
+      // Scroll strip when holding on runway, always when airborne
       let scrollSpd = 0;
-      if (!introStill) {
-        if (airfieldPhase === "taxi" || airfieldPhase === "accel") {
-          // Only scroll while player is actively holding
-          scrollSpd = window.__airborneAirfieldHold
-            ? Math.max(airfieldTakeoffSpeed || 50, 40) : 0;
-        } else {
-          scrollSpd = Math.max(airfieldTakeoffSpeed || 210, (airfieldPhase === "lesson" ? 210 : 0));
-        }
+      if (airfieldPhase === "taxi" || airfieldPhase === "accel") {
+        scrollSpd = window.__airborneAirfieldHold
+          ? Math.max(airfieldTakeoffSpeed || 50, 40) : 0;
+      } else {
+        scrollSpd = Math.max(airfieldTakeoffSpeed || 210, (airfieldPhase === "lesson" ? 210 : 0));
       }
       if (scrollSpd > 0) {
         (airfieldTiles || []).forEach(function(tile) {
@@ -488,70 +467,47 @@
     // ---- RUNWAY ----
     if (airfieldPhase === "taxi" || airfieldPhase === "accel") {
       window.__airborneAirfieldInvuln = true;
+      // No intro lock — player can always HOLD to accelerate
+      window.__airborneAirfieldPaused = false;
+      window.__airborneTrainingFlight = false;
+      airfieldTip = "";
 
-      const ruffSt = window.__airborneRuffStage || "intro";
-      const introLock = (ruffSt === "intro") && !!window.__airborneRuffActive && (airfieldRunwayT || 0) < 2.5;
-
-      if (introLock) {
-        // Wait for R.U.F.F. intro — strip frozen, blimp on deck
-        window.__airborneAirfieldPaused = true;
-        window.__airborneAirfieldHold = false;
+      if (window.__airborneAirfieldBoostPending) {
         window.__airborneAirfieldBoostPending = false;
-        airfieldTakeoffSpeed = 50;
-        if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 0;
-        if (typeof player !== "undefined" && player) {
-          const gy = groundLevelY();
-          const ph = player.h > 0 ? player.h : 40;
-          player.x = W * 0.25;
-          player.y = gy - ph * 0.15;
-          player.vy = 0;
-          player.rotation = 0;
-        }
-        airfieldTip = "R.U.F.F. is briefing you…";
-        syncAirfieldGlobals();
+        airfieldTakeoffSpeed += 40;
+      }
+      // Accelerate while holding
+      if (holding) {
+        airfieldTakeoffSpeed += 70 * dt;
       } else {
-        // Drive + liftoff
-        window.__airborneAirfieldPaused = false;
-        window.__airborneTrainingFlight = false;
+        airfieldTakeoffSpeed = Math.max(50, airfieldTakeoffSpeed - 35 * dt);
+      }
+      if (airfieldTakeoffSpeed > 340) airfieldTakeoffSpeed = 340;
+      if (typeof obstacleSpeed !== "undefined") {
+        obstacleSpeed = holding ? airfieldTakeoffSpeed : 0;
+      }
 
-        if (window.__airborneAirfieldBoostPending) {
-          window.__airborneAirfieldBoostPending = false;
-          airfieldTakeoffSpeed += 40;
-        }
-        // Longer runway (~+30% more) with a bit more top speed while holding
-        if (holding) {
-          airfieldTakeoffSpeed += 62 * dt;
-        } else {
-          airfieldTakeoffSpeed = Math.max(50, airfieldTakeoffSpeed - 40 * dt);
-        }
-        if (airfieldTakeoffSpeed > 340) airfieldTakeoffSpeed = 340;
-        if (typeof obstacleSpeed !== "undefined") {
-          obstacleSpeed = holding ? airfieldTakeoffSpeed : 0;
-        }
+      if (typeof player !== "undefined" && player) {
+        const gy = groundLevelY();
+        const ph = player.h > 0 ? player.h : 40;
+        player.x = W * 0.25;
+        player.y = gy - ph * 0.15;
+        player.vy = 0;
+        player.rotation = holding ? -0.1 : 0;
+      }
 
-        if (typeof player !== "undefined" && player) {
-          const gy = groundLevelY();
-          const ph = player.h > 0 ? player.h : 40;
-          player.x = W * 0.25;
-          player.y = gy - ph * 0.15;
-          player.vy = 0;
-          player.rotation = holding ? -0.1 : 0;
-        }
+      if (airfieldPhase === "taxi") {
+        airfieldPhase = "accel";
+      }
 
-        airfieldTip = holding ? "Accelerating…" : "HOLD to accelerate!";
-        if (airfieldPhase === "taxi") {
-          airfieldPhase = "accel";
-        }
-
-        // Must be holding — longer run (~+30%) before liftoff
-        if (holding && (airfieldTakeoffSpeed >= 320 || airfieldPhaseT > 6.2)) {
-          airfieldPhase = "climb";
-          airfieldPhaseT = 0;
-          if (typeof player !== "undefined" && player) airfieldClimbStartY = player.y;
-          try { if (typeof sfxAirfieldTakeoff === "function") sfxAirfieldTakeoff(); } catch (e) {}
-          console.log("[Airborne] LIFTOFF", Math.round(airfieldTakeoffSpeed));
-          syncAirfieldGlobals();
-        }
+      // Liftoff when held long enough / fast enough
+      if (holding && (airfieldTakeoffSpeed >= 280 || airfieldPhaseT > 4.5)) {
+        airfieldPhase = "climb";
+        airfieldPhaseT = 0;
+        if (typeof player !== "undefined" && player) airfieldClimbStartY = player.y;
+        try { if (typeof sfxAirfieldTakeoff === "function") sfxAirfieldTakeoff(); } catch (e) {}
+        console.log("[Airborne] LIFTOFF", Math.round(airfieldTakeoffSpeed));
+        syncAirfieldGlobals();
       }
 
     // ---- CLIMB ----
