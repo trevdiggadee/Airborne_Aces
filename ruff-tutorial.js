@@ -56,6 +56,7 @@
   let ruffScalePulse = 1;
   let ruffStats = {
     crystals: 0,
+    coins: 0,
     rings: 0,
     powerups: 0,
     obstaclesAvoided: 0,
@@ -63,6 +64,8 @@
     landingStars: 3
   };
   let ruffCrystals = [];
+  let ruffCoins = [];
+  const COIN_SCORE = 10;
   let ruffMarkers = [];
   let ruffCombo = 0;
   let ruffSkipAll = false;
@@ -606,8 +609,10 @@
       if (c.collected) return;
       c.x -= spd * dt;
       c.frameT += dt;
-      if (c.frameT > 0.06) {
-        c.frameT = 0;
+      const cFps = 24; // smooth crystal loop
+      const cFd = 1 / cFps;
+      while (c.frameT >= cFd) {
+        c.frameT -= cFd;
         c.frame = (c.frame + 1) % CRYSTAL_FRAME_COUNT;
       }
       // collect
@@ -674,6 +679,121 @@
     });
   }
 
+
+  function spawnTrainingCoins(n) {
+    n = n || 4;
+    const groundY = (typeof groundLevelY === "function") ? groundLevelY() : (typeof H !== "undefined" ? H * 0.78 : 400);
+    for (let i = 0; i < n; i++) {
+      ruffCoins.push({
+        x: (typeof W !== "undefined" ? W : 400) + 40 + i * (70 + Math.random() * 50),
+        y: (typeof H !== "undefined" ? H : 600) * (0.22 + Math.random() * 0.42),
+        r: 14,
+        spin: Math.random() * Math.PI * 2,
+        bob: Math.random() * Math.PI * 2,
+        collected: false,
+        spark: 0
+      });
+    }
+  }
+
+  function updateTrainingCoins(dt) {
+    if (!ruffCoins.length) return;
+    let spd = (typeof obstacleSpeed === "number" && obstacleSpeed > 40) ? obstacleSpeed : 200;
+    spd = Math.max(160, spd);
+    const px = (typeof player !== "undefined" && player) ? player.x : 0;
+    const py = (typeof player !== "undefined" && player) ? player.y : 0;
+    const pw = (typeof player !== "undefined" && player) ? player.w * 0.42 : 20;
+    const ph = (typeof player !== "undefined" && player) ? player.h * 0.42 : 16;
+    ruffCoins.forEach(function (c) {
+      if (c.collected) return;
+      c.x -= spd * dt;
+      c.spin += dt * 4.5;
+      c.bob += dt * 2.8;
+      if (Math.abs(c.x - px) < pw + c.r && Math.abs(c.y - py) < ph + c.r) {
+        c.collected = true;
+        ruffStats.coins = (ruffStats.coins || 0) + 1;
+        window.__airborneCollectCoins = (window.__airborneCollectCoins || 0) + 1;
+        if (typeof updateCollectDock === "function") updateCollectDock();
+        if (typeof score === "number") score += COIN_SCORE;
+        if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
+        try {
+          if (typeof sfxRingCollect === "function") sfxRingCollect();
+          else if (typeof sfxPowerup === "function") sfxPowerup();
+        } catch (e) {}
+        for (let s = 0; s < 12; s++) {
+          const ang = Math.random() * Math.PI * 2;
+          const sp = 50 + Math.random() * 100;
+          ruffSparkles.push({
+            x: c.x, y: c.y,
+            vx: Math.cos(ang) * sp,
+            vy: Math.sin(ang) * sp - 40,
+            life: 0.4 + Math.random() * 0.3,
+            age: 0,
+            r: 2 + Math.random() * 2.5,
+            color: Math.random() > 0.35 ? "#ffd700" : "#fff3a0"
+          });
+        }
+      }
+    });
+    ruffCoins = ruffCoins.filter(c => !c.collected && c.x > -50);
+  }
+
+  function drawTrainingCoins() {
+    if (!ruffCoins.length || typeof ctx === "undefined") return;
+    ruffCoins.forEach(function (c) {
+      if (c.collected) return;
+      const by = c.y + Math.sin(c.bob) * 5;
+      const squash = 0.55 + 0.45 * Math.abs(Math.cos(c.spin)); // spin edge-on illusion
+      ctx.save();
+      ctx.translate(c.x, by);
+      ctx.scale(squash, 1);
+      // outer glow
+      ctx.globalAlpha = 0.35;
+      ctx.fillStyle = "#ffd700";
+      ctx.beginPath();
+      ctx.arc(0, 0, c.r * 1.35, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      // rim
+      const g = ctx.createRadialGradient(-c.r * 0.3, -c.r * 0.35, 1, 0, 0, c.r);
+      g.addColorStop(0, "#fff6c8");
+      g.addColorStop(0.35, "#ffd700");
+      g.addColorStop(0.75, "#d4a017");
+      g.addColorStop(1, "#8a6a0a");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, 0, c.r, 0, Math.PI * 2);
+      ctx.fill();
+      // inner ring
+      ctx.strokeStyle = "rgba(140, 100, 20, 0.7)";
+      ctx.lineWidth = Math.max(1.5, c.r * 0.12);
+      ctx.beginPath();
+      ctx.arc(0, 0, c.r * 0.72, 0, Math.PI * 2);
+      ctx.stroke();
+      // embossed star / AA mark
+      ctx.fillStyle = "rgba(120, 80, 10, 0.85)";
+      ctx.beginPath();
+      const sr = c.r * 0.28;
+      for (let i = 0; i < 5; i++) {
+        const a = -Math.PI / 2 + i * Math.PI * 2 / 5;
+        const x = Math.cos(a) * sr;
+        const y = Math.sin(a) * sr;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        const a2 = a + Math.PI / 5;
+        ctx.lineTo(Math.cos(a2) * sr * 0.45, Math.sin(a2) * sr * 0.45);
+      }
+      ctx.closePath();
+      ctx.fill();
+      // specular
+      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      ctx.beginPath();
+      ctx.ellipse(-c.r * 0.28, -c.r * 0.32, c.r * 0.28, c.r * 0.16, -0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+  }
+
+
   function drawCrystals() {
     if (!ruffCrystals.length || typeof ctx === "undefined") return;
     ruffCrystals.forEach(function (c) {
@@ -726,8 +846,10 @@
     try {
     ruffBob += dt * 2.2;
     ruffFrameT += dt;
-    if (ruffFrameT > 1 / 12) {
-      ruffFrameT = 0;
+    const ruffFps = 18; // smooth companion loop
+    const ruffFd = 1 / ruffFps;
+    while (ruffFrameT >= ruffFd) {
+      ruffFrameT -= ruffFd;
       ruffFrame = (ruffFrame + 1) % RUFF_FRAME_COUNT;
     }
     // Dramatic intro fly-in from upper-right
@@ -946,6 +1068,7 @@
     if (rows) {
       rows.innerHTML =
         row("SKY CRYSTALS", "×" + ruffStats.crystals) +
+        row("COINS", "×" + (ruffStats.coins || 0)) +
         row("RINGS", "×" + ruffStats.rings) +
         row("POWER-UPS", "×" + ruffStats.powerups) +
         row("OBSTACLES AVOIDED", "×" + ruffStats.obstaclesAvoided) +
@@ -1081,7 +1204,7 @@
       sm0.classList.add("trainingHidden");
     }
     if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay();
-    ruffStats = { crystals: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, landingStars: 3 };
+    ruffStats = { crystals: 0, coins: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, landingStars: 3 };
     ruffCrystals = [];
     ruffMarkers = [];
     ruffCombo = 0;
@@ -1283,9 +1406,13 @@
       }
     } else if (ruffStage === "combined") {
       updateCrystals(dt);
+      updateTrainingCoins(dt);
       if (ruffCrystals.length < 1 && ruffStageT > 3) spawnCrystals(2);
-      if (ruffStageT > 16) {
+      // Last lesson before landing — coin rain
+      if (ruffCoins.length < 3 && ruffStageT > 1.5) spawnTrainingCoins(5);
+      if (ruffStageT > 18) {
         ruffCrystals = [];
+        ruffCoins = [];
         if (typeof obstacles !== "undefined") obstacles = [];
         nextStage();
       }

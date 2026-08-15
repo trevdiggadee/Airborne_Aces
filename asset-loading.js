@@ -1343,7 +1343,7 @@
   let playerBlimpFrameTimer = 0;
 
   const OBSTACLE_ANIM_FRAME_COUNT = 36;
-  const OBSTACLE_ANIM_FPS = 18;
+  const OBSTACLE_ANIM_FPS = 24;
   const BOSS2_FRAME_KEYS = Array.from({ length: 36 }, (_, i) => `boss2_${String(i + 1).padStart(2, "0")}`);
   const BOSS3_FRAME_KEYS = Array.from({ length: 36 }, (_, i) => `boss3_${String(i + 1).padStart(2, "0")}`);
   const BOSS4_FRAME_KEYS = Array.from({ length: 36 }, (_, i) => `boss4_${String(i + 1).padStart(2, "0")}`);

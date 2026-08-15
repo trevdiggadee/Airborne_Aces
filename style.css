@@ -330,8 +330,9 @@ html, body {
   pointer-events: none;
 }
 .heroBlimpWrap.hero-small {
-  width: 33.6%; /* Little Spy stays smaller on the platform */
-  top: 27%;
+  /* Match other blimps — centered same size */
+  width: inherit;
+  top: inherit;
 }
 /* Contact shadow lowered toward Take Flight button / platform */
 .heroBlimpWrap::after {

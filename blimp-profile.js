@@ -44,7 +44,7 @@
       upgrade: "Durability +1", xp: 200, xpMax: 500
     },
     blimp5: {
-      name: "PETRO", mk: "Mk I", cls: "Tanker", call: "PETRO-5",
+      name: "JADE VOYAGER", mk: "Mk I", cls: "Tanker", call: "PETRO-5",
       locked: false,
       stats: { Speed: 3, Lift: 5, Durability: 4, Maneuverability: 2, Boost: 3 },
       ability: { icon: "", name: "FUEL RESERVE", desc: "Extra fuel keeps the engines roaring longer." },
@@ -65,7 +65,7 @@
       upgrade: "Boost +1", xp: 90, xpMax: 500
     },
     blimp8: {
-      name: "CARGO KING", mk: "Mk I", cls: "Freighter", call: "CK-22",
+      name: "IRONWORKS", mk: "Mk I", cls: "Freighter", call: "CK-22",
       locked: false,
       stats: { Speed: 2, Lift: 5, Durability: 5, Maneuverability: 1, Boost: 2 },
       ability: { icon: "", name: "BEAST OF BURDEN", desc: "Extra cargo and armor." },

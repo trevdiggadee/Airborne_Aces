@@ -223,11 +223,12 @@
   let invulnerableUntil = 0; // timestamp (ms) — no damage taken before this
   window.__airborneCollectRings = 0;
   window.__airborneCollectCrystals = 0;
+  window.__airborneCollectCoins = 0;
 
   function updateCollectDock() {
     const r = document.getElementById("collectRings");
     const c = document.getElementById("collectCrystals");
-    const p = document.getElementById("collectPowerPct");
+    const p = document.getElementById("collectPowerPct"); // repurposed as coin counter
     if (r) {
       const v = String(window.__airborneCollectRings || 0);
       if (r.textContent !== v) {
@@ -242,13 +243,8 @@
         c.classList.remove("pop"); void c.offsetWidth; c.classList.add("pop");
       }
     }
-    let charge = 0;
-    if (typeof stormCharge === "number") {
-      const maxC = (typeof STORM_MAX === "number" && STORM_MAX > 0) ? STORM_MAX : 100;
-      charge = Math.max(0, Math.min(1, stormCharge / maxC));
-    }
     if (p) {
-      const v = String(Math.round(charge * 100));
+      const v = String(window.__airborneCollectCoins || 0);
       if (p.textContent !== v) {
         p.textContent = v;
         p.classList.remove("pop"); void p.offsetWidth; p.classList.add("pop");

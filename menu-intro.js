@@ -7,17 +7,17 @@ const BLIMP_DATA = {
   blimp2: { url: "blimp2_flight_01.webp", key: "blimp2_flight_01", name: "Deco Liner", effect: "smoke" },
   blimp3: { url: "blimp3_flight_01.webp", key: "blimp3_flight_01", name: "Aero Slicer", effect: null },
   blimp4: { url: "blimp4_flight_01.webp", key: "blimp4_flight_01", name: "Steampunk", effect: "steam" },
-  blimp5: { url: "blimp5_flight_01.webp", key: "blimp5_flight_01", name: "Petro", effect: null },
+  blimp5: { url: "blimp5_flight_01.webp", key: "blimp5_flight_01", name: "Jade Voyager", effect: null },
   blimp6: { url: "ship_wood_01.webp", key: "ship_wood_01", name: "Little Spy", effect: null },
   blimp7: { url: "ship_lightning_01.webp", key: "ship_lightning_01", name: "Storm Chaser", effect: "flame" },
-  blimp8: { url: "ship_cargo_01.webp", key: "ship_cargo_01", name: "Cargo King", effect: "blackSmoke" },
+  blimp8: { url: "ship_cargo_01.webp", key: "ship_cargo_01", name: "Ironworks", effect: "blackSmoke" },
   blimp9: { url: "ship_pirate_01.webp", key: "ship_pirate_01", name: "Jolly Rogers", effect: null },
   blimp10: { url: "ship_ivory_01.webp", key: "ship_ivory_01", name: "Ivory Anchor", effect: null },
-  blimp11: { url: "blimp11_flight_01.webp", key: "blimp11_flight_01", name: "Pirate Rocket", effect: "flame" },
-  blimp12: { url: "blimp12_flight_01.webp", key: "blimp12_flight_01", name: "War Shark", effect: "smoke" },
+  blimp11: { url: "blimp11_flight_01.webp", key: "blimp11_flight_01", name: "War Shark", effect: "flame" },
+  blimp12: { url: "blimp12_flight_01.webp", key: "blimp12_flight_01", name: "Sky Rocket", effect: "smoke" },
   blimp13: { url: "blimp13_flight_01.webp", key: "blimp13_flight_01", name: "Iron Lattice", effect: "steam" },
-  blimp14: { url: "blimp14_flight_01.webp", key: "blimp14_flight_01", name: "Royal Stripe", effect: null },
-  blimp15: { url: "blimp15_flight_01.webp", key: "blimp15_flight_01", name: "Sky Rocket", effect: "flame" }
+  blimp14: { url: "blimp14_flight_01.webp", key: "blimp14_flight_01", name: "Pirate Rocket", effect: null },
+  blimp15: { url: "blimp15_flight_01.webp", key: "blimp15_flight_01", name: "Royal Stripe", effect: "flame" }
 };
 
 // ---------- Blimp Profile Panel data ----------
@@ -50,7 +50,7 @@ const SHIP_STATS = {
     upgrade: "Next Rank", xp: 60, xpMax: 400, locked: false
   },
   blimp5: {
-    name: "Petro", mk: "Mk I", cls: "Tanker", call: "PETRO-5",
+    name: "Jade Voyager", mk: "Mk I", cls: "Tanker", call: "JADE-5",
     stats: { Speed: 3, Lift: 5, Durability: 4, Maneuverability: 2, Boost: 3 },
     ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
     upgrade: "Next Rank", xp: 0, xpMax: 450, locked: false
@@ -68,7 +68,7 @@ const SHIP_STATS = {
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
   },
   blimp8: {
-    name: "Cargo King", mk: "Mk I", cls: "Heavy Freighter", call: "CARGO-8",
+    name: "Ironworks", mk: "Mk I", cls: "Heavy Freighter", call: "IRON-8",
     stats: { Speed: 2, Lift: 5, Durability: 5, Maneuverability: 2, Boost: 2 },
     ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
@@ -86,13 +86,13 @@ const SHIP_STATS = {
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
   },
   blimp11: {
-    name: "Pirate Rocket", mk: "Mk I", cls: "Raider Rocket", call: "SKULL-11",
+    name: "War Shark", mk: "Mk I", cls: "Military Attack", call: "SHARK-11",
     stats: { Speed: 5, Lift: 2, Durability: 3, Maneuverability: 4, Boost: 5 },
     ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
   },
   blimp12: {
-    name: "War Shark", mk: "Mk I", cls: "Military Attack", call: "SHARK-12",
+    name: "Sky Rocket", mk: "Mk I", cls: "Navy Rocket", call: "SKY-12",
     stats: { Speed: 4, Lift: 3, Durability: 4, Maneuverability: 3, Boost: 4 },
     ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
@@ -104,13 +104,13 @@ const SHIP_STATS = {
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
   },
   blimp14: {
-    name: "Royal Stripe", mk: "Mk I", cls: "Luxury Liner", call: "CROWN-14",
+    name: "Pirate Rocket", mk: "Mk I", cls: "Raider Rocket", call: "SKULL-14",
     stats: { Speed: 3, Lift: 4, Durability: 3, Maneuverability: 3, Boost: 3 },
     ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
   },
   blimp15: {
-    name: "Sky Rocket", mk: "Mk I", cls: "Navy Rocket", call: "NAVY-15",
+    name: "Royal Stripe", mk: "Mk I", cls: "Luxury Liner", call: "CROWN-15",
     stats: { Speed: 5, Lift: 2, Durability: 3, Maneuverability: 4, Boost: 5 },
     ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
@@ -588,7 +588,7 @@ function selectBlimp(key, el) {
   // Keep menu preview sizes consistent; Little Spy stays smaller
   const heroWrap = document.querySelector(".heroBlimpWrap");
   if (heroWrap) {
-    heroWrap.classList.toggle("hero-small", key === "blimp6");
+    heroWrap.classList.remove("hero-small"); // Little Spy same size/center as others
   }
 
   document.querySelectorAll(".numBtn").forEach(b => b.classList.remove("active"));
@@ -601,7 +601,7 @@ function selectBlimp(key, el) {
 setEffect(BLIMP_DATA.blimp1.effect);
 updateProfile(selectedBlimp);
 const _hw = document.querySelector(".heroBlimpWrap");
-if (_hw) _hw.classList.toggle("hero-small", selectedBlimp === "blimp6");
+if (_hw) _hw.classList.remove("hero-small");
 
 function enterGameplay(){
   document.getElementById("menuScreen").style.display = "none";
