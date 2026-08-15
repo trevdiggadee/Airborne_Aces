@@ -1076,6 +1076,18 @@
         cols: 5,
         rows: 5
       });
+      // Windsock in the middle — same height as takeoff windsock
+      airfieldFlags.push({
+        tile: tile,
+        fx: 0.50,
+        fy: 0.69,
+        frame: 0,
+        frameT: 0,
+        fps: 14,
+        sheet: "wind_sock",
+        cols: 6,
+        rows: 6
+      });
       return;
     }
     // Windsock on takeoff strip
