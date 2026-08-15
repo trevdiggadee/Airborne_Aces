@@ -477,6 +477,8 @@
       spawnAltitudeMarkers();
     } else if (name === "crystals") {
       if (ruffLines.length) showRadio(ruffLines[0], 3.0);
+      ruffCrystals = [];
+      ruffCoins = [];
       spawnCrystals(5);
       spawnTrainingCoins(6);
       ruffWaitingCollect = 3;
@@ -553,11 +555,12 @@
 
   // ---------- Crystals ----------
   function spawnCrystals(n) {
-    ruffCrystals = [];
+    n = n || 3;
+    const baseX = (typeof W !== "undefined" ? W : 400) + 60;
     for (let i = 0; i < n; i++) {
       ruffCrystals.push({
-        x: (typeof W !== "undefined" ? W : 400) + 80 + i * 140,
-        y: (typeof H !== "undefined" ? H : 600) * (0.28 + Math.random() * 0.35),
+        x: baseX + i * (110 + Math.random() * 40) + ruffCrystals.length * 20,
+        y: (typeof H !== "undefined" ? H : 600) * (0.22 + Math.random() * 0.42),
         r: 18,
         frame: Math.floor(Math.random() * CRYSTAL_FRAME_COUNT),
         frameT: 0,
@@ -1112,13 +1115,19 @@
     if (img && img.naturalWidth) {
       ctx.drawImage(img, -sc / 2, -sc / 2, sc, sc);
     } else {
-      ctx.fillStyle = "#c4a35a";
-      ctx.strokeStyle = "#4a3210";
+      // Visible fallback so training never has an "invisible" instructor
+      ctx.fillStyle = "#d4a84b";
+      ctx.strokeStyle = "#3a2810";
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.arc(0, 0, sc * 0.42, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
+      ctx.fillStyle = "#1a1208";
+      ctx.font = "bold " + Math.max(12, sc * 0.22) + "px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("R.U.F.F.", 0, 0);
     }
     ctx.restore();
 
@@ -1341,25 +1350,10 @@
   }
 
   function updateRuff(dt) {
-    // Recover if airfield marked active but local flag was lost
     if (window.__airborneRuffActive) ruffActive = true;
-    if (!ruffActive && window.__airborneRuffStage && window.__airborneRuffStage !== "idle") {
-      ruffActive = true;
-      window.__airborneRuffActive = true;
-    }
     if (!ruffActive) return;
-    // Keep internal stage in sync if airfield forced a window stage change
-    if (window.__airborneRuffStage && window.__airborneRuffStage !== ruffStage &&
-        window.__airborneRuffStage !== "idle") {
-      // Only adopt airfield-forced stages that are forward jumps we expect
-      const order = STAGE_ORDER;
-      const cur = order.indexOf(ruffStage);
-      const win = order.indexOf(window.__airborneRuffStage);
-      if (win > cur && win - cur <= 2) {
-        try { setStage(window.__airborneRuffStage); } catch (e) { ruffStage = window.__airborneRuffStage; }
-      }
-    }
-    // Mirror internal stage out
+    // Always publish stage so airfield can read it
+    window.__airborneRuffActive = true;
     if (ruffStage) window.__airborneRuffStage = ruffStage;
     ruffStageT += dt;
     ruffLineT += dt;
@@ -1421,32 +1415,40 @@
           showRadio(ruffLines[ruffLineIdx], 3.2);
         }
       }
-      if ((ruffIntroLineArmed && ruffLineIdx >= ruffLines.length && ruffLineT > 1.2) ||
-          ruffStageT > 16) {
+      if ((ruffIntroLineArmed && ruffLineIdx >= ruffLines.length && ruffLineT > 1.0) ||
+          ruffStageT > 12) {
         ruffIntroFly = false;
-        nextStage(); // → takeoff — runway unlocks only after this
+        nextStage(); // → takeoff — runway unlocks
         console.log("[R.U.F.F.] intro done → takeoff");
       }
     }
 
-    // Stage logic — every stage has a hard timeout so training never freezes
+    // Stage logic — hard timeouts so training never freezes on empty sky
     if (ruffStage === "takeoff") {
       const ph = window.__airborneAirfieldPhase;
-      // Only advance after actual climb/lesson — never skip runway on a timer
-      if (ph === "lesson" || (ph === "climb" && ruffStageT > 3)) {
-        nextStage();
+      // Advance once airborne OR after failsafe time
+      if (ph === "lesson" || ph === "climb" || ruffStageT > 20) {
+        nextStage(); // → altitude
       }
     } else if (ruffStage === "altitude") {
-      // Do NOT wipe obstacles every frame — causes random item disappear
       if (typeof updateMarkers === "function") updateMarkers(dt);
-      if (ruffStageT > 9) nextStage();
+      // Ensure free flight
+      window.__airborneAirfieldPaused = false;
+      window.__airborneAirfieldRings = false;
+      window.__airborneAirfieldObstacles = false;
+      if (ruffStageT > 8) nextStage(); // → crystals
     } else if (ruffStage === "crystals") {
+      window.__airborneAirfieldPaused = false;
+      window.__airborneAirfieldRings = false;
+      window.__airborneAirfieldObstacles = false;
+      if (typeof obstacleSpeed !== "undefined" && obstacleSpeed < 180) obstacleSpeed = 210;
       updateCrystals(dt);
       updateTrainingCoins(dt);
-      if (ruffStats.crystals < 3 && ruffCrystals.length < 2) spawnCrystals(3);
-      if (ruffCoins.length < 2) spawnTrainingCoins(4);
-      if ((ruffStats.crystals >= 3 && ruffCrystals.length === 0 && ruffStageT > 3) || ruffStageT > 14) {
-        nextStage();
+      // Top up only when sparse — spawnCrystals appends (no wipe)
+      if (ruffCrystals.length < 1 && ruffStageT < 12) spawnCrystals(3);
+      if (ruffCoins.length < 1 && ruffStageT < 12) spawnTrainingCoins(3);
+      if ((ruffStats.crystals >= 3 && ruffCrystals.length === 0 && ruffStageT > 4) || ruffStageT > 16) {
+        nextStage(); // → obstacles
       }
     } else if (ruffStage === "obstacles") {
       window.__airborneAirfieldObstacles = true;
@@ -1648,12 +1650,13 @@
   };
 
   window.__airborneForceRuffAltitude = function() {
-    if (!ruffActive) {
-      ruffActive = true;
-      window.__airborneRuffActive = true;
-    }
-    if (ruffStage === "intro" || ruffStage === "takeoff" || ruffStage === "idle") {
-      setStage("altitude");
+    ruffActive = true;
+    window.__airborneRuffActive = true;
+    if (ruffStage === "intro" || ruffStage === "takeoff" || ruffStage === "idle" || !ruffStage) {
+      try { setStage("altitude"); } catch (e) {
+        ruffStage = "altitude";
+        window.__airborneRuffStage = "altitude";
+      }
     }
   };
   window.__airborneBeginRuff = beginRuffTraining;

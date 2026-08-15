@@ -409,16 +409,14 @@
     const holding = !!window.__airborneAirfieldHold;
     if (!(airfieldTakeoffSpeed > 0)) airfieldTakeoffSpeed = 50;
 
-    // Keep trying to start Ruff; do not skip him
-    if (!window.__airborneRuffActive && airfieldRunwayT > 1.5) {
+    // Retry Ruff start a few times early — not every frame forever
+    if (!window.__airborneRuffActive && airfieldRunwayT > 0.8 && airfieldRunwayT < 6) {
       try {
         if (typeof window.__airborneBeginRuff === "function") window.__airborneBeginRuff();
       } catch (e) {}
     }
-    // Intro hang failsafe only after a long wait — and still via Ruff module
-    if (window.__airborneRuffStage === "intro" && airfieldRunwayT > 28) {
-      console.log("[Airborne] intro long timeout → nudge takeoff via Ruff");
-      window.__airborneRuffStage = "takeoff";
+    // If intro hangs, unlock runway but let Ruff module advance stages
+    if ((window.__airborneRuffStage === "intro" || !window.__airborneRuffActive) && airfieldRunwayT > 14) {
       window.__airborneAirfieldPaused = false;
     }
 
@@ -596,12 +594,16 @@
         window.__airborneAirfieldPaused = false;
         window.__airborneAirfieldInvuln = false;
         window.__airborneTrainingFlight = true;
-        // Move Ruff into altitude lesson
-        if (window.__airborneRuffStage === "takeoff" || window.__airborneRuffStage === "intro") {
+        // Move Ruff into altitude lesson (must call into module)
+        try {
+          if (typeof window.__airborneForceRuffAltitude === "function") {
+            window.__airborneForceRuffAltitude();
+          } else {
+            window.__airborneRuffStage = "altitude";
+            window.__airborneRuffActive = true;
+          }
+        } catch (e) {
           window.__airborneRuffStage = "altitude";
-          try {
-            if (typeof window.__airborneForceRuffAltitude === "function") window.__airborneForceRuffAltitude();
-          } catch (e) {}
         }
         syncAirfieldGlobals();
       }
@@ -644,11 +646,15 @@
       // R.U.F.F. drives stages only when companion is really running
       if (window.__airborneRuffActive) {
         window.__airborneAirfieldPaused = false;
-        // Stay invuln during early training so death can't dump to checkpoint
         const st = window.__airborneRuffStage || "";
-        // Invuln only for first two lessons; later hits soft-respawn without glitch
-        window.__airborneAirfieldInvuln = (st === "altitude" || st === "crystals");
-        if (typeof obstacleSpeed !== "undefined") obstacleSpeed = Math.max(210, obstacleSpeed || 210);
+        window.__airborneAirfieldInvuln = (st === "altitude" || st === "crystals" || st === "intro" || st === "takeoff");
+        // Keep world scrolling so crystals/coins/rings move
+        if (typeof obstacleSpeed !== "undefined") {
+          obstacleSpeed = Math.max(210, obstacleSpeed || 210);
+        }
+        if (typeof airfieldTakeoffSpeed !== "undefined") {
+          airfieldTakeoffSpeed = Math.max(airfieldTakeoffSpeed || 0, 210);
+        }
         const sm = document.getElementById("stormMeter");
         if (sm) {
           // Keep element in layout so CSS opacity can fade in/out
