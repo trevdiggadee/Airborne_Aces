@@ -422,10 +422,10 @@
     if (airfieldPhase === "taxi" || airfieldPhase === "accel" || airfieldPhase === "climb" ||
         airfieldPhase === "lesson") {
       // Freeze strip only during active intro (not forever if Ruff fails)
-      // Scroll strip when holding on runway, always when airborne
+      // Scroll strip by takeoff speed (not only hold flag)
       let scrollSpd = 0;
       if (airfieldPhase === "taxi" || airfieldPhase === "accel") {
-        scrollSpd = window.__airborneAirfieldHold
+        scrollSpd = (airfieldTakeoffSpeed > 55 || window.__airborneAirfieldHold)
           ? Math.max(airfieldTakeoffSpeed || 50, 40) : 0;
       } else {
         scrollSpd = Math.max(airfieldTakeoffSpeed || 210, (airfieldPhase === "lesson" ? 210 : 0));
@@ -467,24 +467,33 @@
     // ---- RUNWAY ----
     if (airfieldPhase === "taxi" || airfieldPhase === "accel") {
       window.__airborneAirfieldInvuln = true;
-      // No intro lock — player can always HOLD to accelerate
       window.__airborneAirfieldPaused = false;
       window.__airborneTrainingFlight = false;
       airfieldTip = "";
+      // Ensure global flag so flap()/input routes to hold
+      window.__airborneAirfield = true;
+      window.__airborneAirfieldPhase = airfieldPhase;
 
       if (window.__airborneAirfieldBoostPending) {
         window.__airborneAirfieldBoostPending = false;
-        airfieldTakeoffSpeed += 40;
+        airfieldTakeoffSpeed = Math.max(airfieldTakeoffSpeed || 50, 90);
+        window.__airborneAirfieldHold = true;
       }
-      // Accelerate while holding
-      if (holding) {
-        airfieldTakeoffSpeed += 70 * dt;
+
+      const isHold = !!(holding || window.__airborneAirfieldHold);
+
+      // Fast acceleration while holding; gentle coast when released
+      if (isHold) {
+        airfieldTakeoffSpeed += 95 * dt;
+        airfieldPhase = "accel";
       } else {
-        airfieldTakeoffSpeed = Math.max(50, airfieldTakeoffSpeed - 35 * dt);
+        airfieldTakeoffSpeed = Math.max(40, airfieldTakeoffSpeed - 25 * dt);
       }
-      if (airfieldTakeoffSpeed > 340) airfieldTakeoffSpeed = 340;
+      if (airfieldTakeoffSpeed > 360) airfieldTakeoffSpeed = 360;
+
+      // Strip always scrolls while speed > idle
       if (typeof obstacleSpeed !== "undefined") {
-        obstacleSpeed = holding ? airfieldTakeoffSpeed : 0;
+        obstacleSpeed = airfieldTakeoffSpeed > 55 ? airfieldTakeoffSpeed : 0;
       }
 
       if (typeof player !== "undefined" && player) {
@@ -493,17 +502,16 @@
         player.x = W * 0.25;
         player.y = gy - ph * 0.15;
         player.vy = 0;
-        player.rotation = holding ? -0.1 : 0;
+        player.rotation = isHold ? -0.12 : 0;
       }
 
-      if (airfieldPhase === "taxi") {
-        airfieldPhase = "accel";
-      }
-
-      // Liftoff when held long enough / fast enough
-      if (holding && (airfieldTakeoffSpeed >= 280 || airfieldPhaseT > 4.5)) {
+      // Liftoff: hold + speed, OR held long enough, OR speed alone (safety)
+      if ((isHold && airfieldTakeoffSpeed >= 240) ||
+          (isHold && airfieldPhaseT > 3.2) ||
+          airfieldTakeoffSpeed >= 320) {
         airfieldPhase = "climb";
         airfieldPhaseT = 0;
+        window.__airborneAirfieldPhase = "climb";
         if (typeof player !== "undefined" && player) airfieldClimbStartY = player.y;
         try { if (typeof sfxAirfieldTakeoff === "function") sfxAirfieldTakeoff(); } catch (e) {}
         console.log("[Airborne] LIFTOFF", Math.round(airfieldTakeoffSpeed));
@@ -533,7 +541,7 @@
 
       airfieldTakeoffSpeed = Math.max(180, 160 + e * 60);
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = airfieldTakeoffSpeed;
-      airfieldTip = "Liftoff!";
+      airfieldTip = "";
 
       if (tClimb >= 1) {
         airfieldPhase = "lesson";
@@ -557,7 +565,7 @@
           sm.style.visibility = window.__airborneAirfieldAllowPowerup ? "" : "hidden";
           if (!window.__airborneAirfieldAllowPowerup) sm.style.display = "none";
         }
-        airfieldTip = "You're flying!";
+        airfieldTip = "";
         window.__airborneAirfieldPaused = false;
         window.__airborneAirfieldInvuln = false;
         window.__airborneTrainingFlight = true;
@@ -600,7 +608,7 @@
           // Keep live objects on screen — only stop new spawns
           if (typeof spawnInterval !== "undefined") spawnInterval = 999;
           ensureAirfieldStripVisible();
-          airfieldTip = "Tap to flare — land on the strip!";
+          airfieldTip = "";
           syncAirfieldGlobals();
         }
         // Do not return early when already landing — let land/skid/score run
@@ -656,7 +664,7 @@
         window.__airborneAirfieldRings = false;
         window.__airborneAirfieldObstacles = false;
         if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-        airfieldTip = "Waiting for instructor…";
+        airfieldTip = "";
         try {
           if (typeof window.__airborneBeginRuff === "function") window.__airborneBeginRuff();
         } catch (e) { console.warn(e); }
@@ -677,7 +685,7 @@
         if (false && typeof obstacles !== "undefined") obstacles = [];
         if (typeof spawnInterval !== "undefined") spawnInterval = 999;
         ensureAirfieldStripVisible();
-        airfieldTip = "Prepare to land…";
+        airfieldTip = "";
         syncAirfieldGlobals();
         return;
       }
@@ -695,10 +703,10 @@
       // Show tip for last ~4s of each practice segment
       const showTipAt = Math.max(0, L.practice - 4);
       if (airfieldLessonT >= showTipAt) {
-        airfieldTip = L.tip;
+        airfieldTip = "";
       } else {
         const left = Math.max(0, Math.ceil(L.practice - airfieldLessonT));
-        airfieldTip = left > 0 ? ("Flying… " + left + "s") : L.tip;
+        airfieldTip = "";
       }
 
       if (airfieldLessonT >= L.practice) {
@@ -709,7 +717,7 @@
           if (typeof spawnInterval !== "undefined") spawnInterval = (Ln.rings || Ln.obstacles) ? Ln.spawn : 999;
           window.__airborneAirfieldRings = !!Ln.rings;
           window.__airborneAirfieldObstacles = !!Ln.obstacles;
-          airfieldTip = "Flying…";
+          airfieldTip = "";
         }
       }
       syncAirfieldGlobals();
@@ -1197,76 +1205,25 @@
   }
 
   function drawAirfieldTip() {
+    // Training tip banners removed — no on-screen instruction banners
     try {
-      if (!airfieldMode) return;
-      const ww = (typeof W !== "undefined" ? W : 400);
-      const hh = (typeof H !== "undefined" ? H : 600);
-
-      // Always-visible instruction banner during training (was never drawn before)
-      const tip = (airfieldTip || "").trim();
-      if (tip && airfieldPhase !== "score") {
+      if (!airfieldMode || airfieldPhase !== "score") return;
+      const list = Array.isArray(airfieldFireworks) ? airfieldFireworks : [];
+      for (let i = 0; i < list.length; i++) {
+        const fw = list[i];
+        if (!fw) continue;
+        const life = fw.life || 1;
+        const tt = 1 - (fw.age || 0) / life;
+        if (tt <= 0) continue;
         ctx.save();
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        const fs = Math.max(14, Math.floor(ww * 0.045));
-        ctx.font = "bold " + fs + "px Rockwell, Georgia, serif";
-        const cx = ww * 0.5;
-        const cy = hh * 0.16;
-        const tw = Math.min(ww * 0.88, ctx.measureText(tip).width + 36);
-        const th = fs * 1.8;
-        ctx.fillStyle = "rgba(20, 14, 8, 0.55)";
-        ctx.strokeStyle = "rgba(212, 175, 55, 0.65)";
-        ctx.lineWidth = 2;
-        const x0 = cx - tw / 2, y0 = cy - th / 2;
+        ctx.globalAlpha = Math.max(0, tt);
+        ctx.fillStyle = fw.color || "#ffd700";
         ctx.beginPath();
-        const rr = 10;
-        ctx.moveTo(x0 + rr, y0);
-        ctx.arcTo(x0 + tw, y0, x0 + tw, y0 + th, rr);
-        ctx.arcTo(x0 + tw, y0 + th, x0, y0 + th, rr);
-        ctx.arcTo(x0, y0 + th, x0, y0, rr);
-        ctx.arcTo(x0, y0, x0 + tw, y0, rr);
-        ctx.closePath();
+        ctx.arc(fw.x || 0, fw.y || 0, (fw.r || 3) * tt, 0, Math.PI * 2);
         ctx.fill();
-        ctx.stroke();
-        ctx.fillStyle = "#ffe9a8";
-        ctx.shadowColor = "rgba(0,0,0,0.6)";
-        ctx.shadowBlur = 4;
-        ctx.fillText(tip, cx, cy + 1);
         ctx.restore();
       }
-
-      // Score fireworks
-      if (airfieldPhase === "score") {
-        const list = Array.isArray(airfieldFireworks) ? airfieldFireworks : [];
-        for (let i = 0; i < list.length; i++) {
-          const fw = list[i];
-          if (!fw) continue;
-          const life = fw.life || 1;
-          const tt = 1 - (fw.age || 0) / life;
-          if (tt <= 0) continue;
-          ctx.save();
-          ctx.globalAlpha = Math.max(0, tt);
-          ctx.fillStyle = fw.color || "#ffd700";
-          ctx.beginPath();
-          ctx.arc(fw.x || 0, fw.y || 0, (fw.r || 3) * tt, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
-        }
-        if ((airfieldScoreT || 0) < 2.5) {
-          ctx.save();
-          ctx.textAlign = "center";
-          const fs = Math.floor(ww * 0.065);
-          ctx.font = "bold " + fs + "px Rockwell, Georgia, serif";
-          const cx = ww / 2;
-          const cy = hh * 0.2;
-          ctx.fillStyle = "rgba(0,0,0,0.4)";
-          ctx.fillText("TRAINING COMPLETE!", cx + 2, cy + 2);
-          ctx.fillStyle = "#ffe9a8";
-          ctx.fillText("TRAINING COMPLETE!", cx, cy);
-          ctx.restore();
-        }
-      }
-    } catch (e) { /* never break the game loop */ }
+    } catch (e) {}
   }
 
   function roundRectPath(ctx, x, y, w, h, r) {

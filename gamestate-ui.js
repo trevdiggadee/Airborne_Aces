@@ -887,11 +887,12 @@
   function handleInput(e) {
     if (e.cancelable) e.preventDefault();
     ensureAudio();
-    // Mark hold immediately so takeoff accel responds same frame
-    if (state === "playing" && window.__airborneAirfield &&
-        (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel") &&
-        window.__airborneRuffStage !== "intro") {
-      window.__airborneAirfieldHold = true;
+    // Mark hold immediately — ignore Ruff intro stage (was blocking takeoff)
+    if (state === "playing" && (window.__airborneAirfield || window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel")) {
+      if (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel" || !window.__airborneAirfieldPhase) {
+        window.__airborneAirfieldHold = true;
+        window.__airborneAirfield = true;
+      }
     }
     if (state === "playing") flap();
   }
@@ -920,8 +921,18 @@
     if (e.code === "Space") {
       e.preventDefault();
       ensureAudio();
-      if (state === "playing") flap();
+      if (state === "playing") {
+        if (window.__airborneAirfield &&
+            (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel")) {
+          window.__airborneAirfieldHold = true;
+          window.__airborneAirfieldBoostPending = true;
+        }
+        flap();
+      }
     }
+  });
+  window.addEventListener("keyup", (e) => {
+    if (e.code === "Space") window.__airborneAirfieldHold = false;
   });
 
 
