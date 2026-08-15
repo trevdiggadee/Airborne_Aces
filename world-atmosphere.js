@@ -412,16 +412,28 @@
 
     // Flame ships: sample continuous ribbon nodes (one coherent trail)
     if (style.mode === "flame") {
-      // 50% smaller body
-      jetTrail.push({
-        along: 0, // distance behind nozzle — fixed-length trail in ship space
-        w: player.h * 0.15 * (burst ? 1.12 : 1),
-        age: 0,
-        life: 0.26, // constant visual length (alongMax = speed * life)
-        bx: backX,
-        by: backY
-      });
-      if (jetTrail.length > 12) jetTrail.splice(0, jetTrail.length - 12);
+      // 50% smaller body — dualFlame fires two nozzles stacked vertically
+      var jets = style.jets || 1;
+      for (var ji = 0; ji < jets; ji++) {
+        var yOff = 0;
+        if (jets > 1) {
+          yOff = (ji === 0 ? -1 : 1) * player.h * 0.12;
+        }
+        var jx = exhaustX - sinR * yOff;
+        var jy = exhaustY + cosR * yOff;
+        jetTrail.push({
+          along: 0,
+          w: player.h * 0.15 * (burst ? 1.12 : 1) * (jets > 1 ? 0.85 : 1),
+          age: 0,
+          life: 0.26,
+          bx: backX,
+          by: backY,
+          ox: jx,
+          oy: jy,
+          jet: ji
+        });
+      }
+      if (jetTrail.length > 20) jetTrail.splice(0, jetTrail.length - 18);
       // Smoke sits just behind the flame tip, along rear axis
       if (Math.random() < 0.6 || burst) {
         var smokeDist = 10 + Math.random() * 12;
@@ -517,8 +529,37 @@
       blimpPersonality.propSpeed = 25 + Math.abs(player.vy) * 0.04;
       blimpPersonality.propAngle += blimpPersonality.propSpeed * dt;
       blimpPersonality.propBlurOpacity = Math.min(0.9, 0.5 + Math.abs(player.vy) * 0.001);
+      // Smoke puffs off the spinning prop
+      if (!blimpPersonality.propSmoke) blimpPersonality.propSmoke = [];
+      blimpPersonality.propSmokeT = (blimpPersonality.propSmokeT || 0) + dt;
+      if (blimpPersonality.propSmokeT > 0.07) {
+        blimpPersonality.propSmokeT = 0;
+        var ppx = player.x - player.w * 0.34;
+        var ppy = player.y + player.h * 0.05 + (Math.random() - 0.5) * player.h * 0.25;
+        blimpPersonality.propSmoke.push({
+          x: ppx,
+          y: ppy,
+          vx: -40 - Math.random() * 50,
+          vy: (Math.random() - 0.5) * 25 - 8,
+          size: 4 + Math.random() * 7,
+          age: 0,
+          life: 0.35 + Math.random() * 0.35,
+          alpha: 0.35 + Math.random() * 0.25
+        });
+      }
+      blimpPersonality.propSmoke.forEach(function(p) {
+        p.age += dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.size += 10 * dt;
+        p.vx *= 0.98;
+      });
+      blimpPersonality.propSmoke = blimpPersonality.propSmoke.filter(function(p) {
+        return p.age < p.life;
+      });
     } else {
       blimpPersonality.propBlurOpacity *= 0.95;
+      blimpPersonality.propSmoke = [];
     }
 
     // Continuous exhaust — always on (including airfield taxi / takeoff / landing)
@@ -530,7 +571,7 @@
        afPhase === "land" || afPhase === "rollout"));
     var emitRate = 0.16 - diveFactor * 0.03 + climbFactor * 0.03;
     if (effect === "blackSmoke") emitRate *= 0.65;
-    if (effect === "flame") emitRate = 0.030; // fixed cadence → constant trail density/length
+    if (effect === "flame" || effect === "dualFlame") emitRate = 0.030; // fixed cadence → constant trail density/length
     if (effect === "steam") emitRate *= 0.8;
     if (onRunway && effect !== "flame") emitRate *= 0.7; // visible exhaust while driving
     blimpPersonality.exhaustTimer += dt;
@@ -607,8 +648,10 @@
         // Slight arc while climbing/diving — still same overall length
         var curve = curveAmt * u * u * 10;
         var shimmer = Math.sin(n.age * 5) * 0.3;
-        n.x = ex + bx * n.along + px * (curve + shimmer);
-        n.y = ey + by * n.along + py * (curve + shimmer);
+        var nx0 = (typeof n.ox === "number") ? n.ox : ex;
+        var ny0 = (typeof n.oy === "number") ? n.oy : ey;
+        n.x = nx0 + bx * n.along + px * (curve + shimmer);
+        n.y = ny0 + by * n.along + py * (curve + shimmer);
         n.bx = bx;
         n.by = by;
         n.w *= (1 - 0.9 * dt);
@@ -721,10 +764,48 @@
       ctx.save();
       // Additive blend so flame merges into the ship artwork
       ctx.globalCompositeOperation = "lighter";
-      flameRibbon(1.0, "rgba(255,80,10,0.30)");
-      flameRibbon(0.72, "rgba(255,120,25,0.40)");
-      flameRibbon(0.45, "rgba(255,180,50,0.50)");
-      flameRibbon(0.24, "rgba(255,240,160,0.58)");
+      // Draw each jet nozzle separately (supports dualFlame)
+      var jetIds = {};
+      jetTrail.forEach(function(n) { jetIds[(n.jet|0)] = true; });
+      Object.keys(jetIds).forEach(function(jid) {
+        var nodes = jetTrail.filter(function(n) { return (n.jet|0) === (jid|0); });
+        if (nodes.length < 2) return;
+        function ribbon(halfScale, color) {
+          var n = nodes.length;
+          ctx.beginPath();
+          for (var i = 0; i < n; i++) {
+            var node = nodes[i];
+            var t = Math.max(0, 1 - node.age / node.life);
+            var half = Math.max(0.8, node.w * t * halfScale * (0.55 + 0.45 * t));
+            var bx = (typeof node.bx === "number") ? node.bx : -1;
+            var by = (typeof node.by === "number") ? node.by : 0;
+            var px = node.x - by * half;
+            var py = node.y + bx * half;
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          }
+          var tip = nodes[n - 1];
+          var tipT = Math.max(0, 1 - tip.age / tip.life);
+          var tbx = (typeof tip.bx === "number") ? tip.bx : -1;
+          var tby = (typeof tip.by === "number") ? tip.by : 0;
+          var tipLen = Math.max(4, tip.w * tipT * 0.9);
+          ctx.lineTo(tip.x + tbx * tipLen, tip.y + tby * tipLen);
+          for (var j = n - 1; j >= 0; j--) {
+            var node2 = nodes[j];
+            var t2 = Math.max(0, 1 - node2.age / node2.life);
+            var half2 = Math.max(0.8, node2.w * t2 * halfScale * (0.55 + 0.45 * t2));
+            var bx2 = (typeof node2.bx === "number") ? node2.bx : -1;
+            var by2 = (typeof node2.by === "number") ? node2.by : 0;
+            ctx.lineTo(node2.x + by2 * half2, node2.y - bx2 * half2);
+          }
+          ctx.closePath();
+          ctx.fillStyle = color;
+          ctx.fill();
+        }
+        ribbon(1.0, "rgba(255,80,10,0.30)");
+        ribbon(0.72, "rgba(255,120,25,0.40)");
+        ribbon(0.45, "rgba(255,180,50,0.50)");
+        ribbon(0.24, "rgba(255,240,160,0.58)");
+      });
       ctx.globalCompositeOperation = "source-over";
       ctx.restore();
     } else if (jetTrail.length === 1) {
@@ -784,34 +865,86 @@
 
   function drawBlimpPropBlur() {
     var sel = typeof selectedBlimp !== 'undefined' ? selectedBlimp : 'blimp1';
-    var data = BLIMP_DATA[sel];
+    var data = (typeof BLIMP_DATA !== 'undefined') ? BLIMP_DATA[sel] : null;
     if (!data || data.effect !== 'propeller') return;
     if (blimpPersonality.propBlurOpacity < 0.05) return;
 
+    var px = player.x - player.w * 0.32;
+    var py = player.y + player.h * 0.05;
+    var r = player.w * 0.18;
+    var t = (typeof performance !== 'undefined' ? performance.now() : Date.now()) * 0.001;
+
     ctx.save();
-    ctx.translate(player.x - player.w * 0.32, player.y + player.h * 0.05);
+    ctx.translate(px, py);
     ctx.rotate(blimpPersonality.propAngle);
     ctx.globalAlpha = blimpPersonality.propBlurOpacity;
 
-    var r = player.w * 0.18;
-    var grad = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r);
-    grad.addColorStop(0, 'rgba(40,30,20,0.3)');
-    grad.addColorStop(0.6, 'rgba(40,30,20,0.15)');
+    // Disc blur
+    var grad = ctx.createRadialGradient(0, 0, r * 0.15, 0, 0, r * 1.05);
+    grad.addColorStop(0, 'rgba(30,25,20,0.35)');
+    grad.addColorStop(0.55, 'rgba(40,32,28,0.18)');
     grad.addColorStop(1, 'rgba(40,30,20,0)');
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     ctx.fill();
 
+    // Spinning blades
     for (var i = 0; i < 3; i++) {
       var angle = (i / 3) * Math.PI * 2 + blimpPersonality.propAngle * 2;
       ctx.save();
       ctx.rotate(angle);
-      ctx.fillStyle = 'rgba(60,50,40,0.25)';
+      ctx.fillStyle = 'rgba(45,38,32,0.32)';
       ctx.fillRect(-r * 0.08, -r, r * 0.16, r * 2);
       ctx.restore();
     }
     ctx.restore();
+
+    // Dark animated wind streaks peeling off the prop (world space, leftward)
+    ctx.save();
+    for (var s = 0; s < 7; s++) {
+      var phase = t * (2.8 + s * 0.35) + s * 1.1;
+      var sx = px - r * 0.2 - (s * 7 + (phase % 1) * 28);
+      var sy = py + Math.sin(phase * 2.1 + s) * r * 0.55;
+      var len = 10 + (s % 3) * 5 + Math.sin(phase) * 4;
+      var a = (0.22 + 0.12 * Math.sin(phase * 1.7)) * blimpPersonality.propBlurOpacity;
+      ctx.globalAlpha = Math.max(0.05, a);
+      ctx.strokeStyle = 'rgba(35, 32, 28, 0.85)';
+      ctx.lineWidth = 1.4 + (s % 2) * 0.6;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.quadraticCurveTo(sx - len * 0.4, sy + Math.sin(phase) * 3, sx - len, sy + Math.cos(phase * 0.8) * 2);
+      ctx.stroke();
+      // secondary darker hairline
+      ctx.globalAlpha = a * 0.55;
+      ctx.strokeStyle = 'rgba(20, 18, 16, 0.9)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(sx + 2, sy + 1.5);
+      ctx.lineTo(sx - len * 0.7, sy + 1.5);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Soft smoke puffs drifting back from prop
+    if (!blimpPersonality.propSmoke) blimpPersonality.propSmoke = [];
+    // (spawn handled in update; draw here)
+    (blimpPersonality.propSmoke || []).forEach(function(p) {
+      var u = 1 - p.age / p.life;
+      if (u <= 0) return;
+      ctx.save();
+      ctx.globalAlpha = p.alpha * u * u * blimpPersonality.propBlurOpacity;
+      var g2 = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+      g2.addColorStop(0, 'rgba(55,50,45,' + (0.55 * u) + ')');
+      g2.addColorStop(0.5, 'rgba(40,36,32,' + (0.25 * u) + ')');
+      g2.addColorStop(1, 'rgba(30,28,25,0)');
+      ctx.fillStyle = g2;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
   }
 
   // =====================================================================

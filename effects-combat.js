@@ -848,13 +848,32 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     const t = 1 - p.age / p.life;
     ctx.save();
     ctx.globalAlpha = p.alpha * t;
-    ctx.strokeStyle = "rgba(255,255,255,0.6)";
-    ctx.lineWidth = 1.2;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(p.x + p.len * 0.3, p.y);
-    ctx.lineTo(p.x - p.len * 0.7, p.y);
-    ctx.stroke();
+    // Darker animated streaks for propeller wash / player trail
+    if (p.source === "player") {
+      ctx.strokeStyle = "rgba(40, 36, 32, 0.85)";
+      ctx.lineWidth = 1.6;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      const wobble = Math.sin((p.age + p.len) * 18) * 1.8;
+      ctx.moveTo(p.x + p.len * 0.25, p.y + wobble * 0.3);
+      ctx.quadraticCurveTo(p.x - p.len * 0.15, p.y + wobble, p.x - p.len * 0.85, p.y - wobble * 0.4);
+      ctx.stroke();
+      ctx.globalAlpha = p.alpha * t * 0.45;
+      ctx.strokeStyle = "rgba(25, 22, 20, 0.9)";
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(p.x + p.len * 0.1, p.y + 1.5);
+      ctx.lineTo(p.x - p.len * 0.6, p.y + 1.5);
+      ctx.stroke();
+    } else {
+      ctx.strokeStyle = "rgba(255,255,255,0.55)";
+      ctx.lineWidth = 1.2;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(p.x + p.len * 0.3, p.y);
+      ctx.lineTo(p.x - p.len * 0.7, p.y);
+      ctx.stroke();
+    }
     ctx.restore();
   }
 

@@ -13,8 +13,8 @@ const BLIMP_DATA = {
   blimp8: { url: "ship_cargo_01.webp", key: "ship_cargo_01", name: "Ironworks", effect: "blackSmoke" },
   blimp9: { url: "ship_pirate_01.webp", key: "ship_pirate_01", name: "Jolly Rogers", effect: null },
   blimp10: { url: "ship_ivory_01.webp", key: "ship_ivory_01", name: "Ivory Anchor", effect: null },
-  blimp11: { url: "blimp11_flight_01.webp", key: "blimp11_flight_01", name: "War Shark", effect: "flame" },
-  blimp12: { url: "blimp12_flight_01.webp", key: "blimp12_flight_01", name: "Sky Rocket", effect: "smoke" },
+  blimp11: { url: "blimp11_flight_01.webp", key: "blimp11_flight_01", name: "War Shark", effect: null },
+  blimp12: { url: "blimp12_flight_01.webp", key: "blimp12_flight_01", name: "Sky Rocket", effect: "dualFlame" },
   blimp13: { url: "blimp13_flight_01.webp", key: "blimp13_flight_01", name: "Iron Lattice", effect: "steam" },
   blimp14: { url: "blimp14_flight_01.webp", key: "blimp14_flight_01", name: "Pirate Rocket", effect: null },
   blimp15: { url: "blimp15_flight_01.webp", key: "blimp15_flight_01", name: "Royal Stripe", effect: "flame" }
@@ -588,7 +588,7 @@ function selectBlimp(key, el) {
   // Keep menu preview sizes consistent; Little Spy stays smaller
   const heroWrap = document.querySelector(".heroBlimpWrap");
   if (heroWrap) {
-    heroWrap.classList.remove("hero-small"); // Little Spy same size/center as others
+    heroWrap.classList.toggle("hero-small", key === "blimp6"); // Little Spy 33% smaller
   }
 
   document.querySelectorAll(".numBtn").forEach(b => b.classList.remove("active"));
@@ -601,7 +601,7 @@ function selectBlimp(key, el) {
 setEffect(BLIMP_DATA.blimp1.effect);
 updateProfile(selectedBlimp);
 const _hw = document.querySelector(".heroBlimpWrap");
-if (_hw) _hw.classList.remove("hero-small");
+if (_hw) _hw.classList.toggle("hero-small", selectedBlimp === "blimp6");
 
 function enterGameplay(){
   document.getElementById("menuScreen").style.display = "none";

@@ -476,6 +476,7 @@
     } else if (name === "crystals") {
       if (ruffLines.length) showRadio(ruffLines[0], 3.0);
       spawnCrystals(5);
+      spawnTrainingCoins(6);
       ruffWaitingCollect = 3;
     } else if (name === "obstacles") {
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
@@ -1317,7 +1318,9 @@
       if (ruffStageT > 9) nextStage();
     } else if (ruffStage === "crystals") {
       updateCrystals(dt);
+      updateTrainingCoins(dt);
       if (ruffStats.crystals < 3 && ruffCrystals.length < 2) spawnCrystals(3);
+      if (ruffCoins.length < 2) spawnTrainingCoins(4);
       if ((ruffStats.crystals >= 3 && ruffCrystals.length === 0 && ruffStageT > 3) || ruffStageT > 14) {
         nextStage();
       }
