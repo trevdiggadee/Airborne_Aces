@@ -1067,7 +1067,7 @@
         if (images && images[k2] && images[k2].naturalWidth) { img = images[k2]; break; }
       }
     }
-    const size = Math.max(90, (typeof player !== "undefined" && player ? player.h * 1.55 : 98));
+    const size = Math.max(110, (typeof player !== "undefined" && player ? player.h * 1.85 : 120));
     const sc = size * (ruffScalePulse || 1);
 
     // Jetpack particles (world space, behind body)
@@ -1419,8 +1419,8 @@
           showRadio(ruffLines[ruffLineIdx], 3.2);
         }
       }
-      if ((ruffIntroLineArmed && ruffLineIdx >= ruffLines.length && ruffLineT > 0.8) ||
-          ruffStageT > 5.5) {
+      if ((ruffIntroLineArmed && ruffLineIdx >= ruffLines.length && ruffLineT > 0.6) ||
+          ruffStageT > 3.0) {
         ruffIntroFly = false;
         nextStage(); // → takeoff — runway unlocks
         console.log("[R.U.F.F.] intro done → takeoff");

@@ -53,7 +53,7 @@
   }
 
   function flap() {
-    if (window.__airborneRuffActive && window.__airborneRuffStage === "intro") return;
+    // Allow runway hold even during brief intro (tip tells player to HOLD)
     if (state !== "playing") return;
     // Don't flap-react while docked on the pad
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) return;

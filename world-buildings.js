@@ -274,7 +274,7 @@
     if (typeof levelEndPad !== "undefined") levelEndPad = null;
     if (typeof levelEndActive !== "undefined") levelEndActive = false;
 
-    airfieldTip = "";
+    airfieldTip = "HOLD the screen to take off!";
     syncAirfieldGlobals();
     initAirfieldStrip();
     buildings = [];
@@ -416,7 +416,7 @@
       } catch (e) {}
     }
     // Hard unlock after brief intro so player is never stuck
-    if (airfieldRunwayT > 6) {
+    if (airfieldRunwayT > 3) {
       window.__airborneAirfieldPaused = false;
       if (window.__airborneRuffStage === "intro" || !window.__airborneRuffStage) {
         try {
@@ -439,7 +439,7 @@
       const ruffSt = window.__airborneRuffStage || "intro";
       const introActive = (ruffSt === "intro") && !!window.__airborneRuffActive;
       // Safety: never freeze strip more than ~12s from training start
-      const introTimedOut = (airfieldRunwayT || 0) > 5;
+      const introTimedOut = (airfieldRunwayT || 0) > 2.5;
       const introStill = introActive && !introTimedOut;
       let scrollSpd = 0;
       if (!introStill) {
@@ -490,7 +490,7 @@
       window.__airborneAirfieldInvuln = true;
 
       const ruffSt = window.__airborneRuffStage || "intro";
-      const introLock = (ruffSt === "intro") && !!window.__airborneRuffActive && (airfieldRunwayT || 0) < 5;
+      const introLock = (ruffSt === "intro") && !!window.__airborneRuffActive && (airfieldRunwayT || 0) < 2.5;
 
       if (introLock) {
         // Wait for R.U.F.F. intro — strip frozen, blimp on deck
@@ -1242,34 +1242,73 @@
 
   function drawAirfieldTip() {
     try {
-      if (!airfieldMode || airfieldPhase !== "score") return;
-      const list = Array.isArray(airfieldFireworks) ? airfieldFireworks : [];
-      for (let i = 0; i < list.length; i++) {
-        const fw = list[i];
-        if (!fw) continue;
-        const life = fw.life || 1;
-        const tt = 1 - (fw.age || 0) / life;
-        if (tt <= 0) continue;
-        ctx.save();
-        ctx.globalAlpha = Math.max(0, tt);
-        ctx.fillStyle = fw.color || "#ffd700";
-        ctx.beginPath();
-        ctx.arc(fw.x || 0, fw.y || 0, (fw.r || 3) * tt, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
-      if ((airfieldScoreT || 0) < 2.5) {
+      if (!airfieldMode) return;
+      const ww = (typeof W !== "undefined" ? W : 400);
+      const hh = (typeof H !== "undefined" ? H : 600);
+
+      // Always-visible instruction banner during training (was never drawn before)
+      const tip = (airfieldTip || "").trim();
+      if (tip && airfieldPhase !== "score") {
         ctx.save();
         ctx.textAlign = "center";
-        const fs = Math.floor((typeof W !== "undefined" ? W : 400) * 0.065);
+        ctx.textBaseline = "middle";
+        const fs = Math.max(14, Math.floor(ww * 0.045));
         ctx.font = "bold " + fs + "px Rockwell, Georgia, serif";
-        const cx = (typeof W !== "undefined" ? W : 400) / 2;
-        const cy = (typeof H !== "undefined" ? H : 600) * 0.2;
-        ctx.fillStyle = "rgba(0,0,0,0.4)";
-        ctx.fillText("TRAINING COMPLETE!", cx + 2, cy + 2);
+        const cx = ww * 0.5;
+        const cy = hh * 0.16;
+        const tw = Math.min(ww * 0.88, ctx.measureText(tip).width + 36);
+        const th = fs * 1.8;
+        ctx.fillStyle = "rgba(20, 14, 8, 0.55)";
+        ctx.strokeStyle = "rgba(212, 175, 55, 0.65)";
+        ctx.lineWidth = 2;
+        const x0 = cx - tw / 2, y0 = cy - th / 2;
+        ctx.beginPath();
+        const rr = 10;
+        ctx.moveTo(x0 + rr, y0);
+        ctx.arcTo(x0 + tw, y0, x0 + tw, y0 + th, rr);
+        ctx.arcTo(x0 + tw, y0 + th, x0, y0 + th, rr);
+        ctx.arcTo(x0, y0 + th, x0, y0, rr);
+        ctx.arcTo(x0, y0, x0 + tw, y0, rr);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
         ctx.fillStyle = "#ffe9a8";
-        ctx.fillText("TRAINING COMPLETE!", cx, cy);
+        ctx.shadowColor = "rgba(0,0,0,0.6)";
+        ctx.shadowBlur = 4;
+        ctx.fillText(tip, cx, cy + 1);
         ctx.restore();
+      }
+
+      // Score fireworks
+      if (airfieldPhase === "score") {
+        const list = Array.isArray(airfieldFireworks) ? airfieldFireworks : [];
+        for (let i = 0; i < list.length; i++) {
+          const fw = list[i];
+          if (!fw) continue;
+          const life = fw.life || 1;
+          const tt = 1 - (fw.age || 0) / life;
+          if (tt <= 0) continue;
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, tt);
+          ctx.fillStyle = fw.color || "#ffd700";
+          ctx.beginPath();
+          ctx.arc(fw.x || 0, fw.y || 0, (fw.r || 3) * tt, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+        if ((airfieldScoreT || 0) < 2.5) {
+          ctx.save();
+          ctx.textAlign = "center";
+          const fs = Math.floor(ww * 0.065);
+          ctx.font = "bold " + fs + "px Rockwell, Georgia, serif";
+          const cx = ww / 2;
+          const cy = hh * 0.2;
+          ctx.fillStyle = "rgba(0,0,0,0.4)";
+          ctx.fillText("TRAINING COMPLETE!", cx + 2, cy + 2);
+          ctx.fillStyle = "#ffe9a8";
+          ctx.fillText("TRAINING COMPLETE!", cx, cy);
+          ctx.restore();
+        }
       }
     } catch (e) { /* never break the game loop */ }
   }
