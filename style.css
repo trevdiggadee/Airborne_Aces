@@ -330,10 +330,9 @@ html, body {
   pointer-events: none;
 }
 .heroBlimpWrap.hero-small {
-  width: 33.8%; /* 33% smaller than default 50.4% */
-  top: 28%;
-  left: 50%;
-  transform: translateX(-50%);
+  /* Match other blimps — centered same size */
+  width: inherit;
+  top: inherit;
 }
 /* Contact shadow lowered toward Take Flight button / platform */
 .heroBlimpWrap::after {

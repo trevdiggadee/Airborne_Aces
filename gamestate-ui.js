@@ -74,11 +74,6 @@
   }
 
   function startTutorial() {
-    // Old overlay tutorial disabled — airfield training IS the tutorial
-    // Jump straight into gameplay so updateAirfield runs (needs state === "playing")
-    ensureAudio();
-    startGame();
-    return;
     state = "tutorial";
     injectTutorialStyle();
     ensureAudio();
@@ -493,11 +488,7 @@
         (typeof beginAirfieldTraining === "function" ? beginAirfieldTraining : null);
       if (startTrain) {
         try {
-          state = "playing";
-          window.__airbornePlaying = true;
           startTrain();
-          state = "playing";
-          window.__airborneAirfield = true;
           console.log("[Airborne] Training started", window.__airborneAirfield, window.__airborneAirfieldPhase, window.__airborneRuffStage);
         } catch (err) {
           console.error("[Airborne] Training failed", err);
@@ -871,7 +862,11 @@
   let pendingStart = false;
   function bridgeStart() {
     if (assetsLoaded === assetKeys.length) {
-      startGame();
+      if (window.__airbornePendingMapLevel && Number(window.__airbornePendingMapLevel) >= 1) {
+        startGame();
+      } else {
+        startTutorial();
+      }
     } else {
       pendingStart = true;
     }
@@ -882,50 +877,39 @@
   window.__airborneOnAssetsReady = function() {
     if (!pendingStart) return;
     pendingStart = false;
-    startGame();
+    if (window.__airbornePendingMapLevel && Number(window.__airbornePendingMapLevel) >= 1) {
+      startGame();
+    } else {
+      startTutorial();
+    }
   };
 
   function handleInput(e) {
     if (e.cancelable) e.preventDefault();
     ensureAudio();
-    if (state === "playing") {
-      // Always set hold while pointer is down during airfield runway phases
-      const ph = window.__airborneAirfieldPhase;
-      if (window.__airborneAirfield || ph === "taxi" || ph === "accel") {
-        if (ph === "taxi" || ph === "accel" || ph == null || ph === undefined) {
-          window.__airborneAirfieldHold = true;
-          window.__airborneAirfieldBoostPending = true;
-          window.__airborneAirfield = true;
-        }
-      }
-      flap();
+    // Mark hold immediately so takeoff accel responds same frame
+    if (state === "playing" && window.__airborneAirfield &&
+        (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel") &&
+        window.__airborneRuffStage !== "intro") {
+      window.__airborneAirfieldHold = true;
     }
+    if (state === "playing") flap();
   }
   function handleInputUp(e) {
+    // Only clear hold when no touches remain
     if (e && e.touches && e.touches.length > 0) return;
-    // Delay clear slightly so frame loop can register the hold
-    setTimeout(function () {
-      if (!window.__airbornePointerDown) window.__airborneAirfieldHold = false;
-    }, 50);
-    window.__airbornePointerDown = false;
+    window.__airborneAirfieldHold = false;
   }
   canvas.addEventListener("touchstart", handleInput, { passive: false });
   canvas.addEventListener("mousedown", handleInput);
   canvas.addEventListener("pointerdown", handleInput);
   // Capture holds even if a HUD element is under the finger
   document.addEventListener("pointerdown", function(e) {
-    window.__airbornePointerDown = true;
-    if (state === "playing") {
-      const ph = window.__airborneAirfieldPhase;
-      if (window.__airborneAirfield || ph === "taxi" || ph === "accel") {
-        window.__airborneAirfieldHold = true;
-        window.__airborneAirfieldBoostPending = true;
-        if (typeof window.__airborneAirfieldBoost === "function") window.__airborneAirfieldBoost();
-      }
+    if (state === "playing" && window.__airborneAirfield &&
+        (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel")) {
+      window.__airborneAirfieldHold = true;
+      if (typeof window.__airborneAirfieldBoost === "function") window.__airborneAirfieldBoost();
     }
-  }, true);
-  document.addEventListener("pointerup", function() {
-    window.__airbornePointerDown = false;
   }, true);
   canvas.addEventListener("touchend", handleInputUp, { passive: true });
   canvas.addEventListener("touchcancel", handleInputUp, { passive: true });
@@ -936,18 +920,8 @@
     if (e.code === "Space") {
       e.preventDefault();
       ensureAudio();
-      if (state === "playing") {
-        if (window.__airborneAirfield &&
-            (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel")) {
-          window.__airborneAirfieldHold = true;
-          window.__airborneAirfieldBoostPending = true;
-        }
-        flap();
-      }
+      if (state === "playing") flap();
     }
-  });
-  window.addEventListener("keyup", (e) => {
-    if (e.code === "Space") window.__airborneAirfieldHold = false;
   });
 
 
