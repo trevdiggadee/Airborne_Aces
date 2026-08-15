@@ -887,30 +887,44 @@
   function handleInput(e) {
     if (e.cancelable) e.preventDefault();
     ensureAudio();
-    // Mark hold immediately — ignore Ruff intro stage (was blocking takeoff)
-    if (state === "playing" && (window.__airborneAirfield || window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel")) {
-      if (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel" || !window.__airborneAirfieldPhase) {
-        window.__airborneAirfieldHold = true;
-        window.__airborneAirfield = true;
+    if (state === "playing") {
+      // Always set hold while pointer is down during airfield runway phases
+      const ph = window.__airborneAirfieldPhase;
+      if (window.__airborneAirfield || ph === "taxi" || ph === "accel") {
+        if (ph === "taxi" || ph === "accel" || ph == null || ph === undefined) {
+          window.__airborneAirfieldHold = true;
+          window.__airborneAirfieldBoostPending = true;
+          window.__airborneAirfield = true;
+        }
       }
+      flap();
     }
-    if (state === "playing") flap();
   }
   function handleInputUp(e) {
-    // Only clear hold when no touches remain
     if (e && e.touches && e.touches.length > 0) return;
-    window.__airborneAirfieldHold = false;
+    // Delay clear slightly so frame loop can register the hold
+    setTimeout(function () {
+      if (!window.__airbornePointerDown) window.__airborneAirfieldHold = false;
+    }, 50);
+    window.__airbornePointerDown = false;
   }
   canvas.addEventListener("touchstart", handleInput, { passive: false });
   canvas.addEventListener("mousedown", handleInput);
   canvas.addEventListener("pointerdown", handleInput);
   // Capture holds even if a HUD element is under the finger
   document.addEventListener("pointerdown", function(e) {
-    if (state === "playing" && window.__airborneAirfield &&
-        (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel")) {
-      window.__airborneAirfieldHold = true;
-      if (typeof window.__airborneAirfieldBoost === "function") window.__airborneAirfieldBoost();
+    window.__airbornePointerDown = true;
+    if (state === "playing") {
+      const ph = window.__airborneAirfieldPhase;
+      if (window.__airborneAirfield || ph === "taxi" || ph === "accel") {
+        window.__airborneAirfieldHold = true;
+        window.__airborneAirfieldBoostPending = true;
+        if (typeof window.__airborneAirfieldBoost === "function") window.__airborneAirfieldBoost();
+      }
     }
+  }, true);
+  document.addEventListener("pointerup", function() {
+    window.__airbornePointerDown = false;
   }, true);
   canvas.addEventListener("touchend", handleInputUp, { passive: true });
   canvas.addEventListener("touchcancel", handleInputUp, { passive: true });

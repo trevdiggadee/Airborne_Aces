@@ -57,12 +57,14 @@
     if (state !== "playing") return;
     // Don't flap-react while docked on the pad
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) return;
-    // Airfield runway: hold/tap accelerates instead of flap
-    if (window.__airborneAirfield &&
-        (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel")) {
-      window.__airborneAirfieldHold = true;
-      window.__airborneAirfieldBoostPending = true;
-      return;
+    // Airfield runway: every tap/hold accelerates (never flap on runway)
+    if (window.__airborneAirfield || window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel") {
+      if (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel" || !window.__airborneAirfieldPhase) {
+        window.__airborneAirfield = true;
+        window.__airborneAirfieldHold = true;
+        window.__airborneAirfieldBoostPending = true;
+        return;
+      }
     }
     if (window.__airborneAirfield && window.__airborneAirfieldPhase === "climb") {
       return;

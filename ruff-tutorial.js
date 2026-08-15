@@ -445,18 +445,7 @@
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
       ruffWaitingInput = true;
       window.__airborneAirfieldPaused = false;
-      // Do NOT reset runway if player already rolling — avoids killing takeoff
-      const ph = window.__airborneAirfieldPhase;
-      if (ph !== "accel" && ph !== "climb" && ph !== "lesson") {
-        window.__airborneResetRunway = true;
-        try {
-          if (typeof airfieldDriveDist !== "undefined") airfieldDriveDist = 0;
-          if (typeof airfieldPhaseT !== "undefined") airfieldPhaseT = 0;
-          if (typeof airfieldTakeoffSpeed !== "undefined") airfieldTakeoffSpeed = 50;
-          if (typeof airfieldPhase !== "undefined") airfieldPhase = "taxi";
-        } catch (e) {}
-        window.__airborneAirfieldPhase = "taxi";
-      }
+      // Never reset runway progress — was killing takeoff mid-roll
       try {
         if (typeof sfxAirfieldEngineStart === "function") sfxAirfieldEngineStart();
         if (typeof sfxAirfieldWindStart === "function") sfxAirfieldWindStart();
