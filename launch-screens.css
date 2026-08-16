@@ -78,7 +78,7 @@
 .otg-loading-area {
   position: absolute;
   /* Text/dots sit below the fixed ring; does not affect ring position */
-  top: calc(45% + 128px);
+  top: calc(50% + 116px);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -113,27 +113,24 @@
 /* White circular progress around center of loading UI */
 .otg-ring-wrap {
   position: absolute;
-  top: 45%; /* raised another 5% */
+  top: 50%; /* lowered 5% from 45% */
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 234px;
-  height: 234px;
+  width: 211px;  /* -10% from 234 */
+  height: 211px;
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: otg-ring-pulse 1.6s ease-in-out infinite;
+  /* no pulse */
+  filter: drop-shadow(0 0 8px rgba(255,255,255,0.45));
   z-index: 11;
   pointer-events: none;
-}
-@keyframes otg-ring-pulse {
-  0%, 100% { filter: drop-shadow(0 0 6px rgba(255,255,255,0.35)); transform: translate(-50%, -50%) scale(1); }
-  50% { filter: drop-shadow(0 0 16px rgba(255,255,255,0.85)); transform: translate(-50%, -50%) scale(1.04); }
 }
 .otg-progress-ring {
   position: absolute;
   inset: 0;
-  width: 234px;
-  height: 234px;
+  width: 211px;
+  height: 211px;
 }
 .otg-ring-bg {
   stroke: rgba(255,255,255,0.18);
@@ -144,11 +141,8 @@
   stroke-dashoffset: 326.73;
   transition: stroke-dashoffset 0.15s linear;
   filter: drop-shadow(0 0 4px rgba(255,255,255,0.9));
-  animation: otg-ring-glow 1.6s ease-in-out infinite;
-}
-@keyframes otg-ring-glow {
-  0%, 100% { stroke: rgba(255,255,255,0.75); }
-  50% { stroke: rgba(255,255,255,1); }
+  /* steady white, no pulse */
+  stroke: rgba(255,255,255,0.95);
 }
 .otg-progress-pct {
   position: relative;

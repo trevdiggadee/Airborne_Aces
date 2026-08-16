@@ -657,6 +657,10 @@
           window.__airborneTrainingReportReady = false;
           window.__airborneAirfieldPaused = false;
           window.__airborneAirfieldInvuln = true;
+          // Always training landing strip art
+          airfieldUseLandingArt = true;
+          airfieldStripGone = false;
+          try { ensureAirfieldStripVisible(); } catch (e) {}
           // Keep live objects on screen — only stop new spawns
           if (typeof spawnInterval !== "undefined") spawnInterval = 999;
           ensureAirfieldStripVisible();

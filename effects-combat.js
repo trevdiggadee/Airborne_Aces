@@ -414,10 +414,15 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
       healthMeter.classList.add("hit");
     }
     showBanner(cfg.defeatLabel + " +" + bonus + " · FULL HEALTH!", 2200, "defeat");
-    // Training lesson: no bonus round / level progress — hand control back to R.U.F.F.
-    if (window.__airborneTrainingBoss) {
+    // Training lesson: no campaign progress, no bonus round, no level-end pad
+    if (window.__airborneTrainingBoss || window.__airborneAirfield || window.__airborneTrainingFlight) {
       window.__airborneTrainingBossDone = true;
       window.__airborneTrainingBoss = false;
+      // Roll back campaign counters so map/levels stay clean
+      try {
+        if (typeof bossesDefeatedCount === "number" && bossesDefeatedCount > 0) bossesDefeatedCount -= 1;
+        if (typeof lastBossTriggered === "number") lastBossTriggered = Math.max(0, lastBossTriggered - 1);
+      } catch (e) {}
       try { setMusicTheme(THEME_NORMAL); } catch (e) {}
       return;
     }

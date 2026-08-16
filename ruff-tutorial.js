@@ -1772,12 +1772,13 @@
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       updateTrainingBgBalloons(dt);
       updateTrainingBossDark(dt, 1);
-      // Ensure boss was triggered
-      if (ruffStageT > 1.2 && !(typeof bossActive !== "undefined" && bossActive) && !window.__airborneTrainingBossDone && !ruffLessonPendingNext) {
+      // ONE boss only — never re-trigger
+      if (ruffStageT > 1.0 && !window.__airborneTrainingBossTried && !window.__airborneTrainingBossDone &&
+          !(typeof bossActive !== "undefined" && bossActive) && !ruffLessonPendingNext) {
         try {
-          if (typeof triggerBoss === "function" && !window.__airborneTrainingBossTried) {
-            window.__airborneTrainingBossTried = true;
-            window.__airborneTrainingBoss = true;
+          window.__airborneTrainingBossTried = true;
+          window.__airborneTrainingBoss = true;
+          if (typeof triggerBoss === "function") {
             triggerBoss(1);
             if (typeof boss !== "undefined" && boss) {
               boss.maxHealth = 10;
@@ -1788,16 +1789,17 @@
       }
       if (!ruffLessonPendingNext) {
         if (window.__airborneTrainingBossDone ||
-            (ruffStageT > 5 && typeof bossActive !== "undefined" && !bossActive && !bossSinking)) {
+            (ruffStageT > 6 && window.__airborneTrainingBossTried &&
+             typeof bossActive !== "undefined" && !bossActive && !bossSinking)) {
           window.__airborneTrainingBoss = false;
           ruffBgBalloons = [];
           updateTrainingBossDark(dt, 0);
           requestNextStage();
         } else if (ruffStageT > 50) {
-          // Timeout — skip remaining boss and continue training
           try {
             if (typeof bossActive !== "undefined") bossActive = false;
             boss = null;
+            bossSinking = null;
           } catch (e) {}
           window.__airborneTrainingBoss = false;
           window.__airborneTrainingBossDone = true;
@@ -1806,6 +1808,14 @@
         }
       }
     } else if (ruffStage === "combined") {
+      // Never run campaign boss during combined practice
+      window.__airborneTrainingBoss = false;
+      try {
+        if (typeof bossActive !== "undefined" && bossActive) {
+          bossActive = false;
+          boss = null;
+        }
+      } catch (e) {}
       updateCrystals(dt);
       updateTrainingCoins(dt);
       if (ruffStageT > 4 && !window.__airborneFireSpawned2) {
@@ -1823,10 +1833,21 @@
         requestNextStage();
       }
     } else if (ruffStage === "landing") {
+      // Stay in training airfield — never campaign pad/score
+      window.__airborneTrainingFlight = true;
+      try {
+        if (typeof levelEndActive !== "undefined") levelEndActive = false;
+        if (typeof levelEndPhase !== "undefined") levelEndPhase = null;
+      } catch (e) {}
       // Request land once — do not spam every frame (causes land/score glitches)
       if (!window.__airborneRuffLandArmed) {
         window.__airborneRuffLandArmed = true;
         window.__airborneRuffRequestLand = true;
+        // Force training landing_field art
+        try {
+          if (typeof ensureAirfieldStripVisible === "function") ensureAirfieldStripVisible();
+          if (typeof airfieldUseLandingArt !== "undefined") airfieldUseLandingArt = true;
+        } catch (e2) {}
       }
       const ph = window.__airborneAirfieldPhase;
       // Report when world-buildings signals ready, or failsafe

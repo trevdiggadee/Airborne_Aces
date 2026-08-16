@@ -1063,6 +1063,12 @@
   let levelEndStats = null; // { score, timeStr, bonus, landingBonus, health }
 
   function startLevelEndLanding() {
+    // Never hijack R.U.F.F. training with the campaign landing pad / score
+    if (window.__airborneAirfield || window.__airborneTrainingFlight || window.__airborneTrainingBoss ||
+        (typeof airfieldMode !== "undefined" && airfieldMode) ||
+        (window.__airborneRuffActive && window.__airborneRuffStage && window.__airborneRuffStage !== "idle")) {
+      return;
+    }
     levelEndActive = true;
     levelEndPhase = "windDown";
     // Clear weather leftovers so level-3 rain/clouds don't show on the pad
