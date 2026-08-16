@@ -682,6 +682,10 @@
     // Always scroll — never freeze when birds/obstacles appear
     let spd = (typeof obstacleSpeed === "number" && obstacleSpeed > 40) ? obstacleSpeed : 210;
     spd = Math.max(180, spd);
+    // Last lesson (combined): slower crystals
+    if (ruffStage === "combined" || window.__airborneRuffStage === "combined") {
+      spd = Math.min(spd, 95);
+    }
     const px = (typeof player !== "undefined" && player) ? player.x : 0;
     const py = (typeof player !== "undefined" && player) ? player.y : 0;
     const pw = (typeof player !== "undefined" && player) ? player.w * 0.4 : 20;

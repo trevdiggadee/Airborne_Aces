@@ -101,39 +101,50 @@
   50% { opacity: 1; }
 }
 
-.otg-progress-track {
-  width: 100%;
-  max-width: 252px; /* +5% */
-  height: 8px;     /* thicker bar */
-  background: rgba(255,255,255,0.15);
-  border-radius: 10px;
-  overflow: hidden;
-}
-.otg-progress-fill {
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, #1a6bb5, #3da5ff, #7ec8ff);
-  border-radius: 10px;
-  transition: width 0.15s linear;
-  box-shadow: 0 0 10px rgba(61,165,255,0.65);
+/* White circular progress around center of loading UI */
+.otg-ring-wrap {
   position: relative;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: otg-ring-pulse 1.6s ease-in-out infinite;
 }
-.otg-progress-fill::after {
-  content: '';
+@keyframes otg-ring-pulse {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(255,255,255,0.35)); transform: scale(1); }
+  50% { filter: drop-shadow(0 0 16px rgba(255,255,255,0.85)); transform: scale(1.04); }
+}
+.otg-progress-ring {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
-  animation: otg-shimmer 1.2s infinite;
+  width: 120px;
+  height: 120px;
 }
-@keyframes otg-shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+.otg-ring-bg {
+  stroke: rgba(255,255,255,0.18);
 }
-
+.otg-ring-fill {
+  stroke: #ffffff;
+  stroke-dasharray: 326.73; /* 2πr, r=52 */
+  stroke-dashoffset: 326.73;
+  transition: stroke-dashoffset 0.15s linear;
+  filter: drop-shadow(0 0 4px rgba(255,255,255,0.9));
+  animation: otg-ring-glow 1.6s ease-in-out infinite;
+}
+@keyframes otg-ring-glow {
+  0%, 100% { stroke: rgba(255,255,255,0.75); }
+  50% { stroke: rgba(255,255,255,1); }
+}
 .otg-progress-pct {
-  font-size: 11px;
-  color: rgba(255,255,255,0.45);
+  position: relative;
+  z-index: 2;
+  font-size: 14px;
+  color: rgba(255,255,255,0.9);
   font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 10px rgba(255,255,255,0.6);
 }
 
 .otg-dots {

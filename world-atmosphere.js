@@ -877,55 +877,20 @@
     ctx.save();
     ctx.translate(px, py);
     ctx.rotate(blimpPersonality.propAngle);
-    ctx.globalAlpha = blimpPersonality.propBlurOpacity;
+    ctx.globalAlpha = blimpPersonality.propBlurOpacity * 0.55;
 
-    // Disc blur
-    var grad = ctx.createRadialGradient(0, 0, r * 0.15, 0, 0, r * 1.05);
-    grad.addColorStop(0, 'rgba(30,25,20,0.35)');
-    grad.addColorStop(0.55, 'rgba(40,32,28,0.18)');
-    grad.addColorStop(1, 'rgba(40,30,20,0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Spinning blades
+    // No shadow disc — light motion streaks only for propeller
     for (var i = 0; i < 3; i++) {
       var angle = (i / 3) * Math.PI * 2 + blimpPersonality.propAngle * 2;
       ctx.save();
       ctx.rotate(angle);
-      ctx.fillStyle = 'rgba(45,38,32,0.32)';
-      ctx.fillRect(-r * 0.08, -r, r * 0.16, r * 2);
+      ctx.fillStyle = 'rgba(220,220,230,0.18)';
+      ctx.fillRect(-r * 0.06, -r * 0.95, r * 0.12, r * 1.9);
       ctx.restore();
     }
     ctx.restore();
 
-    // Dark animated wind streaks peeling off the prop (world space, leftward)
-    ctx.save();
-    for (var s = 0; s < 7; s++) {
-      var phase = t * (2.8 + s * 0.35) + s * 1.1;
-      var sx = px - r * 0.2 - (s * 7 + (phase % 1) * 28);
-      var sy = py + Math.sin(phase * 2.1 + s) * r * 0.55;
-      var len = 10 + (s % 3) * 5 + Math.sin(phase) * 4;
-      var a = (0.22 + 0.12 * Math.sin(phase * 1.7)) * blimpPersonality.propBlurOpacity;
-      ctx.globalAlpha = Math.max(0.05, a);
-      ctx.strokeStyle = 'rgba(35, 32, 28, 0.85)';
-      ctx.lineWidth = 1.4 + (s % 2) * 0.6;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.quadraticCurveTo(sx - len * 0.4, sy + Math.sin(phase) * 3, sx - len, sy + Math.cos(phase * 0.8) * 2);
-      ctx.stroke();
-      // secondary darker hairline
-      ctx.globalAlpha = a * 0.55;
-      ctx.strokeStyle = 'rgba(20, 18, 16, 0.9)';
-      ctx.lineWidth = 0.8;
-      ctx.beginPath();
-      ctx.moveTo(sx + 2, sy + 1.5);
-      ctx.lineTo(sx - len * 0.7, sy + 1.5);
-      ctx.stroke();
-    }
-    ctx.restore();
+    // Prop shadow streaks removed
 
     // Soft smoke puffs drifting back from prop
     if (!blimpPersonality.propSmoke) blimpPersonality.propSmoke = [];

@@ -1077,6 +1077,11 @@
             if (typeof bumpScorePop === "function") bumpScorePop();
           } catch (e) {}
           try {
+            if (typeof sfxExplosion === "function") sfxExplosion();
+            else if (typeof sfxCrash === "function") sfxCrash();
+            else if (typeof sfxHit === "function") sfxHit();
+          } catch (e) {}
+          try {
             if (typeof window.__airborneEmitFireBurst === "function") {
               window.__airborneEmitFireBurst(o.x + o.w * 0.5, o.y + o.h * 0.4);
             }

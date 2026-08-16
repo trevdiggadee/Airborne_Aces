@@ -49,7 +49,15 @@
       const eased = 1 - Math.pow(1 - t, 2.2);
       const p = start + (end - start) * eased;
       const pct = Math.min(99, Math.round((p / total) * 100));
-      progressFill.style.width = pct + '%';
+      if (progressFill) {
+        if (progressFill.tagName === 'CIRCLE' || progressFill.classList.contains('otg-ring-fill')) {
+          var circ = 2 * Math.PI * 52;
+          progressFill.style.strokeDasharray = String(circ);
+          progressFill.style.strokeDashoffset = String(circ * (1 - pct / 100));
+        } else {
+          progressFill.style.width = pct + '%';
+        }
+      }
       progressPct.textContent = pct + '%';
       if (t < 1) requestAnimationFrame(tick);
       else {
@@ -62,7 +70,14 @@
   }
 
   function finish() {
-    progressFill.style.width = '100%';
+    if (progressFill) {
+      if (progressFill.tagName === 'CIRCLE' || progressFill.classList.contains('otg-ring-fill')) {
+        progressFill.style.strokeDasharray = String(2 * Math.PI * 52);
+        progressFill.style.strokeDashoffset = '0';
+      } else {
+        progressFill.style.width = '100%';
+      }
+    }
     progressPct.textContent = '100%';
     const txt = loadingEl.querySelector('.otg-loading-text');
     if (txt) txt.textContent = 'ENGINES READY';
