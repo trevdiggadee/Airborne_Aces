@@ -1562,11 +1562,18 @@
       }
       const ph = window.__airborneAirfieldPhase;
       // Report when world-buildings signals ready, or failsafe
-      if (window.__airborneTrainingReportReady || ph === "done") {
+      if (window.__airborneTrainingReportReady || ph === "done" || window.__airborneTrainingReportShown) {
         nextStage(); // → report → showFlightReport
-      } else if (ruffStageT > 40) {
-        // Failsafe — force report
-        try { if (typeof showFlightReport === "function") showFlightReport(); } catch (e) {}
+      } else if (ruffStageT > 8) {
+        // Failsafe — force report after 8s in landing stage
+        try {
+          window.__airborneTrainingReportShown = true;
+          window.__airborneTrainingReportReady = true;
+          if (typeof window.__airborneShowRuffReport === "function") window.__airborneShowRuffReport();
+          else if (typeof showFlightReport === "function") showFlightReport();
+          var el = document.getElementById("ruffReport");
+          if (el) { el.classList.add("visible"); el.style.display = "flex"; el.style.zIndex = "90"; }
+        } catch (e) {}
         nextStage();
       }
     } else if (ruffStage === "report") {

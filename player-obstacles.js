@@ -1429,7 +1429,7 @@ function spawnHealPickup() {
     if (window.__airborneAirfield && !window.__airborneAirfieldAllowShield) return;
     const img = images.shieldPickup;
     const aspect = img && img.naturalWidth ? img.naturalHeight / img.naturalWidth : 1;
-    const dispW = Math.min(48, W * 0.11);
+    const dispW = Math.min(56, W * 0.13);
     const dispH = dispW * aspect;
 
     const groundY = groundLevelY();
@@ -1470,6 +1470,52 @@ function spawnHealPickup() {
       return;
     }
 
+    // Animate 6x6 sheet
+    shieldPickup.frameT = (shieldPickup.frameT || 0) + dt;
+    const sfd = 1 / 14;
+    while (shieldPickup.frameT >= sfd) {
+      shieldPickup.frameT -= sfd;
+      shieldPickup.frame = ((shieldPickup.frame || 0) + 1) % 36;
+    }
+    // Blue spark embers
+    if (!shieldPickup.embers) shieldPickup.embers = [];
+    if (!shieldPickup.collectAnim && Math.random() < 0.55) {
+      const ang = -Math.PI * 0.5 + (Math.random() - 0.5) * 1.4;
+      shieldPickup.embers.push({
+        x: shieldPickup.x + shieldPickup.w / 2 + (Math.random() - 0.5) * 14,
+        y: shieldPickup.y + shieldPickup.h / 2 + 4,
+        vx: Math.cos(ang) * (15 + Math.random() * 35),
+        vy: Math.sin(ang) * (25 + Math.random() * 40) - 15,
+        life: 0.3 + Math.random() * 0.3,
+        age: 0,
+        r: 1.5 + Math.random() * 2.2
+      });
+    }
+    for (let ei = shieldPickup.embers.length - 1; ei >= 0; ei--) {
+      const e = shieldPickup.embers[ei];
+      e.age += dt; e.x += e.vx * dt; e.y += e.vy * dt; e.vy += 35 * dt;
+      if (e.age >= e.life) shieldPickup.embers.splice(ei, 1);
+    }
+    if (shieldPickup.embers.length > 36) shieldPickup.embers.splice(0, shieldPickup.embers.length - 36);
+
+    // Collect expand animation
+    if (shieldPickup.collectAnim != null && shieldPickup.collectAnim >= 0) {
+      shieldPickup.collectAnim += dt / 0.85;
+      if (Math.random() < 0.8 && shieldPickup.collectAnim < 0.7) {
+        const ang = Math.random() * Math.PI * 2;
+        const sp = 50 + Math.random() * 120;
+        shieldPickup.embers.push({
+          x: shieldPickup.collectX, y: shieldPickup.collectY,
+          vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 20,
+          life: 0.35 + Math.random() * 0.35, age: 0, r: 2 + Math.random() * 3.5
+        });
+      }
+      if (shieldPickup.collectAnim >= 1) {
+        shieldPickup = null;
+      }
+      return;
+    }
+
     shieldPickup.x -= shieldPickup.speed * dt;
     shieldPickup.bobPhase += dt * 2.4;
 
@@ -1484,8 +1530,10 @@ function spawnHealPickup() {
     if (dx < player.w * 0.5 + shieldPickup.w * 0.45 && dy < player.h * 0.5 + shieldPickup.h * 0.45) {
       shieldActive = true;
       shieldUntil = performance.now() + SHIELD_DURATION_MS;
-      shieldPickup = null;
-      sfxPowerup();
+      shieldPickup.collectAnim = 0.001;
+      shieldPickup.collectX = shieldPickup.x + shieldPickup.w / 2;
+      shieldPickup.collectY = drawY + shieldPickup.h / 2;
+      try { sfxPowerup(); } catch (e) {}
     }
   }
 

@@ -176,6 +176,36 @@
   let airfieldUseLandingArt = false;
 
   function isAirfieldMode() { return !!airfieldMode; }
+  
+  // Force flight report within 5s of touchdown (never stall)
+  function forceTrainingReportIfDue() {
+    if (window.__airborneTrainingReportShown) return;
+    const t0 = window.__airborneLandTouchAt;
+    if (!t0) return;
+    if (performance.now() - t0 < 5000) return;
+    window.__airborneTrainingReportShown = true;
+    window.__airborneTrainingReportReady = true;
+    window.__airborneAirfieldDidLand = true;
+    airfieldPhase = "done";
+    try { syncAirfieldGlobals(); } catch (e) {}
+    try {
+      if (typeof window.__airborneShowRuffReport === "function") window.__airborneShowRuffReport();
+    } catch (e) {}
+    try {
+      if (typeof showFlightReport === "function") showFlightReport();
+    } catch (e) {}
+    try {
+      var el = document.getElementById("ruffReport");
+      if (el) {
+        el.classList.add("visible");
+        el.style.display = "flex";
+        el.style.visibility = "visible";
+        el.style.opacity = "1";
+        el.style.zIndex = "90";
+      }
+    } catch (e) {}
+  }
+
   function syncAirfieldGlobals() {
     window.__airborneAirfield = !!airfieldMode;
     window.__airborneAirfieldPhase = airfieldPhase;
@@ -728,6 +758,7 @@
       syncAirfieldGlobals();
       } // end non-landing lesson branch
 
+    forceTrainingReportIfDue();
     // ---- LAND ----
     } else if (airfieldPhase === "land") {
       window.__airborneAirfieldInvuln = true;
@@ -799,6 +830,7 @@
         if (!airfieldDidLand && ((fieldReady && airfieldLandContact >= 0.12) || airfieldLandT > 48)) {
           airfieldDidLand = true;
           window.__airborneAirfieldDidLand = true;
+          window.__airborneLandTouchAt = performance.now();
           player.y = landY;
           player.vy = 0;
           player.rotation = 0;
@@ -820,6 +852,7 @@
       syncAirfieldGlobals();
 
     
+    forceTrainingReportIfDue();
     // ---- SKID (drive like takeoff: strip scrolls under blimp + blimp rolls forward) ----
     } else if (airfieldPhase === "skid") {
       window.__airborneAirfieldInvuln = true;
@@ -831,7 +864,7 @@
       if (!airfieldTiles || !airfieldTiles.length) {
         try { ensureAirfieldStripVisible(); } catch (e) {}
       }
-      const skidDur = 4.0; // auto-drive then score at ~5s total
+      const skidDur = 3.0; // auto-drive then quick score
       const u = Math.min(1, airfieldSkidT / skidDur);
       // Linear then soft stop in last 15%
       const ease = u < 0.85 ? (u / 0.85) * 0.92 : (0.92 + 0.08 * (1 - Math.pow(1 - (u - 0.85) / 0.15, 2)));
@@ -930,7 +963,7 @@
         airfieldFireworks = airfieldFireworks.filter(function(fw) { return fw.age < fw.life; });
       }
       // Hold briefly on strip then ALWAYS show score
-      if (!window.__airborneTrainingReportShown && airfieldScoreT > 1.0) {
+      if (!window.__airborneTrainingReportShown && airfieldScoreT > 0.5) {
         window.__airborneTrainingReportShown = true;
         window.__airborneTrainingReportReady = true;
         window.__airborneAirfieldDidLand = true;
