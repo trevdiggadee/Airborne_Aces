@@ -1454,21 +1454,25 @@ function spawnHealPickup() {
 
     if ((bossActive || bonusActive) && !window.__airborneAirfield) return;
 
-    // During training, only clear shield pickup when we're past shield/combined
-    // and never freeze an on-screen orb mid-air
-    if (window.__airborneAirfield && !window.__airborneAirfieldAllowShield) {
+    // Training: shield pickup ONLY during shield + combined lessons
+    if (window.__airborneAirfield || window.__airborneTrainingFlight) {
       const st = window.__airborneRuffStage || "";
-      if (st !== "shield" && st !== "combined" && st !== "landing" && st !== "report") {
-        // only clear if fully off-screen
-        if (shieldPickup && shieldPickup.x < -80) shieldPickup = null;
-        if (!shieldPickup) return;
+      const allow = (st === "shield" || st === "combined");
+      window.__airborneAirfieldAllowShield = allow;
+      if (!allow) {
+        shieldPickup = null;
+        return;
       }
     }
     if (!shieldPickup) {
+      // No random world spawns during training except allowed stages (handled above)
+      if (window.__airborneAirfield || window.__airborneTrainingFlight) {
+        return;
+      }
       shieldSpawnTimer -= dt;
       if (shieldSpawnTimer <= 0) {
         spawnShieldPickup();
-        shieldSpawnTimer = 55 + Math.random() * 35; // next chance well after this one
+        shieldSpawnTimer = 55 + Math.random() * 35;
       }
       return;
     }

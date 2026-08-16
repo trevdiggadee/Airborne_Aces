@@ -78,7 +78,7 @@
 .otg-loading-area {
   position: absolute;
   /* Text/dots sit below the fixed ring; does not affect ring position */
-  top: calc(50% + 122px);
+  top: calc(49% + 124px);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -113,11 +113,11 @@
 /* White circular progress around center of loading UI */
 .otg-ring-wrap {
   position: absolute;
-  top: 50%; /* lower 2% from 48% */
+  top: 49%; /* up 1% from 50% */
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 222px;  /* +5% from 211 */
-  height: 222px;
+  width: 226px;  /* +2% from 222 */
+  height: 226px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -129,8 +129,8 @@
 .otg-progress-ring {
   position: absolute;
   inset: 0;
-  width: 222px;
-  height: 222px;
+  width: 226px;
+  height: 226px;
 }
 .otg-ring-bg {
   stroke: rgba(255,255,255,0.18);

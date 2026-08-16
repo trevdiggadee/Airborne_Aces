@@ -415,6 +415,8 @@
     ruffWaitingAvoid = false;
     ruffWaitingRing = 0;
     window.__airborneRuffStage = name;
+    window.__airborneAirfieldAllowShield = (name === "shield" || name === "combined");
+    if (!window.__airborneAirfieldAllowShield) { try { shieldPickup = null; } catch (e) {} };
     try { updateFlightTrace(name); } catch (e) {}
     window.__airborneAirfieldAllowPowerup = (name === "powerup" || name === "combined");
     if (!window.__airborneAirfieldAllowPowerup && typeof powerup !== "undefined") powerup = null;
@@ -732,11 +734,12 @@
       y: H0 * 0.5 - ah * 0.5,
       w: aw,
       h: ah,
-      speed: 42, // slower so huge ship can fully clear
+      speed: 42,
       frame: 0,
       frameT: 0,
       bob: Math.random() * Math.PI * 2,
-      passed: false
+      passed: false,
+      smoke: []
     };
   }
 
@@ -750,6 +753,35 @@
       ruffAirship.frameT -= fd;
       ruffAirship.frame = ((ruffAirship.frame || 0) + 1) % 25; // 5x5 sheet
     }
+    // Steam + smoke particles all over / behind the ship
+    if (!ruffAirship.smoke) ruffAirship.smoke = [];
+    var cy0 = ruffAirship.y + Math.sin(ruffAirship.bob || 0) * 6;
+    var nEmit = 5;
+    for (var ei = 0; ei < nEmit; ei++) {
+      if (Math.random() > 0.55) continue;
+      var along = Math.random();
+      var isSteam = Math.random() < 0.45;
+      ruffAirship.smoke.push({
+        x: ruffAirship.x + ruffAirship.w * (0.05 + along * 0.75),
+        y: cy0 + ruffAirship.h * (0.15 + Math.random() * 0.55),
+        vx: -18 - Math.random() * 35 - (ruffAirship.speed || 40) * 0.15,
+        vy: -12 - Math.random() * 28,
+        life: 0.5 + Math.random() * 0.7,
+        age: 0,
+        r: (isSteam ? 6 : 9) + Math.random() * (isSteam ? 10 : 14),
+        steam: isSteam
+      });
+    }
+    for (var si = ruffAirship.smoke.length - 1; si >= 0; si--) {
+      var p = ruffAirship.smoke[si];
+      p.age += dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy -= 8 * dt;
+      p.r += 10 * dt;
+      if (p.age >= p.life) ruffAirship.smoke.splice(si, 1);
+    }
+    if (ruffAirship.smoke.length > 80) ruffAirship.smoke.splice(0, ruffAirship.smoke.length - 80);
     // Soft collision — costs a heart if hit (unless invuln/shield)
     if (!ruffAirship.passed && typeof player !== "undefined" && player) {
       var cy = ruffAirship.y + Math.sin(ruffAirship.bob) * 6;
@@ -775,6 +807,31 @@
     if (!ruffAirship || typeof ctx === "undefined") return;
     var a = ruffAirship;
     var cy = a.y + Math.sin(a.bob || 0) * 6;
+    // Draw smoke/steam BEHIND the ship first
+    if (a.smoke && a.smoke.length) {
+      for (var i = 0; i < a.smoke.length; i++) {
+        var p = a.smoke[i];
+        var u = 1 - p.age / p.life;
+        if (u <= 0) continue;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, u * (p.steam ? 0.35 : 0.45));
+        var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+        if (p.steam) {
+          g.addColorStop(0, "rgba(240,245,250,0.9)");
+          g.addColorStop(0.45, "rgba(200,210,220,0.45)");
+          g.addColorStop(1, "rgba(180,190,200,0)");
+        } else {
+          g.addColorStop(0, "rgba(70,68,65,0.85)");
+          g.addColorStop(0.4, "rgba(45,42,40,0.5)");
+          g.addColorStop(1, "rgba(20,18,16,0)");
+        }
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
     var sheet = (typeof images !== "undefined" && images) ? images.training_airship : null;
     ctx.save();
     if (sheet && sheet.naturalWidth) {
@@ -790,6 +847,22 @@
       ctx.fillRect(a.x, cy, a.w, a.h * 0.7);
     }
     ctx.restore();
+    // Light steam wisps in front for depth
+    if (a.smoke && a.smoke.length) {
+      for (var j = 0; j < a.smoke.length; j++) {
+        var q = a.smoke[j];
+        if (!q.steam) continue;
+        var u2 = 1 - q.age / q.life;
+        if (u2 <= 0) continue;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, u2 * 0.2);
+        ctx.fillStyle = "rgba(230,235,240,0.5)";
+        ctx.beginPath();
+        ctx.arc(q.x + 4, q.y - 6, q.r * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
   }
 
 
@@ -878,9 +951,7 @@
     g.addColorStop(1, "rgba(0,0,0," + a + ")");
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W0, H0);
-    // Extra top band (sky fills with silhouette balloons)
-    ctx.fillStyle = "rgba(5,5,15," + (a * 0.35) + ")";
-    ctx.fillRect(0, 0, W0, H0 * 0.22);
+    // No hard grey rectangle at top — smooth dusk only
     ctx.restore();
   }
 
@@ -1764,14 +1835,27 @@
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      try { bossBanner = null; } catch (e) {}
+      // Balloons drift in first (~4s), sky darkens gradually, then boss
+      if (!ruffBgBalloons || !ruffBgBalloons.length) {
+        try { spawnTrainingBgBalloons(); } catch (e) {}
+        // Start balloons off-screen right so they scroll in
+        if (ruffBgBalloons) {
+          for (var bi = 0; bi < ruffBgBalloons.length; bi++) {
+            ruffBgBalloons[bi].x += (typeof W !== "undefined" ? W : 400) * (0.3 + Math.random() * 0.5);
+          }
+        }
+      }
       updateTrainingBgBalloons(dt);
-      updateTrainingBossDark(dt, 1);
-      // ONE boss only — never re-trigger
-      if (ruffStageT > 1.0 && !window.__airborneTrainingBossTried && !window.__airborneTrainingBossDone &&
+      var darkT = Math.min(1, ruffStageT / 3.5);
+      updateTrainingBossDark(dt, darkT);
+      // ONE boss only after balloons have been scrolling ~4s
+      if (ruffStageT > 4.0 && !window.__airborneTrainingBossTried && !window.__airborneTrainingBossDone &&
           !(typeof bossActive !== "undefined" && bossActive) && !ruffLessonPendingNext) {
         try {
           window.__airborneTrainingBossTried = true;
           window.__airborneTrainingBoss = true;
+          try { bossBanner = null; } catch (e0) {}
           if (typeof triggerBoss === "function") {
             triggerBoss(1);
             if (typeof boss !== "undefined" && boss) {
@@ -1779,6 +1863,7 @@
               boss.health = 10;
             }
           }
+          try { bossBanner = null; } catch (e1) {}
         } catch (e) {}
       }
       if (!ruffLessonPendingNext) {

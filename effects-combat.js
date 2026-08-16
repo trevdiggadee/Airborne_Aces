@@ -1739,6 +1739,11 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
   }
 
   function drawBossBanner() {
+    if (window.__airborneTrainingBoss || window.__airborneAirfield ||
+        (window.__airborneRuffStage === "boss1")) {
+      bossBanner = null;
+      return;
+    }
     if (!bossBanner) return;
     const now = performance.now();
     if (now > bossBanner.until) {
