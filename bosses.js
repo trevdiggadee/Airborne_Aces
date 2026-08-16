@@ -1993,6 +1993,11 @@
   let bossBanner = null; // { text, until } — brief on-screen announcement
 
   function showBanner(text, durationMs, type) {
+    // Suppress campaign banners during R.U.F.F. training boss lesson
+    if (window.__airborneTrainingBoss || window.__airborneAirfield || window.__airborneTrainingFlight ||
+        (window.__airborneRuffActive && (window.__airborneRuffStage === "boss1" || window.__airborneRuffStage === "combined"))) {
+      return;
+    }
     bossBanner = { text, until: performance.now() + durationMs, startedAt: performance.now(), type: type || "info" };
   }
 

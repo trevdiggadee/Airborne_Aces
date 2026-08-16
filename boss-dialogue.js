@@ -25,6 +25,9 @@ const PLAYER_RETORTS = [
 let bossDialogueSkip = null;
 
 function startBossDialogue(num) {
+  if (window.__airborneTrainingBoss || window.__airborneAirfield || window.__airborneTrainingFlight) {
+    return; // no dialogue overlay during training boss lesson
+  }
   state = "bossDialogue";
 
   const overlay = document.getElementById("bossDialogueOverlay");
@@ -191,6 +194,10 @@ function triggerBoss(num) {
     bossActive = true;
     bossNumber = num;
     obstacles = []; // clear the sky for the encounter
+    // Training: no incoming/defeat banners
+    if (window.__airborneTrainingBoss || window.__airborneAirfield) {
+      try { bossBanner = null; } catch (e) {}
+    }
 
     const isGround = cfg.kind === "tank";
     const bossImg = bossPortraitImg(num);

@@ -450,17 +450,11 @@
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       window.__airborneTrainingBoss = true;
       window.__airborneTrainingBossDone = false;
+      window.__airborneTrainingBossTried = false;
       ruffBossDark = 0;
+      try { bossBanner = null; } catch (e) {}
       try { spawnTrainingBgBalloons(); } catch (e) {}
-      try {
-        if (typeof triggerBoss === "function") {
-          triggerBoss(1);
-          if (typeof boss !== "undefined" && boss) {
-            boss.maxHealth = Math.min(boss.maxHealth || 16, 10);
-            boss.health = boss.maxHealth;
-          }
-        }
-      } catch (e) { console.warn("[R.U.F.F.] triggerBoss", e); }
+      // Boss spawned once from stage update only (avoids double spawn)
     } else if (name === "airship") {
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = false;
