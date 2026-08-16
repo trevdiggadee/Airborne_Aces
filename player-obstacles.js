@@ -1454,11 +1454,14 @@ function spawnHealPickup() {
 
     if ((bossActive || bonusActive) && !window.__airborneAirfield) return;
 
+    // During training, only clear shield pickup when we're past shield/combined
+    // and never freeze an on-screen orb mid-air
     if (window.__airborneAirfield && !window.__airborneAirfieldAllowShield) {
-      // Keep existing training-spawned shield moving; don't auto-clear mid-lesson
-      if (window.__airborneRuffStage !== "shield" && window.__airborneRuffStage !== "combined") {
-        shieldPickup = null;
-        return;
+      const st = window.__airborneRuffStage || "";
+      if (st !== "shield" && st !== "combined" && st !== "landing" && st !== "report") {
+        // only clear if fully off-screen
+        if (shieldPickup && shieldPickup.x < -80) shieldPickup = null;
+        if (!shieldPickup) return;
       }
     }
     if (!shieldPickup) {
@@ -1516,8 +1519,11 @@ function spawnHealPickup() {
       return;
     }
 
-    shieldPickup.x -= shieldPickup.speed * dt;
-    shieldPickup.bobPhase += dt * 2.4;
+    // Always scroll — never freeze mid-air
+    const shSpd = Math.max(120, shieldPickup.speed || 150);
+    shieldPickup.speed = shSpd;
+    shieldPickup.x -= shSpd * dt;
+    shieldPickup.bobPhase = (shieldPickup.bobPhase || 0) + dt * 2.4;
 
     if (shieldPickup.x < -shieldPickup.w - 20) {
       shieldPickup = null;
@@ -1540,15 +1546,75 @@ function spawnHealPickup() {
   function drawShieldPickup() {
     if (typeof levelEndPhase === "string" && levelEndPhase === "fadeOut") return;
     if (!shieldPickup) return;
-    const img = images.shieldPickup;
-    if (!img || !img.naturalWidth) return;
-    const drawY = shieldPickup.y + Math.sin(shieldPickup.bobPhase) * 8;
+    const sp = shieldPickup;
+    const bob = Math.sin(sp.bobPhase || 0) * 10;
+    const sway = Math.sin((sp.bobPhase || 0) * 0.65) * 5;
+    const collecting = (sp.collectAnim != null && sp.collectAnim > 0);
+    const ca = Math.min(1, sp.collectAnim || 0);
+    let cx = sp.x + (sp.w || 48) / 2 + (collecting ? 0 : sway);
+    let cy = sp.y + (sp.h || 48) / 2 + (collecting ? 0 : bob);
+    if (collecting && sp.collectX != null) { cx = sp.collectX; cy = sp.collectY; }
+    let scale = 1 + Math.sin((sp.bobPhase || 0) * 2.2) * 0.1;
+    let alpha = 1;
+    if (collecting) {
+      const bounce = Math.sin(ca * Math.PI) * 0.15;
+      scale = 1 + ca * ca * 8 + bounce;
+      alpha = ca < 0.55 ? 1 : Math.max(0, 1 - (ca - 0.55) / 0.45);
+    }
+    const base = Math.max(sp.w || 48, sp.h || 48) * 1.25;
+    const halfTarget = Math.min(W, H) * 0.9;
+    const dw = collecting ? Math.min(halfTarget * (0.12 + ca * 0.88), halfTarget) : base * scale;
+    const dh = dw;
     ctx.save();
-    ctx.translate(shieldPickup.x + shieldPickup.w / 2, drawY + shieldPickup.h / 2);
-    const pulse = 1 + Math.sin(performance.now() / 150) * 0.07;
-    ctx.scale(pulse, pulse);
-    drawMotionBlur(img, 0, 0, shieldPickup.w, shieldPickup.h, 0, 160, 0);
-    ctx.drawImage(img, -shieldPickup.w / 2, -shieldPickup.h / 2, shieldPickup.w, shieldPickup.h);
+    ctx.globalAlpha = alpha;
+    const glowR = dw * 0.65;
+    const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, glowR);
+    g.addColorStop(0, "rgba(120,220,255," + (0.55 * alpha) + ")");
+    g.addColorStop(0.45, "rgba(40,140,255," + (0.25 * alpha) + ")");
+    g.addColorStop(1, "rgba(20,60,180,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, glowR, 0, Math.PI * 2);
+    ctx.fill();
+    // Prefer animated sheet; fallback to static
+    const sheet = (typeof images !== "undefined" && images)
+      ? (images.shield_sheet || images.shieldPickup || null) : null;
+    if (sheet && sheet.naturalWidth && images.shield_sheet && sheet === images.shield_sheet) {
+      const cols = 6, rows = 6;
+      const fw = sheet.naturalWidth / cols;
+      const fh = sheet.naturalHeight / rows;
+      const fr = (sp.frame || 0) % 36;
+      const col = fr % cols;
+      const row = Math.floor(fr / cols) % rows;
+      ctx.drawImage(sheet, col * fw, row * fh, fw, fh, cx - dw / 2, cy - dh / 2, dw, dh);
+    } else if (sheet && sheet.naturalWidth) {
+      ctx.drawImage(sheet, cx - dw / 2, cy - dh / 2, dw, dh);
+    } else {
+      // procedural fallback so it is never invisible
+      ctx.fillStyle = "rgba(100,200,255,0.85)";
+      ctx.beginPath();
+      ctx.arc(cx, cy, dw * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(200,240,255,0.9)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(cx, cy, dw * 0.4, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    (sp.embers || []).forEach(function (e) {
+      const u = 1 - e.age / e.life;
+      if (u <= 0) return;
+      ctx.globalAlpha = Math.max(0, u * alpha);
+      const eg = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.r);
+      eg.addColorStop(0, "rgba(220,250,255,1)");
+      eg.addColorStop(0.5, "rgba(80,180,255,0.8)");
+      eg.addColorStop(1, "rgba(30,80,200,0)");
+      ctx.fillStyle = eg;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
     ctx.restore();
   }
 

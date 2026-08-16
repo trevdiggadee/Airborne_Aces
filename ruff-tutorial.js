@@ -1469,7 +1469,8 @@
         shieldPickup = {
           x: (typeof W !== "undefined" ? W : 400) + 40,
           y: (typeof H !== "undefined" ? H : 600) * 0.4,
-          w: 44, h: 44, speed: 150, bobPhase: 0
+          w: 56, h: 56, speed: 160, bobPhase: 0,
+          frame: 0, frameT: 0, embers: []
         };
       }
       // After shield is up (or 5s), send obstacles to demonstrate protection
