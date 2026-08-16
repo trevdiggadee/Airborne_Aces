@@ -414,6 +414,13 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
       healthMeter.classList.add("hit");
     }
     showBanner(cfg.defeatLabel + " +" + bonus + " · FULL HEALTH!", 2200, "defeat");
+    // Training lesson: no bonus round / level progress — hand control back to R.U.F.F.
+    if (window.__airborneTrainingBoss) {
+      window.__airborneTrainingBossDone = true;
+      window.__airborneTrainingBoss = false;
+      try { setMusicTheme(THEME_NORMAL); } catch (e) {}
+      return;
+    }
     queueBonusRound(cfg.bonusRound, 2200);
   }
 

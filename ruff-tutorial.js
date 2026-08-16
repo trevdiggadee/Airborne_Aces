@@ -87,6 +87,7 @@
     "powerup",
     "rings",
     "airship",
+    "boss1",
     "combined",
     "landing",
     "report"
@@ -135,6 +136,11 @@
       "Hold up — heavy traffic ahead.",
       "That's an industrial hauler. Give it a wide berth.",
       "Wait until it clears the sky before we continue."
+    ],
+    boss1: [
+      "Incoming contact — this is the real deal, rookie.",
+      "Baron Blackpowder. Bomb bay and all.",
+      "The sky will darken. Stay sharp and empty that balloon."
     ],
     combined: [
       "Okay, rookie. You've learned the basics.",
@@ -438,6 +444,23 @@
       window.__airborneAirfieldObstacles = true;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 1.35;
+    } else if (name === "boss1") {
+      window.__airborneAirfieldRings = false;
+      window.__airborneAirfieldObstacles = false;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      window.__airborneTrainingBoss = true;
+      window.__airborneTrainingBossDone = false;
+      ruffBossDark = 0;
+      try { spawnTrainingBgBalloons(); } catch (e) {}
+      try {
+        if (typeof triggerBoss === "function") {
+          triggerBoss(1);
+          if (typeof boss !== "undefined" && boss) {
+            boss.maxHealth = Math.min(boss.maxHealth || 16, 10);
+            boss.health = boss.maxHealth;
+          }
+        }
+      } catch (e) { console.warn("[R.U.F.F.] triggerBoss", e); }
     } else if (name === "airship") {
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = false;
@@ -449,6 +472,10 @@
       window.__airborneAirfieldObstacles = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 1.5;
     } else if (name === "combined") {
+      window.__airborneTrainingBoss = false;
+      window.__airborneTrainingBossTried = false;
+      ruffBgBalloons = [];
+      ruffBossDark = 0;
       window.__airborneAirfieldRings = true;
       window.__airborneAirfieldObstacles = true;
       if (typeof spawnInterval !== "undefined") spawnInterval = 1.55;
@@ -517,6 +544,10 @@
       ruffWaitingRing = 8;
       window.__airborneRingCollects = 0;
     } else if (name === "combined") {
+      window.__airborneTrainingBoss = false;
+      window.__airborneTrainingBossTried = false;
+      ruffBgBalloons = [];
+      ruffBossDark = 0;
       if (ruffLines.length) showRadio(ruffLines[0], 2.6);
       window.__airborneAirfieldRings = true;
       window.__airborneAirfieldObstacles = true;
@@ -764,6 +795,98 @@
       ctx.fillStyle = "rgba(80,60,40,0.85)";
       ctx.fillRect(a.x, cy, a.w, a.h * 0.7);
     }
+    ctx.restore();
+  }
+
+
+  // ---------- Training boss atmosphere (far balloons + sky darken) ----------
+  var ruffBgBalloons = [];
+  var ruffBossDark = 0; // 0..1 overlay strength
+
+  function spawnTrainingBgBalloons() {
+    ruffBgBalloons = [];
+    var W0 = (typeof W !== "undefined") ? W : 400;
+    var H0 = (typeof H !== "undefined") ? H : 600;
+    var n = 14;
+    for (var i = 0; i < n; i++) {
+      ruffBgBalloons.push({
+        x: (i / n) * (W0 + 200) + Math.random() * 40,
+        y: H0 * (0.08 + Math.random() * 0.55),
+        s: 0.35 + Math.random() * 0.45, // far = smaller
+        speed: 12 + Math.random() * 22, // slow drift
+        frame: (Math.random() * 36) | 0,
+        frameT: Math.random(),
+        bob: Math.random() * Math.PI * 2,
+        alpha: 0.28 + Math.random() * 0.35
+      });
+    }
+  }
+
+  function updateTrainingBgBalloons(dt) {
+    if (!ruffBgBalloons || !ruffBgBalloons.length) return;
+    var W0 = (typeof W !== "undefined") ? W : 400;
+    var H0 = (typeof H !== "undefined") ? H : 600;
+    for (var i = 0; i < ruffBgBalloons.length; i++) {
+      var b = ruffBgBalloons[i];
+      b.x -= b.speed * dt;
+      b.bob += dt * (0.6 + b.s * 0.4);
+      b.frameT += dt;
+      if (b.frameT >= 1 / 10) {
+        b.frameT = 0;
+        b.frame = ((b.frame || 0) + 1) % 36;
+      }
+      if (b.x < -80) {
+        b.x = W0 + 40 + Math.random() * 80;
+        b.y = H0 * (0.08 + Math.random() * 0.55);
+      }
+    }
+  }
+
+  function drawTrainingBgBalloons() {
+    if (!ruffBgBalloons || !ruffBgBalloons.length || typeof ctx === "undefined") return;
+    for (var i = 0; i < ruffBgBalloons.length; i++) {
+      var b = ruffBgBalloons[i];
+      var key = "balloon_anim_" + String((b.frame % 36) + 1).padStart(2, "0");
+      var img = (typeof images !== "undefined" && images) ? images[key] : null;
+      var bw = ((typeof W !== "undefined") ? W : 400) * 0.09 * b.s;
+      var bh = bw * 1.35;
+      var by = b.y + Math.sin(b.bob) * 5;
+      ctx.save();
+      ctx.globalAlpha = b.alpha;
+      if (img && img.naturalWidth) {
+        ctx.drawImage(img, b.x, by, bw, bh);
+      } else {
+        ctx.fillStyle = "rgba(200,80,80,0.7)";
+        ctx.beginPath();
+        ctx.ellipse(b.x + bw / 2, by + bh * 0.4, bw * 0.4, bh * 0.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
+  function updateTrainingBossDark(dt, target) {
+    var t = (typeof target === "number") ? target : 0;
+    if (ruffBossDark < t) ruffBossDark = Math.min(t, ruffBossDark + dt * 0.35);
+    else if (ruffBossDark > t) ruffBossDark = Math.max(t, ruffBossDark - dt * 0.4);
+  }
+
+  function drawTrainingBossDark() {
+    if (!ruffBossDark || ruffBossDark < 0.02 || typeof ctx === "undefined") return;
+    var W0 = (typeof W !== "undefined") ? W : 400;
+    var H0 = (typeof H !== "undefined") ? H : 600;
+    var a = Math.min(0.55, ruffBossDark * 0.55);
+    ctx.save();
+    // Full-screen dusk (everywhere), stronger at edges like a flocking storm
+    var g = ctx.createRadialGradient(W0 * 0.5, H0 * 0.35, W0 * 0.1, W0 * 0.5, H0 * 0.4, W0 * 0.85);
+    g.addColorStop(0, "rgba(10,8,20," + (a * 0.45) + ")");
+    g.addColorStop(0.55, "rgba(8,6,18," + (a * 0.75) + ")");
+    g.addColorStop(1, "rgba(0,0,0," + a + ")");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W0, H0);
+    // Extra top band (sky fills with silhouette balloons)
+    ctx.fillStyle = "rgba(5,5,15," + (a * 0.35) + ")";
+    ctx.fillRect(0, 0, W0, H0 * 0.22);
     ctx.restore();
   }
 
@@ -1636,12 +1759,51 @@
         try { spawnTrainingAirship(); } catch (e) {}
       }
       updateTrainingAirship(dt);
-      // Wait until fully off screen, then pause gate → combined
+      // Wait until fully off screen, then pause gate → boss1
       if (!ruffLessonPendingNext && ruffStageT > 2 && !ruffAirship) {
         requestNextStage();
       } else if (!ruffLessonPendingNext && ruffStageT > 28) {
         ruffAirship = null;
         requestNextStage();
+      }
+    } else if (ruffStage === "boss1") {
+      window.__airborneAirfieldObstacles = false;
+      window.__airborneAirfieldRings = false;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      updateTrainingBgBalloons(dt);
+      updateTrainingBossDark(dt, 1);
+      // Ensure boss was triggered
+      if (ruffStageT > 1.2 && !(typeof bossActive !== "undefined" && bossActive) && !window.__airborneTrainingBossDone && !ruffLessonPendingNext) {
+        try {
+          if (typeof triggerBoss === "function" && !window.__airborneTrainingBossTried) {
+            window.__airborneTrainingBossTried = true;
+            window.__airborneTrainingBoss = true;
+            triggerBoss(1);
+            if (typeof boss !== "undefined" && boss) {
+              boss.maxHealth = 10;
+              boss.health = 10;
+            }
+          }
+        } catch (e) {}
+      }
+      if (!ruffLessonPendingNext) {
+        if (window.__airborneTrainingBossDone ||
+            (ruffStageT > 5 && typeof bossActive !== "undefined" && !bossActive && !bossSinking)) {
+          window.__airborneTrainingBoss = false;
+          ruffBgBalloons = [];
+          updateTrainingBossDark(dt, 0);
+          requestNextStage();
+        } else if (ruffStageT > 50) {
+          // Timeout — skip remaining boss and continue training
+          try {
+            if (typeof bossActive !== "undefined") bossActive = false;
+            boss = null;
+          } catch (e) {}
+          window.__airborneTrainingBoss = false;
+          window.__airborneTrainingBossDone = true;
+          ruffBgBalloons = [];
+          requestNextStage();
+        }
       }
     } else if (ruffStage === "combined") {
       updateCrystals(dt);
@@ -1703,7 +1865,9 @@
     drawMarkers();
     drawCrystals();
     try { drawTrainingCoins();
-    try { drawTrainingAirship(); } catch (e) {} } catch (e) {}
+    try { drawTrainingBgBalloons(); } catch (e) {}
+    try { drawTrainingAirship(); } catch (e) {}
+    try { drawTrainingBossDark(); } catch (e) {} } catch (e) {}
     drawSparkles();
     drawRuffCompanion();
   }
