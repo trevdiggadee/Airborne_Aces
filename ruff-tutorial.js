@@ -86,6 +86,7 @@
     "shield",
     "powerup",
     "rings",
+    "airship",
     "combined",
     "landing",
     "report"
@@ -129,6 +130,11 @@
     rings: [
       "Alright, rookie. Time for some precision flying.",
       "Fly through the rings. Chain them for a combo."
+    ],
+    airship: [
+      "Hold up — heavy traffic ahead.",
+      "That's an industrial hauler. Give it a wide berth.",
+      "Wait until it clears the sky before we continue."
     ],
     combined: [
       "Okay, rookie. You've learned the basics.",
@@ -432,6 +438,12 @@
       window.__airborneAirfieldObstacles = true;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 1.35;
+    } else if (name === "airship") {
+      window.__airborneAirfieldRings = false;
+      window.__airborneAirfieldObstacles = false;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      ruffAirship = null;
+      try { spawnTrainingAirship(); } catch (e) {}
     } else if (name === "rings") {
       window.__airborneAirfieldRings = true;
       window.__airborneAirfieldObstacles = false;
@@ -586,6 +598,9 @@
       if (typeof powerup !== "undefined" && powerup && powerup.x > -50) {
         pending += 1;
       }
+      if (ruffAirship && ruffAirship.x + (ruffAirship.w || 0) > -40) {
+        pending += 1;
+      }
     } catch (e) {}
     return pending;
   }
@@ -675,6 +690,81 @@
       if (typeof sfxRankUp === "function") sfxRankUp();
       else if (typeof sfxLevelCompleteFanfare === "function") sfxLevelCompleteFanfare();
     } catch (e) {}
+  }
+
+
+  // ---------- Training airship obstacle (between rings and combined) ----------
+  var ruffAirship = null;
+
+  function spawnTrainingAirship() {
+    var H0 = (typeof H !== "undefined") ? H : 600;
+    var W0 = (typeof W !== "undefined") ? W : 400;
+    // ~25% of screen width
+    var aw = Math.max(80, W0 * 0.25);
+    var ah = aw * 0.42;
+    ruffAirship = {
+      x: W0 + aw * 0.2,
+      y: H0 * (0.28 + Math.random() * 0.18),
+      w: aw,
+      h: ah,
+      speed: 55, // slow scroll
+      frame: 0,
+      frameT: 0,
+      bob: Math.random() * Math.PI * 2,
+      passed: false
+    };
+  }
+
+  function updateTrainingAirship(dt) {
+    if (!ruffAirship) return;
+    ruffAirship.x -= (ruffAirship.speed || 55) * dt;
+    ruffAirship.bob = (ruffAirship.bob || 0) + dt * 1.2;
+    ruffAirship.frameT = (ruffAirship.frameT || 0) + dt;
+    var fd = 1 / 12;
+    while (ruffAirship.frameT >= fd) {
+      ruffAirship.frameT -= fd;
+      ruffAirship.frame = ((ruffAirship.frame || 0) + 1) % 25; // 5x5 sheet
+    }
+    // Soft collision — costs a heart if hit (unless invuln/shield)
+    if (!ruffAirship.passed && typeof player !== "undefined" && player) {
+      var cy = ruffAirship.y + Math.sin(ruffAirship.bob) * 6;
+      var dx = Math.abs(player.x - (ruffAirship.x + ruffAirship.w * 0.5));
+      var dy = Math.abs(player.y - (cy + ruffAirship.h * 0.5));
+      if (dx < player.w * 0.35 + ruffAirship.w * 0.35 && dy < player.h * 0.35 + ruffAirship.h * 0.3) {
+        ruffAirship.passed = true; // one hit only
+        try {
+          if (!(typeof shieldActive !== "undefined" && shieldActive) &&
+              !(window.__airborneAirfieldInvuln) &&
+              typeof takeHit === "function") {
+            takeHit();
+          }
+        } catch (e) {}
+      }
+    }
+    if (ruffAirship.x + ruffAirship.w < -40) {
+      ruffAirship = null;
+    }
+  }
+
+  function drawTrainingAirship() {
+    if (!ruffAirship || typeof ctx === "undefined") return;
+    var a = ruffAirship;
+    var cy = a.y + Math.sin(a.bob || 0) * 6;
+    var sheet = (typeof images !== "undefined" && images) ? images.training_airship : null;
+    ctx.save();
+    if (sheet && sheet.naturalWidth) {
+      var cols = 5, rows = 5;
+      var fw = sheet.naturalWidth / cols;
+      var fh = sheet.naturalHeight / rows;
+      var fr = (a.frame || 0) % 25;
+      var col = fr % cols;
+      var row = Math.floor(fr / cols) % rows;
+      ctx.drawImage(sheet, col * fw, row * fh, fw, fh, a.x, cy, a.w, a.h);
+    } else {
+      ctx.fillStyle = "rgba(80,60,40,0.85)";
+      ctx.fillRect(a.x, cy, a.w, a.h * 0.7);
+    }
+    ctx.restore();
   }
 
   function updateCrystals(dt) {
@@ -1538,6 +1628,21 @@
       if (!ruffLessonPendingNext && ((ruffStats.rings >= 4 && ringLeft === 0 && ruffStageT > 6) || ruffStageT > 18)) {
         requestNextStage();
       }
+    } else if (ruffStage === "airship") {
+      window.__airborneAirfieldObstacles = false;
+      window.__airborneAirfieldRings = false;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      if (!ruffAirship && ruffStageT < 1.5) {
+        try { spawnTrainingAirship(); } catch (e) {}
+      }
+      updateTrainingAirship(dt);
+      // Wait until fully off screen, then pause gate → combined
+      if (!ruffLessonPendingNext && ruffStageT > 2 && !ruffAirship) {
+        requestNextStage();
+      } else if (!ruffLessonPendingNext && ruffStageT > 28) {
+        ruffAirship = null;
+        requestNextStage();
+      }
     } else if (ruffStage === "combined") {
       updateCrystals(dt);
       updateTrainingCoins(dt);
@@ -1597,7 +1702,8 @@
     }
     drawMarkers();
     drawCrystals();
-    try { drawTrainingCoins(); } catch (e) {}
+    try { drawTrainingCoins();
+    try { drawTrainingAirship(); } catch (e) {} } catch (e) {}
     drawSparkles();
     drawRuffCompanion();
   }
