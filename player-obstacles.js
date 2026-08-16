@@ -256,7 +256,7 @@
       ctx.globalAlpha = a;
       ctx.translate(W * 0.5, H * 0.24);
       ctx.scale(pop, pop);
-      const R = Math.max(24, Math.min(34, W * 0.068));
+      const R = Math.max(28, Math.min(42, W * 0.10));
       // Outer soft pulse
       const pulse = 1 + 0.04 * Math.sin(now / 200);
       ctx.beginPath();
@@ -335,7 +335,7 @@
   }
 
   function spawnGoldRing() {
-    const r = Math.min(34, W * 0.08); // half previous size
+    const r = Math.min(42, W * 0.10); // +25% from prior half-size
     const groundY = groundLevelY();
     const minY = H * 0.12;
     const maxY = groundY - H * 0.22;
@@ -529,6 +529,9 @@
           const dy = Math.abs(player.y - (pickup.y + Math.sin(pickup.bob) * 10));
           if (dx < player.w * 0.45 + pickup.r && dy < player.h * 0.45 + pickup.r) {
             pickup.collected = true;
+            pickup.collectAnim = 0; // 0→1 expand + bounce fade
+            pickup.collectX = pickup.x;
+            pickup.collectY = pickup.y + Math.sin(pickup.bob) * 10;
             window.__airborneFirePowerActive = true;
             window.__airborneFirePowerUntil = performance.now() + 9000;
             try {
@@ -542,7 +545,39 @@
             } catch (e) {}
           }
         }
-        if (pickup.x < -70) window.__airborneFirePickup = null;
+        if (pickup.x < -70 && !pickup.collected) window.__airborneFirePickup = null;
+      }
+      // Collect expand animation continues after collect
+      if (pickup && pickup.collected) {
+        pickup.collectAnim = (pickup.collectAnim || 0) + dt / 0.85;
+        // keep animating frames during expand
+        pickup.frameT = (pickup.frameT || 0) + dt;
+        const fd = 1 / 16;
+        while (pickup.frameT >= fd) {
+          pickup.frameT -= fd;
+          pickup.frame = ((pickup.frame || 0) + 1) % 36;
+        }
+        // burst embers during expand
+        if (!pickup.embers) pickup.embers = [];
+        if (pickup.collectAnim < 0.7 && Math.random() < 0.85) {
+          const ang = Math.random() * Math.PI * 2;
+          const sp = 60 + Math.random() * 140;
+          pickup.embers.push({
+            x: pickup.collectX || pickup.x,
+            y: pickup.collectY || pickup.y,
+            vx: Math.cos(ang) * sp,
+            vy: Math.sin(ang) * sp - 30,
+            life: 0.4 + Math.random() * 0.4,
+            age: 0,
+            r: 2 + Math.random() * 4
+          });
+        }
+        for (let ei = (pickup.embers || []).length - 1; ei >= 0; ei--) {
+          const e = pickup.embers[ei];
+          e.age += dt; e.x += e.vx * dt; e.y += e.vy * dt; e.vy += 50 * dt;
+          if (e.age >= e.life) pickup.embers.splice(ei, 1);
+        }
+        if (pickup.collectAnim >= 1) window.__airborneFirePickup = null;
       }
       if (window.__airborneFirePowerActive && performance.now() > window.__airborneFirePowerUntil) {
         window.__airborneFirePowerActive = false;
@@ -588,21 +623,42 @@
     window.__airborneDrawFirePower = function () {
       if (typeof ctx === "undefined") return;
       const pickup = window.__airborneFirePickup;
-      if (pickup && !pickup.collected) {
-        const y = pickup.y + Math.sin(pickup.bob) * 10;
-        const pulse = 1 + Math.sin(pickup.pulse || 0) * 0.08;
-        const R = pickup.r * pulse;
+      if (pickup) {
+        const collecting = !!pickup.collected;
+        const ca = Math.min(1, pickup.collectAnim || 0);
+        // Motion: bob + slight orbit sway + spin scale
+        const bobY = Math.sin(pickup.bob || 0) * 10;
+        const swayX = Math.sin((pickup.pulse || 0) * 0.7) * 6;
+        const baseX = collecting ? (pickup.collectX || pickup.x) : (pickup.x + swayX);
+        const baseY = collecting ? (pickup.collectY || pickup.y) : (pickup.y + bobY);
+        // Expand to ~half screen with bounce, then fade
+        let scale = 1;
+        let alpha = 1;
+        if (collecting) {
+          // bounce ease: overshoot then settle while fading
+          const bounce = Math.sin(ca * Math.PI) * 0.18;
+          scale = 1 + ca * ca * 9 + bounce; // grows toward ~half screen
+          alpha = ca < 0.55 ? 1 : Math.max(0, 1 - (ca - 0.55) / 0.45);
+        } else {
+          scale = 1 + Math.sin(pickup.pulse || 0) * 0.08;
+        }
+        const R = (pickup.r || 28) * scale;
+        const halfTarget = Math.min(W, H) * 0.5;
+        const dw = collecting ? Math.min(halfTarget * (0.15 + ca * 0.85), halfTarget) : R * 2.4;
+        const dh = dw;
         ctx.save();
-        // Soft glow under sprite
-        const g = ctx.createRadialGradient(pickup.x, y, 2, pickup.x, y, R * 2.2);
-        g.addColorStop(0, "rgba(255,180,40,0.55)");
-        g.addColorStop(0.5, "rgba(255,80,10,0.2)");
+        ctx.globalAlpha = alpha;
+        // Glow
+        const glowR = dw * 0.7;
+        const g = ctx.createRadialGradient(baseX, baseY, 2, baseX, baseY, glowR);
+        g.addColorStop(0, "rgba(255,200,60," + (0.55 * alpha) + ")");
+        g.addColorStop(0.45, "rgba(255,90,15," + (0.25 * alpha) + ")");
         g.addColorStop(1, "rgba(180,20,0,0)");
         ctx.fillStyle = g;
         ctx.beginPath();
-        ctx.arc(pickup.x, y, R * 2.2, 0, Math.PI * 2);
+        ctx.arc(baseX, baseY, glowR, 0, Math.PI * 2);
         ctx.fill();
-        // Animated spritesheet 6x6
+        // Sprite
         const sheet = (typeof images !== "undefined" && images) ? images.fireball_sheet : null;
         if (sheet && sheet.naturalWidth) {
           const cols = 6, rows = 6;
@@ -611,33 +667,30 @@
           const fr = (pickup.frame || 0) % 36;
           const col = fr % cols;
           const row = Math.floor(fr / cols) % rows;
-          const dw = R * 2.4;
-          const dh = R * 2.4;
-          ctx.drawImage(sheet, col * fw, row * fh, fw, fh, pickup.x - dw / 2, y - dh / 2, dw, dh);
+          ctx.drawImage(sheet, col * fw, row * fh, fw, fh, baseX - dw / 2, baseY - dh / 2, dw, dh);
         } else {
-          // fallback orb
-          const g2 = ctx.createRadialGradient(pickup.x - 3, y - 4, 0, pickup.x, y, R);
+          const g2 = ctx.createRadialGradient(baseX - 3, baseY - 4, 0, baseX, baseY, dw / 2);
           g2.addColorStop(0, "#fff6c8");
           g2.addColorStop(0.35, "#ffb030");
           g2.addColorStop(0.75, "#ff4a10");
           g2.addColorStop(1, "rgba(120,10,0,0.25)");
           ctx.fillStyle = g2;
           ctx.beginPath();
-          ctx.arc(pickup.x, y, R, 0, Math.PI * 2);
+          ctx.arc(baseX, baseY, dw / 2, 0, Math.PI * 2);
           ctx.fill();
         }
         // Embers
         (pickup.embers || []).forEach(function (e) {
           const u = 1 - e.age / e.life;
           if (u <= 0) return;
-          ctx.globalAlpha = Math.max(0, u);
+          ctx.globalAlpha = Math.max(0, u * alpha);
           const eg = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.r);
           eg.addColorStop(0, "rgba(255,240,160,1)");
           eg.addColorStop(0.5, "rgba(255,120,30,0.8)");
           eg.addColorStop(1, "rgba(200,40,0,0)");
           ctx.fillStyle = eg;
           ctx.beginPath();
-          ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2);
+          ctx.arc(e.x, e.y, e.r * (collecting ? 1.4 : 1), 0, Math.PI * 2);
           ctx.fill();
         });
         ctx.globalAlpha = 1;

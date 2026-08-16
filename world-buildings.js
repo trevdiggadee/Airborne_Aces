@@ -831,27 +831,27 @@
       if (!airfieldTiles || !airfieldTiles.length) {
         try { ensureAirfieldStripVisible(); } catch (e) {}
       }
-      const skidDur = 50.0; // ~10x longer runway drive
+      const skidDur = 7.5; // clear auto-drive along strip
       const u = Math.min(1, airfieldSkidT / skidDur);
-      const ease = 1 - Math.pow(1 - u, 1.4);
-      // Strong continuous scroll like takeoff (slow only at the very end)
-      const driveSpd = Math.max(airfieldTakeoffSpeed || 210, 230) * (u < 0.85 ? 1.15 : (1.15 - 0.9 * ((u - 0.85) / 0.15)));
+      // Linear then soft stop in last 15%
+      const ease = u < 0.85 ? (u / 0.85) * 0.92 : (0.92 + 0.08 * (1 - Math.pow(1 - (u - 0.85) / 0.15, 2)));
+      // Auto-drive: strip scrolls under blimp like takeoff
+      const driveSpd = Math.max(airfieldTakeoffSpeed || 210, 240) * (u < 0.88 ? 1.2 : 0.35);
       (airfieldTiles || []).forEach(function(tile) {
         if (!tile) return;
         tile.x -= driveSpd * dt;
       });
-      // Keep strip Y locked at rest (runway under feet)
       airfieldStripY = (typeof airfieldStripY === "number") ? airfieldStripY : 0;
       const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
       const sinkS = airfieldStripY || 0;
       const landY = H - Math.max(40, th * 0.28) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10) + sinkS;
       if (typeof player !== "undefined" && player) {
-        const sx = (typeof airfieldSkidStartX === "number") ? airfieldSkidStartX : W * 0.28;
-        // Visible roll toward end of strip
-        player.x = sx + ease * W * 0.55;
+        const sx = (typeof airfieldSkidStartX === "number") ? airfieldSkidStartX : W * 0.22;
+        // Blimp rolls forward across the runway
+        player.x = sx + ease * W * 0.58;
         player.y = landY;
         player.vy = 0;
-        player.rotation = (1 - u) * 0.06;
+        player.rotation = (1 - ease) * 0.05;
         if (typeof blimpPersonality !== "undefined" && blimpPersonality) {
           blimpPersonality.squashX = 1;
           blimpPersonality.squashY = 1;
@@ -930,7 +930,7 @@
         airfieldFireworks = airfieldFireworks.filter(function(fw) { return fw.age < fw.life; });
       }
       // Hold briefly on strip then ALWAYS show score
-      if (!window.__airborneTrainingReportShown && airfieldScoreT > 2.0) {
+      if (!window.__airborneTrainingReportShown && airfieldScoreT > 1.2) {
         window.__airborneTrainingReportShown = true;
         window.__airborneTrainingReportReady = true;
         window.__airborneAirfieldDidLand = true;
