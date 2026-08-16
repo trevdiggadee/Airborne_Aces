@@ -1365,11 +1365,19 @@
     }
     updateRuffCompanion(dt);
     updateSparkles(dt);
-    // ALWAYS scroll remaining coins so they never freeze after a lesson ends
+    // ALWAYS scroll remaining coins/crystals so they never freeze (incl. landing)
     try {
       if (ruffCoins && ruffCoins.length) {
         updateTrainingCoins(dt);
         ruffCoins = ruffCoins.filter(function (c) {
+          return c && !c.collected && c.x > -80;
+        });
+      }
+    } catch (e) {}
+    try {
+      if (ruffCrystals && ruffCrystals.length) {
+        updateCrystals(dt);
+        ruffCrystals = ruffCrystals.filter(function (c) {
           return c && !c.collected && c.x > -80;
         });
       }

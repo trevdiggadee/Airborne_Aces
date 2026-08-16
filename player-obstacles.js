@@ -450,7 +450,7 @@
       window.__airborneFirePickup = {
         x: (typeof x === "number") ? x : ((typeof W !== "undefined" ? W : 400) + 60),
         y: (typeof y === "number") ? y : ((typeof H !== "undefined" ? H : 600) * (0.28 + Math.random() * 0.32)),
-        r: 28,
+        r: 35, // +25% floating size
         bob: Math.random() * Math.PI * 2,
         pulse: 0,
         speed: 125,
@@ -643,8 +643,9 @@
           scale = 1 + Math.sin(pickup.pulse || 0) * 0.08;
         }
         const R = (pickup.r || 28) * scale;
-        const halfTarget = Math.min(W, H) * 0.5;
-        const dw = collecting ? Math.min(halfTarget * (0.15 + ca * 0.85), halfTarget) : R * 2.4;
+        // Collected expands to ~full half-screen * 2 (almost fills view), with bounce
+        const halfTarget = Math.min(W, H) * 0.95;
+        const dw = collecting ? Math.min(halfTarget * (0.12 + ca * 0.88), halfTarget) : R * 2.4;
         const dh = dw;
         ctx.save();
         ctx.globalAlpha = alpha;

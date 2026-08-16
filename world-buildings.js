@@ -831,7 +831,7 @@
       if (!airfieldTiles || !airfieldTiles.length) {
         try { ensureAirfieldStripVisible(); } catch (e) {}
       }
-      const skidDur = 7.5; // clear auto-drive along strip
+      const skidDur = 4.0; // auto-drive then score at ~5s total
       const u = Math.min(1, airfieldSkidT / skidDur);
       // Linear then soft stop in last 15%
       const ease = u < 0.85 ? (u / 0.85) * 0.92 : (0.92 + 0.08 * (1 - Math.pow(1 - (u - 0.85) / 0.15, 2)));
@@ -930,7 +930,7 @@
         airfieldFireworks = airfieldFireworks.filter(function(fw) { return fw.age < fw.life; });
       }
       // Hold briefly on strip then ALWAYS show score
-      if (!window.__airborneTrainingReportShown && airfieldScoreT > 1.2) {
+      if (!window.__airborneTrainingReportShown && airfieldScoreT > 1.0) {
         window.__airborneTrainingReportShown = true;
         window.__airborneTrainingReportReady = true;
         window.__airborneAirfieldDidLand = true;
@@ -1084,40 +1084,31 @@
   function seedAirfieldFlagsForTile(tile, isLanding) {
     if (!tile || !tile.w) return;
     if (isLanding) {
-      // Checkered finish flags on landing strip — both sides of runway
+      // Finish flag on LEFT side of landing strip (+50% size)
       airfieldFlags.push({
         tile: tile,
-        fx: 0.18,
+        fx: 0.12,
         fy: 0.55,
         frame: 0,
         frameT: 0,
         fps: 12,
         sheet: "finish_flag",
         cols: 5,
-        rows: 5
+        rows: 5,
+        scaleMul: 1.5
       });
+      // Windsock shifted RIGHT by 25% of strip (+50% size)
       airfieldFlags.push({
         tile: tile,
-        fx: 0.82,
-        fy: 0.55,
-        frame: 3,
-        frameT: 0,
-        fps: 12,
-        sheet: "finish_flag",
-        cols: 5,
-        rows: 5
-      });
-      // Windsock in the middle — same height as takeoff windsock
-      airfieldFlags.push({
-        tile: tile,
-        fx: 0.50,
+        fx: 0.75,
         fy: 0.69,
         frame: 0,
         frameT: 0,
         fps: 14,
         sheet: "wind_sock",
         cols: 6,
-        rows: 6
+        rows: 6,
+        scaleMul: 1.5
       });
       return;
     }
@@ -1167,8 +1158,8 @@
     const sx = col * fw;
     const sy = row * fh;
 
-    // Scale: pole sits on dirt, flag not oversized
-    const targetH = Math.max(24, tileH * 0.42);
+    // Scale: pole sits on dirt; scaleMul for landing props (+50%)
+    const targetH = Math.max(24, tileH * 0.42) * (f.scaleMul || 1);
     const scale = targetH / fh;
     const dw = fw * scale;
     const dh = fh * scale;
