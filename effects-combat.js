@@ -490,10 +490,10 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     const mode = s.mode || "fire_sink";
 
     if (mode === "fire_sink") {
-      s.vy = 45 + t * t * 220;
+      s.vy = 55 + t * t * 280; // 25% faster sink
       s.y += s.vy * dt;
-      s.x += Math.sin(s.age * 1.15) * 18 * dt;
-      s.tilt = Math.sin(s.age * 0.9) * 0.16 - t * 0.12;
+      s.x += Math.sin(s.age * 1.35) * 20 * dt;
+      s.tilt = Math.sin(s.age * 1.05) * 0.16 - t * 0.12;
     } else if (mode === "rocket_blast") {
       s.vy = 40 + t * 280;
       s.vx = (s.vx || 0) + (Math.random() - 0.5) * 40 * dt;
@@ -650,8 +650,9 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         h: boss.h,
         img: img,
         age: 0,
-        duration: mode === "heli_spin" ? 2.2 : (mode === "ink_dissolve" ? 2.5 : 2.6),
-        vy: 30,
+        // 25% faster defeat sequence
+        duration: (mode === "heli_spin" ? 2.2 : (mode === "ink_dissolve" ? 2.5 : 2.6)) * 0.75,
+        vy: 40,
         vx: mode === "heli_spin" ? 70 : 0,
         tilt: 0,
         spin: 0,

@@ -724,15 +724,15 @@
   function spawnTrainingAirship() {
     var H0 = (typeof H !== "undefined") ? H : 600;
     var W0 = (typeof W !== "undefined") ? W : 400;
-    // ~25% of screen width
-    var aw = Math.max(80, W0 * 0.25);
+    // 500% of prior ~25% width → ~125% screen width, centered vertically
+    var aw = Math.max(120, W0 * 0.25 * 5);
     var ah = aw * 0.42;
     ruffAirship = {
-      x: W0 + aw * 0.2,
-      y: H0 * (0.28 + Math.random() * 0.18),
+      x: W0 + aw * 0.08,
+      y: H0 * 0.5 - ah * 0.5,
       w: aw,
       h: ah,
-      speed: 55, // slow scroll
+      speed: 42, // slower so huge ship can fully clear
       frame: 0,
       frameT: 0,
       bob: Math.random() * Math.PI * 2,
