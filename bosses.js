@@ -4,7 +4,7 @@
   // "gameplayScore" only counts normal dodge-scoring, so bonus-round points never
   // shift boss pacing (see the scoring block in updateObstacles).
   const BOSSES = [
-    { num: 1, threshold: 50,  maxHealth: 16,  kind: "bomber",  miniType: "balloon_anim",
+    { num: 1, threshold: 50,  maxHealth: 32,  kind: "bomber",  miniType: "balloon_anim",
       label: "BOSS INCOMING!",         defeatLabel: "BOSS DEFEATED!",         powerupKind: "gold",    defeatBonus: 25,  bonusRound: "balloon",
       name: "Baron Blackpowder",
       taunts: [
@@ -21,7 +21,7 @@
         "This sky's got room for one more win.",
         "Better duck, old man!"
       ] },
-    { num: 2, threshold: 100, maxHealth: 64,  kind: "rocket",  miniType: "mini_blimp",
+    { num: 2, threshold: 100, maxHealth: 128,  kind: "rocket",  miniType: "mini_blimp",
       label: "SECOND BOSS INCOMING!",  defeatLabel: "SECOND BOSS DEFEATED!",  powerupKind: "blue",    defeatBonus: 60,  bonusRound: "coin",
       name: "Marshal Cinderfuse",
       taunts: [
@@ -36,7 +36,7 @@
         "I've flown through worse than you!",
         "Fuse THIS, Marshal!"
       ] },
-    { num: 3, threshold: 150, maxHealth: 96,  kind: "tank",    miniType: "mini_tank",
+    { num: 3, threshold: 150, maxHealth: 192,  kind: "tank",    miniType: "mini_tank",
       label: "THIRD BOSS INCOMING!",   defeatLabel: "THIRD BOSS DEFEATED!",   powerupKind: "arcbomb", defeatBonus: 90,  bonusRound: "balloon",
       name: "General Grimtread",
       taunts: [
@@ -51,7 +51,7 @@
         "Let's see you aim at a moving target!",
         "Enjoy the view from down there!"
       ] },
-    { num: 4, threshold: 200, maxHealth: 140, kind: "heli",    miniType: "mini_heli",
+    { num: 4, threshold: 200, maxHealth: 280, kind: "heli",    miniType: "mini_heli",
       label: "FOURTH BOSS INCOMING!",  defeatLabel: "FOURTH BOSS DEFEATED!",  powerupKind: "gold",    defeatBonus: 130, bonusRound: "coin",
       name: "Captain Rotorbane",
       taunts: [
@@ -66,7 +66,7 @@
         "Let's see whose blades are sharper!",
         "Smiling all the way to your defeat!"
       ] },
-    { num: 5, threshold: 250, maxHealth: 200, kind: "octopus", miniType: "mini_ebomb",
+    { num: 5, threshold: 250, maxHealth: 400, kind: "octopus", miniType: "mini_ebomb",
       label: "FIFTH BOSS INCOMING!",   defeatLabel: "FIFTH BOSS DEFEATED!",   powerupKind: "blue",    defeatBonus: 190, bonusRound: "balloon",
       name: "Admiral Octavius Squall",
       taunts: [

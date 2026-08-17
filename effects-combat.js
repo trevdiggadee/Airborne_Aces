@@ -106,10 +106,12 @@
         const dy = Math.abs(b.y - (boss.y + boss.h / 2));
         if (dx < boss.w * 0.38 && dy < boss.h * 0.42) {
           boss.health--;
-          bossHitFlashUntil = performance.now() + 130;
-          bossShakeUntil = performance.now() + 220;
+          bossHitFlashUntil = performance.now() + 200;
+          bossShakeUntil = performance.now() + 320;
           spawnHitParticles(b.x, b.y);
-          triggerBigExplosion(b.x, b.y, 26, 26);
+          triggerBigExplosion(b.x, b.y, 36, 36);
+          try { if (typeof spawnPirateBlast === "function") spawnPirateBlast(b.x, b.y, 0.45); } catch (e) {}
+          try { if (typeof triggerScreenShake === "function") triggerScreenShake(4, 140); } catch (e) {}
           if (boss.health <= 0) defeatBoss();
           return false;
         }
@@ -917,13 +919,13 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
 
   function makeDustParticle(spawnAnywhereX) {
     const depth = Math.random();
-    const size = 0.7 + depth * 2.2; // core radius in px
+    const size = 0.35 + depth * 1.1; // ~50% smaller cores
     return {
       x: spawnAnywhereX ? Math.random() * W : W + size * 8 + Math.random() * 40,
       y: Math.random() * H,
       depth,
       size,
-      baseAlpha: 0.07 + depth * 0.18,
+      baseAlpha: 0.04 + depth * 0.09, // darker / more subtle
       driftSpeed: 9 + depth * 24, // px/s leftward at baseline scroll speed
       bobAmp: 3 + Math.random() * 9,
       bobFreq: 0.35 + Math.random() * 0.55,
@@ -964,11 +966,11 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
       const flicker = 0.85 + 0.15 * Math.sin(now * p.flickerFreq + p.flickerPhase);
       const alpha = p.baseAlpha * flicker;
       if (alpha <= 0.004) return;
-      const r = p.size * 3.4; // soft glow radius, well past the opaque core
+      const r = p.size * 2.6; // tighter glow
       const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-      grad.addColorStop(0, `rgba(235, 219, 188, ${alpha})`);
-      grad.addColorStop(0.45, `rgba(214, 196, 162, ${alpha * 0.5})`);
-      grad.addColorStop(1, "rgba(200,182,148,0)");
+      grad.addColorStop(0, `rgba(90, 82, 70, ${alpha})`);
+      grad.addColorStop(0.45, `rgba(60, 54, 46, ${alpha * 0.45})`);
+      grad.addColorStop(1, "rgba(40,36,30,0)");
       ctx.fillStyle = grad;
       ctx.beginPath();
       ctx.arc(x, y, r, 0, Math.PI * 2);
@@ -1206,11 +1208,11 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
   }
 
   function spawnHitParticles(x, y) {
-    // sparks — quick, bright, scatter in all directions
-    const sparkCount = 8;
+    // sparks — quick, bright, scatter in all directions (boosted for boss weapon hits)
+    const sparkCount = 14;
     for (let i = 0; i < sparkCount; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = 90 + Math.random() * 170;
+      const speed = 110 + Math.random() * 200;
       hitParticles.push({
         type: "spark",
         x, y,
@@ -1454,9 +1456,13 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         const dy = Math.abs(b.y - (boss.y + boss.h / 2));
         if (dx < boss.w * 0.38 && dy < boss.h * 0.42) {
           boss.health--;
-          bossHitFlashUntil = performance.now() + 130;
-          bossShakeUntil = performance.now() + 220;
+          bossHitFlashUntil = performance.now() + 180;
+          bossShakeUntil = performance.now() + 280;
           spawnHitParticles(b.x, b.y);
+          // Extra weapon impact FX on boss
+          try { triggerBigExplosion(b.x, b.y, 18, 18); } catch (e) {}
+          try { if (typeof spawnPirateBlast === "function") spawnPirateBlast(b.x, b.y, 0.25); } catch (e) {}
+          try { if (typeof triggerScreenShake === "function") triggerScreenShake(2.5, 90); } catch (e) {}
           if (boss.health <= 0) defeatBoss();
           return false;
         }

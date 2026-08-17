@@ -1994,8 +1994,8 @@
           if (typeof triggerBoss === "function") {
             triggerBoss(1);
             if (typeof boss !== "undefined" && boss) {
-              boss.maxHealth = 10;
-              boss.health = 10;
+              boss.maxHealth = 20;
+              boss.health = 20;
             }
           }
           try { bossBanner = null; } catch (e1) {}
