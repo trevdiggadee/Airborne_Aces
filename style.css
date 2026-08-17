@@ -220,11 +220,8 @@ html, body {
   width: min(78vw, 420px);
   max-width: 92%;
   line-height: 0;
-  filter:
-    drop-shadow(0 0 10px rgba(255, 200, 80, 0.55))
-    drop-shadow(0 0 22px rgba(80, 160, 255, 0.35))
-    drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
-  transition: transform 0.15s ease, filter 0.2s ease;
+  filter: none; /* no idle glow */
+  transition: transform 0.12s ease, filter 0.12s ease;
 }
 .enterHangarBtn .enterHangarImg,
 #splashEnterBtn.enterHangarBtn .enterHangarImg {
@@ -237,20 +234,17 @@ html, body {
 }
 .enterHangarBtn:hover,
 #splashEnterBtn.enterHangarBtn:hover {
-  filter:
-    drop-shadow(0 0 14px rgba(255, 210, 100, 0.75))
-    drop-shadow(0 0 28px rgba(100, 180, 255, 0.5))
-    drop-shadow(0 8px 18px rgba(0, 0, 0, 0.55))
-    brightness(1.06);
-  transform: translateX(-50%) scale(1.03);
+  filter: none;
+  transform: translateX(-50%);
 }
 .enterHangarBtn:active,
 #splashEnterBtn.enterHangarBtn:active {
-  transform: translateX(-50%) scale(0.98);
+  transform: translateX(-50%) scale(0.97);
   filter:
-    drop-shadow(0 0 8px rgba(255, 200, 80, 0.45))
-    drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5))
-    brightness(0.96);
+    drop-shadow(0 0 12px rgba(255, 200, 80, 0.7))
+    drop-shadow(0 0 26px rgba(80, 160, 255, 0.45))
+    drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5))
+    brightness(1.05);
 }
 
 
@@ -2699,7 +2693,7 @@ html, body {
 /* Name under animated hangar blimp */
 .heroBlimpName {
   position: absolute;
-  top: 43.5%; /* up 5% */
+  top: 33.5%; /* up 10% more */
   left: 50%;
   transform: translateX(-50%);
   z-index: 4;

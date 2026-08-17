@@ -280,10 +280,7 @@
   cursor: pointer;
   width: min(78vw, 400px);
   line-height: 0;
-  filter:
-    drop-shadow(0 0 10px rgba(255, 200, 80, 0.5))
-    drop-shadow(0 0 20px rgba(80, 160, 255, 0.35))
-    drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5));
+  filter: none;
   transition: transform 0.15s ease, filter 0.2s ease;
 }
 .otg-enter-btn .enterHangarImg {
@@ -293,14 +290,16 @@
   pointer-events: none;
 }
 .otg-enter-btn:hover {
-  filter:
-    drop-shadow(0 0 14px rgba(255, 210, 100, 0.7))
-    drop-shadow(0 0 28px rgba(100, 180, 255, 0.5))
-    brightness(1.06);
-  transform: scale(1.03);
+  filter: none;
+  transform: none;
 }
 .otg-enter-btn:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
+  filter:
+    drop-shadow(0 0 12px rgba(255, 200, 80, 0.7))
+    drop-shadow(0 0 26px rgba(80, 160, 255, 0.45))
+    drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5))
+    brightness(1.05);
 }
 
 
