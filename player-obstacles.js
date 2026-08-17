@@ -1503,7 +1503,7 @@ function spawnHealPickup() {
       e.age += dt; e.x += e.vx * dt; e.y += e.vy * dt; e.vy += 35 * dt;
       if (e.age >= e.life) shieldPickup.embers.splice(ei, 1);
     }
-    if (shieldPickup.embers.length > 36) shieldPickup.embers.splice(0, shieldPickup.embers.length - 36);
+    if (shieldPickup.embers.length > 24) shieldPickup.embers.splice(0, shieldPickup.embers.length - 24);
 
     // Collect expand animation
     if (shieldPickup.collectAnim != null && shieldPickup.collectAnim >= 0) {

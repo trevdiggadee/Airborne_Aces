@@ -100,7 +100,7 @@
     // Dramatic slow-mo while boss 1 sinks
     if (typeof defeatSlowMo !== "undefined" && defeatSlowMo &&
         typeof defeatSlowMoUntil !== "undefined" && performance.now() < defeatSlowMoUntil) {
-      dt *= 0.68; // mild slow-mo — was 0.38 and felt sluggish
+      dt *= 0.25; // 25% speed during boss defeat slow-mo
     } else if (typeof defeatSlowMo !== "undefined" && defeatSlowMo &&
                typeof defeatSlowMoUntil !== "undefined" && performance.now() >= defeatSlowMoUntil) {
       defeatSlowMo = false;
