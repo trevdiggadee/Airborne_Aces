@@ -1003,12 +1003,11 @@
   }
 
   function updateTrainingBossDark(dt, target) {
-    var t = (typeof target === "number") ? target : 0;
-    if (ruffBossDark < t) ruffBossDark = Math.min(t, ruffBossDark + dt * 0.35);
-    else if (ruffBossDark > t) ruffBossDark = Math.max(t, ruffBossDark - dt * 0.4);
+    ruffBossDark = 0; // never darken training stages
   }
 
   function drawTrainingBossDark() {
+    return; // Disabled — no full-screen darken during training
     if (!ruffBossDark || ruffBossDark < 0.02 || typeof ctx === "undefined") return;
     var W0 = (typeof W !== "undefined") ? W : 400;
     var H0 = (typeof H !== "undefined") ? H : 600;
@@ -1028,6 +1027,7 @@
 
   var ruffScreenDust = [];
   function ensureScreenDust() {
+    return; // Disabled — black dust overlay darkened rings/airship
     if (ruffScreenDust.length) return;
     var W0 = (typeof W !== "undefined") ? W : 400;
     var H0 = (typeof H !== "undefined") ? H : 600;
@@ -1043,6 +1043,8 @@
     }
   }
   function updateScreenDust(dt) {
+    ruffScreenDust = [];
+    return;
     if (!ruffScreenDust.length) return;
     var W0 = (typeof W !== "undefined") ? W : 400;
     var H0 = (typeof H !== "undefined") ? H : 600;
@@ -1056,6 +1058,7 @@
     }
   }
   function drawScreenDust() {
+    return; // Disabled
     if (!ruffScreenDust.length || typeof ctx === "undefined") return;
     ctx.save();
     for (var i = 0; i < ruffScreenDust.length; i++) {
