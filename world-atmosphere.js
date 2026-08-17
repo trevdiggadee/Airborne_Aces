@@ -37,8 +37,8 @@
   function initParallaxLayers() {
     parallaxLayers = [
       { depth: 0.03, items: [], imgKey: currentLevelBgKey(), imgX: 0 },
-      { depth: 0.08, items: [], color: 'rgba(100,80,55,0.35)', itemH: H * 0.242, density: 0.012 },
-      { depth: 0.18, items: [], color: 'rgba(70,55,35,0.45)', itemH: H * 0.154, density: 0.018 },
+      { depth: 0.08, items: [], color: 'rgba(100,80,55,0.35)', itemH: H * 0.242, density: 0 }, // L1 disabled
+      { depth: 0.18, items: [], color: 'rgba(70,55,35,0.45)', itemH: H * 0.154, density: 0 }, // L2 disabled
       // Layer 3: mountain range image — bottom of peaks at screen bottom, lower graphic cropped
       { depth: 0.22, items: [], imgKey: "parallax_mountains", mountain: true }
     ];
@@ -252,7 +252,8 @@
         });
         ctx.restore();
       } else {
-        // Procedural shape layers
+        // Procedural shape layers (L1 soft brown, L2 darker) — disabled
+        if (li === 1 || li === 2) return;
         ctx.save();
         layer.items.forEach(function(item) {
           var top = groundY - item.h;
@@ -959,6 +960,7 @@
   }
 
   function drawSunMoon(gpScore) {
+    return; // Disabled — sun/moon layer off
     const tod = getTimeOfDay(gpScore);
     if (tod.isNight) {
       // Draw moon
