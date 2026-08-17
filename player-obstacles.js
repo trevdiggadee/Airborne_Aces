@@ -1429,7 +1429,7 @@ function spawnHealPickup() {
     if (window.__airborneAirfield && !window.__airborneAirfieldAllowShield) return;
     const img = images.shieldPickup;
     const aspect = img && img.naturalWidth ? img.naturalHeight / img.naturalWidth : 1;
-    const dispW = Math.min(56, W * 0.13);
+    const dispW = Math.min(42, W * 0.0975); // 25% smaller
     const dispH = dispW * aspect;
 
     const groundY = groundLevelY();
@@ -1565,7 +1565,7 @@ function spawnHealPickup() {
       scale = 1 + ca * ca * 8 + bounce;
       alpha = ca < 0.55 ? 1 : Math.max(0, 1 - (ca - 0.55) / 0.45);
     }
-    const base = Math.max(sp.w || 48, sp.h || 48) * 1.25;
+    const base = Math.max(sp.w || 48, sp.h || 48) * 0.94; // 25% smaller overall
     const halfTarget = Math.min(W, H) * 0.9;
     const dw = collecting ? Math.min(halfTarget * (0.12 + ca * 0.88), halfTarget) : base * scale;
     const dh = dw;

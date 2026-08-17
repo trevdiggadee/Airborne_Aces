@@ -78,7 +78,7 @@
 .otg-loading-area {
   position: absolute;
   /* Text/dots sit below the fixed ring; does not affect ring position */
-  top: calc(49% + 124px);
+  top: calc(48.75% + 124px);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -113,7 +113,7 @@
 /* White circular progress around center of loading UI */
 .otg-ring-wrap {
   position: absolute;
-  top: 49%; /* up 1% from 50% */
+  top: 48.75%; /* up 0.25% from 49% */
   left: 50%;
   transform: translate(-50%, -50%);
   width: 226px;  /* +2% from 222 */
