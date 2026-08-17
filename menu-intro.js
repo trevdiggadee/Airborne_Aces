@@ -578,12 +578,68 @@ function setEffect(effect) {
   }
 }
 
+
+  // ----- Menu power-up preview on hero blimp -----
+  function powerPreviewKindFor(key, iconSrc) {
+    const src = (iconSrc || "").toLowerCase();
+    if (src.indexOf("fire") >= 0 || src.indexOf("flame") >= 0) return "fire";
+    if (src.indexOf("bomb") >= 0 || src.indexOf("pirate") >= 0) return "bomb";
+    if (src.indexOf("blimp3") >= 0 || src.indexOf("blimp4") >= 0 || src.indexOf("missile") >= 0) return "missile";
+    if (src.indexOf("blimp7") >= 0 || src.indexOf("blimp8") >= 0 || src.indexOf("blimp9") >= 0) return "fire";
+    // default storm / shield-style
+    return "storm";
+  }
+
+  function playMenuPowerPreview() {
+    const el = document.getElementById("heroPowerPreview");
+    const icon = document.getElementById("bpPowerIcon");
+    if (!el) return;
+    const key = (typeof selectedBlimp !== "undefined") ? selectedBlimp : "blimp1";
+    const iconSrc = icon ? (icon.getAttribute("src") || "") : "";
+    const kind = powerPreviewKindFor(key, iconSrc);
+    el.className = "heroPowerPreview active " + kind;
+    // Restart burst animation
+    const burst = el.querySelector(".hpp-burst");
+    if (burst) {
+      burst.style.animation = "none";
+      void burst.offsetWidth;
+      burst.style.animation = "";
+    }
+    try { if (typeof sfxPowerup === "function") sfxPowerup(); } catch (e) {}
+    clearTimeout(window.__menuPowerPreviewT);
+    window.__menuPowerPreviewT = setTimeout(function () {
+      el.classList.remove("active");
+    }, 1600);
+  }
+
+  function bindMenuPowerPreview() {
+    const icon = document.getElementById("bpPowerIcon");
+    if (!icon || icon.dataset.previewBound) return;
+    icon.dataset.previewBound = "1";
+    icon.style.pointerEvents = "auto";
+    icon.style.cursor = "pointer";
+    icon.title = "Preview power-up";
+    icon.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      playMenuPowerPreview();
+    });
+  }
+  // bind now and after profile refreshes
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bindMenuPowerPreview);
+  } else {
+    bindMenuPowerPreview();
+  }
+  setTimeout(bindMenuPowerPreview, 500);
+
 function selectBlimp(key, el) {
   selectedBlimp = key;
   const data = BLIMP_DATA[key];
 
   startHeroAnimation(key);
   setEffect(data.effect);
+  try { bindMenuPowerPreview(); } catch (e) {}
 
   // Keep menu preview sizes consistent; Little Spy stays smaller
   const heroWrap = document.querySelector(".heroBlimpWrap");
