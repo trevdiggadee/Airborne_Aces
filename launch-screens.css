@@ -275,16 +275,25 @@
   position: relative;
   display: block;
   padding: 0;
+  margin: 0;
   border: none;
+  outline: none;
   background: transparent;
+  box-shadow: none;
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
+  -webkit-appearance: none;
   cursor: pointer;
   width: min(78vw, 400px);
   line-height: 0;
-  filter:
-    drop-shadow(0 0 4px rgba(255, 210, 120, 0.55))
-    drop-shadow(0 0 10px rgba(255, 190, 80, 0.35))
-    drop-shadow(0 0 18px rgba(100, 170, 255, 0.28));
-  transition: transform 0.12s ease, filter 0.15s ease;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.55));
+  transition: none;
+}
+.otg-enter-btn:focus,
+.otg-enter-btn:focus-visible {
+  outline: none;
+  border: none;
+  box-shadow: none;
 }
 .otg-enter-btn .enterHangarImg {
   display: block;
@@ -293,19 +302,18 @@
   pointer-events: none;
 }
 .otg-enter-btn:hover {
-  filter:
-    drop-shadow(0 0 5px rgba(255, 215, 130, 0.65))
-    drop-shadow(0 0 12px rgba(255, 195, 90, 0.42))
-    drop-shadow(0 0 20px rgba(110, 180, 255, 0.34));
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.55));
   transform: none;
+  outline: none;
+  box-shadow: none;
 }
 .otg-enter-btn:active {
-  transform: scale(0.97);
-  filter:
-    drop-shadow(0 0 6px rgba(255, 220, 140, 0.8))
-    drop-shadow(0 0 14px rgba(255, 200, 100, 0.55))
-    drop-shadow(0 0 24px rgba(120, 190, 255, 0.45));
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.55));
+  transform: none;
+  outline: none;
+  box-shadow: none;
 }
+
 
 
 

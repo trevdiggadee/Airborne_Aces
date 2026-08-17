@@ -214,18 +214,45 @@ html, body {
   transform: translateX(-50%);
   z-index: 5;
   padding: 0;
+  margin: 0;
   border: none;
+  outline: none;
   background: transparent;
+  box-shadow: none;
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
+  -webkit-appearance: none;
   cursor: pointer;
   width: min(78vw, 420px);
   max-width: 92%;
   line-height: 0;
-  /* Silhouette edge glow only (tracks transparent PNG outline, not a rectangle) */
-  filter:
-    drop-shadow(0 0 4px rgba(255, 210, 120, 0.55))
-    drop-shadow(0 0 10px rgba(255, 190, 80, 0.35))
-    drop-shadow(0 0 18px rgba(100, 170, 255, 0.28));
-  transition: transform 0.12s ease, filter 0.15s ease;
+  /* Soft drop shadow only — no glow, no press box */
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.55));
+  transition: none;
+}
+.enterHangarBtn:focus,
+.enterHangarBtn:focus-visible,
+#splashEnterBtn.enterHangarBtn:focus,
+#splashEnterBtn.enterHangarBtn:focus-visible {
+  outline: none;
+  border: none;
+  box-shadow: none;
+}
+.enterHangarBtn:hover,
+#splashEnterBtn.enterHangarBtn:hover {
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.55));
+  transform: translateX(-50%);
+  outline: none;
+  border: none;
+  box-shadow: none;
+}
+.enterHangarBtn:active,
+#splashEnterBtn.enterHangarBtn:active {
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.55));
+  transform: translateX(-50%);
+  outline: none;
+  border: none;
+  box-shadow: none;
 }
 .enterHangarBtn .enterHangarImg,
 #splashEnterBtn.enterHangarBtn .enterHangarImg {
@@ -236,22 +263,7 @@ html, body {
   user-select: none;
   -webkit-user-drag: none;
 }
-.enterHangarBtn:hover,
-#splashEnterBtn.enterHangarBtn:hover {
-  filter:
-    drop-shadow(0 0 5px rgba(255, 215, 130, 0.65))
-    drop-shadow(0 0 12px rgba(255, 195, 90, 0.42))
-    drop-shadow(0 0 20px rgba(110, 180, 255, 0.34));
-  transform: translateX(-50%);
-}
-.enterHangarBtn:active,
-#splashEnterBtn.enterHangarBtn:active {
-  transform: translateX(-50%) scale(0.97);
-  filter:
-    drop-shadow(0 0 6px rgba(255, 220, 140, 0.8))
-    drop-shadow(0 0 14px rgba(255, 200, 100, 0.55))
-    drop-shadow(0 0 24px rgba(120, 190, 255, 0.45));
-}
+
 
 
 
@@ -2700,7 +2712,7 @@ html, body {
 /* Name under animated hangar blimp */
 .heroBlimpName {
   position: absolute;
-  top: 23.5%; /* up another 10% */
+  top: 13.5%; /* up another 10% */
   left: 50%;
   transform: translateX(-50%);
   z-index: 4;
