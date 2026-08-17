@@ -274,66 +274,47 @@
 .otg-enter-btn {
   position: relative;
   display: block;
-  padding: 0;
-  margin: 0;
-  border: none;
-  outline: none;
-  background: transparent;
-  box-shadow: none;
-  -webkit-tap-highlight-color: transparent;
-  appearance: none;
-  -webkit-appearance: none;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  outline: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
   cursor: pointer;
   width: min(78vw, 400px);
   line-height: 0;
-  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.55));
-  transition: none;
+  filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.5));
+  transition: none !important;
+}
+.otg-enter-btn::before,
+.otg-enter-btn::after {
+  content: none !important;
+  display: none !important;
 }
 .otg-enter-btn:focus,
-.otg-enter-btn:focus-visible {
-  outline: none;
-  border: none;
-  box-shadow: none;
+.otg-enter-btn:focus-visible,
+.otg-enter-btn:hover,
+.otg-enter-btn:active {
+  outline: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  transform: none !important;
+  filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.5));
 }
 .otg-enter-btn .enterHangarImg {
   display: block;
   width: 100%;
   height: auto;
   pointer-events: none;
-}
-.otg-enter-btn:hover {
-  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.55));
-  transform: none;
-  outline: none;
-  box-shadow: none;
-}
-.otg-enter-btn:active {
-  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.55));
-  transform: none;
-  outline: none;
-  box-shadow: none;
+  background: transparent !important;
 }
 
-
-
-
-.otg-enter-btn::before {
-  content: '';
-  position: absolute;
-  top: 0; left: -100%;
-  width: 55%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
-  animation: otg-btn-shine 3.8s ease-in-out infinite;
-}
-@keyframes otg-btn-shine {
-  0% { left: -100%; }
-  35%, 100% { left: 150%; }
-}
-.otg-enter-btn:active {
-  transform: scale(0.97);
-  background: rgba(255,255,255,0.14);
-  border-color: rgba(200,230,255,0.75);
-}
 
 .otg-footer {
   display: none !important; /* removed under Enter Hangar */

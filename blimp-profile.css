@@ -243,20 +243,19 @@
 /* Name under animated hangar blimp */
 .heroBlimpName {
   position: absolute;
-  top: 45%;
+  top: 13.5% !important;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 3;
+  z-index: 4;
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 6.8vw;
+  font-size: clamp(14px, 4.2vw, 22px);
   font-weight: bold;
   letter-spacing: 1.5px;
   text-transform: uppercase;
   color: #ffffff;
   text-shadow:
     0 1px 0 rgba(0,0,0,0.55),
-    0 2px 8px rgba(0,0,0,0.7),
-    0 0 14px rgba(255,255,255,0.25);
+    0 2px 8px rgba(0,0,0,0.7);
   pointer-events: none;
   white-space: nowrap;
   text-align: center;
