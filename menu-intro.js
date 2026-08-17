@@ -28,7 +28,7 @@ const SHIP_STATS = {
   blimp1: {
     name: "Zeppelin Ace", mk: "Mk I", cls: "Scout Airship", call: "ACE-1",
     stats: { Speed: 4, Lift: 4, Durability: 3, Maneuverability: 3, Boost: 4 },
-    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
+    ability: { icon: "🔥", name: "Inferno Aura", desc: "Surrounds the ship in fire that burns obstacles and clears the path." },
     upgrade: "Next Rank", xp: 320, xpMax: 500, locked: false
   },
   blimp2: {
@@ -40,79 +40,79 @@ const SHIP_STATS = {
   blimp3: {
     name: "Aero Slicer", mk: "Mk I", cls: "Speed Cutter", call: "SLICE-3",
     stats: { Speed: 5, Lift: 3, Durability: 2, Maneuverability: 5, Boost: 3 },
-    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
+    ability: { icon: "🚀", name: "Missile Slice", desc: "Fires a fast missile volley that punches through obstacles." },
     upgrade: "Next Rank", xp: 90, xpMax: 400, locked: false
   },
   blimp4: {
     name: "Steampunk", mk: "Mk I", cls: "Armored Hauler", call: "IRON-4",
     stats: { Speed: 2, Lift: 3, Durability: 5, Maneuverability: 2, Boost: 5 },
-    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
+    ability: { icon: "⚙", name: "Steam Overload", desc: "Releases a high-pressure steam blast that pushes hazards away." },
     upgrade: "Next Rank", xp: 60, xpMax: 400, locked: false
   },
   blimp5: {
     name: "Jade Voyager", mk: "Mk I", cls: "Tanker", call: "JADE-5",
     stats: { Speed: 3, Lift: 5, Durability: 4, Maneuverability: 2, Boost: 3 },
-    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
+    ability: { icon: "💎", name: "Jade Ward", desc: "Forms a crystal ward that shields the ship for a short time." },
     upgrade: "Next Rank", xp: 0, xpMax: 450, locked: false
   },
   blimp6: {
     name: "Little Spy", mk: "Mk I", cls: "Recon Scout", call: "SPY-06",
     stats: { Speed: 3, Lift: 3, Durability: 4, Maneuverability: 3, Boost: 4 },
-    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
+    ability: { icon: "👁", name: "Ghost Veil", desc: "A recon cloak pulse that makes the next few hits glance off." },
     upgrade: "Next Rank", xp: 0, xpMax: 450, locked: false
   },
   blimp7: {
     name: "Storm Chaser", mk: "Mk I", cls: "Interceptor", call: "STORM-7",
     stats: { Speed: 5, Lift: 3, Durability: 2, Maneuverability: 4, Boost: 5 },
-    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
+    ability: { icon: "⚡", name: "Thunder Lance", desc: "Calls lightning that chains across nearby threats." },
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
   },
   blimp8: {
     name: "Ironworks", mk: "Mk I", cls: "Heavy Freighter", call: "IRON-8",
     stats: { Speed: 2, Lift: 5, Durability: 5, Maneuverability: 2, Boost: 2 },
-    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
+    ability: { icon: "🏗", name: "Iron Hail", desc: "Drops a cluster of scrap charges that shred obstacles." },
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
   },
   blimp9: {
     name: "Jolly Rogers", mk: "Mk I", cls: "Raider", call: "ROGER-9",
     stats: { Speed: 4, Lift: 3, Durability: 3, Maneuverability: 4, Boost: 3 },
-    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
+    ability: { icon: "☠", name: "Black Flag Bomb", desc: "Drops a pirate bomb that detonates and wipes the screen." },
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
   },
   blimp10: {
     name: "Ivory Anchor", mk: "Mk I", cls: "Flagship", call: "IVORY-10",
     stats: { Speed: 3, Lift: 4, Durability: 4, Maneuverability: 3, Boost: 3 },
-    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
+    ability: { icon: "⚓", name: "Anchor Barrier", desc: "Raises a radiant barrier that absorbs damage." },
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
   },
   blimp11: {
     name: "War Shark", mk: "Mk I", cls: "Military Attack", call: "SHARK-11",
     stats: { Speed: 5, Lift: 2, Durability: 3, Maneuverability: 4, Boost: 5 },
-    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
+    ability: { icon: "🦈", name: "Depth Charge", desc: "Launches a shark-torpedo that hunts the nearest threat." },
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
   },
   blimp12: {
     name: "Sky Rocket", mk: "Mk I", cls: "Navy Rocket", call: "SKY-12",
     stats: { Speed: 4, Lift: 3, Durability: 4, Maneuverability: 3, Boost: 4 },
-    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
+    ability: { icon: "💨", name: "Afterburner", desc: "A rocket burst that clears the lane ahead in a fiery streak." },
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
   },
   blimp13: {
     name: "Iron Lattice", mk: "Mk I", cls: "Industrial", call: "FORGE-13",
     stats: { Speed: 2, Lift: 4, Durability: 5, Maneuverability: 2, Boost: 2 },
-    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
+    ability: { icon: "🔧", name: "Gear Tempest", desc: "Spins a mechanical storm of gears that chews through hazards." },
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
   },
   blimp14: {
     name: "Pirate Rocket", mk: "Mk I", cls: "Raider Rocket", call: "SKULL-14",
     stats: { Speed: 3, Lift: 4, Durability: 3, Maneuverability: 3, Boost: 3 },
-    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
+    ability: { icon: "💣", name: "Powder Rocket", desc: "Fires a powder rocket that explodes in a wide blast." },
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
   },
   blimp15: {
     name: "Royal Stripe", mk: "Mk I", cls: "Luxury Liner", call: "CROWN-15",
     stats: { Speed: 5, Lift: 2, Durability: 3, Maneuverability: 4, Boost: 5 },
-    ability: { icon: "☁", name: "Storm Cloud", desc: "Drops a storm cloud that clears every threat on screen." },
+    ability: { icon: "👑", name: "Royal Guard", desc: "Summons a royal escort aura that destroys nearby threats." },
     upgrade: "Next Rank", xp: 0, xpMax: 500, locked: false
   }
 };
@@ -171,21 +171,21 @@ function updateProfile(key) {
   const powerIcon = document.getElementById('bpPowerIcon');
   if (powerIcon) {
     const POWER_ICON_BY_SHIP = {
-      blimp1: "storm_icon_5.webp",
-      blimp2: "storm_icon_5.webp",
+      blimp1: "power_icon_blimp7.webp",
+      blimp2: "storm_cloud_unique_00.png",
       blimp3: "power_icon_blimp3.webp",
       blimp4: "power_icon_blimp4.webp",
       blimp5: "power_icon_blimp5.webp",
-      blimp6: "storm_icon_5.webp",
+      blimp6: "power_icon_blimp5.webp",
       blimp7: "power_icon_blimp7.webp",
       blimp8: "power_icon_blimp8.webp",
       blimp9: "power_icon_blimp9.webp",
-      blimp10: "storm_icon_5.webp",
-      blimp11: "storm_icon_5.webp",
-      blimp12: "storm_icon_5.webp",
-      blimp13: "storm_icon_5.webp",
-      blimp14: "storm_icon_5.webp",
-      blimp15: "storm_icon_5.webp"
+      blimp10: "power_icon_blimp5.webp",
+      blimp11: "power_icon_blimp3.webp",
+      blimp12: "power_icon_blimp7.webp",
+      blimp13: "power_icon_blimp4.webp",
+      blimp14: "pirate_bomb.webp",
+      blimp15: "power_icon_blimp8.webp"
     };
     const iconSrc = (s.powerIcon) || POWER_ICON_BY_SHIP[key] || "storm_icon_5.webp";
     if (powerIcon.getAttribute("src") !== iconSrc) {
@@ -579,53 +579,64 @@ function setEffect(effect) {
 }
 
 
-  // ----- Menu power-up preview on hero blimp -----
-  function powerPreviewKindFor(key, iconSrc) {
-    const src = (iconSrc || "").toLowerCase();
-    if (src.indexOf("fire") >= 0 || src.indexOf("flame") >= 0) return "fire";
-    if (src.indexOf("bomb") >= 0 || src.indexOf("pirate") >= 0) return "bomb";
-    if (src.indexOf("blimp3") >= 0 || src.indexOf("blimp4") >= 0 || src.indexOf("missile") >= 0) return "missile";
-    if (src.indexOf("blimp7") >= 0 || src.indexOf("blimp8") >= 0 || src.indexOf("blimp9") >= 0) return "fire";
-    // default storm / shield-style
-    return "storm";
+  
+  // ----- Menu power-up preview on hero blimp (unique per ship) -----
+  const POWER_PREVIEW_KIND = {
+    blimp1: "fire",
+    blimp2: "storm",
+    blimp3: "missile",
+    blimp4: "steam",
+    blimp5: "jade",
+    blimp6: "cloak",
+    blimp7: "lightning",
+    blimp8: "iron",
+    blimp9: "bomb",
+    blimp10: "anchor",
+    blimp11: "shark",
+    blimp12: "afterburn",
+    blimp13: "gears",
+    blimp14: "powder",
+    blimp15: "royal"
+  };
+
+  function powerPreviewKindFor(key) {
+    return POWER_PREVIEW_KIND[key] || "storm";
   }
 
-  function playMenuPowerPreview() {
+  function playMenuPowerPreview(optKey) {
     const el = document.getElementById("heroPowerPreview");
-    const icon = document.getElementById("bpPowerIcon");
     if (!el) return;
-    const key = (typeof selectedBlimp !== "undefined") ? selectedBlimp : "blimp1";
-    const iconSrc = icon ? (icon.getAttribute("src") || "") : "";
-    const kind = powerPreviewKindFor(key, iconSrc);
+    const key = optKey || ((typeof selectedBlimp !== "undefined") ? selectedBlimp : "blimp1");
+    const kind = powerPreviewKindFor(key);
     el.className = "heroPowerPreview active " + kind;
-    // Restart burst animation
-    const burst = el.querySelector(".hpp-burst");
-    if (burst) {
-      burst.style.animation = "none";
-      void burst.offsetWidth;
-      burst.style.animation = "";
-    }
+    // Restart CSS animations
+    el.querySelectorAll(".hpp-burst, .hpp-flame, .hpp-ring, .hpp-bolt, .hpp-spark").forEach(function (node) {
+      node.style.animation = "none";
+      void node.offsetWidth;
+      node.style.animation = "";
+    });
     try { if (typeof sfxPowerup === "function") sfxPowerup(); } catch (e) {}
     clearTimeout(window.__menuPowerPreviewT);
     window.__menuPowerPreviewT = setTimeout(function () {
       el.classList.remove("active");
-    }, 1600);
+    }, 1700);
   }
 
   function bindMenuPowerPreview() {
     const icon = document.getElementById("bpPowerIcon");
-    if (!icon || icon.dataset.previewBound) return;
-    icon.dataset.previewBound = "1";
+    if (!icon) return;
     icon.style.pointerEvents = "auto";
     icon.style.cursor = "pointer";
     icon.title = "Preview power-up";
-    icon.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      playMenuPowerPreview();
-    });
+    if (!icon.dataset.previewBound) {
+      icon.dataset.previewBound = "1";
+      icon.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        playMenuPowerPreview();
+      });
+    }
   }
-  // bind now and after profile refreshes
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", bindMenuPowerPreview);
   } else {
@@ -640,6 +651,8 @@ function selectBlimp(key, el) {
   startHeroAnimation(key);
   setEffect(data.effect);
   try { bindMenuPowerPreview(); } catch (e) {}
+  // Show this blimp's unique power animation on the menu display
+  try { playMenuPowerPreview(key); } catch (e) {}
 
   // Keep menu preview sizes consistent; Little Spy stays smaller
   const heroWrap = document.querySelector(".heroBlimpWrap");
