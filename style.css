@@ -500,16 +500,14 @@ html, body {
 .flyBtn {
   position: absolute;
   top: 53.5%;
-  left: 50%;
+  left: 55%; /* shifted right 5% */
   transform: translate(-50%, -50%);
   padding: 0;
   border: none;
   background: transparent;
   cursor: pointer;
   z-index: 6;
-  width: min(42vw, 280px);
-  aspect-ratio: 4020 / 2110; /* full sheet ratio per frame is same 804/422 */
-  /* each frame aspect ≈ 804/422 ≈ 1.905 */
+  width: min(52.5vw, 350px); /* +25% size */
   aspect-ratio: 1.905 / 1;
   line-height: 0;
   filter:
@@ -2701,7 +2699,7 @@ html, body {
 /* Name under animated hangar blimp */
 .heroBlimpName {
   position: absolute;
-  top: 48.5%;
+  top: 43.5%; /* up 5% */
   left: 50%;
   transform: translateX(-50%);
   z-index: 4;
