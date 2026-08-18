@@ -493,10 +493,7 @@ document.addEventListener("pointerdown", function unlockMenuMusic() {
 window.__airborneShowMenu = () => {
   startHeroAnimation(selectedBlimp);
   startMenuMusic();
-  try {
-    if (selectedBlimp === "blimp1") startHeroFireAura();
-    else stopHeroFireAura();
-  } catch (e) {}
+  try { stopHeroFireAura(); } catch (e) {}
   try { updateProfile(selectedBlimp); } catch (e) {}
 };
 
@@ -589,41 +586,34 @@ function setEffect(effect) {
 
   
   
-  // ----- Zeppelin Ace: real fireball-sheet aura on menu (like training) -----
+  
+  // ----- Zeppelin Ace: flames-only aura (profile icon click, 5s) -----
   var __heroFireRaf = 0;
-  var __heroFireSheet = null;
-  var __heroFireFrame = 0;
-  var __heroFireFrameT = 0;
-  var __heroFireEmbers = [];
   var __heroFireLast = 0;
-
-  function loadHeroFireSheet() {
-    if (__heroFireSheet && __heroFireSheet.complete) return __heroFireSheet;
-    __heroFireSheet = new Image();
-    __heroFireSheet.crossOrigin = "anonymous";
-    __heroFireSheet.src = "fireball_sheet.webp";
-    return __heroFireSheet;
-  }
+  var __heroFireEmbers = [];
+  var __heroFireFlames = [];
+  var __heroFireUntil = 0;
 
   function stopHeroFireAura() {
     if (__heroFireRaf) {
       cancelAnimationFrame(__heroFireRaf);
       __heroFireRaf = 0;
     }
+    __heroFireUntil = 0;
+    __heroFireEmbers = [];
+    __heroFireFlames = [];
     var c = document.getElementById("heroFireCanvas");
     if (c) {
       c.classList.remove("active");
       var ctx2 = c.getContext("2d");
       if (ctx2) ctx2.clearRect(0, 0, c.width, c.height);
     }
-    __heroFireEmbers = [];
   }
 
   function startHeroFireAura() {
     var c = document.getElementById("heroFireCanvas");
     if (!c) return;
     c.classList.add("active");
-    // Match canvas pixel size to display size
     var rect = c.getBoundingClientRect();
     var w = Math.max(200, Math.floor(rect.width) || 400);
     var h = Math.max(150, Math.floor(rect.height) || 300);
@@ -631,8 +621,10 @@ function setEffect(effect) {
       c.width = w;
       c.height = h;
     }
-    loadHeroFireSheet();
+    __heroFireEmbers = [];
+    __heroFireFlames = [];
     __heroFireLast = performance.now();
+    __heroFireUntil = performance.now() + 5000; // 5 seconds only
     if (__heroFireRaf) cancelAnimationFrame(__heroFireRaf);
 
     function tick(now) {
@@ -640,158 +632,131 @@ function setEffect(effect) {
         stopHeroFireAura();
         return;
       }
+      if (now >= __heroFireUntil) {
+        stopHeroFireAura();
+        return;
+      }
       var dt = Math.min(0.05, (now - __heroFireLast) / 1000);
       __heroFireLast = now;
-      __heroFireFrameT += dt;
-      while (__heroFireFrameT >= 1 / 14) {
-        __heroFireFrameT -= 1 / 14;
-        __heroFireFrame = (__heroFireFrame + 1) % 36;
-      }
-      // Embers around center
-      if (Math.random() < 0.55) {
+      var ctx2 = c.getContext("2d");
+      ctx2.clearRect(0, 0, w, h);
+      var cx = w * 0.5;
+      var cy = h * 0.52;
+      var tnow = now * 0.001;
+      var lifeLeft = Math.max(0, (__heroFireUntil - now) / 5000);
+      var fade = lifeLeft < 0.2 ? lifeLeft / 0.2 : 1;
+
+      // Soft warm glow under flames (no icon/sheet)
+      var g0 = ctx2.createRadialGradient(cx, cy, Math.min(w, h) * 0.08, cx, cy, Math.min(w, h) * 0.4);
+      g0.addColorStop(0, "rgba(255,140,30," + (0.18 * fade) + ")");
+      g0.addColorStop(0.5, "rgba(255,60,0," + (0.1 * fade) + ")");
+      g0.addColorStop(1, "rgba(120,10,0,0)");
+      ctx2.fillStyle = g0;
+      ctx2.beginPath();
+      ctx2.arc(cx, cy, Math.min(w, h) * 0.4, 0, Math.PI * 2);
+      ctx2.fill();
+
+      // Spawn upward flame tongues around hull
+      if (Math.random() < 0.7) {
         var ang = Math.random() * Math.PI * 2;
-        var rad = Math.min(w, h) * (0.18 + Math.random() * 0.22);
-        __heroFireEmbers.push({
-          x: w * 0.5 + Math.cos(ang) * rad,
-          y: h * 0.52 + Math.sin(ang) * rad * 0.7,
-          vx: (Math.random() - 0.5) * 40,
-          vy: -30 - Math.random() * 55,
-          life: 0.35 + Math.random() * 0.3,
+        var rad = Math.min(w, h) * (0.12 + Math.random() * 0.2);
+        __heroFireFlames.push({
+          x: cx + Math.cos(ang) * rad,
+          y: cy + Math.sin(ang) * rad * 0.65 + Math.min(w, h) * 0.04,
+          vx: (Math.random() - 0.5) * 25,
+          vy: -50 - Math.random() * 70,
+          life: 0.35 + Math.random() * 0.4,
           age: 0,
-          r: 2 + Math.random() * 4
+          w: 6 + Math.random() * 10,
+          h: 14 + Math.random() * 22
         });
+      }
+      if (Math.random() < 0.5) {
+        __heroFireEmbers.push({
+          x: cx + (Math.random() - 0.5) * Math.min(w, h) * 0.35,
+          y: cy + (Math.random() - 0.5) * Math.min(w, h) * 0.25,
+          vx: (Math.random() - 0.5) * 40,
+          vy: -40 - Math.random() * 60,
+          life: 0.3 + Math.random() * 0.35,
+          age: 0,
+          r: 1.5 + Math.random() * 3.5
+        });
+      }
+
+      for (var fi = __heroFireFlames.length - 1; fi >= 0; fi--) {
+        var f = __heroFireFlames[fi];
+        f.age += dt;
+        f.x += f.vx * dt;
+        f.y += f.vy * dt;
+        f.vy -= 20 * dt;
+        f.w *= (1 - 0.4 * dt);
+        if (f.age >= f.life) __heroFireFlames.splice(fi, 1);
       }
       for (var ei = __heroFireEmbers.length - 1; ei >= 0; ei--) {
         var e = __heroFireEmbers[ei];
         e.age += dt;
         e.x += e.vx * dt;
         e.y += e.vy * dt;
-        e.vy += 35 * dt;
+        e.vy += 30 * dt;
         if (e.age >= e.life) __heroFireEmbers.splice(ei, 1);
       }
-      if (__heroFireEmbers.length > 36) __heroFireEmbers.splice(0, __heroFireEmbers.length - 36);
+      if (__heroFireFlames.length > 28) __heroFireFlames.splice(0, __heroFireFlames.length - 28);
+      if (__heroFireEmbers.length > 32) __heroFireEmbers.splice(0, __heroFireEmbers.length - 32);
 
-      var ctx2 = c.getContext("2d");
-      ctx2.clearRect(0, 0, w, h);
-      var cx = w * 0.5;
-      var cy = h * 0.52;
-      var tnow = now * 0.001;
-      var sheet = __heroFireSheet;
-
-      // Soft outer glow ring
-      var g0 = ctx2.createRadialGradient(cx, cy, Math.min(w, h) * 0.12, cx, cy, Math.min(w, h) * 0.42);
-      g0.addColorStop(0, "rgba(255,160,40,0.12)");
-      g0.addColorStop(0.55, "rgba(255,80,10,0.08)");
-      g0.addColorStop(1, "rgba(180,20,0,0)");
-      ctx2.fillStyle = g0;
-      ctx2.beginPath();
-      ctx2.arc(cx, cy, Math.min(w, h) * 0.42, 0, Math.PI * 2);
-      ctx2.fill();
-
-      // Center fireball (like collected training power wrapping the ship)
-      var coreSz = Math.min(w, h) * (0.36 + 0.04 * Math.sin(tnow * 4));
-      if (sheet && sheet.complete && sheet.naturalWidth) {
-        var cols0 = 6, rows0 = 6;
-        var fw0 = sheet.naturalWidth / cols0;
-        var fh0 = sheet.naturalHeight / rows0;
-        var fr0 = __heroFireFrame % 36;
-        var col0 = fr0 % cols0;
-        var row0 = Math.floor(fr0 / cols0) % rows0;
+      // Draw flame tongues (teardrop shapes)
+      ctx2.globalCompositeOperation = "lighter";
+      for (var j = 0; j < __heroFireFlames.length; j++) {
+        var fl = __heroFireFlames[j];
+        var u = 1 - fl.age / fl.life;
+        if (u <= 0) continue;
+        var alpha = u * u * 0.85 * fade;
         ctx2.save();
-        ctx2.globalAlpha = 0.55;
-        ctx2.globalCompositeOperation = "lighter";
-        ctx2.drawImage(sheet, col0 * fw0, row0 * fh0, fw0, fh0, cx - coreSz / 2, cy - coreSz / 2, coreSz, coreSz);
-        ctx2.restore();
-      } else {
-        var cg = ctx2.createRadialGradient(cx, cy, 0, cx, cy, coreSz * 0.5);
-        cg.addColorStop(0, "rgba(255,230,120,0.55)");
-        cg.addColorStop(0.4, "rgba(255,100,20,0.35)");
-        cg.addColorStop(1, "rgba(255,40,0,0)");
-        ctx2.fillStyle = cg;
+        ctx2.translate(fl.x, fl.y);
+        ctx2.globalAlpha = alpha;
+        var grd = ctx2.createRadialGradient(0, 0, 0, 0, 0, fl.h);
+        grd.addColorStop(0, "rgba(255,245,180,0.95)");
+        grd.addColorStop(0.25, "rgba(255,180,40,0.8)");
+        grd.addColorStop(0.55, "rgba(255,70,10,0.45)");
+        grd.addColorStop(1, "rgba(180,20,0,0)");
+        ctx2.fillStyle = grd;
         ctx2.beginPath();
-        ctx2.arc(cx, cy, coreSz * 0.5, 0, Math.PI * 2);
+        ctx2.moveTo(0, -fl.h * 0.85);
+        ctx2.bezierCurveTo(fl.w * 0.7, -fl.h * 0.3, fl.w * 0.55, fl.h * 0.2, 0, fl.h * 0.35);
+        ctx2.bezierCurveTo(-fl.w * 0.55, fl.h * 0.2, -fl.w * 0.7, -fl.h * 0.3, 0, -fl.h * 0.85);
         ctx2.fill();
-      }
-
-      // Orbiting fire orbs (training-style aura around the blimp)
-      var nOrb = 8;
-      for (var i = 0; i < nOrb; i++) {
-        var a = tnow * 2.4 + i * (Math.PI * 2 / nOrb);
-        var ox = cx + Math.cos(a) * Math.min(w, h) * 0.32;
-        var oy = cy + Math.sin(a * 1.25) * Math.min(w, h) * 0.26;
-        var sz = Math.min(w, h) * (0.16 + 0.04 * Math.sin(tnow * 5 + i));
-        if (sheet && sheet.complete && sheet.naturalWidth) {
-          var cols = 6, rows = 6;
-          var fw = sheet.naturalWidth / cols;
-          var fh = sheet.naturalHeight / rows;
-          var fr = (__heroFireFrame + i * 3) % 36;
-          var col = fr % cols;
-          var row = Math.floor(fr / cols) % rows;
-          ctx2.save();
-          ctx2.globalAlpha = 0.9;
-          ctx2.drawImage(sheet, col * fw, row * fh, fw, fh, ox - sz / 2, oy - sz / 2, sz, sz);
-          ctx2.restore();
-        } else {
-          var gr = ctx2.createRadialGradient(ox, oy, 0, ox, oy, sz * 0.55);
-          gr.addColorStop(0, "rgba(255,240,120,0.85)");
-          gr.addColorStop(0.45, "rgba(255,100,20,0.45)");
-          gr.addColorStop(1, "rgba(255,40,0,0)");
-          ctx2.fillStyle = gr;
-          ctx2.beginPath();
-          ctx2.arc(ox, oy, sz * 0.55, 0, Math.PI * 2);
-          ctx2.fill();
-        }
+        ctx2.restore();
       }
 
       // Embers
-      for (var j = 0; j < __heroFireEmbers.length; j++) {
-        var p = __heroFireEmbers[j];
-        var u = 1 - p.age / p.life;
-        if (u <= 0) continue;
-        ctx2.globalAlpha = Math.max(0, u * 0.95);
+      for (var k = 0; k < __heroFireEmbers.length; k++) {
+        var p = __heroFireEmbers[k];
+        var uu = 1 - p.age / p.life;
+        if (uu <= 0) continue;
+        ctx2.globalAlpha = Math.max(0, uu * 0.9 * fade);
         var eg = ctx2.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        eg.addColorStop(0, "rgba(255,240,160,1)");
-        eg.addColorStop(0.5, "rgba(255,120,30,0.85)");
-        eg.addColorStop(1, "rgba(200,40,0,0)");
+        eg.addColorStop(0, "rgba(255,230,120,1)");
+        eg.addColorStop(0.5, "rgba(255,100,20,0.7)");
+        eg.addColorStop(1, "rgba(255,40,0,0)");
         ctx2.fillStyle = eg;
         ctx2.beginPath();
         ctx2.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx2.fill();
       }
       ctx2.globalAlpha = 1;
+      ctx2.globalCompositeOperation = "source-over";
 
       __heroFireRaf = requestAnimationFrame(tick);
     }
     __heroFireRaf = requestAnimationFrame(tick);
   }
 
-
-  // ----- Menu power-up preview on hero blimp (unique per ship) -----
-  const POWER_PREVIEW_KIND = {
-    blimp1: "fire",
-    blimp2: "storm",
-    blimp3: "missile",
-    blimp4: "steam",
-    blimp5: "jade",
-    blimp6: "cloak",
-    blimp7: "lightning",
-    blimp8: "iron",
-    blimp9: "bomb",
-    blimp10: "anchor",
-    blimp11: "shark",
-    blimp12: "afterburn",
-    blimp13: "gears",
-    blimp14: "powder",
-    blimp15: "royal"
-  };
-
-  function powerPreviewKindFor(key) {
+function powerPreviewKindFor(key) {
     return POWER_PREVIEW_KIND[key] || "storm";
   }
 
   function playMenuPowerPreview(optKey) {
     const key = optKey || ((typeof selectedBlimp !== "undefined") ? selectedBlimp : "blimp1");
-    // Zeppelin Ace: continuous in-game fire aura (training style)
+    // Zeppelin Ace: flames only when profile power icon is pressed (5s)
     if (key === "blimp1") {
       try { startHeroFireAura(); } catch (e) {}
       const el = document.getElementById("heroPowerPreview");
@@ -837,19 +802,6 @@ function setEffect(effect) {
     bindMenuPowerPreview();
   }
   setTimeout(bindMenuPowerPreview, 500);
-  function initZeppelinFireOnReady() {
-    try {
-      if ((typeof selectedBlimp !== "undefined" ? selectedBlimp : "blimp1") === "blimp1") {
-        startHeroFireAura();
-        updateProfile("blimp1");
-      }
-    } catch (e) {}
-  }
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", function () { setTimeout(initZeppelinFireOnReady, 600); });
-  } else {
-    setTimeout(initZeppelinFireOnReady, 600);
-  }
 
 function selectBlimp(key, el) {
   selectedBlimp = key;
@@ -858,12 +810,10 @@ function selectBlimp(key, el) {
   startHeroAnimation(key);
   setEffect(data.effect);
   try { bindMenuPowerPreview(); } catch (e) {}
-  // Zeppelin Ace keeps training-style fire aura; others get short unique previews
+  // Do not auto-play power FX on select — only when profile power icon is clicked
   try {
-    if (key === "blimp1") startHeroFireAura();
-    else stopHeroFireAura();
+    if (key !== "blimp1") stopHeroFireAura();
   } catch (e) {}
-  try { playMenuPowerPreview(key); } catch (e) {}
 
   // Keep menu preview sizes consistent; Little Spy stays smaller
   const heroWrap = document.querySelector(".heroBlimpWrap");
