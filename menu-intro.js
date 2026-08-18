@@ -677,6 +677,7 @@ function powerPreviewKindFor(key) {
   var __heroFxKind = "";
   var __heroFxParticles = [];
 
+  
   function stopHeroFireAura() {
     if (__heroFxRaf) {
       cancelAnimationFrame(__heroFxRaf);
@@ -685,33 +686,44 @@ function powerPreviewKindFor(key) {
     __heroFxUntil = 0;
     __heroFxKind = "";
     __heroFxParticles = [];
-    var c = document.getElementById("heroFireCanvas");
-    if (c) {
+    ["heroFireCanvas", "heroFireCanvasBack"].forEach(function (id) {
+      var c = document.getElementById(id);
+      if (!c) return;
       c.classList.remove("active");
       try {
         var ctx2 = c.getContext("2d");
         if (ctx2) ctx2.clearRect(0, 0, c.width, c.height);
       } catch (e) {}
-    }
+    });
   }
+
   // alias
   function stopHeroPowerFx() { stopHeroFireAura(); }
 
+
+  
   
   
   function startHeroPowerFx(kind) {
-    var c = document.getElementById("heroFireCanvas");
-    if (!c) return;
-    c.classList.add("active");
+    var cFront = document.getElementById("heroFireCanvas");
+    var cBack = document.getElementById("heroFireCanvasBack");
+    if (!cFront) return;
+    if (!cBack) cBack = cFront;
+
     var wrap = document.querySelector(".heroBlimpWrap");
-    var rect = (wrap || c).getBoundingClientRect();
+    var rect = (wrap || cFront).getBoundingClientRect();
     var w = Math.max(300, Math.floor(rect.width * 1.75) || 440);
     var h = Math.max(240, Math.floor(rect.height * 1.75) || 340);
-    c.width = w;
-    c.height = h;
-    c.style.display = "block";
-    c.style.visibility = "visible";
-    c.style.opacity = "1";
+
+    [cFront, cBack].forEach(function (c) {
+      if (!c) return;
+      c.classList.add("active");
+      c.width = w;
+      c.height = h;
+      c.style.display = "block";
+      c.style.visibility = "visible";
+      c.style.opacity = "1";
+    });
 
     __heroFxKind = kind || "fire";
     __heroFxParticles = [];
@@ -719,18 +731,46 @@ function powerPreviewKindFor(key) {
     __heroFxUntil = performance.now() + 5000;
     if (__heroFxRaf) cancelAnimationFrame(__heroFxRaf);
 
-    // Seed orbiting flame cores for fire
     var cores = [];
     if (__heroFxKind === "fire") {
-      for (var ci = 0; ci < 10; ci++) {
+      for (var ci = 0; ci < 12; ci++) {
         cores.push({
-          ang: (ci / 10) * Math.PI * 2,
-          elev: (Math.random() - 0.5) * 0.4,
-          speed: 1.6 + Math.random() * 0.9,
-          size: 0.7 + Math.random() * 0.5,
+          ang: (ci / 12) * Math.PI * 2,
+          elev: (Math.random() - 0.5) * 0.35,
+          speed: 1.5 + Math.random() * 1.0,
+          size: 0.65 + Math.random() * 0.55,
           phase: Math.random() * Math.PI * 2
         });
       }
+    }
+
+    function drawFlameAt(ctx2, ox, oy, baseR, fade) {
+      ctx2.globalCompositeOperation = "lighter";
+      var g3 = ctx2.createRadialGradient(ox, oy + baseR * 0.3, 0, ox, oy, baseR * 2.4);
+      g3.addColorStop(0, "rgba(255,80,10," + (0.35 * fade) + ")");
+      g3.addColorStop(0.45, "rgba(180,30,0," + (0.15 * fade) + ")");
+      g3.addColorStop(1, "rgba(40,0,0,0)");
+      ctx2.fillStyle = g3;
+      ctx2.beginPath();
+      ctx2.arc(ox, oy, baseR * 2.4, 0, Math.PI * 2);
+      ctx2.fill();
+      var g2 = ctx2.createRadialGradient(ox - baseR * 0.15, oy - baseR * 0.2, 0, ox, oy, baseR * 1.4);
+      g2.addColorStop(0, "rgba(255,170,40," + (0.75 * fade) + ")");
+      g2.addColorStop(0.5, "rgba(255,90,10," + (0.45 * fade) + ")");
+      g2.addColorStop(1, "rgba(200,40,0,0)");
+      ctx2.fillStyle = g2;
+      ctx2.beginPath();
+      ctx2.arc(ox, oy, baseR * 1.4, 0, Math.PI * 2);
+      ctx2.fill();
+      var g1 = ctx2.createRadialGradient(ox - baseR * 0.1, oy - baseR * 0.25, 0, ox, oy, baseR * 0.7);
+      g1.addColorStop(0, "rgba(255,255,230," + (0.95 * fade) + ")");
+      g1.addColorStop(0.35, "rgba(255,220,100," + (0.7 * fade) + ")");
+      g1.addColorStop(1, "rgba(255,120,0,0)");
+      ctx2.fillStyle = g1;
+      ctx2.beginPath();
+      ctx2.arc(ox, oy, baseR * 0.7, 0, Math.PI * 2);
+      ctx2.fill();
+      ctx2.globalCompositeOperation = "source-over";
     }
 
     function tick(now) {
@@ -743,8 +783,10 @@ function powerPreviewKindFor(key) {
       __heroFxLast = now;
       var lifeLeft = Math.max(0, (__heroFxUntil - now) / 5000);
       var fade = lifeLeft < 0.2 ? lifeLeft / 0.2 : 1;
-      var ctx2 = c.getContext("2d");
-      ctx2.clearRect(0, 0, w, h);
+      var ctxF = cFront.getContext("2d");
+      var ctxB = cBack.getContext("2d");
+      ctxF.clearRect(0, 0, w, h);
+      ctxB.clearRect(0, 0, w, h);
       var cx = w * 0.5;
       var cy = h * 0.52;
       var tnow = now * 0.001;
@@ -752,72 +794,46 @@ function powerPreviewKindFor(key) {
       var bh = Math.min(w, h) * 0.3;
 
       if (__heroFxKind === "fire") {
-        // Realistic JS fire orbs orbiting the blimp (no sprite sheet)
-        // Soft heat haze under ship
-        var haze = ctx2.createRadialGradient(cx, cy, bw * 0.1, cx, cy, bw * 0.75);
-        haze.addColorStop(0, "rgba(255,120,20," + (0.12 * fade) + ")");
-        haze.addColorStop(0.5, "rgba(255,60,0," + (0.08 * fade) + ")");
-        haze.addColorStop(1, "rgba(0,0,0,0)");
-        ctx2.fillStyle = haze;
-        ctx2.beginPath();
-        ctx2.arc(cx, cy, bw * 0.75, 0, Math.PI * 2);
-        ctx2.fill();
+        // Haze on both layers lightly
+        [ctxB, ctxF].forEach(function (ctx2, li) {
+          var haze = ctx2.createRadialGradient(cx, cy, bw * 0.1, cx, cy, bw * 0.75);
+          haze.addColorStop(0, "rgba(255,120,20," + ((li === 0 ? 0.1 : 0.06) * fade) + ")");
+          haze.addColorStop(1, "rgba(0,0,0,0)");
+          ctx2.fillStyle = haze;
+          ctx2.beginPath();
+          ctx2.arc(cx, cy, bw * 0.75, 0, Math.PI * 2);
+          ctx2.fill();
+        });
 
         for (var i = 0; i < cores.length; i++) {
           var core = cores[i];
           core.ang += core.speed * dt;
+          // depth: sin of angle → behind when sin > 0 (going "away"), front when sin < 0
+          // Use cos for left-right; depth from sin so half orbit is behind
+          var depth = Math.sin(core.ang); // -1 front, +1 back
           var ox = cx + Math.cos(core.ang) * bw * 0.58;
-          var oy = cy + Math.sin(core.ang * 1.15 + core.elev) * bh * 0.55;
+          var oy = cy + Math.sin(core.ang * 1.05 + core.elev) * bh * 0.5;
           var flicker = 0.85 + 0.15 * Math.sin(tnow * 12 + core.phase);
           var baseR = Math.min(w, h) * 0.055 * core.size * flicker;
+          // Scale slightly smaller when behind for depth
+          if (depth > 0) baseR *= 0.82;
 
-          // Multi-layer flame (white-yellow core → orange → red → transparent)
-          ctx2.globalCompositeOperation = "lighter";
-          // Outer smoke-tint
-          var g3 = ctx2.createRadialGradient(ox, oy + baseR * 0.3, 0, ox, oy, baseR * 2.4);
-          g3.addColorStop(0, "rgba(255,80,10," + (0.35 * fade) + ")");
-          g3.addColorStop(0.45, "rgba(180,30,0," + (0.15 * fade) + ")");
-          g3.addColorStop(1, "rgba(40,0,0,0)");
-          ctx2.fillStyle = g3;
-          ctx2.beginPath();
-          ctx2.arc(ox, oy, baseR * 2.4, 0, Math.PI * 2);
-          ctx2.fill();
+          var ctx2 = depth > 0 ? ctxB : ctxF;
+          drawFlameAt(ctx2, ox, oy, baseR, fade * (depth > 0 ? 0.75 : 1));
 
-          // Mid orange
-          var g2 = ctx2.createRadialGradient(ox - baseR * 0.15, oy - baseR * 0.2, 0, ox, oy, baseR * 1.4);
-          g2.addColorStop(0, "rgba(255,170,40," + (0.75 * fade) + ")");
-          g2.addColorStop(0.5, "rgba(255,90,10," + (0.45 * fade) + ")");
-          g2.addColorStop(1, "rgba(200,40,0,0)");
-          ctx2.fillStyle = g2;
-          ctx2.beginPath();
-          ctx2.arc(ox, oy, baseR * 1.4, 0, Math.PI * 2);
-          ctx2.fill();
-
-          // Hot white core
-          var g1 = ctx2.createRadialGradient(ox - baseR * 0.1, oy - baseR * 0.25, 0, ox, oy, baseR * 0.7);
-          g1.addColorStop(0, "rgba(255,255,230," + (0.95 * fade) + ")");
-          g1.addColorStop(0.35, "rgba(255,220,100," + (0.7 * fade) + ")");
-          g1.addColorStop(1, "rgba(255,120,0,0)");
-          ctx2.fillStyle = g1;
-          ctx2.beginPath();
-          ctx2.arc(ox, oy, baseR * 0.7, 0, Math.PI * 2);
-          ctx2.fill();
-
-          // Spawn trailing sparks from each core
-          if (Math.random() < 0.45) {
+          if (Math.random() < 0.4) {
             __heroFxParticles.push({
-              x: ox + (Math.random() - 0.5) * baseR,
-              y: oy + (Math.random() - 0.5) * baseR,
-              vx: -Math.sin(core.ang) * 30 + (Math.random() - 0.5) * 40,
-              vy: -40 - Math.random() * 60,
-              life: 0.25 + Math.random() * 0.35,
+              x: ox, y: oy,
+              vx: -Math.sin(core.ang) * 28 + (Math.random() - 0.5) * 36,
+              vy: -40 - Math.random() * 55,
+              life: 0.25 + Math.random() * 0.3,
               age: 0,
-              r: 1.2 + Math.random() * 2.8
+              r: 1.2 + Math.random() * 2.6,
+              depth: depth
             });
           }
         }
 
-        // Update / draw sparks
         for (var pi = __heroFxParticles.length - 1; pi >= 0; pi--) {
           var p = __heroFxParticles[pi];
           p.age += dt;
@@ -826,118 +842,133 @@ function powerPreviewKindFor(key) {
           p.vy += 50 * dt;
           if (p.age >= p.life) { __heroFxParticles.splice(pi, 1); continue; }
           var u = 1 - p.age / p.life;
-          ctx2.globalAlpha = u * u * 0.9 * fade;
-          var eg = ctx2.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 1.5);
+          var ctxP = (p.depth > 0) ? ctxB : ctxF;
+          ctxP.globalCompositeOperation = "lighter";
+          ctxP.globalAlpha = u * u * 0.9 * fade;
+          var eg = ctxP.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 1.5);
           eg.addColorStop(0, "rgba(255,240,160,1)");
           eg.addColorStop(0.4, "rgba(255,140,30,0.7)");
           eg.addColorStop(1, "rgba(255,40,0,0)");
-          ctx2.fillStyle = eg;
-          ctx2.beginPath();
-          ctx2.arc(p.x, p.y, p.r * 1.5, 0, Math.PI * 2);
-          ctx2.fill();
+          ctxP.fillStyle = eg;
+          ctxP.beginPath();
+          ctxP.arc(p.x, p.y, p.r * 1.5, 0, Math.PI * 2);
+          ctxP.fill();
+          ctxP.globalAlpha = 1;
+          ctxP.globalCompositeOperation = "source-over";
         }
-        ctx2.globalAlpha = 1;
-        ctx2.globalCompositeOperation = "source-over";
         if (__heroFxParticles.length > 60) __heroFxParticles.splice(0, __heroFxParticles.length - 60);
 
       } else if (__heroFxKind === "shockwave") {
         var elapsed = (5000 - (__heroFxUntil - now)) / 1000;
+        // Draw expanding rings on BOTH layers with different alpha so blimp sits "inside"
         for (var ring = 0; ring < 4; ring++) {
           var phase = elapsed * 1.1 - ring * 0.35;
           if (phase < 0) continue;
           var rr = (phase % 1.4) / 1.4;
           var radR = Math.min(w, h) * (0.12 + rr * 0.48);
-          var alphaR = (1 - rr) * 0.75 * fade;
-          ctx2.beginPath();
-          ctx2.arc(cx, cy, radR, 0, Math.PI * 2);
-          ctx2.strokeStyle = "rgba(180, 230, 255," + alphaR + ")";
-          ctx2.lineWidth = 4 + (1 - rr) * 8;
-          ctx2.shadowColor = "rgba(120, 200, 255, 0.8)";
-          ctx2.shadowBlur = 12;
-          ctx2.stroke();
-          ctx2.shadowBlur = 0;
+          var alphaR = (1 - rr) * 0.7 * fade;
+          // Back: full ring slightly dimmer
+          ctxB.beginPath();
+          ctxB.arc(cx, cy, radR, 0, Math.PI * 2);
+          ctxB.strokeStyle = "rgba(160, 220, 255," + (alphaR * 0.55) + ")";
+          ctxB.lineWidth = 5 + (1 - rr) * 7;
+          ctxB.stroke();
+          // Front: only the "near" arc (bottom half-ish) brighter
+          ctxF.beginPath();
+          ctxF.arc(cx, cy, radR, 0.15 * Math.PI, 0.85 * Math.PI);
+          ctxF.strokeStyle = "rgba(200, 240, 255," + alphaR + ")";
+          ctxF.lineWidth = 4 + (1 - rr) * 8;
+          ctxF.shadowColor = "rgba(120, 200, 255, 0.85)";
+          ctxF.shadowBlur = 12;
+          ctxF.stroke();
+          ctxF.shadowBlur = 0;
         }
 
       } else if (__heroFxKind === "saws") {
-        // Aero Slicer — two glowing rings crossing through each other, blimp in middle
+        // Crossing rings: back layer draws rear arcs, front draws near arcs — blimp in middle
         var spin = tnow * 1.8;
         var R = Math.min(w, h) * 0.38;
-        ctx2.lineCap = "round";
-        ctx2.globalCompositeOperation = "lighter";
 
-        // Ring A — tilted ~+45°
-        ctx2.save();
-        ctx2.translate(cx, cy);
-        ctx2.rotate(Math.PI / 4 + Math.sin(spin * 0.3) * 0.08);
-        ctx2.scale(1, 0.42); // ellipse = ring viewed at angle
-        // outer glow
-        ctx2.beginPath();
-        ctx2.arc(0, 0, R, 0, Math.PI * 2);
-        ctx2.strokeStyle = "rgba(80, 160, 255," + (0.25 * fade) + ")";
-        ctx2.lineWidth = 18;
-        ctx2.stroke();
-        // main ring
-        ctx2.beginPath();
-        ctx2.arc(0, 0, R, 0, Math.PI * 2);
-        ctx2.strokeStyle = "rgba(140, 210, 255," + (0.9 * fade) + ")";
-        ctx2.lineWidth = 6;
-        ctx2.shadowColor = "rgba(100, 180, 255, 0.9)";
-        ctx2.shadowBlur = 16;
-        ctx2.stroke();
-        // bright edge arc (rotating highlight)
-        ctx2.beginPath();
-        ctx2.arc(0, 0, R, spin, spin + Math.PI * 0.55);
-        ctx2.strokeStyle = "rgba(230, 250, 255," + (0.95 * fade) + ")";
-        ctx2.lineWidth = 4;
-        ctx2.stroke();
-        ctx2.restore();
-
-        // Ring B — tilted ~-45° (crosses the first)
-        ctx2.save();
-        ctx2.translate(cx, cy);
-        ctx2.rotate(-Math.PI / 4 - Math.sin(spin * 0.3) * 0.08);
-        ctx2.scale(1, 0.42);
-        ctx2.beginPath();
-        ctx2.arc(0, 0, R * 0.98, 0, Math.PI * 2);
-        ctx2.strokeStyle = "rgba(60, 140, 255," + (0.22 * fade) + ")";
-        ctx2.lineWidth = 18;
-        ctx2.stroke();
-        ctx2.beginPath();
-        ctx2.arc(0, 0, R * 0.98, 0, Math.PI * 2);
-        ctx2.strokeStyle = "rgba(120, 200, 255," + (0.88 * fade) + ")";
-        ctx2.lineWidth = 6;
-        ctx2.shadowColor = "rgba(80, 160, 255, 0.85)";
-        ctx2.shadowBlur = 16;
-        ctx2.stroke();
-        ctx2.beginPath();
-        ctx2.arc(0, 0, R * 0.98, -spin + Math.PI, -spin + Math.PI + Math.PI * 0.55);
-        ctx2.strokeStyle = "rgba(230, 250, 255," + (0.95 * fade) + ")";
-        ctx2.lineWidth = 4;
-        ctx2.stroke();
-        ctx2.restore();
-
-        // Crossing energy sparks near center intersections
-        for (var s = 0; s < 6; s++) {
-          var sa = spin * 2 + s * (Math.PI / 3);
-          var sx = cx + Math.cos(sa) * R * 0.25;
-          var sy = cy + Math.sin(sa * 1.4) * R * 0.12;
-          var sg = ctx2.createRadialGradient(sx, sy, 0, sx, sy, 8);
-          sg.addColorStop(0, "rgba(220,245,255," + (0.7 * fade) + ")");
-          sg.addColorStop(1, "rgba(80,160,255,0)");
-          ctx2.fillStyle = sg;
-          ctx2.beginPath();
-          ctx2.arc(sx, sy, 8, 0, Math.PI * 2);
-          ctx2.fill();
+        function drawRingLayer(ctx2, tilt, rear) {
+          ctx2.save();
+          ctx2.translate(cx, cy);
+          ctx2.rotate(tilt);
+          ctx2.scale(1, 0.42);
+          ctx2.lineCap = "round";
+          ctx2.globalCompositeOperation = "lighter";
+          // Full dim ring on back; front only bright arcs
+          if (rear) {
+            ctx2.beginPath();
+            ctx2.arc(0, 0, R, 0, Math.PI * 2);
+            ctx2.strokeStyle = "rgba(70, 150, 255," + (0.22 * fade) + ")";
+            ctx2.lineWidth = 16;
+            ctx2.stroke();
+            ctx2.beginPath();
+            ctx2.arc(0, 0, R, 0, Math.PI * 2);
+            ctx2.strokeStyle = "rgba(130, 200, 255," + (0.55 * fade) + ")";
+            ctx2.lineWidth = 5;
+            ctx2.stroke();
+            // rear half brighter on back canvas
+            ctx2.beginPath();
+            ctx2.arc(0, 0, R, Math.PI * 0.15, Math.PI * 0.85);
+            ctx2.strokeStyle = "rgba(180, 230, 255," + (0.5 * fade) + ")";
+            ctx2.lineWidth = 4;
+            ctx2.stroke();
+          } else {
+            ctx2.beginPath();
+            ctx2.arc(0, 0, R, -Math.PI * 0.85, -Math.PI * 0.15);
+            ctx2.strokeStyle = "rgba(100, 180, 255," + (0.35 * fade) + ")";
+            ctx2.lineWidth = 14;
+            ctx2.stroke();
+            ctx2.beginPath();
+            ctx2.arc(0, 0, R, -Math.PI * 0.85, -Math.PI * 0.15);
+            ctx2.strokeStyle = "rgba(200, 240, 255," + (0.95 * fade) + ")";
+            ctx2.lineWidth = 5;
+            ctx2.shadowColor = "rgba(120, 200, 255, 0.9)";
+            ctx2.shadowBlur = 14;
+            ctx2.stroke();
+            // traveling highlight
+            ctx2.beginPath();
+            ctx2.arc(0, 0, R, spin, spin + Math.PI * 0.45);
+            ctx2.strokeStyle = "rgba(240, 250, 255," + (0.95 * fade) + ")";
+            ctx2.lineWidth = 3;
+            ctx2.stroke();
+            ctx2.shadowBlur = 0;
+          }
+          ctx2.restore();
+          ctx2.globalCompositeOperation = "source-over";
         }
-        ctx2.shadowBlur = 0;
-        ctx2.globalCompositeOperation = "source-over";
-        ctx2.globalAlpha = 1;
+
+        var tiltA = Math.PI / 4 + Math.sin(spin * 0.3) * 0.08;
+        var tiltB = -Math.PI / 4 - Math.sin(spin * 0.3) * 0.08;
+        drawRingLayer(ctxB, tiltA, true);
+        drawRingLayer(ctxB, tiltB, true);
+        drawRingLayer(ctxF, tiltA, false);
+        drawRingLayer(ctxF, tiltB, false);
+
+        // Center crossing sparks on front
+        ctxF.globalCompositeOperation = "lighter";
+        for (var s = 0; s < 5; s++) {
+          var sa = spin * 2 + s * (Math.PI * 2 / 5);
+          var sx = cx + Math.cos(sa) * R * 0.2;
+          var sy = cy + Math.sin(sa * 1.3) * R * 0.1;
+          var sg = ctxF.createRadialGradient(sx, sy, 0, sx, sy, 7);
+          sg.addColorStop(0, "rgba(220,245,255," + (0.65 * fade) + ")");
+          sg.addColorStop(1, "rgba(80,160,255,0)");
+          ctxF.fillStyle = sg;
+          ctxF.beginPath();
+          ctxF.arc(sx, sy, 7, 0, Math.PI * 2);
+          ctxF.fill();
+        }
+        ctxF.globalCompositeOperation = "source-over";
       }
 
       __heroFxRaf = requestAnimationFrame(tick);
     }
     __heroFxRaf = requestAnimationFrame(tick);
   }
+
+
 
 
 

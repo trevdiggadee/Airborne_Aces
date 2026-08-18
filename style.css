@@ -603,16 +603,26 @@ html, body {
   left: -35%;
   top: -35%;
   pointer-events: none;
-  z-index: 6;
   display: none;
   mix-blend-mode: normal;
   opacity: 1;
+}
+.heroFireCanvasBack {
+  z-index: 0;
+}
+.heroFireCanvasFront {
+  z-index: 8;
 }
 .heroFireCanvas.active {
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
 }
+.heroBlimpWrap img,
+.heroBlimpWrap .heroBlimpLayer {
+  z-index: 4;
+}
+
 
 
 .heroBlimpWrap .heroBlimpLayer {
