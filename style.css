@@ -382,20 +382,27 @@ html, body {
    motion-blurred spin rather than a hard frame-to-frame pop. */
 .heroBlimpWrap {
   position: absolute;
-  /* Lowered 5%, size +5% vs prior */
   top: 23%;
   left: 50%;
   width: 50.4%;
+  /* Fixed aspect so every ship centers in the same preview slot */
+  aspect-ratio: 1.35 / 1;
   transform: translateX(-50%);
   z-index: 2;
   animation: floatHero 3.2s ease-in-out infinite;
   filter: none;
   pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .heroBlimpWrap.hero-small {
-  /* Match other blimps — centered same size */
-  width: inherit;
-  top: inherit;
+  /* Same slot as every other blimp */
+  width: 50.4%;
+  top: 23%;
+  left: 50%;
+  aspect-ratio: 1.35 / 1;
+  transform: translateX(-50%);
 }
 /* Contact shadow lowered toward Take Flight button / platform */
 .heroBlimpWrap::after {
@@ -411,13 +418,21 @@ html, body {
 .heroBlimpWrap img {
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
+  object-position: center center;
+  margin: 0 auto;
 }
 
 .heroBlimpLayer {
   position: relative;
-  z-index: 1;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center center;
   backface-visibility: hidden;
 }
 
@@ -426,6 +441,9 @@ html, body {
   top: 0;
   left: 0;
   width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center center;
   opacity: 0;
   z-index: 1;
   backface-visibility: hidden;
@@ -556,7 +574,7 @@ html, body {
 .flyBtn {
   position: absolute;
   top: 53.5%;
-  left: 55%;
+  left: 50%; /* moved left 5% from 55% */
   transform: translate(-50%, -50%);
   padding: 0;
   border: none;
@@ -564,7 +582,7 @@ html, body {
   background: transparent;
   cursor: pointer;
   z-index: 6;
-  width: min(52.5vw, 350px);
+  width: min(34.1vw, 228px); /* 35% smaller */
   line-height: 0;
   -webkit-tap-highlight-color: transparent;
   filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.55));
@@ -2758,7 +2776,7 @@ html, body {
   transform: translateX(-50%);
   z-index: 4;
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: clamp(14px, 4.2vw, 22px);
+  font-size: clamp(18px, 5.25vw, 28px); /* +25% */
   font-weight: bold;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -2773,7 +2791,7 @@ html, body {
   max-width: 80%;
 }
 @media (min-width: 480px) {
-  .heroBlimpName { font-size: 32px; }
+  .heroBlimpName { font-size: 40px; }
 }
 
 /* Power-up icon under the Power Up text in the profile card */
@@ -2829,7 +2847,7 @@ html, body {
   font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
   font-weight: 700;
   letter-spacing: 0.18em;
-  font-size: clamp(14px, 4.2vw, 22px);
+  font-size: clamp(18px, 5.25vw, 28px); /* +25% */
   color: #f0e0b8;
   text-shadow: 0 2px 8px rgba(0,0,0,0.75);
 }

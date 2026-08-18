@@ -646,8 +646,25 @@ function selectBlimp(key, el) {
   // Keep menu preview sizes consistent; Little Spy stays smaller
   const heroWrap = document.querySelector(".heroBlimpWrap");
   if (heroWrap) {
-    heroWrap.classList.remove("hero-small"); // Little Spy same size/center as others
+    heroWrap.classList.remove("hero-small");
+    // Force identical preview slot for every blimp
+    heroWrap.style.width = "";
+    heroWrap.style.top = "";
+    heroWrap.style.left = "";
+    heroWrap.style.transform = "";
+    heroWrap.style.margin = "";
   }
+  try {
+    var layers = [document.getElementById("heroBlimpImgA"), document.getElementById("heroBlimpImgB")];
+    layers.forEach(function (img) {
+      if (!img) return;
+      img.style.objectFit = "contain";
+      img.style.objectPosition = "center center";
+      img.style.width = "100%";
+      img.style.height = "100%";
+    });
+  } catch (e) {}
+
 
   document.querySelectorAll(".numBtn").forEach(b => b.classList.remove("active"));
   if (el) el.classList.add("active");
