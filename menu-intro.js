@@ -28,7 +28,7 @@ const SHIP_STATS = {
   blimp1: {
     name: "Zeppelin Ace", mk: "Mk I", cls: "Scout Airship", call: "ACE-1",
     stats: { Speed: 4, Lift: 4, Durability: 3, Maneuverability: 3, Boost: 4 },
-    ability: { icon: "⚙️", name: "Twin Saws", desc: "Two blue glowing saw blades rotate around the ship at 45° and shred nearby obstacles." },
+    ability: { icon: "⚡", name: "Storm Veil", desc: "Crackling electricity surrounds the ship and zaps nearby threats." },
     upgrade: "Next Rank", xp: 320, xpMax: 500, locked: false
   },
   blimp2: {
@@ -775,7 +775,8 @@ function powerPreviewKindFor(key) {
 
     function tick(now) {
       var key = (typeof selectedBlimp !== "undefined") ? selectedBlimp : "blimp1";
-      var need = __heroFxKind === "fire" ? "blimp1" : (__heroFxKind === "shockwave" ? "blimp2" : (__heroFxKind === "saws" ? "blimp3" : key));
+      var needMap = { fire: "blimp1", shockwave: "blimp2", saws: "blimp3", steam: "blimp4", sunblade: "blimp5", electric: "blimp7" };
+      var need = needMap[__heroFxKind] || key;
       if (key !== need) { stopHeroFireAura(); return; }
       if (now >= __heroFxUntil) { stopHeroFireAura(); return; }
 
@@ -960,7 +961,198 @@ function powerPreviewKindFor(key) {
           ctxF.arc(sx, sy, 7, 0, Math.PI * 2);
           ctxF.fill();
         }
+
         ctxF.globalCompositeOperation = "source-over";
+      } else if (__heroFxKind === "steam") {
+        // Steampunk — billowing steam jets orbiting / venting around the ship
+        for (var si = 0; si < 3; si++) {
+          if (Math.random() < 0.7) {
+            var sang = Math.random() * Math.PI * 2;
+            var side = Math.sin(sang);
+            __heroFxParticles.push({
+              x: cx + Math.cos(sang) * bw * 0.35,
+              y: cy + Math.sin(sang) * bh * 0.25 + bh * 0.15,
+              vx: (Math.random() - 0.5) * 25,
+              vy: -30 - Math.random() * 50,
+              life: 0.7 + Math.random() * 0.6,
+              age: 0,
+              r: 8 + Math.random() * 14,
+              depth: side,
+              type: "steam"
+            });
+          }
+        }
+        for (var spi = __heroFxParticles.length - 1; spi >= 0; spi--) {
+          var sp = __heroFxParticles[spi];
+          sp.age += dt;
+          sp.x += sp.vx * dt;
+          sp.y += sp.vy * dt;
+          sp.vx *= 0.99;
+          sp.r += 18 * dt;
+          if (sp.age >= sp.life) { __heroFxParticles.splice(spi, 1); continue; }
+          var su = 1 - sp.age / sp.life;
+          var ctxS = sp.depth > 0 ? ctxB : ctxF;
+          ctxS.globalCompositeOperation = "source-over";
+          var sg = ctxS.createRadialGradient(sp.x, sp.y, 0, sp.x, sp.y, sp.r);
+          sg.addColorStop(0, "rgba(245,245,250," + (0.55 * su * fade) + ")");
+          sg.addColorStop(0.4, "rgba(200,205,215," + (0.28 * su * fade) + ")");
+          sg.addColorStop(1, "rgba(160,165,175,0)");
+          ctxS.fillStyle = sg;
+          ctxS.beginPath();
+          ctxS.arc(sp.x, sp.y, sp.r, 0, Math.PI * 2);
+          ctxS.fill();
+        }
+        // Brass-tinted vent rings behind / in front
+        for (var vr = 0; vr < 2; vr++) {
+          var ctxV = vr === 0 ? ctxB : ctxF;
+          var vspin = tnow * (0.8 + vr * 0.4);
+          ctxV.strokeStyle = "rgba(200, 170, 120," + ((vr === 0 ? 0.25 : 0.4) * fade) + ")";
+          ctxV.lineWidth = 2;
+          ctxV.beginPath();
+          ctxV.ellipse(cx, cy + bh * 0.1, bw * (0.45 + vr * 0.08), bh * 0.22, vspin * 0.2, 0, Math.PI * 2);
+          ctxV.stroke();
+        }
+        if (__heroFxParticles.length > 70) __heroFxParticles.splice(0, __heroFxParticles.length - 70);
+
+      } else if (__heroFxKind === "sunblade") {
+        // Jade Voyager — sun behind ship with rotating fire blades
+        var sunSpin = tnow * 1.4;
+        var sunR = Math.min(w, h) * 0.22;
+        // BACK: sun disc + rear blades
+        ctxB.save();
+        ctxB.translate(cx, cy - bh * 0.05);
+        // Sun core
+        var sunG = ctxB.createRadialGradient(0, 0, 0, 0, 0, sunR * 1.6);
+        sunG.addColorStop(0, "rgba(255,245,180," + (0.95 * fade) + ")");
+        sunG.addColorStop(0.35, "rgba(255,180,40," + (0.7 * fade) + ")");
+        sunG.addColorStop(0.7, "rgba(255,90,10," + (0.35 * fade) + ")");
+        sunG.addColorStop(1, "rgba(255,40,0,0)");
+        ctxB.fillStyle = sunG;
+        ctxB.beginPath();
+        ctxB.arc(0, 0, sunR * 1.6, 0, Math.PI * 2);
+        ctxB.fill();
+        // Fire blades (rear half emphasis)
+        ctxB.globalCompositeOperation = "lighter";
+        for (var bi = 0; bi < 8; bi++) {
+          var ba = sunSpin + bi * (Math.PI * 2 / 8);
+          // blades that are "behind" (cos > 0 roughly)
+          var bladeLen = sunR * (1.6 + 0.25 * Math.sin(tnow * 6 + bi));
+          ctxB.save();
+          ctxB.rotate(ba);
+          var bg = ctxB.createLinearGradient(0, 0, bladeLen, 0);
+          bg.addColorStop(0, "rgba(255,240,150," + (0.85 * fade) + ")");
+          bg.addColorStop(0.4, "rgba(255,140,20," + (0.55 * fade) + ")");
+          bg.addColorStop(1, "rgba(255,40,0,0)");
+          ctxB.fillStyle = bg;
+          ctxB.beginPath();
+          ctxB.moveTo(sunR * 0.35, -sunR * 0.08);
+          ctxB.lineTo(bladeLen, 0);
+          ctxB.lineTo(sunR * 0.35, sunR * 0.08);
+          ctxB.closePath();
+          ctxB.fill();
+          ctxB.restore();
+        }
+        ctxB.restore();
+        ctxB.globalCompositeOperation = "source-over";
+
+        // FRONT: nearer blades + edge glow so sun sits behind blimp with blades wrapping
+        ctxF.save();
+        ctxF.translate(cx, cy - bh * 0.05);
+        ctxF.globalCompositeOperation = "lighter";
+        for (var fi = 0; fi < 8; fi++) {
+          var fa = sunSpin + fi * (Math.PI * 2 / 8) + Math.PI / 8;
+          var depthF = Math.cos(fa); // front when cos < 0
+          if (depthF > 0.15) continue; // skip rear-facing for front canvas
+          var flen = sunR * (1.5 + 0.2 * Math.sin(tnow * 6 + fi));
+          ctxF.save();
+          ctxF.rotate(fa);
+          var fg = ctxF.createLinearGradient(0, 0, flen, 0);
+          fg.addColorStop(0, "rgba(255,250,200," + (0.9 * fade) + ")");
+          fg.addColorStop(0.35, "rgba(255,160,30," + (0.6 * fade) + ")");
+          fg.addColorStop(1, "rgba(255,50,0,0)");
+          ctxF.fillStyle = fg;
+          ctxF.beginPath();
+          ctxF.moveTo(sunR * 0.3, -sunR * 0.07);
+          ctxF.lineTo(flen, 0);
+          ctxF.lineTo(sunR * 0.3, sunR * 0.07);
+          ctxF.closePath();
+          ctxF.fill();
+          ctxF.restore();
+        }
+        ctxF.restore();
+        ctxF.globalCompositeOperation = "source-over";
+
+      } else if (__heroFxKind === "electric") {
+        // Storm Chaser — electricity surrounds the blimp (front + back)
+        function bolt(ctx2, x0, y0, x1, y1, segs, jag, alpha) {
+          ctx2.beginPath();
+          ctx2.moveTo(x0, y0);
+          for (var s = 1; s < segs; s++) {
+            var t = s / segs;
+            var nx = x0 + (x1 - x0) * t + (Math.random() - 0.5) * jag;
+            var ny = y0 + (y1 - y0) * t + (Math.random() - 0.5) * jag;
+            ctx2.lineTo(nx, ny);
+          }
+          ctx2.lineTo(x1, y1);
+          ctx2.strokeStyle = "rgba(180, 220, 255," + alpha + ")";
+          ctx2.lineWidth = 2;
+          ctx2.shadowColor = "rgba(120, 180, 255, 0.9)";
+          ctx2.shadowBlur = 8;
+          ctx2.stroke();
+          ctx2.strokeStyle = "rgba(255, 255, 255," + (alpha * 0.85) + ")";
+          ctx2.lineWidth = 1;
+          ctx2.stroke();
+          ctx2.shadowBlur = 0;
+        }
+        // Arc ring of points around ship
+        var pts = 10;
+        for (var ei = 0; ei < pts; ei++) {
+          var ea = tnow * 2.2 + ei * (Math.PI * 2 / pts);
+          var ex = cx + Math.cos(ea) * bw * 0.7;
+          var ey = cy + Math.sin(ea * 1.1) * bh * 0.65;
+          var depthE = Math.sin(ea);
+          var ctxE = depthE > 0 ? ctxB : ctxF;
+          // bolt toward near-center rim
+          var ix = cx + Math.cos(ea) * bw * 0.28;
+          var iy = cy + Math.sin(ea) * bh * 0.22;
+          if (Math.random() < 0.55) {
+            bolt(ctxE, ix, iy, ex, ey, 5, 10, 0.7 * fade);
+          }
+          // glow node
+          ctxE.globalCompositeOperation = "lighter";
+          var ng = ctxE.createRadialGradient(ex, ey, 0, ex, ey, 8);
+          ng.addColorStop(0, "rgba(220,240,255," + (0.7 * fade) + ")");
+          ng.addColorStop(1, "rgba(80,140,255,0)");
+          ctxE.fillStyle = ng;
+          ctxE.beginPath();
+          ctxE.arc(ex, ey, 8, 0, Math.PI * 2);
+          ctxE.fill();
+          ctxE.globalCompositeOperation = "source-over";
+        }
+        // Occasional cross-ship lightning on front
+        if (Math.random() < 0.2) {
+          var a1 = Math.random() * Math.PI * 2;
+          var a2 = a1 + Math.PI * (0.6 + Math.random() * 0.8);
+          bolt(
+            ctxF,
+            cx + Math.cos(a1) * bw * 0.5,
+            cy + Math.sin(a1) * bh * 0.4,
+            cx + Math.cos(a2) * bw * 0.5,
+            cy + Math.sin(a2) * bh * 0.4,
+            6, 14, 0.85 * fade
+          );
+        }
+        // Soft electric shell
+        ctxB.strokeStyle = "rgba(140, 190, 255," + (0.2 * fade) + ")";
+        ctxB.lineWidth = 3;
+        ctxB.beginPath();
+        ctxB.ellipse(cx, cy, bw * 0.55, bh * 0.48, 0, 0, Math.PI * 2);
+        ctxB.stroke();
+        ctxF.strokeStyle = "rgba(180, 220, 255," + (0.25 * fade) + ")";
+        ctxF.lineWidth = 2;
+        ctxF.beginPath();
+        ctxF.ellipse(cx, cy, bw * 0.5, bh * 0.42, 0, 0, Math.PI * 2);
+        ctxF.stroke();
       }
 
       __heroFxRaf = requestAnimationFrame(tick);
@@ -978,25 +1170,25 @@ function powerPreviewKindFor(key) {
     startHeroPowerFx("fire");
   }
 
+  
   function playMenuPowerPreview(optKey) {
     var key = optKey || ((typeof selectedBlimp !== "undefined") ? selectedBlimp : "blimp1");
-    if (key === "blimp1") {
-      startHeroPowerFx("fire");
-      try { if (typeof sfxPowerup === "function") sfxPowerup(); } catch (e) {}
-      return;
-    }
-    if (key === "blimp2") {
-      startHeroPowerFx("shockwave");
-      try { if (typeof sfxPowerup === "function") sfxPowerup(); } catch (e) {}
-      return;
-    }
-    if (key === "blimp3") {
-      startHeroPowerFx("saws");
+    var map = {
+      blimp1: "fire",
+      blimp2: "shockwave",
+      blimp3: "saws",
+      blimp4: "steam",
+      blimp5: "sunblade",
+      blimp7: "electric"
+    };
+    if (map[key]) {
+      startHeroPowerFx(map[key]);
       try { if (typeof sfxPowerup === "function") sfxPowerup(); } catch (e) {}
       return;
     }
     stopHeroFireAura();
   }
+
 
   function bindMenuPowerPreview() {
     var icon = document.getElementById("bpPowerIcon");
