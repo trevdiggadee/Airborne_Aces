@@ -697,14 +697,16 @@ function powerPreviewKindFor(key) {
   // alias
   function stopHeroPowerFx() { stopHeroFireAura(); }
 
+  
+  
   function startHeroPowerFx(kind) {
     var c = document.getElementById("heroFireCanvas");
     if (!c) return;
     c.classList.add("active");
     var wrap = document.querySelector(".heroBlimpWrap");
     var rect = (wrap || c).getBoundingClientRect();
-    var w = Math.max(280, Math.floor(rect.width * 1.6) || 400);
-    var h = Math.max(220, Math.floor(rect.height * 1.6) || 300);
+    var w = Math.max(300, Math.floor(rect.width * 1.75) || 440);
+    var h = Math.max(240, Math.floor(rect.height * 1.75) || 340);
     c.width = w;
     c.height = h;
     c.style.display = "block";
@@ -717,113 +719,128 @@ function powerPreviewKindFor(key) {
     __heroFxUntil = performance.now() + 5000;
     if (__heroFxRaf) cancelAnimationFrame(__heroFxRaf);
 
+    // Seed orbiting flame cores for fire
+    var cores = [];
+    if (__heroFxKind === "fire") {
+      for (var ci = 0; ci < 10; ci++) {
+        cores.push({
+          ang: (ci / 10) * Math.PI * 2,
+          elev: (Math.random() - 0.5) * 0.4,
+          speed: 1.6 + Math.random() * 0.9,
+          size: 0.7 + Math.random() * 0.5,
+          phase: Math.random() * Math.PI * 2
+        });
+      }
+    }
+
     function tick(now) {
       var key = (typeof selectedBlimp !== "undefined") ? selectedBlimp : "blimp1";
       var need = __heroFxKind === "fire" ? "blimp1" : (__heroFxKind === "shockwave" ? "blimp2" : (__heroFxKind === "saws" ? "blimp3" : key));
-      if (key !== need) {
-        stopHeroFireAura();
-        return;
-      }
-      if (now >= __heroFxUntil) {
-        stopHeroFireAura();
-        return;
-      }
+      if (key !== need) { stopHeroFireAura(); return; }
+      if (now >= __heroFxUntil) { stopHeroFireAura(); return; }
+
       var dt = Math.min(0.05, (now - __heroFxLast) / 1000);
       __heroFxLast = now;
-      var fade = Math.max(0, (__heroFxUntil - now) / 5000);
-      fade = fade < 0.2 ? fade / 0.2 : 1;
+      var lifeLeft = Math.max(0, (__heroFxUntil - now) / 5000);
+      var fade = lifeLeft < 0.2 ? lifeLeft / 0.2 : 1;
       var ctx2 = c.getContext("2d");
       ctx2.clearRect(0, 0, w, h);
       var cx = w * 0.5;
       var cy = h * 0.52;
       var tnow = now * 0.001;
+      var bw = Math.min(w, h) * 0.4;
+      var bh = Math.min(w, h) * 0.3;
 
       if (__heroFxKind === "fire") {
-        // Procedural JS flames only (no sprite icons)
-        if (Math.random() < 0.75) {
-          var ang = Math.random() * Math.PI * 2;
-          var rad = Math.min(w, h) * (0.1 + Math.random() * 0.22);
-          __heroFxParticles.push({
-            x: cx + Math.cos(ang) * rad,
-            y: cy + Math.sin(ang) * rad * 0.65 + Math.min(w, h) * 0.02,
-            vx: (Math.random() - 0.5) * 30,
-            vy: -55 - Math.random() * 70,
-            life: 0.35 + Math.random() * 0.4,
-            age: 0,
-            w: 7 + Math.random() * 11,
-            h: 16 + Math.random() * 24,
-            type: "flame"
-          });
+        // Realistic JS fire orbs orbiting the blimp (no sprite sheet)
+        // Soft heat haze under ship
+        var haze = ctx2.createRadialGradient(cx, cy, bw * 0.1, cx, cy, bw * 0.75);
+        haze.addColorStop(0, "rgba(255,120,20," + (0.12 * fade) + ")");
+        haze.addColorStop(0.5, "rgba(255,60,0," + (0.08 * fade) + ")");
+        haze.addColorStop(1, "rgba(0,0,0,0)");
+        ctx2.fillStyle = haze;
+        ctx2.beginPath();
+        ctx2.arc(cx, cy, bw * 0.75, 0, Math.PI * 2);
+        ctx2.fill();
+
+        for (var i = 0; i < cores.length; i++) {
+          var core = cores[i];
+          core.ang += core.speed * dt;
+          var ox = cx + Math.cos(core.ang) * bw * 0.58;
+          var oy = cy + Math.sin(core.ang * 1.15 + core.elev) * bh * 0.55;
+          var flicker = 0.85 + 0.15 * Math.sin(tnow * 12 + core.phase);
+          var baseR = Math.min(w, h) * 0.055 * core.size * flicker;
+
+          // Multi-layer flame (white-yellow core → orange → red → transparent)
+          ctx2.globalCompositeOperation = "lighter";
+          // Outer smoke-tint
+          var g3 = ctx2.createRadialGradient(ox, oy + baseR * 0.3, 0, ox, oy, baseR * 2.4);
+          g3.addColorStop(0, "rgba(255,80,10," + (0.35 * fade) + ")");
+          g3.addColorStop(0.45, "rgba(180,30,0," + (0.15 * fade) + ")");
+          g3.addColorStop(1, "rgba(40,0,0,0)");
+          ctx2.fillStyle = g3;
+          ctx2.beginPath();
+          ctx2.arc(ox, oy, baseR * 2.4, 0, Math.PI * 2);
+          ctx2.fill();
+
+          // Mid orange
+          var g2 = ctx2.createRadialGradient(ox - baseR * 0.15, oy - baseR * 0.2, 0, ox, oy, baseR * 1.4);
+          g2.addColorStop(0, "rgba(255,170,40," + (0.75 * fade) + ")");
+          g2.addColorStop(0.5, "rgba(255,90,10," + (0.45 * fade) + ")");
+          g2.addColorStop(1, "rgba(200,40,0,0)");
+          ctx2.fillStyle = g2;
+          ctx2.beginPath();
+          ctx2.arc(ox, oy, baseR * 1.4, 0, Math.PI * 2);
+          ctx2.fill();
+
+          // Hot white core
+          var g1 = ctx2.createRadialGradient(ox - baseR * 0.1, oy - baseR * 0.25, 0, ox, oy, baseR * 0.7);
+          g1.addColorStop(0, "rgba(255,255,230," + (0.95 * fade) + ")");
+          g1.addColorStop(0.35, "rgba(255,220,100," + (0.7 * fade) + ")");
+          g1.addColorStop(1, "rgba(255,120,0,0)");
+          ctx2.fillStyle = g1;
+          ctx2.beginPath();
+          ctx2.arc(ox, oy, baseR * 0.7, 0, Math.PI * 2);
+          ctx2.fill();
+
+          // Spawn trailing sparks from each core
+          if (Math.random() < 0.45) {
+            __heroFxParticles.push({
+              x: ox + (Math.random() - 0.5) * baseR,
+              y: oy + (Math.random() - 0.5) * baseR,
+              vx: -Math.sin(core.ang) * 30 + (Math.random() - 0.5) * 40,
+              vy: -40 - Math.random() * 60,
+              life: 0.25 + Math.random() * 0.35,
+              age: 0,
+              r: 1.2 + Math.random() * 2.8
+            });
+          }
         }
-        if (Math.random() < 0.55) {
-          __heroFxParticles.push({
-            x: cx + (Math.random() - 0.5) * Math.min(w, h) * 0.35,
-            y: cy + (Math.random() - 0.5) * Math.min(w, h) * 0.22,
-            vx: (Math.random() - 0.5) * 40,
-            vy: -40 - Math.random() * 55,
-            life: 0.3 + Math.random() * 0.3,
-            age: 0,
-            r: 1.5 + Math.random() * 3.5,
-            type: "ember"
-          });
-        }
-        for (var i = __heroFxParticles.length - 1; i >= 0; i--) {
-          var p = __heroFxParticles[i];
+
+        // Update / draw sparks
+        for (var pi = __heroFxParticles.length - 1; pi >= 0; pi--) {
+          var p = __heroFxParticles[pi];
           p.age += dt;
           p.x += p.vx * dt;
           p.y += p.vy * dt;
-          if (p.type === "flame") { p.vy -= 18 * dt; p.w *= (1 - 0.35 * dt); }
-          else p.vy += 30 * dt;
-          if (p.age >= p.life) __heroFxParticles.splice(i, 1);
-        }
-        if (__heroFxParticles.length > 50) __heroFxParticles.splice(0, __heroFxParticles.length - 50);
-
-        var g0 = ctx2.createRadialGradient(cx, cy, Math.min(w, h) * 0.08, cx, cy, Math.min(w, h) * 0.42);
-        g0.addColorStop(0, "rgba(255,140,30," + (0.2 * fade) + ")");
-        g0.addColorStop(0.5, "rgba(255,60,0," + (0.1 * fade) + ")");
-        g0.addColorStop(1, "rgba(120,10,0,0)");
-        ctx2.fillStyle = g0;
-        ctx2.beginPath();
-        ctx2.arc(cx, cy, Math.min(w, h) * 0.42, 0, Math.PI * 2);
-        ctx2.fill();
-
-        ctx2.globalCompositeOperation = "lighter";
-        for (var j = 0; j < __heroFxParticles.length; j++) {
-          var fl = __heroFxParticles[j];
-          var u = 1 - fl.age / fl.life;
-          if (u <= 0) continue;
-          if (fl.type === "flame") {
-            ctx2.save();
-            ctx2.translate(fl.x, fl.y);
-            ctx2.globalAlpha = u * u * 0.9 * fade;
-            var grd = ctx2.createRadialGradient(0, 0, 0, 0, 0, fl.h);
-            grd.addColorStop(0, "rgba(255,245,180,0.95)");
-            grd.addColorStop(0.25, "rgba(255,180,40,0.8)");
-            grd.addColorStop(0.55, "rgba(255,70,10,0.45)");
-            grd.addColorStop(1, "rgba(180,20,0,0)");
-            ctx2.fillStyle = grd;
-            ctx2.beginPath();
-            ctx2.moveTo(0, -fl.h * 0.85);
-            ctx2.bezierCurveTo(fl.w * 0.7, -fl.h * 0.3, fl.w * 0.55, fl.h * 0.2, 0, fl.h * 0.35);
-            ctx2.bezierCurveTo(-fl.w * 0.55, fl.h * 0.2, -fl.w * 0.7, -fl.h * 0.3, 0, -fl.h * 0.85);
-            ctx2.fill();
-            ctx2.restore();
-          } else {
-            ctx2.globalAlpha = Math.max(0, u * 0.95 * fade);
-            var eg = ctx2.createRadialGradient(fl.x, fl.y, 0, fl.x, fl.y, fl.r);
-            eg.addColorStop(0, "rgba(255,230,120,1)");
-            eg.addColorStop(0.5, "rgba(255,100,20,0.7)");
-            eg.addColorStop(1, "rgba(255,40,0,0)");
-            ctx2.fillStyle = eg;
-            ctx2.beginPath();
-            ctx2.arc(fl.x, fl.y, fl.r, 0, Math.PI * 2);
-            ctx2.fill();
-          }
+          p.vy += 50 * dt;
+          if (p.age >= p.life) { __heroFxParticles.splice(pi, 1); continue; }
+          var u = 1 - p.age / p.life;
+          ctx2.globalAlpha = u * u * 0.9 * fade;
+          var eg = ctx2.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 1.5);
+          eg.addColorStop(0, "rgba(255,240,160,1)");
+          eg.addColorStop(0.4, "rgba(255,140,30,0.7)");
+          eg.addColorStop(1, "rgba(255,40,0,0)");
+          ctx2.fillStyle = eg;
+          ctx2.beginPath();
+          ctx2.arc(p.x, p.y, p.r * 1.5, 0, Math.PI * 2);
+          ctx2.fill();
         }
         ctx2.globalAlpha = 1;
         ctx2.globalCompositeOperation = "source-over";
+        if (__heroFxParticles.length > 60) __heroFxParticles.splice(0, __heroFxParticles.length - 60);
+
       } else if (__heroFxKind === "shockwave") {
-        // Deco Liner — Sonic Blimp shockwave rings
         var elapsed = (5000 - (__heroFxUntil - now)) / 1000;
         for (var ring = 0; ring < 4; ring++) {
           var phase = elapsed * 1.1 - ring * 0.35;
@@ -839,99 +856,92 @@ function powerPreviewKindFor(key) {
           ctx2.shadowBlur = 12;
           ctx2.stroke();
           ctx2.shadowBlur = 0;
-          // inner pressure disc
-          if (rr < 0.35) {
-            var gd = ctx2.createRadialGradient(cx, cy, 0, cx, cy, radR);
-            gd.addColorStop(0, "rgba(220,245,255," + (0.25 * (1 - rr / 0.35) * fade) + ")");
-            gd.addColorStop(1, "rgba(100,180,255,0)");
-            ctx2.fillStyle = gd;
-            ctx2.beginPath();
-            ctx2.arc(cx, cy, radR, 0, Math.PI * 2);
-            ctx2.fill();
-          }
         }
-        // floating pressure particles
-        if (Math.random() < 0.4) {
-          var a2 = Math.random() * Math.PI * 2;
-          __heroFxParticles.push({
-            x: cx, y: cy, ang: a2, dist: Math.min(w, h) * 0.1,
-            life: 0.6, age: 0, type: "sw"
-          });
-        }
-        for (var si = __heroFxParticles.length - 1; si >= 0; si--) {
-          var sp = __heroFxParticles[si];
-          sp.age += dt;
-          sp.dist += Math.min(w, h) * 0.55 * dt;
-          if (sp.age >= sp.life) __heroFxParticles.splice(si, 1);
-          else {
-            var px = cx + Math.cos(sp.ang) * sp.dist;
-            var py = cy + Math.sin(sp.ang) * sp.dist * 0.85;
-            var ua = 1 - sp.age / sp.life;
-            ctx2.globalAlpha = ua * 0.7 * fade;
-            ctx2.fillStyle = "rgba(200,240,255,0.9)";
-            ctx2.beginPath();
-            ctx2.arc(px, py, 2 + ua * 3, 0, Math.PI * 2);
-            ctx2.fill();
-          }
-        }
-        ctx2.globalAlpha = 1;
+
       } else if (__heroFxKind === "saws") {
-        // Aero Slicer — two blue glowing saw blades at 45°
-        var spin = tnow * 4.5;
-        var baseAng = Math.PI / 4; // 45 degrees
-        for (var s = 0; s < 2; s++) {
-          var orbit = spin + s * Math.PI;
-          var ox = cx + Math.cos(orbit) * Math.min(w, h) * 0.28;
-          var oy = cy + Math.sin(orbit) * Math.min(w, h) * 0.22;
-          var bladeR = Math.min(w, h) * 0.14;
-          ctx2.save();
-          ctx2.translate(ox, oy);
-          ctx2.rotate(baseAng + spin * 2.5 + s * Math.PI * 0.5);
-          ctx2.globalAlpha = 0.95 * fade;
-          // glow
-          var sg = ctx2.createRadialGradient(0, 0, bladeR * 0.2, 0, 0, bladeR * 1.2);
-          sg.addColorStop(0, "rgba(160,220,255,0.85)");
-          sg.addColorStop(0.5, "rgba(60,140,255,0.35)");
-          sg.addColorStop(1, "rgba(20,80,200,0)");
+        // Aero Slicer — two glowing rings crossing through each other, blimp in middle
+        var spin = tnow * 1.8;
+        var R = Math.min(w, h) * 0.38;
+        ctx2.lineCap = "round";
+        ctx2.globalCompositeOperation = "lighter";
+
+        // Ring A — tilted ~+45°
+        ctx2.save();
+        ctx2.translate(cx, cy);
+        ctx2.rotate(Math.PI / 4 + Math.sin(spin * 0.3) * 0.08);
+        ctx2.scale(1, 0.42); // ellipse = ring viewed at angle
+        // outer glow
+        ctx2.beginPath();
+        ctx2.arc(0, 0, R, 0, Math.PI * 2);
+        ctx2.strokeStyle = "rgba(80, 160, 255," + (0.25 * fade) + ")";
+        ctx2.lineWidth = 18;
+        ctx2.stroke();
+        // main ring
+        ctx2.beginPath();
+        ctx2.arc(0, 0, R, 0, Math.PI * 2);
+        ctx2.strokeStyle = "rgba(140, 210, 255," + (0.9 * fade) + ")";
+        ctx2.lineWidth = 6;
+        ctx2.shadowColor = "rgba(100, 180, 255, 0.9)";
+        ctx2.shadowBlur = 16;
+        ctx2.stroke();
+        // bright edge arc (rotating highlight)
+        ctx2.beginPath();
+        ctx2.arc(0, 0, R, spin, spin + Math.PI * 0.55);
+        ctx2.strokeStyle = "rgba(230, 250, 255," + (0.95 * fade) + ")";
+        ctx2.lineWidth = 4;
+        ctx2.stroke();
+        ctx2.restore();
+
+        // Ring B — tilted ~-45° (crosses the first)
+        ctx2.save();
+        ctx2.translate(cx, cy);
+        ctx2.rotate(-Math.PI / 4 - Math.sin(spin * 0.3) * 0.08);
+        ctx2.scale(1, 0.42);
+        ctx2.beginPath();
+        ctx2.arc(0, 0, R * 0.98, 0, Math.PI * 2);
+        ctx2.strokeStyle = "rgba(60, 140, 255," + (0.22 * fade) + ")";
+        ctx2.lineWidth = 18;
+        ctx2.stroke();
+        ctx2.beginPath();
+        ctx2.arc(0, 0, R * 0.98, 0, Math.PI * 2);
+        ctx2.strokeStyle = "rgba(120, 200, 255," + (0.88 * fade) + ")";
+        ctx2.lineWidth = 6;
+        ctx2.shadowColor = "rgba(80, 160, 255, 0.85)";
+        ctx2.shadowBlur = 16;
+        ctx2.stroke();
+        ctx2.beginPath();
+        ctx2.arc(0, 0, R * 0.98, -spin + Math.PI, -spin + Math.PI + Math.PI * 0.55);
+        ctx2.strokeStyle = "rgba(230, 250, 255," + (0.95 * fade) + ")";
+        ctx2.lineWidth = 4;
+        ctx2.stroke();
+        ctx2.restore();
+
+        // Crossing energy sparks near center intersections
+        for (var s = 0; s < 6; s++) {
+          var sa = spin * 2 + s * (Math.PI / 3);
+          var sx = cx + Math.cos(sa) * R * 0.25;
+          var sy = cy + Math.sin(sa * 1.4) * R * 0.12;
+          var sg = ctx2.createRadialGradient(sx, sy, 0, sx, sy, 8);
+          sg.addColorStop(0, "rgba(220,245,255," + (0.7 * fade) + ")");
+          sg.addColorStop(1, "rgba(80,160,255,0)");
           ctx2.fillStyle = sg;
           ctx2.beginPath();
-          ctx2.arc(0, 0, bladeR * 1.15, 0, Math.PI * 2);
+          ctx2.arc(sx, sy, 8, 0, Math.PI * 2);
           ctx2.fill();
-          // disc
-          ctx2.fillStyle = "rgba(40, 90, 180, 0.9)";
-          ctx2.beginPath();
-          ctx2.arc(0, 0, bladeR * 0.55, 0, Math.PI * 2);
-          ctx2.fill();
-          ctx2.strokeStyle = "rgba(180, 230, 255, 0.95)";
-          ctx2.lineWidth = 2;
-          ctx2.stroke();
-          // teeth
-          ctx2.fillStyle = "rgba(140, 210, 255, 0.95)";
-          for (var t = 0; t < 12; t++) {
-            var ta = (t / 12) * Math.PI * 2;
-            ctx2.save();
-            ctx2.rotate(ta);
-            ctx2.beginPath();
-            ctx2.moveTo(bladeR * 0.45, -bladeR * 0.08);
-            ctx2.lineTo(bladeR * 0.95, 0);
-            ctx2.lineTo(bladeR * 0.45, bladeR * 0.08);
-            ctx2.closePath();
-            ctx2.fill();
-            ctx2.restore();
-          }
-          // hub
-          ctx2.fillStyle = "rgba(220, 245, 255, 0.95)";
-          ctx2.beginPath();
-          ctx2.arc(0, 0, bladeR * 0.18, 0, Math.PI * 2);
-          ctx2.fill();
-          ctx2.restore();
         }
+        ctx2.shadowBlur = 0;
+        ctx2.globalCompositeOperation = "source-over";
+        ctx2.globalAlpha = 1;
       }
 
       __heroFxRaf = requestAnimationFrame(tick);
     }
     __heroFxRaf = requestAnimationFrame(tick);
   }
+
+
+
+
 
   function startHeroFireAura() {
     startHeroPowerFx("fire");
