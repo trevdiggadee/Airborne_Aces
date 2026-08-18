@@ -28,7 +28,7 @@ const SHIP_STATS = {
   blimp1: {
     name: "Zeppelin Ace", mk: "Mk I", cls: "Scout Airship", call: "ACE-1",
     stats: { Speed: 4, Lift: 4, Durability: 3, Maneuverability: 3, Boost: 4 },
-    ability: { icon: "⚡", name: "Storm Veil", desc: "Crackling electricity surrounds the ship and zaps nearby threats." },
+    ability: { icon: "☄", name: "Meteor Strike", desc: "Calls down several burning meteors from above. Great for destroying large clusters." },
     upgrade: "Next Rank", xp: 320, xpMax: 500, locked: false
   },
   blimp2: {
@@ -775,7 +775,11 @@ function powerPreviewKindFor(key) {
 
     function tick(now) {
       var key = (typeof selectedBlimp !== "undefined") ? selectedBlimp : "blimp1";
-      var needMap = { fire: "blimp1", shockwave: "blimp2", saws: "blimp3", steam: "blimp4", sunblade: "blimp5", electric: "blimp7" };
+      var needMap = {
+        fire: "blimp1", shockwave: "blimp2", saws: "blimp3", steam: "blimp4",
+        sunblade: "blimp5", vortex: "blimp6", chain: "blimp7", electric: "blimp7",
+        crystalbeam: "blimp8", rockets: "blimp12", meteors: "blimp15"
+      };
       var need = needMap[__heroFxKind] || key;
       if (key !== need) { stopHeroFireAura(); return; }
       if (now >= __heroFxUntil) { stopHeroFireAura(); return; }
@@ -1148,11 +1152,262 @@ function powerPreviewKindFor(key) {
         ctxB.beginPath();
         ctxB.ellipse(cx, cy, bw * 0.55, bh * 0.48, 0, 0, Math.PI * 2);
         ctxB.stroke();
+
         ctxF.strokeStyle = "rgba(180, 220, 255," + (0.25 * fade) + ")";
         ctxF.lineWidth = 2;
         ctxF.beginPath();
         ctxF.ellipse(cx, cy, bw * 0.5, bh * 0.42, 0, 0, Math.PI * 2);
         ctxF.stroke();
+
+      } else if (__heroFxKind === "chain") {
+        // Storm Chaser — Chain Lightning: bolt jumps outward through "obstacle" nodes
+        function chainBolt(ctx2, points, alpha) {
+          if (points.length < 2) return;
+          ctx2.beginPath();
+          ctx2.moveTo(points[0].x, points[0].y);
+          for (var i = 1; i < points.length; i++) {
+            var p0 = points[i - 1], p1 = points[i];
+            var mx = (p0.x + p1.x) * 0.5 + (Math.random() - 0.5) * 18;
+            var my = (p0.y + p1.y) * 0.5 + (Math.random() - 0.5) * 14;
+            ctx2.lineTo(mx, my);
+            ctx2.lineTo(p1.x, p1.y);
+          }
+          ctx2.strokeStyle = "rgba(160, 210, 255," + alpha + ")";
+          ctx2.lineWidth = 2.5;
+          ctx2.shadowColor = "rgba(100, 180, 255, 0.95)";
+          ctx2.shadowBlur = 10;
+          ctx2.stroke();
+          ctx2.strokeStyle = "rgba(255,255,255," + (alpha * 0.9) + ")";
+          ctx2.lineWidth = 1;
+          ctx2.stroke();
+          ctx2.shadowBlur = 0;
+        }
+        // Nodes: ship → outward chain
+        var nodes = [{ x: cx + bw * 0.35, y: cy }];
+        for (var ni = 0; ni < 5; ni++) {
+          var na = -0.4 + ni * 0.25 + Math.sin(tnow * 3 + ni) * 0.08;
+          nodes.push({
+            x: cx + bw * (0.55 + ni * 0.22) + Math.sin(tnow * 4 + ni) * 8,
+            y: cy + Math.sin(na * 3 + tnow) * bh * 0.55
+          });
+        }
+        // Alternate front/back segments for depth
+        if (Math.random() < 0.85) {
+          chainBolt(ctxF, nodes, 0.85 * fade);
+          // branch secondary chains
+          for (var br = 1; br < nodes.length - 1; br++) {
+            if (Math.random() < 0.4) {
+              var branch = [
+                nodes[br],
+                {
+                  x: nodes[br].x + 20 + Math.random() * 30,
+                  y: nodes[br].y + (Math.random() - 0.5) * 40
+                }
+              ];
+              chainBolt(br % 2 ? ctxB : ctxF, branch, 0.55 * fade);
+            }
+          }
+        }
+        // Impact flashes on nodes
+        for (var nf = 1; nf < nodes.length; nf++) {
+          var ctxN = nf % 2 ? ctxB : ctxF;
+          ctxN.globalCompositeOperation = "lighter";
+          var ng = ctxN.createRadialGradient(nodes[nf].x, nodes[nf].y, 0, nodes[nf].x, nodes[nf].y, 12);
+          ng.addColorStop(0, "rgba(230,245,255," + (0.8 * fade) + ")");
+          ng.addColorStop(1, "rgba(80,140,255,0)");
+          ctxN.fillStyle = ng;
+          ctxN.beginPath();
+          ctxN.arc(nodes[nf].x, nodes[nf].y, 12, 0, Math.PI * 2);
+          ctxN.fill();
+          ctxN.globalCompositeOperation = "source-over";
+        }
+
+      } else if (__heroFxKind === "vortex") {
+        // Little Spy — Obliteration Vortex in front of blimp
+        var vx = cx + bw * 0.55;
+        var vy = cy;
+        var vspin = tnow * 4;
+        for (var layer = 0; layer < 2; layer++) {
+          var ctxV = layer === 0 ? ctxB : ctxF;
+          ctxV.save();
+          ctxV.translate(vx, vy);
+          ctxV.globalCompositeOperation = "lighter";
+          for (var arm = 0; arm < 5; arm++) {
+            var aa = vspin + arm * (Math.PI * 2 / 5) + layer * 0.3;
+            ctxV.rotate(0); // draw each arm
+            ctxV.beginPath();
+            for (var t = 0; t < 18; t++) {
+              var tt = t / 18;
+              var rr = 8 + tt * Math.min(w, h) * 0.2;
+              var ang = aa + tt * 2.8;
+              var px = Math.cos(ang) * rr;
+              var py = Math.sin(ang) * rr * 0.85;
+              if (t === 0) ctxV.moveTo(px, py);
+              else ctxV.lineTo(px, py);
+            }
+            ctxV.strokeStyle = "rgba(160, 100, 255," + ((layer ? 0.55 : 0.35) * fade) + ")";
+            ctxV.lineWidth = 3;
+            ctxV.stroke();
+          }
+          // core
+          var cg = ctxV.createRadialGradient(0, 0, 0, 0, 0, 22);
+          cg.addColorStop(0, "rgba(255,255,255," + (0.7 * fade) + ")");
+          cg.addColorStop(0.4, "rgba(180,80,255," + (0.45 * fade) + ")");
+          cg.addColorStop(1, "rgba(40,0,80,0)");
+          ctxV.fillStyle = cg;
+          ctxV.beginPath();
+          ctxV.arc(0, 0, 22, 0, Math.PI * 2);
+          ctxV.fill();
+          ctxV.restore();
+        }
+        // Debris sucked inward
+        if (Math.random() < 0.5) {
+          var dang = Math.random() * Math.PI * 2;
+          var dr = 40 + Math.random() * 50;
+          __heroFxParticles.push({
+            x: vx + Math.cos(dang) * dr,
+            y: vy + Math.sin(dang) * dr,
+            life: 0.5,
+            age: 0,
+            ang: dang,
+            dist: dr,
+            type: "debris"
+          });
+        }
+        for (var di = __heroFxParticles.length - 1; di >= 0; di--) {
+          var d = __heroFxParticles[di];
+          if (d.type !== "debris") continue;
+          d.age += dt;
+          d.ang += 6 * dt;
+          d.dist *= (1 - 2.2 * dt);
+          if (d.age >= d.life || d.dist < 4) { __heroFxParticles.splice(di, 1); continue; }
+          var dx = vx + Math.cos(d.ang) * d.dist;
+          var dy = vy + Math.sin(d.ang) * d.dist;
+          ctxF.fillStyle = "rgba(200,160,255," + ((1 - d.age / d.life) * 0.8 * fade) + ")";
+          ctxF.fillRect(dx - 2, dy - 2, 4, 4);
+        }
+
+      } else if (__heroFxKind === "rockets") {
+        // Sky Rocket — Rocket Barrage forward
+        if (Math.random() < 0.35) {
+          __heroFxParticles.push({
+            x: cx + bw * 0.3,
+            y: cy + (Math.random() - 0.5) * bh * 0.5,
+            vx: 180 + Math.random() * 80,
+            vy: (Math.random() - 0.5) * 40,
+            life: 0.7 + Math.random() * 0.4,
+            age: 0,
+            type: "rocket"
+          });
+        }
+        for (var ri = __heroFxParticles.length - 1; ri >= 0; ri--) {
+          var rk = __heroFxParticles[ri];
+          if (rk.type !== "rocket") continue;
+          rk.age += dt;
+          rk.x += rk.vx * dt;
+          rk.y += rk.vy * dt;
+          if (rk.age >= rk.life || rk.x > w + 20) { __heroFxParticles.splice(ri, 1); continue; }
+          var ru = 1 - rk.age / rk.life;
+          // trail on back, body on front
+          ctxB.globalCompositeOperation = "lighter";
+          var tg = ctxB.createRadialGradient(rk.x - 12, rk.y, 0, rk.x - 12, rk.y, 16);
+          tg.addColorStop(0, "rgba(255,180,60," + (0.5 * ru * fade) + ")");
+          tg.addColorStop(1, "rgba(255,40,0,0)");
+          ctxB.fillStyle = tg;
+          ctxB.beginPath();
+          ctxB.arc(rk.x - 10, rk.y, 14, 0, Math.PI * 2);
+          ctxB.fill();
+          ctxB.globalCompositeOperation = "source-over";
+          ctxF.fillStyle = "rgba(230,230,240," + (0.95 * ru * fade) + ")";
+          ctxF.beginPath();
+          ctxF.ellipse(rk.x, rk.y, 9, 3.5, 0, 0, Math.PI * 2);
+          ctxF.fill();
+          ctxF.fillStyle = "rgba(255,100,40," + (0.9 * ru * fade) + ")";
+          ctxF.beginPath();
+          ctxF.arc(rk.x - 8, rk.y, 3, 0, Math.PI * 2);
+          ctxF.fill();
+        }
+
+      } else if (__heroFxKind === "meteors") {
+        // Royal Stripe — Meteor Strike from above
+        if (Math.random() < 0.28) {
+          __heroFxParticles.push({
+            x: cx + (Math.random() - 0.5) * bw * 1.6,
+            y: -10,
+            vx: (Math.random() - 0.5) * 40,
+            vy: 160 + Math.random() * 100,
+            life: 1.1,
+            age: 0,
+            r: 5 + Math.random() * 6,
+            type: "meteor"
+          });
+        }
+        for (var mi2 = __heroFxParticles.length - 1; mi2 >= 0; mi2--) {
+          var m = __heroFxParticles[mi2];
+          if (m.type !== "meteor") continue;
+          m.age += dt;
+          m.x += m.vx * dt;
+          m.y += m.vy * dt;
+          if (m.age >= m.life || m.y > h + 20) { __heroFxParticles.splice(mi2, 1); continue; }
+          var mu = 1 - m.age / m.life;
+          // trail behind
+          ctxB.globalCompositeOperation = "lighter";
+          var mt = ctxB.createLinearGradient(m.x, m.y - 30, m.x, m.y);
+          mt.addColorStop(0, "rgba(255,80,0,0)");
+          mt.addColorStop(1, "rgba(255,160,40," + (0.55 * mu * fade) + ")");
+          ctxB.fillStyle = mt;
+          ctxB.beginPath();
+          ctxB.moveTo(m.x - 3, m.y);
+          ctxB.lineTo(m.x, m.y - 35);
+          ctxB.lineTo(m.x + 3, m.y);
+          ctxB.fill();
+          ctxB.globalCompositeOperation = "source-over";
+          // meteor head front
+          ctxF.globalCompositeOperation = "lighter";
+          var mg = ctxF.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.r * 2);
+          mg.addColorStop(0, "rgba(255,255,220," + (0.95 * mu * fade) + ")");
+          mg.addColorStop(0.4, "rgba(255,140,30," + (0.7 * mu * fade) + ")");
+          mg.addColorStop(1, "rgba(180,20,0,0)");
+          ctxF.fillStyle = mg;
+          ctxF.beginPath();
+          ctxF.arc(m.x, m.y, m.r * 2, 0, Math.PI * 2);
+          ctxF.fill();
+          ctxF.globalCompositeOperation = "source-over";
+        }
+
+      } else if (__heroFxKind === "crystalbeam") {
+        // Ironworks — Sky Crystal Beam straight ahead
+        var beamX0 = cx + bw * 0.25;
+        var beamY = cy;
+        var beamX1 = w + 10;
+        var pulse = 0.7 + 0.3 * Math.sin(tnow * 10);
+        // Back glow
+        ctxB.globalCompositeOperation = "lighter";
+        var bgb = ctxB.createLinearGradient(beamX0, beamY, beamX1, beamY);
+        bgb.addColorStop(0, "rgba(120, 220, 255," + (0.25 * pulse * fade) + ")");
+        bgb.addColorStop(1, "rgba(40, 120, 255, 0)");
+        ctxB.fillStyle = bgb;
+        ctxB.fillRect(beamX0, beamY - 14, beamX1 - beamX0, 28);
+        ctxB.globalCompositeOperation = "source-over";
+        // Front core beam
+        ctxF.globalCompositeOperation = "lighter";
+        var bgf = ctxF.createLinearGradient(beamX0, beamY, beamX1, beamY);
+        bgf.addColorStop(0, "rgba(220, 250, 255," + (0.95 * pulse * fade) + ")");
+        bgf.addColorStop(0.3, "rgba(100, 200, 255," + (0.7 * pulse * fade) + ")");
+        bgf.addColorStop(1, "rgba(40, 100, 255, 0)");
+        ctxF.fillStyle = bgf;
+        ctxF.fillRect(beamX0, beamY - 4, beamX1 - beamX0, 8);
+        // Crystal shards at muzzle
+        for (var sh = 0; sh < 4; sh++) {
+          var sy = beamY + (sh - 1.5) * 6;
+          ctxF.fillStyle = "rgba(180, 240, 255," + (0.8 * fade) + ")";
+          ctxF.beginPath();
+          ctxF.moveTo(beamX0 - 4, sy);
+          ctxF.lineTo(beamX0 + 10, beamY);
+          ctxF.lineTo(beamX0 - 4, sy + 4);
+          ctxF.fill();
+        }
+        ctxF.globalCompositeOperation = "source-over";
       }
 
       __heroFxRaf = requestAnimationFrame(tick);
@@ -1171,6 +1426,7 @@ function powerPreviewKindFor(key) {
   }
 
   
+  
   function playMenuPowerPreview(optKey) {
     var key = optKey || ((typeof selectedBlimp !== "undefined") ? selectedBlimp : "blimp1");
     var map = {
@@ -1179,7 +1435,11 @@ function powerPreviewKindFor(key) {
       blimp3: "saws",
       blimp4: "steam",
       blimp5: "sunblade",
-      blimp7: "electric"
+      blimp6: "vortex",
+      blimp7: "chain",
+      blimp8: "crystalbeam",
+      blimp12: "rockets",
+      blimp15: "meteors"
     };
     if (map[key]) {
       startHeroPowerFx(map[key]);
@@ -1188,6 +1448,7 @@ function powerPreviewKindFor(key) {
     }
     stopHeroFireAura();
   }
+
 
 
   function bindMenuPowerPreview() {
