@@ -444,8 +444,8 @@
     window.__airborneAirfieldAllowShield = (name === "shield" || name === "combined");
     if (!window.__airborneAirfieldAllowShield) { try { shieldPickup = null; } catch (e) {} };
     try { updateFlightTrace(name); } catch (e) {}
-    window.__airborneAirfieldAllowPowerup = true; // coin-charged power available in training
-    if (!window.__airborneAirfieldAllowPowerup && typeof powerup !== "undefined") powerup = null;
+    window.__airborneAirfieldAllowPowerup = true;
+    try { placeTrainingPowerIcon(); } catch (e) {}
     if (name !== "powerup") ruffPowerOrb = null;
     if (typeof powerup !== "undefined" && name !== "powerup" && name !== "combined") powerup = null;
     try { placeTrainingPowerIcon(); } catch (e) {}

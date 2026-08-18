@@ -329,7 +329,7 @@
     if (typeof bombs !== "undefined") bombs = [];
     if (typeof rockets !== "undefined") rockets = [];
     const sm = document.getElementById("stormMeter");
-    if (sm) {
+    if (sm && !window.__airborneAirfield) {
       sm.style.visibility = "hidden";
       sm.style.display = "none";
       sm.classList.add("trainingHidden");
