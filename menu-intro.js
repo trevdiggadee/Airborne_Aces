@@ -275,9 +275,35 @@ function stopHeroAnimation() {
   }
 }
 
+
+  function resetHeroPreviewSlot() {
+    var wrap = document.querySelector(".heroBlimpWrap");
+    if (wrap) {
+      wrap.classList.remove("hero-small");
+      wrap.style.cssText = "";
+    }
+    ["heroBlimpImgA", "heroBlimpImgB"].forEach(function (id) {
+      var img = document.getElementById(id);
+      if (!img) return;
+      img.style.position = "absolute";
+      img.style.left = "0";
+      img.style.right = "0";
+      img.style.top = "0";
+      img.style.bottom = "0";
+      img.style.width = "100%";
+      img.style.height = "100%";
+      img.style.margin = "0";
+      img.style.padding = "0";
+      img.style.transform = "none";
+      img.style.objectFit = "contain";
+      img.style.objectPosition = "center center";
+    });
+  }
+
 function startHeroAnimation(key) {
   const gen = ++heroAnimGen;
   stopHeroAnimation();
+  try { resetHeroPreviewSlot(); } catch (e) {}
   const [layerA, layerB] = heroBlimpLayers;
   if (!layerA || !layerB) return;
   const anim = (typeof PLACEHOLDER_MODE !== "undefined" && PLACEHOLDER_MODE) ? null : HERO_ANIM[key];
@@ -644,26 +670,7 @@ function selectBlimp(key, el) {
   } catch (e) {}
 
   // Keep menu preview sizes consistent; Little Spy stays smaller
-  const heroWrap = document.querySelector(".heroBlimpWrap");
-  if (heroWrap) {
-    heroWrap.classList.remove("hero-small");
-    // Force identical preview slot for every blimp
-    heroWrap.style.width = "";
-    heroWrap.style.top = "";
-    heroWrap.style.left = "";
-    heroWrap.style.transform = "";
-    heroWrap.style.margin = "";
-  }
-  try {
-    var layers = [document.getElementById("heroBlimpImgA"), document.getElementById("heroBlimpImgB")];
-    layers.forEach(function (img) {
-      if (!img) return;
-      img.style.objectFit = "contain";
-      img.style.objectPosition = "center center";
-      img.style.width = "100%";
-      img.style.height = "100%";
-    });
-  } catch (e) {}
+  try { resetHeroPreviewSlot(); } catch (e) {}
 
 
   document.querySelectorAll(".numBtn").forEach(b => b.classList.remove("active"));

@@ -382,70 +382,48 @@ html, body {
    motion-blurred spin rather than a hard frame-to-frame pop. */
 .heroBlimpWrap {
   position: absolute;
-  top: 23%;
+  top: 22%;
   left: 50%;
-  width: 50.4%;
-  /* Fixed aspect so every ship centers in the same preview slot */
-  aspect-ratio: 1.35 / 1;
+  width: min(52vw, 420px);
+  height: min(38vw, 300px);
   transform: translateX(-50%);
   z-index: 2;
   animation: floatHero 3.2s ease-in-out infinite;
   filter: none;
   pointer-events: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow: visible;
 }
 .heroBlimpWrap.hero-small {
-  /* Same slot as every other blimp */
-  width: 50.4%;
-  top: 23%;
+  top: 22%;
   left: 50%;
-  aspect-ratio: 1.35 / 1;
+  width: min(52vw, 420px);
+  height: min(38vw, 300px);
   transform: translateX(-50%);
 }
-/* Contact shadow lowered toward Take Flight button / platform */
-.heroBlimpWrap::after {
-  display: none;
-  content: none;
-}
-/* Soft edge fade so sprite doesn't look hard-cut against the hangar */
-.heroBlimpWrap::before {
-  display: none;
-  content: none;
-}
-
-.heroBlimpWrap img {
+.heroBlimpWrap img,
+.heroBlimpWrap .heroBlimpLayer {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  transform: none !important;
   display: block;
-  width: 100%;
-  height: 100%;
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  object-position: center center;
-  margin: 0 auto;
 }
-
 .heroBlimpLayer {
-  position: relative;
   z-index: 2;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center center;
   backface-visibility: hidden;
+  opacity: 1;
 }
-
 .heroBlimpLayerB {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center center;
-  opacity: 0;
   z-index: 1;
+  opacity: 0;
   backface-visibility: hidden;
 }
 
@@ -574,7 +552,7 @@ html, body {
 .flyBtn {
   position: absolute;
   top: 53.5%;
-  left: 50%; /* moved left 5% from 55% */
+  left: 50%;
   transform: translate(-50%, -50%);
   padding: 0;
   border: none;
@@ -582,26 +560,25 @@ html, body {
   background: transparent;
   cursor: pointer;
   z-index: 6;
-  width: min(34.1vw, 228px); /* 35% smaller */
+  /* Longer width, shorter height */
+  width: min(48vw, 320px);
+  height: auto;
   line-height: 0;
   -webkit-tap-highlight-color: transparent;
   filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.55));
   transition: filter 0.15s ease, transform 0.12s ease;
 }
 .flyBtn .flyBtnSprite {
-  display: block;
-  width: 100%;
-  height: auto;
-  pointer-events: none;
-  user-select: none;
-  /* was animated sheet; now static PNG */
-  background: none !important;
-  animation: none !important;
+  display: none !important;
 }
 .flyBtn .flyBtnImg {
   display: block;
   width: 100%;
   height: auto;
+  max-height: 9.5vw;
+  min-height: 42px;
+  max-height: min(9.5vw, 64px);
+  object-fit: fill; /* stretch wider / shorter */
   pointer-events: none;
   user-select: none;
   -webkit-user-drag: none;
@@ -891,19 +868,20 @@ html, body {
 
 .numBtn {
   position: absolute;
-  /* Measured against hangar_bg_v2 ornate frames (3×5 grid) */
+  /* Tighter to hangar_bg_v2 frames */
   top: 66.8%;
-  width: 16.8%;
-  height: 12.6%;
+  width: 14.2%;
+  height: 10.4%;
   transform: translate(-50%, -50%);
-  border-radius: 8px;
+  border-radius: 10px;
   border: none;
   background: transparent;
-  padding: 1%;
+  padding: 0;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   z-index: 3;
-  transition: transform 0.1s ease-out, box-shadow 0.15s ease;
+  transition: transform 0.1s ease-out, box-shadow 0.15s ease, filter 0.15s ease;
+  overflow: visible;
 }
 .numBtn:active { transform: translate(-50%, -50%) scale(0.93); }
 
@@ -945,8 +923,15 @@ html, body {
 }
 
 .numBtn.active {
-  box-shadow: 0 0 0 3px rgba(217,122,63,0.65), 0 0 14px 2px rgba(255,200,120,0.5);
-  border-radius: 8px;
+  box-shadow:
+    0 0 0 2px rgba(255, 210, 140, 0.95),
+    0 0 10px 2px rgba(255, 180, 80, 0.65),
+    0 0 22px 4px rgba(255, 150, 40, 0.4);
+  border-radius: 10px;
+  filter: drop-shadow(0 0 6px rgba(255, 190, 90, 0.55));
+}
+.numBtn.active img {
+  filter: drop-shadow(0 0 4px rgba(255, 200, 120, 0.45));
 }
 
 /* LOCKED SLOTS — remaining grid squares, static placeholders */
@@ -2776,7 +2761,7 @@ html, body {
   transform: translateX(-50%);
   z-index: 4;
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: clamp(18px, 5.25vw, 28px); /* +25% */
+  font-size: clamp(22px, 6.2vw, 34px);
   font-weight: bold;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -2791,7 +2776,7 @@ html, body {
   max-width: 80%;
 }
 @media (min-width: 480px) {
-  .heroBlimpName { font-size: 40px; }
+  .heroBlimpName { font-size: 42px; }
 }
 
 /* Power-up icon under the Power Up text in the profile card */
@@ -2847,7 +2832,7 @@ html, body {
   font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
   font-weight: 700;
   letter-spacing: 0.18em;
-  font-size: clamp(18px, 5.25vw, 28px); /* +25% */
+  font-size: clamp(22px, 6.2vw, 34px);
   color: #f0e0b8;
   text-shadow: 0 2px 8px rgba(0,0,0,0.75);
 }
