@@ -701,13 +701,16 @@ function powerPreviewKindFor(key) {
     var c = document.getElementById("heroFireCanvas");
     if (!c) return;
     c.classList.add("active");
-    var rect = c.getBoundingClientRect();
-    var w = Math.max(200, Math.floor(rect.width) || 400);
-    var h = Math.max(150, Math.floor(rect.height) || 300);
-    if (c.width !== w || c.height !== h) {
-      c.width = w;
-      c.height = h;
-    }
+    var wrap = document.querySelector(".heroBlimpWrap");
+    var rect = (wrap || c).getBoundingClientRect();
+    var w = Math.max(280, Math.floor(rect.width * 1.6) || 400);
+    var h = Math.max(220, Math.floor(rect.height * 1.6) || 300);
+    c.width = w;
+    c.height = h;
+    c.style.display = "block";
+    c.style.visibility = "visible";
+    c.style.opacity = "1";
+
     __heroFxKind = kind || "fire";
     __heroFxParticles = [];
     __heroFxLast = performance.now();
@@ -1271,3 +1274,12 @@ window.__airborneEnterGameplay = enterGameplay;
     }
   });
 })();
+
+window.__airborneBindPowerPreview = bindMenuPowerPreview;
+try {
+  document.addEventListener("DOMContentLoaded", function () {
+    setTimeout(bindMenuPowerPreview, 300);
+    setTimeout(bindMenuPowerPreview, 1200);
+  });
+  setTimeout(bindMenuPowerPreview, 500);
+} catch (e) {}

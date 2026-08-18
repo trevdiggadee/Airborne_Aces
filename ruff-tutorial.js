@@ -67,6 +67,30 @@
   };
   let ruffCrystals = [];
   let ruffCoins = [];
+
+  function placeTrainingPowerIcon() {
+    try {
+      var meter = document.getElementById("stormMeter");
+      if (!meter) return;
+      meter.classList.add("trainingPos");
+      meter.classList.remove("trainingHidden");
+      meter.style.display = "flex";
+      meter.style.visibility = "visible";
+      meter.style.opacity = "1";
+      meter.style.pointerEvents = "auto";
+      window.__airborneAirfieldAllowPowerup = true;
+    } catch (e) {}
+  }
+  function clearTrainingPowerIcon() {
+    try {
+      var meter = document.getElementById("stormMeter");
+      if (meter) {
+        meter.classList.remove("trainingPos");
+        meter.classList.remove("trainingHidden");
+      }
+    } catch (e) {}
+  }
+
   const COIN_SCORE = 10;
   let ruffMarkers = [];
   let ruffCombo = 0;
@@ -424,16 +448,7 @@
     if (!window.__airborneAirfieldAllowPowerup && typeof powerup !== "undefined") powerup = null;
     if (name !== "powerup") ruffPowerOrb = null;
     if (typeof powerup !== "undefined" && name !== "powerup" && name !== "combined") powerup = null;
-    const smGate = document.getElementById("stormMeter");
-    if (smGate) {
-      smGate.style.display = "";
-      smGate.style.visibility = "";
-      if (window.__airborneAirfieldAllowPowerup) {
-        smGate.classList.remove("trainingHidden");
-      } else {
-        smGate.classList.add("trainingHidden");
-      }
-    }
+    try { placeTrainingPowerIcon(); } catch (e) {}
     syncStageFlags();
 
     // Clear items ONCE when entering a stage (never every frame mid-flight)
@@ -1690,16 +1705,12 @@
     ruffIntroLineArmed = false;
     ruffScalePulse = 1.2;
     ruffFrame = 0;
-    window.__airborneAirfieldAllowPowerup = false;
+    window.__airborneAirfieldAllowPowerup = true;
     if (typeof powerup !== "undefined") powerup = null;
     if (typeof shieldPickup !== "undefined") shieldPickup = null;
     if (typeof stormCharge === "number") stormCharge = 0;
-    const sm0 = document.getElementById("stormMeter");
-    if (sm0) {
-      sm0.style.display = "";
-      sm0.style.visibility = "";
-      sm0.classList.add("trainingHidden");
-    }
+    try { placeTrainingPowerIcon(); } catch (e) {}
+
     if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay();
     ruffStats = { crystals: 0, coins: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, landingStars: 3 };
     ruffCrystals = [];
@@ -1746,15 +1757,11 @@
     ruffStageT += dt;
     ruffLineT += dt;
     try { tickLessonGate(dt); } catch (e) {}
-    // Keep power icon suppressed until power lesson
-    if (!window.__airborneAirfieldAllowPowerup) {
-      const smx = document.getElementById("stormMeter");
-      if (smx) {
-        smx.style.display = "";
-        smx.style.visibility = "";
-        smx.classList.add("trainingHidden");
-      }
-    }
+    // Keep training power icon visible (center bottom)
+    try {
+      var __sm = document.getElementById("stormMeter");
+      if (__sm && !__sm.classList.contains("trainingPos")) placeTrainingPowerIcon();
+    } catch (e) {}
     // Do NOT force obstacleSpeed or unpause during intro/runway —
     // airfield owns those. Only ensure cruise speed once airborne lessons run.
     const afPh = window.__airborneAirfieldPhase;

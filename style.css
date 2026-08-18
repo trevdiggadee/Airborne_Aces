@@ -597,19 +597,23 @@ html, body {
 
 .heroFireCanvas {
   position: absolute;
-  inset: -30%;
-  width: 160%;
-  height: 160%;
-  left: -30%;
-  top: -30%;
+  inset: -35%;
+  width: 170%;
+  height: 170%;
+  left: -35%;
+  top: -35%;
   pointer-events: none;
-  z-index: 0;
+  z-index: 6;
   display: none;
-  mix-blend-mode: screen;
+  mix-blend-mode: normal;
+  opacity: 1;
 }
 .heroFireCanvas.active {
-  display: block;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
+
 
 .heroBlimpWrap .heroBlimpLayer {
   position: relative;
@@ -1509,7 +1513,10 @@ html, body {
   }
 
   /* STORM POWER-UP — bottom-left corner, icon only, no box */
-  #stormMeter.trainingPos {
+  #stormMeter.trainingHidden {
+  /* suppressed only when not forced visible for training */
+}
+#stormMeter.trainingPos {
     left: 50% !important;
     right: auto !important;
     bottom: calc(env(safe-area-inset-bottom, 0px) + 18px) !important;
@@ -3297,6 +3304,9 @@ html, body {
   text-align: center;
 }
 
+#stormMeter.trainingHidden {
+  /* suppressed only when not forced visible for training */
+}
 #stormMeter.trainingPos {
     left: 50% !important;
     right: auto !important;
@@ -3648,6 +3658,9 @@ html, body {
   to { transform: rotate(360deg); }
 }
 
+#stormMeter.trainingHidden {
+  /* suppressed only when not forced visible for training */
+}
 #stormMeter.trainingPos {
     left: 50% !important;
     right: auto !important;

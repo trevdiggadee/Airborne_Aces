@@ -418,7 +418,7 @@
     window.__airborneAirfieldBlockBoss = true;
 
     // Power icon off unless power-up lesson
-    if (!window.__airborneAirfieldAllowPowerup) {
+    if (false && !window.__airborneAirfieldAllowPowerup) {
       const smHide = document.getElementById("stormMeter");
       if (smHide) {
         smHide.style.display = "none";
