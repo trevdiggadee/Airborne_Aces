@@ -560,9 +560,9 @@ html, body {
   background: transparent;
   cursor: pointer;
   z-index: 6;
-  /* Longer width, shorter height */
-  width: min(48vw, 320px);
+  width: auto;
   height: auto;
+  max-width: min(70vw, 520px);
   line-height: 0;
   -webkit-tap-highlight-color: transparent;
   filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.55));
@@ -575,10 +575,8 @@ html, body {
   display: block;
   width: 100%;
   height: auto;
-  max-height: 9.5vw;
-  min-height: 42px;
-  max-height: min(9.5vw, 64px);
-  object-fit: fill; /* stretch wider / shorter */
+  max-width: min(70vw, 520px);
+  object-fit: contain;
   pointer-events: none;
   user-select: none;
   -webkit-user-drag: none;
@@ -598,21 +596,21 @@ html, body {
 }
 
 .heroFireCanvas {
-  display: none !important;
   position: absolute;
-  inset: -28%;
-  width: 156%;
-  height: 156%;
-  left: -28%;
-  top: -28%;
+  inset: -30%;
+  width: 160%;
+  height: 160%;
+  left: -30%;
+  top: -30%;
   pointer-events: none;
-  z-index: 0; /* behind blimp sprite so fire wraps the ship */
+  z-index: 0;
   display: none;
   mix-blend-mode: screen;
 }
 .heroFireCanvas.active {
-  display: none !important;
+  display: block;
 }
+
 .heroBlimpWrap .heroBlimpLayer {
   position: relative;
   z-index: 2;

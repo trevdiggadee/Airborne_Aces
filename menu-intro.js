@@ -620,7 +620,56 @@ function setEffect(effect) {
   var __heroFireFlames = [];
   var __heroFireUntil = 0;
 
+  /* removed */
+
+
+
+  /* removed */
+
+
+
+function powerPreviewKindFor(key) {
+    return POWER_PREVIEW_KIND[key] || "storm";
+  }
+
+  /* removed */
+
+
+
+  /* removed */
+
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bindMenuPowerPreview);
+  } else {
+    bindMenuPowerPreview();
+  }
+  setTimeout(bindMenuPowerPreview, 500);
+
+
+  var __heroFireRaf = 0;
+  var __heroFireSheet = null;
+  var __heroFireFrame = 0;
+  var __heroFireFrameT = 0;
+  var __heroFireEmbers = [];
+  var __heroFireLast = 0;
+  var __heroFireUntil = 0;
+
+  function loadHeroFireSheet() {
+    if (__heroFireSheet && __heroFireSheet.complete) return __heroFireSheet;
+    __heroFireSheet = new Image();
+    __heroFireSheet.crossOrigin = "anonymous";
+    __heroFireSheet.src = "fireball_sheet.webp";
+    return __heroFireSheet;
+  }
+
   function stopHeroFireAura() {
+    if (__heroFireRaf) {
+      cancelAnimationFrame(__heroFireRaf);
+      __heroFireRaf = 0;
+    }
+    __heroFireUntil = 0;
+    __heroFireEmbers = [];
     var c = document.getElementById("heroFireCanvas");
     if (c) {
       c.classList.remove("active");
@@ -631,31 +680,166 @@ function setEffect(effect) {
     }
   }
 
-
   function startHeroFireAura() {
-    return; // menu power FX disabled
-  }
+    var c = document.getElementById("heroFireCanvas");
+    if (!c) return;
+    if ((typeof selectedBlimp !== "undefined" ? selectedBlimp : "blimp1") !== "blimp1") return;
+    c.classList.add("active");
+    var rect = c.getBoundingClientRect();
+    var w = Math.max(200, Math.floor(rect.width) || 400);
+    var h = Math.max(150, Math.floor(rect.height) || 300);
+    if (c.width !== w || c.height !== h) {
+      c.width = w;
+      c.height = h;
+    }
+    loadHeroFireSheet();
+    __heroFireEmbers = [];
+    __heroFireFrame = 0;
+    __heroFireFrameT = 0;
+    __heroFireLast = performance.now();
+    __heroFireUntil = performance.now() + 5000;
+    if (__heroFireRaf) cancelAnimationFrame(__heroFireRaf);
 
+    function tick(now) {
+      if ((typeof selectedBlimp !== "undefined" ? selectedBlimp : "blimp1") !== "blimp1") {
+        stopHeroFireAura();
+        return;
+      }
+      if (now >= __heroFireUntil) {
+        stopHeroFireAura();
+        return;
+      }
+      var dt = Math.min(0.05, (now - __heroFireLast) / 1000);
+      __heroFireLast = now;
+      __heroFireFrameT += dt;
+      while (__heroFireFrameT >= 1 / 14) {
+        __heroFireFrameT -= 1 / 14;
+        __heroFireFrame = (__heroFireFrame + 1) % 36;
+      }
+      var lifeLeft = Math.max(0, (__heroFireUntil - now) / 5000);
+      var fade = lifeLeft < 0.18 ? lifeLeft / 0.18 : 1;
 
-function powerPreviewKindFor(key) {
-    return POWER_PREVIEW_KIND[key] || "storm";
+      // Embers
+      if (Math.random() < 0.6) {
+        var ang = Math.random() * Math.PI * 2;
+        var rad = Math.min(w, h) * (0.16 + Math.random() * 0.22);
+        __heroFireEmbers.push({
+          x: w * 0.5 + Math.cos(ang) * rad,
+          y: h * 0.52 + Math.sin(ang) * rad * 0.7,
+          vx: (Math.random() - 0.5) * 40,
+          vy: -30 - Math.random() * 50,
+          life: 0.35 + Math.random() * 0.3,
+          age: 0,
+          r: 2 + Math.random() * 4
+        });
+      }
+      for (var ei = __heroFireEmbers.length - 1; ei >= 0; ei--) {
+        var e = __heroFireEmbers[ei];
+        e.age += dt;
+        e.x += e.vx * dt;
+        e.y += e.vy * dt;
+        e.vy += 35 * dt;
+        if (e.age >= e.life) __heroFireEmbers.splice(ei, 1);
+      }
+      if (__heroFireEmbers.length > 40) __heroFireEmbers.splice(0, __heroFireEmbers.length - 40);
+
+      var ctx2 = c.getContext("2d");
+      ctx2.clearRect(0, 0, w, h);
+      var cx = w * 0.5;
+      var cy = h * 0.52;
+      var tnow = now * 0.001;
+      var sheet = __heroFireSheet;
+
+      // Soft glow
+      var g0 = ctx2.createRadialGradient(cx, cy, Math.min(w, h) * 0.1, cx, cy, Math.min(w, h) * 0.45);
+      g0.addColorStop(0, "rgba(255,160,40," + (0.2 * fade) + ")");
+      g0.addColorStop(0.55, "rgba(255,80,10," + (0.1 * fade) + ")");
+      g0.addColorStop(1, "rgba(180,20,0,0)");
+      ctx2.fillStyle = g0;
+      ctx2.beginPath();
+      ctx2.arc(cx, cy, Math.min(w, h) * 0.45, 0, Math.PI * 2);
+      ctx2.fill();
+
+      // Orbiting fireball-sheet orbs (training style)
+      var nOrb = 8;
+      for (var i = 0; i < nOrb; i++) {
+        var a = tnow * 2.2 + i * (Math.PI * 2 / nOrb);
+        var ox = cx + Math.cos(a) * Math.min(w, h) * 0.3;
+        var oy = cy + Math.sin(a * 1.2) * Math.min(w, h) * 0.24;
+        var sz = Math.min(w, h) * (0.15 + 0.04 * Math.sin(tnow * 5 + i));
+        ctx2.save();
+        ctx2.globalAlpha = 0.92 * fade;
+        ctx2.globalCompositeOperation = "lighter";
+        if (sheet && sheet.complete && sheet.naturalWidth) {
+          var cols = 6, rows = 6;
+          var fw = sheet.naturalWidth / cols;
+          var fh = sheet.naturalHeight / rows;
+          var fr = (__heroFireFrame + i * 3) % 36;
+          var col = fr % cols;
+          var row = Math.floor(fr / cols) % rows;
+          ctx2.drawImage(sheet, col * fw, row * fh, fw, fh, ox - sz / 2, oy - sz / 2, sz, sz);
+        } else {
+          var gr = ctx2.createRadialGradient(ox, oy, 0, ox, oy, sz * 0.55);
+          gr.addColorStop(0, "rgba(255,240,120,0.9)");
+          gr.addColorStop(0.4, "rgba(255,100,20,0.55)");
+          gr.addColorStop(1, "rgba(255,40,0,0)");
+          ctx2.fillStyle = gr;
+          ctx2.beginPath();
+          ctx2.arc(ox, oy, sz * 0.55, 0, Math.PI * 2);
+          ctx2.fill();
+        }
+        ctx2.restore();
+      }
+
+      // Embers
+      ctx2.globalCompositeOperation = "lighter";
+      for (var j = 0; j < __heroFireEmbers.length; j++) {
+        var p = __heroFireEmbers[j];
+        var u = 1 - p.age / p.life;
+        if (u <= 0) continue;
+        ctx2.globalAlpha = Math.max(0, u * 0.95 * fade);
+        var eg = ctx2.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+        eg.addColorStop(0, "rgba(255,230,120,1)");
+        eg.addColorStop(0.5, "rgba(255,100,20,0.7)");
+        eg.addColorStop(1, "rgba(255,40,0,0)");
+        ctx2.fillStyle = eg;
+        ctx2.beginPath();
+        ctx2.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx2.fill();
+      }
+      ctx2.globalAlpha = 1;
+      ctx2.globalCompositeOperation = "source-over";
+
+      __heroFireRaf = requestAnimationFrame(tick);
+    }
+    __heroFireRaf = requestAnimationFrame(tick);
   }
 
   function playMenuPowerPreview(optKey) {
-    return; // menu power FX disabled
+    var key = optKey || ((typeof selectedBlimp !== "undefined") ? selectedBlimp : "blimp1");
+    if (key === "blimp1") {
+      try { startHeroFireAura(); } catch (e) {}
+      try { if (typeof sfxPowerup === "function") sfxPowerup(); } catch (e) {}
+      return;
+    }
+    try { stopHeroFireAura(); } catch (e) {}
   }
-
 
   function bindMenuPowerPreview() {
-    return; // menu power FX disabled
+    var icon = document.getElementById("bpPowerIcon");
+    if (!icon) return;
+    icon.style.pointerEvents = "auto";
+    icon.style.cursor = "pointer";
+    icon.title = "Preview Fire Power";
+    if (!icon.dataset.previewBound) {
+      icon.dataset.previewBound = "1";
+      icon.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        playMenuPowerPreview();
+      });
+    }
   }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", bindMenuPowerPreview);
-  } else {
-    bindMenuPowerPreview();
-  }
-  setTimeout(bindMenuPowerPreview, 500);
 
 function selectBlimp(key, el) {
   selectedBlimp = key;
