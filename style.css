@@ -218,51 +218,65 @@ html, body {
   border: 0 !important;
   outline: none !important;
   background: transparent !important;
-  background-color: transparent !important;
   box-shadow: none !important;
   -webkit-tap-highlight-color: transparent !important;
   appearance: none !important;
-  -webkit-appearance: none !important;
   cursor: pointer;
   width: min(78vw, 420px);
   max-width: 92%;
   line-height: 0;
-  overflow: hidden;
+  overflow: visible;
   filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.55));
-  transition: filter 0.15s ease;
 }
-.enterHangarBtn::before,
-#splashEnterBtn.enterHangarBtn::before {
-  content: "" !important;
-  display: block !important;
+/* Shine layer masked to badge silhouette (not a rectangle) */
+.enterHangarBtn .enterHangarShine,
+#splashEnterBtn.enterHangarBtn .enterHangarShine {
   position: absolute;
-  top: 0;
-  left: -120%;
-  width: 55%;
-  height: 100%;
+  inset: 0;
   z-index: 2;
   pointer-events: none;
+  overflow: hidden;
+  border-radius: 0;
+  -webkit-mask-image: url("enter_hangar_btn.png");
+  mask-image: url("enter_hangar_btn.png");
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+.enterHangarBtn .enterHangarShine::before,
+#splashEnterBtn.enterHangarBtn .enterHangarShine::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -130%;
+  width: 50%;
+  height: 100%;
   background: linear-gradient(
     100deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.0) 30%,
-    rgba(255, 255, 255, 0.35) 48%,
-    rgba(255, 245, 200, 0.55) 50%,
-    rgba(255, 255, 255, 0.25) 52%,
-    rgba(255, 255, 255, 0.0) 70%,
+    rgba(255, 255, 255, 0) 35%,
+    rgba(255, 255, 255, 0.4) 48%,
+    rgba(255, 245, 200, 0.65) 50%,
+    rgba(255, 255, 255, 0.3) 52%,
+    rgba(255, 255, 255, 0) 65%,
     transparent 100%
   );
   animation: enterHangarShine 3.6s ease-in-out infinite;
 }
+@keyframes enterHangarShine {
+  0% { left: -130%; }
+  42% { left: 140%; }
+  100% { left: 140%; }
+}
+.enterHangarBtn::before,
 .enterHangarBtn::after,
+#splashEnterBtn.enterHangarBtn::before,
 #splashEnterBtn.enterHangarBtn::after {
   content: none !important;
   display: none !important;
-}
-@keyframes enterHangarShine {
-  0% { left: -120%; }
-  40% { left: 130%; }
-  100% { left: 130%; }
 }
 .enterHangarBtn:focus,
 .enterHangarBtn:focus-visible,
@@ -286,12 +300,10 @@ html, body {
   height: auto;
   pointer-events: none;
   user-select: none;
-  -webkit-user-drag: none;
-  background: transparent !important;
-  border: 0 !important;
   position: relative;
   z-index: 1;
 }
+
 
 
 
@@ -544,75 +556,51 @@ html, body {
 .flyBtn {
   position: absolute;
   top: 53.5%;
-  left: 55%; /* shifted right 5% */
+  left: 55%;
   transform: translate(-50%, -50%);
   padding: 0;
   border: none;
+  outline: none;
   background: transparent;
   cursor: pointer;
   z-index: 6;
-  width: min(52.5vw, 350px); /* +25% size */
-  aspect-ratio: 1.905 / 1;
+  width: min(52.5vw, 350px);
   line-height: 0;
-  filter:
-    drop-shadow(0 0 8px rgba(255, 190, 80, 0.4))
-    drop-shadow(0 4px 12px rgba(0, 0, 0, 0.45));
-  transition: transform 0.15s ease, filter 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.55));
+  transition: filter 0.15s ease, transform 0.12s ease;
 }
 .flyBtn .flyBtnSprite {
   display: block;
   width: 100%;
-  height: 100%;
-  background-image: url("take_flight_sheet.webp");
-  background-repeat: no-repeat;
-  background-size: 500% 500%; /* 5 cols × 5 rows */
-  background-position: 0% 0%;
-  animation: takeFlightAnim 2s steps(1) infinite;
+  height: auto;
   pointer-events: none;
+  user-select: none;
+  /* was animated sheet; now static PNG */
+  background: none !important;
+  animation: none !important;
 }
-/* 5×5 grid: col = i % 5, row = floor(i / 5); position = col*25% , row*25% */
-@keyframes takeFlightAnim {
-  0% { background-position: 0% 0%; }
-  4% { background-position: 25% 0%; }
-  8% { background-position: 50% 0%; }
-  12% { background-position: 75% 0%; }
-  16% { background-position: 100% 0%; }
-  20% { background-position: 0% 25%; }
-  24% { background-position: 25% 25%; }
-  28% { background-position: 50% 25%; }
-  32% { background-position: 75% 25%; }
-  36% { background-position: 100% 25%; }
-  40% { background-position: 0% 50%; }
-  44% { background-position: 25% 50%; }
-  48% { background-position: 50% 50%; }
-  52% { background-position: 75% 50%; }
-  56% { background-position: 100% 50%; }
-  60% { background-position: 0% 75%; }
-  64% { background-position: 25% 75%; }
-  68% { background-position: 50% 75%; }
-  72% { background-position: 75% 75%; }
-  76% { background-position: 100% 75%; }
-  80% { background-position: 0% 100%; }
-  84% { background-position: 25% 100%; }
-  88% { background-position: 50% 100%; }
-  92% { background-position: 75% 100%; }
-  96%, 100% { background-position: 100% 100%; }
+.flyBtn .flyBtnImg {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 .flyBtn:hover {
-  filter:
-    drop-shadow(0 0 14px rgba(255, 200, 90, 0.65))
-    drop-shadow(0 6px 16px rgba(0, 0, 0, 0.5))
-    brightness(1.08);
-  transform: translate(-50%, -50%) scale(1.04);
+  filter: drop-shadow(0 7px 14px rgba(0, 0, 0, 0.6));
+  transform: translate(-50%, -50%) scale(1.02);
 }
 .flyBtn:active {
-  transform: translate(-50%, -50%) scale(0.97);
-  filter:
-    drop-shadow(0 0 6px rgba(255, 190, 80, 0.35))
-    drop-shadow(0 3px 8px rgba(0, 0, 0, 0.45))
-    brightness(0.95);
+  transform: translate(-50%, -50%) scale(0.98);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
 }
-
+.flyBtn:focus,
+.flyBtn:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
 
 .heroFireCanvas {
   display: none !important;
@@ -2765,7 +2753,7 @@ html, body {
 /* Name under animated hangar blimp */
 .heroBlimpName {
   position: absolute;
-  top: 13.5% !important; /* forced — blimp-profile was overriding */
+  top: 45%; /* forced — blimp-profile was overriding */
   left: 50%;
   transform: translateX(-50%);
   z-index: 4;

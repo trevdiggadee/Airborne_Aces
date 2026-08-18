@@ -353,3 +353,18 @@
   letter-spacing: 1px;
   z-index: 20;
 }
+
+.otg-enter-btn { overflow: visible; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.55)); }
+.otg-enter-btn .enterHangarShine {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  -webkit-mask-image: url("enter_hangar_btn.png");
+  mask-image: url("enter_hangar_btn.png");
+  -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+}
+.otg-enter-btn .enterHangarShine::before {
+  content: ""; position: absolute; top: 0; left: -130%; width: 50%; height: 100%;
+  background: linear-gradient(100deg, transparent 0%, rgba(255,255,255,0) 35%, rgba(255,255,255,0.4) 48%, rgba(255,245,200,0.65) 50%, rgba(255,255,255,0.3) 52%, rgba(255,255,255,0) 65%, transparent 100%);
+  animation: enterHangarShine 3.6s ease-in-out infinite;
+}
+.otg-enter-btn::before, .otg-enter-btn::after { content: none !important; display: none !important; }
