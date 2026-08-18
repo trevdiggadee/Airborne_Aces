@@ -28,7 +28,7 @@ const SHIP_STATS = {
   blimp1: {
     name: "Zeppelin Ace", mk: "Mk I", cls: "Scout Airship", call: "ACE-1",
     stats: { Speed: 4, Lift: 4, Durability: 3, Maneuverability: 3, Boost: 4 },
-    ability: { icon: "🔥", name: "Fire Power", desc: "Training fireball power — burns obstacles and clears a path around the ship." },
+    ability: { icon: "⚙️", name: "Twin Saws", desc: "Two blue glowing saw blades rotate around the ship at 45° and shred nearby obstacles." },
     upgrade: "Next Rank", xp: 320, xpMax: 500, locked: false
   },
   blimp2: {
@@ -655,21 +655,36 @@ function powerPreviewKindFor(key) {
   var __heroFireLast = 0;
   var __heroFireUntil = 0;
 
-  function loadHeroFireSheet() {
-    if (__heroFireSheet && __heroFireSheet.complete) return __heroFireSheet;
-    __heroFireSheet = new Image();
-    __heroFireSheet.crossOrigin = "anonymous";
-    __heroFireSheet.src = "fireball_sheet.webp";
-    return __heroFireSheet;
-  }
+  /* rm loadHeroFireSheet */
+
+
+  /* rm stopHeroFireAura */
+
+
+  /* rm startHeroFireAura */
+
+
+  /* rm playMenuPowerPreview */
+
+
+  /* rm bindMenuPowerPreview */
+
+
+
+  var __heroFxRaf = 0;
+  var __heroFxLast = 0;
+  var __heroFxUntil = 0;
+  var __heroFxKind = "";
+  var __heroFxParticles = [];
 
   function stopHeroFireAura() {
-    if (__heroFireRaf) {
-      cancelAnimationFrame(__heroFireRaf);
-      __heroFireRaf = 0;
+    if (__heroFxRaf) {
+      cancelAnimationFrame(__heroFxRaf);
+      __heroFxRaf = 0;
     }
-    __heroFireUntil = 0;
-    __heroFireEmbers = [];
+    __heroFxUntil = 0;
+    __heroFxKind = "";
+    __heroFxParticles = [];
     var c = document.getElementById("heroFireCanvas");
     if (c) {
       c.classList.remove("active");
@@ -679,11 +694,12 @@ function powerPreviewKindFor(key) {
       } catch (e) {}
     }
   }
+  // alias
+  function stopHeroPowerFx() { stopHeroFireAura(); }
 
-  function startHeroFireAura() {
+  function startHeroPowerFx(kind) {
     var c = document.getElementById("heroFireCanvas");
     if (!c) return;
-    if ((typeof selectedBlimp !== "undefined" ? selectedBlimp : "blimp1") !== "blimp1") return;
     c.classList.add("active");
     var rect = c.getBoundingClientRect();
     var w = Math.max(200, Math.floor(rect.width) || 400);
@@ -692,137 +708,250 @@ function powerPreviewKindFor(key) {
       c.width = w;
       c.height = h;
     }
-    loadHeroFireSheet();
-    __heroFireEmbers = [];
-    __heroFireFrame = 0;
-    __heroFireFrameT = 0;
-    __heroFireLast = performance.now();
-    __heroFireUntil = performance.now() + 5000;
-    if (__heroFireRaf) cancelAnimationFrame(__heroFireRaf);
+    __heroFxKind = kind || "fire";
+    __heroFxParticles = [];
+    __heroFxLast = performance.now();
+    __heroFxUntil = performance.now() + 5000;
+    if (__heroFxRaf) cancelAnimationFrame(__heroFxRaf);
 
     function tick(now) {
-      if ((typeof selectedBlimp !== "undefined" ? selectedBlimp : "blimp1") !== "blimp1") {
+      var key = (typeof selectedBlimp !== "undefined") ? selectedBlimp : "blimp1";
+      var need = __heroFxKind === "fire" ? "blimp1" : (__heroFxKind === "shockwave" ? "blimp2" : (__heroFxKind === "saws" ? "blimp3" : key));
+      if (key !== need) {
         stopHeroFireAura();
         return;
       }
-      if (now >= __heroFireUntil) {
+      if (now >= __heroFxUntil) {
         stopHeroFireAura();
         return;
       }
-      var dt = Math.min(0.05, (now - __heroFireLast) / 1000);
-      __heroFireLast = now;
-      __heroFireFrameT += dt;
-      while (__heroFireFrameT >= 1 / 14) {
-        __heroFireFrameT -= 1 / 14;
-        __heroFireFrame = (__heroFireFrame + 1) % 36;
-      }
-      var lifeLeft = Math.max(0, (__heroFireUntil - now) / 5000);
-      var fade = lifeLeft < 0.18 ? lifeLeft / 0.18 : 1;
-
-      // Embers
-      if (Math.random() < 0.6) {
-        var ang = Math.random() * Math.PI * 2;
-        var rad = Math.min(w, h) * (0.16 + Math.random() * 0.22);
-        __heroFireEmbers.push({
-          x: w * 0.5 + Math.cos(ang) * rad,
-          y: h * 0.52 + Math.sin(ang) * rad * 0.7,
-          vx: (Math.random() - 0.5) * 40,
-          vy: -30 - Math.random() * 50,
-          life: 0.35 + Math.random() * 0.3,
-          age: 0,
-          r: 2 + Math.random() * 4
-        });
-      }
-      for (var ei = __heroFireEmbers.length - 1; ei >= 0; ei--) {
-        var e = __heroFireEmbers[ei];
-        e.age += dt;
-        e.x += e.vx * dt;
-        e.y += e.vy * dt;
-        e.vy += 35 * dt;
-        if (e.age >= e.life) __heroFireEmbers.splice(ei, 1);
-      }
-      if (__heroFireEmbers.length > 40) __heroFireEmbers.splice(0, __heroFireEmbers.length - 40);
-
+      var dt = Math.min(0.05, (now - __heroFxLast) / 1000);
+      __heroFxLast = now;
+      var fade = Math.max(0, (__heroFxUntil - now) / 5000);
+      fade = fade < 0.2 ? fade / 0.2 : 1;
       var ctx2 = c.getContext("2d");
       ctx2.clearRect(0, 0, w, h);
       var cx = w * 0.5;
       var cy = h * 0.52;
       var tnow = now * 0.001;
-      var sheet = __heroFireSheet;
 
-      // Soft glow
-      var g0 = ctx2.createRadialGradient(cx, cy, Math.min(w, h) * 0.1, cx, cy, Math.min(w, h) * 0.45);
-      g0.addColorStop(0, "rgba(255,160,40," + (0.2 * fade) + ")");
-      g0.addColorStop(0.55, "rgba(255,80,10," + (0.1 * fade) + ")");
-      g0.addColorStop(1, "rgba(180,20,0,0)");
-      ctx2.fillStyle = g0;
-      ctx2.beginPath();
-      ctx2.arc(cx, cy, Math.min(w, h) * 0.45, 0, Math.PI * 2);
-      ctx2.fill();
-
-      // Orbiting fireball-sheet orbs (training style)
-      var nOrb = 8;
-      for (var i = 0; i < nOrb; i++) {
-        var a = tnow * 2.2 + i * (Math.PI * 2 / nOrb);
-        var ox = cx + Math.cos(a) * Math.min(w, h) * 0.3;
-        var oy = cy + Math.sin(a * 1.2) * Math.min(w, h) * 0.24;
-        var sz = Math.min(w, h) * (0.15 + 0.04 * Math.sin(tnow * 5 + i));
-        ctx2.save();
-        ctx2.globalAlpha = 0.92 * fade;
-        ctx2.globalCompositeOperation = "lighter";
-        if (sheet && sheet.complete && sheet.naturalWidth) {
-          var cols = 6, rows = 6;
-          var fw = sheet.naturalWidth / cols;
-          var fh = sheet.naturalHeight / rows;
-          var fr = (__heroFireFrame + i * 3) % 36;
-          var col = fr % cols;
-          var row = Math.floor(fr / cols) % rows;
-          ctx2.drawImage(sheet, col * fw, row * fh, fw, fh, ox - sz / 2, oy - sz / 2, sz, sz);
-        } else {
-          var gr = ctx2.createRadialGradient(ox, oy, 0, ox, oy, sz * 0.55);
-          gr.addColorStop(0, "rgba(255,240,120,0.9)");
-          gr.addColorStop(0.4, "rgba(255,100,20,0.55)");
-          gr.addColorStop(1, "rgba(255,40,0,0)");
-          ctx2.fillStyle = gr;
-          ctx2.beginPath();
-          ctx2.arc(ox, oy, sz * 0.55, 0, Math.PI * 2);
-          ctx2.fill();
+      if (__heroFxKind === "fire") {
+        // Procedural JS flames only (no sprite icons)
+        if (Math.random() < 0.75) {
+          var ang = Math.random() * Math.PI * 2;
+          var rad = Math.min(w, h) * (0.1 + Math.random() * 0.22);
+          __heroFxParticles.push({
+            x: cx + Math.cos(ang) * rad,
+            y: cy + Math.sin(ang) * rad * 0.65 + Math.min(w, h) * 0.02,
+            vx: (Math.random() - 0.5) * 30,
+            vy: -55 - Math.random() * 70,
+            life: 0.35 + Math.random() * 0.4,
+            age: 0,
+            w: 7 + Math.random() * 11,
+            h: 16 + Math.random() * 24,
+            type: "flame"
+          });
         }
-        ctx2.restore();
-      }
+        if (Math.random() < 0.55) {
+          __heroFxParticles.push({
+            x: cx + (Math.random() - 0.5) * Math.min(w, h) * 0.35,
+            y: cy + (Math.random() - 0.5) * Math.min(w, h) * 0.22,
+            vx: (Math.random() - 0.5) * 40,
+            vy: -40 - Math.random() * 55,
+            life: 0.3 + Math.random() * 0.3,
+            age: 0,
+            r: 1.5 + Math.random() * 3.5,
+            type: "ember"
+          });
+        }
+        for (var i = __heroFxParticles.length - 1; i >= 0; i--) {
+          var p = __heroFxParticles[i];
+          p.age += dt;
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          if (p.type === "flame") { p.vy -= 18 * dt; p.w *= (1 - 0.35 * dt); }
+          else p.vy += 30 * dt;
+          if (p.age >= p.life) __heroFxParticles.splice(i, 1);
+        }
+        if (__heroFxParticles.length > 50) __heroFxParticles.splice(0, __heroFxParticles.length - 50);
 
-      // Embers
-      ctx2.globalCompositeOperation = "lighter";
-      for (var j = 0; j < __heroFireEmbers.length; j++) {
-        var p = __heroFireEmbers[j];
-        var u = 1 - p.age / p.life;
-        if (u <= 0) continue;
-        ctx2.globalAlpha = Math.max(0, u * 0.95 * fade);
-        var eg = ctx2.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        eg.addColorStop(0, "rgba(255,230,120,1)");
-        eg.addColorStop(0.5, "rgba(255,100,20,0.7)");
-        eg.addColorStop(1, "rgba(255,40,0,0)");
-        ctx2.fillStyle = eg;
+        var g0 = ctx2.createRadialGradient(cx, cy, Math.min(w, h) * 0.08, cx, cy, Math.min(w, h) * 0.42);
+        g0.addColorStop(0, "rgba(255,140,30," + (0.2 * fade) + ")");
+        g0.addColorStop(0.5, "rgba(255,60,0," + (0.1 * fade) + ")");
+        g0.addColorStop(1, "rgba(120,10,0,0)");
+        ctx2.fillStyle = g0;
         ctx2.beginPath();
-        ctx2.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx2.arc(cx, cy, Math.min(w, h) * 0.42, 0, Math.PI * 2);
         ctx2.fill();
-      }
-      ctx2.globalAlpha = 1;
-      ctx2.globalCompositeOperation = "source-over";
 
-      __heroFireRaf = requestAnimationFrame(tick);
+        ctx2.globalCompositeOperation = "lighter";
+        for (var j = 0; j < __heroFxParticles.length; j++) {
+          var fl = __heroFxParticles[j];
+          var u = 1 - fl.age / fl.life;
+          if (u <= 0) continue;
+          if (fl.type === "flame") {
+            ctx2.save();
+            ctx2.translate(fl.x, fl.y);
+            ctx2.globalAlpha = u * u * 0.9 * fade;
+            var grd = ctx2.createRadialGradient(0, 0, 0, 0, 0, fl.h);
+            grd.addColorStop(0, "rgba(255,245,180,0.95)");
+            grd.addColorStop(0.25, "rgba(255,180,40,0.8)");
+            grd.addColorStop(0.55, "rgba(255,70,10,0.45)");
+            grd.addColorStop(1, "rgba(180,20,0,0)");
+            ctx2.fillStyle = grd;
+            ctx2.beginPath();
+            ctx2.moveTo(0, -fl.h * 0.85);
+            ctx2.bezierCurveTo(fl.w * 0.7, -fl.h * 0.3, fl.w * 0.55, fl.h * 0.2, 0, fl.h * 0.35);
+            ctx2.bezierCurveTo(-fl.w * 0.55, fl.h * 0.2, -fl.w * 0.7, -fl.h * 0.3, 0, -fl.h * 0.85);
+            ctx2.fill();
+            ctx2.restore();
+          } else {
+            ctx2.globalAlpha = Math.max(0, u * 0.95 * fade);
+            var eg = ctx2.createRadialGradient(fl.x, fl.y, 0, fl.x, fl.y, fl.r);
+            eg.addColorStop(0, "rgba(255,230,120,1)");
+            eg.addColorStop(0.5, "rgba(255,100,20,0.7)");
+            eg.addColorStop(1, "rgba(255,40,0,0)");
+            ctx2.fillStyle = eg;
+            ctx2.beginPath();
+            ctx2.arc(fl.x, fl.y, fl.r, 0, Math.PI * 2);
+            ctx2.fill();
+          }
+        }
+        ctx2.globalAlpha = 1;
+        ctx2.globalCompositeOperation = "source-over";
+      } else if (__heroFxKind === "shockwave") {
+        // Deco Liner — Sonic Blimp shockwave rings
+        var elapsed = (5000 - (__heroFxUntil - now)) / 1000;
+        for (var ring = 0; ring < 4; ring++) {
+          var phase = elapsed * 1.1 - ring * 0.35;
+          if (phase < 0) continue;
+          var rr = (phase % 1.4) / 1.4;
+          var radR = Math.min(w, h) * (0.12 + rr * 0.48);
+          var alphaR = (1 - rr) * 0.75 * fade;
+          ctx2.beginPath();
+          ctx2.arc(cx, cy, radR, 0, Math.PI * 2);
+          ctx2.strokeStyle = "rgba(180, 230, 255," + alphaR + ")";
+          ctx2.lineWidth = 4 + (1 - rr) * 8;
+          ctx2.shadowColor = "rgba(120, 200, 255, 0.8)";
+          ctx2.shadowBlur = 12;
+          ctx2.stroke();
+          ctx2.shadowBlur = 0;
+          // inner pressure disc
+          if (rr < 0.35) {
+            var gd = ctx2.createRadialGradient(cx, cy, 0, cx, cy, radR);
+            gd.addColorStop(0, "rgba(220,245,255," + (0.25 * (1 - rr / 0.35) * fade) + ")");
+            gd.addColorStop(1, "rgba(100,180,255,0)");
+            ctx2.fillStyle = gd;
+            ctx2.beginPath();
+            ctx2.arc(cx, cy, radR, 0, Math.PI * 2);
+            ctx2.fill();
+          }
+        }
+        // floating pressure particles
+        if (Math.random() < 0.4) {
+          var a2 = Math.random() * Math.PI * 2;
+          __heroFxParticles.push({
+            x: cx, y: cy, ang: a2, dist: Math.min(w, h) * 0.1,
+            life: 0.6, age: 0, type: "sw"
+          });
+        }
+        for (var si = __heroFxParticles.length - 1; si >= 0; si--) {
+          var sp = __heroFxParticles[si];
+          sp.age += dt;
+          sp.dist += Math.min(w, h) * 0.55 * dt;
+          if (sp.age >= sp.life) __heroFxParticles.splice(si, 1);
+          else {
+            var px = cx + Math.cos(sp.ang) * sp.dist;
+            var py = cy + Math.sin(sp.ang) * sp.dist * 0.85;
+            var ua = 1 - sp.age / sp.life;
+            ctx2.globalAlpha = ua * 0.7 * fade;
+            ctx2.fillStyle = "rgba(200,240,255,0.9)";
+            ctx2.beginPath();
+            ctx2.arc(px, py, 2 + ua * 3, 0, Math.PI * 2);
+            ctx2.fill();
+          }
+        }
+        ctx2.globalAlpha = 1;
+      } else if (__heroFxKind === "saws") {
+        // Aero Slicer — two blue glowing saw blades at 45°
+        var spin = tnow * 4.5;
+        var baseAng = Math.PI / 4; // 45 degrees
+        for (var s = 0; s < 2; s++) {
+          var orbit = spin + s * Math.PI;
+          var ox = cx + Math.cos(orbit) * Math.min(w, h) * 0.28;
+          var oy = cy + Math.sin(orbit) * Math.min(w, h) * 0.22;
+          var bladeR = Math.min(w, h) * 0.14;
+          ctx2.save();
+          ctx2.translate(ox, oy);
+          ctx2.rotate(baseAng + spin * 2.5 + s * Math.PI * 0.5);
+          ctx2.globalAlpha = 0.95 * fade;
+          // glow
+          var sg = ctx2.createRadialGradient(0, 0, bladeR * 0.2, 0, 0, bladeR * 1.2);
+          sg.addColorStop(0, "rgba(160,220,255,0.85)");
+          sg.addColorStop(0.5, "rgba(60,140,255,0.35)");
+          sg.addColorStop(1, "rgba(20,80,200,0)");
+          ctx2.fillStyle = sg;
+          ctx2.beginPath();
+          ctx2.arc(0, 0, bladeR * 1.15, 0, Math.PI * 2);
+          ctx2.fill();
+          // disc
+          ctx2.fillStyle = "rgba(40, 90, 180, 0.9)";
+          ctx2.beginPath();
+          ctx2.arc(0, 0, bladeR * 0.55, 0, Math.PI * 2);
+          ctx2.fill();
+          ctx2.strokeStyle = "rgba(180, 230, 255, 0.95)";
+          ctx2.lineWidth = 2;
+          ctx2.stroke();
+          // teeth
+          ctx2.fillStyle = "rgba(140, 210, 255, 0.95)";
+          for (var t = 0; t < 12; t++) {
+            var ta = (t / 12) * Math.PI * 2;
+            ctx2.save();
+            ctx2.rotate(ta);
+            ctx2.beginPath();
+            ctx2.moveTo(bladeR * 0.45, -bladeR * 0.08);
+            ctx2.lineTo(bladeR * 0.95, 0);
+            ctx2.lineTo(bladeR * 0.45, bladeR * 0.08);
+            ctx2.closePath();
+            ctx2.fill();
+            ctx2.restore();
+          }
+          // hub
+          ctx2.fillStyle = "rgba(220, 245, 255, 0.95)";
+          ctx2.beginPath();
+          ctx2.arc(0, 0, bladeR * 0.18, 0, Math.PI * 2);
+          ctx2.fill();
+          ctx2.restore();
+        }
+      }
+
+      __heroFxRaf = requestAnimationFrame(tick);
     }
-    __heroFireRaf = requestAnimationFrame(tick);
+    __heroFxRaf = requestAnimationFrame(tick);
+  }
+
+  function startHeroFireAura() {
+    startHeroPowerFx("fire");
   }
 
   function playMenuPowerPreview(optKey) {
     var key = optKey || ((typeof selectedBlimp !== "undefined") ? selectedBlimp : "blimp1");
     if (key === "blimp1") {
-      try { startHeroFireAura(); } catch (e) {}
+      startHeroPowerFx("fire");
       try { if (typeof sfxPowerup === "function") sfxPowerup(); } catch (e) {}
       return;
     }
-    try { stopHeroFireAura(); } catch (e) {}
+    if (key === "blimp2") {
+      startHeroPowerFx("shockwave");
+      try { if (typeof sfxPowerup === "function") sfxPowerup(); } catch (e) {}
+      return;
+    }
+    if (key === "blimp3") {
+      startHeroPowerFx("saws");
+      try { if (typeof sfxPowerup === "function") sfxPowerup(); } catch (e) {}
+      return;
+    }
+    stopHeroFireAura();
   }
 
   function bindMenuPowerPreview() {
@@ -830,7 +959,7 @@ function powerPreviewKindFor(key) {
     if (!icon) return;
     icon.style.pointerEvents = "auto";
     icon.style.cursor = "pointer";
-    icon.title = "Preview Fire Power";
+    icon.title = "Preview power-up";
     if (!icon.dataset.previewBound) {
       icon.dataset.previewBound = "1";
       icon.addEventListener("click", function (e) {
@@ -840,6 +969,7 @@ function powerPreviewKindFor(key) {
       });
     }
   }
+
 
 function selectBlimp(key, el) {
   selectedBlimp = key;

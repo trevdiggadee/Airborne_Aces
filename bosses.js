@@ -208,8 +208,20 @@
   // landing in the same frame as a streak bonus — still credits every notch it passed, so the
   // tank can never stall a few points short of full.
   function addStormChargeForScore(currentScore) {
-    // Training: no storm charge until the power-up lesson
-    if (window.__airborneAirfield && !window.__airborneAirfieldAllowPowerup) return;
+    // Training: charge power from coins (25 coins = full activation)
+    if (window.__airborneAirfield) {
+      if (!window.__airborneAirfieldAllowPowerup) return;
+      const coins = window.__airborneCollectCoins || 0;
+      // Map coins directly: 25 coins => 100% charge
+      const target = Math.min(STORM_MAX, Math.floor((coins / 25) * STORM_MAX));
+      if (target > stormCharge) {
+        stormCharge = target;
+        updateStormMeterDisplay(true);
+      }
+  window.addStormChargeForScore = addStormChargeForScore;
+
+      return;
+    }
     const crossedTotal = Math.floor(currentScore / STORM_CHARGE_PER_MILESTONE);
     if (crossedTotal <= stormMilestoneCount) return;
     const newNotches = crossedTotal - stormMilestoneCount;
@@ -249,6 +261,19 @@
 
     stormActive = true;
     stormCharge = 0;
+    if (window.__airborneAirfield) {
+      // Spend 25 coins for activation
+      window.__airborneCollectCoins = Math.max(0, (window.__airborneCollectCoins || 0) - 25);
+      try {
+        const coinEl = document.getElementById("collectPowerPct");
+        if (coinEl) coinEl.textContent = String(window.__airborneCollectCoins || 0);
+      } catch (e) {}
+      try {
+        if (typeof ruffStats !== "undefined" && ruffStats) {
+          ruffStats.coins = Math.max(0, (ruffStats.coins || 0) - 25);
+        }
+      } catch (e) {}
+    }
     updateStormMeterDisplay();
     pirateBlastParticles = [];
     stormSwarm = [];

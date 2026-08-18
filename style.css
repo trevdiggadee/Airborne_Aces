@@ -1509,6 +1509,22 @@ html, body {
   }
 
   /* STORM POWER-UP — bottom-left corner, icon only, no box */
+  #stormMeter.trainingPos {
+    left: 50% !important;
+    right: auto !important;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 18px) !important;
+    transform: translateX(-50%);
+    width: 88px !important;
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto;
+    z-index: 40;
+  }
+  #stormMeter.trainingPos #stormIcon {
+    width: 100%;
+    opacity: 1;
+  }
   #stormMeter {
     position: fixed;
     bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
@@ -3281,7 +3297,23 @@ html, body {
   text-align: center;
 }
 
-#stormMeter {
+#stormMeter.trainingPos {
+    left: 50% !important;
+    right: auto !important;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 18px) !important;
+    transform: translateX(-50%);
+    width: 88px !important;
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto;
+    z-index: 40;
+  }
+  #stormMeter.trainingPos #stormIcon {
+    width: 100%;
+    opacity: 1;
+  }
+  #stormMeter {
   transition: opacity 0.45s ease, transform 0.45s ease;
 }
 #stormMeter.trainingHidden {
@@ -3616,7 +3648,23 @@ html, body {
   to { transform: rotate(360deg); }
 }
 
-#stormMeter {
+#stormMeter.trainingPos {
+    left: 50% !important;
+    right: auto !important;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 18px) !important;
+    transform: translateX(-50%);
+    width: 88px !important;
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto;
+    z-index: 40;
+  }
+  #stormMeter.trainingPos #stormIcon {
+    width: 100%;
+    opacity: 1;
+  }
+  #stormMeter {
   opacity: 0 !important;
   pointer-events: none !important;
   width: 0 !important;

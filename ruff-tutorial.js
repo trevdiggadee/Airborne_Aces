@@ -34,6 +34,8 @@
 
   // ---------- State ----------
   let ruffActive = false;
+    try { clearTrainingPowerIcon(); } catch (e) {}
+
   let ruffStage = "idle"; // see STAGES
   let ruffStageT = 0;
   let ruffLineIdx = 0;
@@ -418,7 +420,7 @@
     window.__airborneAirfieldAllowShield = (name === "shield" || name === "combined");
     if (!window.__airborneAirfieldAllowShield) { try { shieldPickup = null; } catch (e) {} };
     try { updateFlightTrace(name); } catch (e) {}
-    window.__airborneAirfieldAllowPowerup = (name === "powerup" || name === "combined");
+    window.__airborneAirfieldAllowPowerup = true; // coin-charged power available in training
     if (!window.__airborneAirfieldAllowPowerup && typeof powerup !== "undefined") powerup = null;
     if (name !== "powerup") ruffPowerOrb = null;
     if (typeof powerup !== "undefined" && name !== "powerup" && name !== "combined") powerup = null;
@@ -1196,6 +1198,10 @@
         ruffStats.coins = (ruffStats.coins || 0) + 1;
         window.__airborneCollectCoins = (window.__airborneCollectCoins || 0) + 1;
         try {
+          if (typeof window.addStormChargeForScore === "function") window.addStormChargeForScore(typeof score === "number" ? score : 0);
+        } catch (e) {}
+
+        try {
           if (typeof updateCollectDock === "function") updateCollectDock();
           else {
             const coinEl = document.getElementById("collectPowerPct");
@@ -1643,6 +1649,7 @@
     window.__airborneRuffRequestLand = false;
     window.__airborneRuffLandArmed = false;
     // Always end airfield cleanly — never leave land/score running
+    try { clearTrainingPowerIcon(); } catch (e) {}
     if (typeof endAirfieldTrainingToMap === "function") {
       endAirfieldTrainingToMap();
     } else if (window.endAirfieldTrainingToMap) {
@@ -1670,6 +1677,8 @@
   // ---------- Public API ----------
   function beginRuffTraining() {
     ruffActive = true;
+    try { placeTrainingPowerIcon(); } catch (e) {}
+
     window.__airborneRuffActive = true;
     window.__airborneRuffStage = "intro";
     console.log("[R.U.F.F.] beginRuffTraining active=", ruffActive);
