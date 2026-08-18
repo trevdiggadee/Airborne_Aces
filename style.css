@@ -586,6 +586,26 @@ html, body {
 }
 
 
+.heroFireCanvas {
+  position: absolute;
+  inset: -28%;
+  width: 156%;
+  height: 156%;
+  left: -28%;
+  top: -28%;
+  pointer-events: none;
+  z-index: 0; /* behind blimp sprite so fire wraps the ship */
+  display: none;
+  mix-blend-mode: screen;
+}
+.heroFireCanvas.active {
+  display: block;
+}
+.heroBlimpWrap .heroBlimpLayer {
+  position: relative;
+  z-index: 2;
+}
+
 /* Menu power-up preview overlay on hero blimp — unique per ship */
 .heroPowerPreview {
   position: absolute;
