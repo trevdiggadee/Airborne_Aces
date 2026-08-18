@@ -227,15 +227,42 @@ html, body {
   width: min(78vw, 420px);
   max-width: 92%;
   line-height: 0;
-  filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.5));
-  transition: none !important;
+  overflow: hidden;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.55));
+  transition: filter 0.15s ease;
 }
 .enterHangarBtn::before,
+#splashEnterBtn.enterHangarBtn::before {
+  content: "" !important;
+  display: block !important;
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 55%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.0) 30%,
+    rgba(255, 255, 255, 0.35) 48%,
+    rgba(255, 245, 200, 0.55) 50%,
+    rgba(255, 255, 255, 0.25) 52%,
+    rgba(255, 255, 255, 0.0) 70%,
+    transparent 100%
+  );
+  animation: enterHangarShine 3.6s ease-in-out infinite;
+}
 .enterHangarBtn::after,
-#splashEnterBtn.enterHangarBtn::before,
 #splashEnterBtn.enterHangarBtn::after {
   content: none !important;
   display: none !important;
+}
+@keyframes enterHangarShine {
+  0% { left: -120%; }
+  40% { left: 130%; }
+  100% { left: 130%; }
 }
 .enterHangarBtn:focus,
 .enterHangarBtn:focus-visible,
@@ -249,9 +276,8 @@ html, body {
   border: 0 !important;
   box-shadow: none !important;
   background: transparent !important;
-  background-color: transparent !important;
   transform: translateX(-50%) !important;
-  filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.55));
 }
 .enterHangarBtn .enterHangarImg,
 #splashEnterBtn.enterHangarBtn .enterHangarImg {
@@ -263,8 +289,10 @@ html, body {
   -webkit-user-drag: none;
   background: transparent !important;
   border: 0 !important;
-  box-shadow: none !important;
+  position: relative;
+  z-index: 1;
 }
+
 
 
 
@@ -587,6 +615,7 @@ html, body {
 
 
 .heroFireCanvas {
+  display: none !important;
   position: absolute;
   inset: -28%;
   width: 156%;
@@ -599,7 +628,7 @@ html, body {
   mix-blend-mode: screen;
 }
 .heroFireCanvas.active {
-  display: block;
+  display: none !important;
 }
 .heroBlimpWrap .heroBlimpLayer {
   position: relative;
@@ -608,6 +637,7 @@ html, body {
 
 /* Menu power-up preview overlay on hero blimp — unique per ship */
 .heroPowerPreview {
+  display: none !important;
   position: absolute;
   inset: -22%;
   pointer-events: none;

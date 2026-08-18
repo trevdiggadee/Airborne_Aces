@@ -595,207 +595,35 @@ function setEffect(effect) {
   var __heroFireUntil = 0;
 
   function stopHeroFireAura() {
-    if (__heroFireRaf) {
-      cancelAnimationFrame(__heroFireRaf);
-      __heroFireRaf = 0;
-    }
-    __heroFireUntil = 0;
-    __heroFireEmbers = [];
-    __heroFireFlames = [];
     var c = document.getElementById("heroFireCanvas");
     if (c) {
       c.classList.remove("active");
-      var ctx2 = c.getContext("2d");
-      if (ctx2) ctx2.clearRect(0, 0, c.width, c.height);
+      try {
+        var ctx2 = c.getContext("2d");
+        if (ctx2) ctx2.clearRect(0, 0, c.width, c.height);
+      } catch (e) {}
     }
   }
+
 
   function startHeroFireAura() {
-    var c = document.getElementById("heroFireCanvas");
-    if (!c) return;
-    c.classList.add("active");
-    var rect = c.getBoundingClientRect();
-    var w = Math.max(200, Math.floor(rect.width) || 400);
-    var h = Math.max(150, Math.floor(rect.height) || 300);
-    if (c.width !== w || c.height !== h) {
-      c.width = w;
-      c.height = h;
-    }
-    __heroFireEmbers = [];
-    __heroFireFlames = [];
-    __heroFireLast = performance.now();
-    __heroFireUntil = performance.now() + 5000; // 5 seconds only
-    if (__heroFireRaf) cancelAnimationFrame(__heroFireRaf);
-
-    function tick(now) {
-      if ((typeof selectedBlimp !== "undefined" ? selectedBlimp : "blimp1") !== "blimp1") {
-        stopHeroFireAura();
-        return;
-      }
-      if (now >= __heroFireUntil) {
-        stopHeroFireAura();
-        return;
-      }
-      var dt = Math.min(0.05, (now - __heroFireLast) / 1000);
-      __heroFireLast = now;
-      var ctx2 = c.getContext("2d");
-      ctx2.clearRect(0, 0, w, h);
-      var cx = w * 0.5;
-      var cy = h * 0.52;
-      var tnow = now * 0.001;
-      var lifeLeft = Math.max(0, (__heroFireUntil - now) / 5000);
-      var fade = lifeLeft < 0.2 ? lifeLeft / 0.2 : 1;
-
-      // Soft warm glow under flames (no icon/sheet)
-      var g0 = ctx2.createRadialGradient(cx, cy, Math.min(w, h) * 0.08, cx, cy, Math.min(w, h) * 0.4);
-      g0.addColorStop(0, "rgba(255,140,30," + (0.18 * fade) + ")");
-      g0.addColorStop(0.5, "rgba(255,60,0," + (0.1 * fade) + ")");
-      g0.addColorStop(1, "rgba(120,10,0,0)");
-      ctx2.fillStyle = g0;
-      ctx2.beginPath();
-      ctx2.arc(cx, cy, Math.min(w, h) * 0.4, 0, Math.PI * 2);
-      ctx2.fill();
-
-      // Spawn upward flame tongues around hull
-      if (Math.random() < 0.7) {
-        var ang = Math.random() * Math.PI * 2;
-        var rad = Math.min(w, h) * (0.12 + Math.random() * 0.2);
-        __heroFireFlames.push({
-          x: cx + Math.cos(ang) * rad,
-          y: cy + Math.sin(ang) * rad * 0.65 + Math.min(w, h) * 0.04,
-          vx: (Math.random() - 0.5) * 25,
-          vy: -50 - Math.random() * 70,
-          life: 0.35 + Math.random() * 0.4,
-          age: 0,
-          w: 6 + Math.random() * 10,
-          h: 14 + Math.random() * 22
-        });
-      }
-      if (Math.random() < 0.5) {
-        __heroFireEmbers.push({
-          x: cx + (Math.random() - 0.5) * Math.min(w, h) * 0.35,
-          y: cy + (Math.random() - 0.5) * Math.min(w, h) * 0.25,
-          vx: (Math.random() - 0.5) * 40,
-          vy: -40 - Math.random() * 60,
-          life: 0.3 + Math.random() * 0.35,
-          age: 0,
-          r: 1.5 + Math.random() * 3.5
-        });
-      }
-
-      for (var fi = __heroFireFlames.length - 1; fi >= 0; fi--) {
-        var f = __heroFireFlames[fi];
-        f.age += dt;
-        f.x += f.vx * dt;
-        f.y += f.vy * dt;
-        f.vy -= 20 * dt;
-        f.w *= (1 - 0.4 * dt);
-        if (f.age >= f.life) __heroFireFlames.splice(fi, 1);
-      }
-      for (var ei = __heroFireEmbers.length - 1; ei >= 0; ei--) {
-        var e = __heroFireEmbers[ei];
-        e.age += dt;
-        e.x += e.vx * dt;
-        e.y += e.vy * dt;
-        e.vy += 30 * dt;
-        if (e.age >= e.life) __heroFireEmbers.splice(ei, 1);
-      }
-      if (__heroFireFlames.length > 28) __heroFireFlames.splice(0, __heroFireFlames.length - 28);
-      if (__heroFireEmbers.length > 32) __heroFireEmbers.splice(0, __heroFireEmbers.length - 32);
-
-      // Draw flame tongues (teardrop shapes)
-      ctx2.globalCompositeOperation = "lighter";
-      for (var j = 0; j < __heroFireFlames.length; j++) {
-        var fl = __heroFireFlames[j];
-        var u = 1 - fl.age / fl.life;
-        if (u <= 0) continue;
-        var alpha = u * u * 0.85 * fade;
-        ctx2.save();
-        ctx2.translate(fl.x, fl.y);
-        ctx2.globalAlpha = alpha;
-        var grd = ctx2.createRadialGradient(0, 0, 0, 0, 0, fl.h);
-        grd.addColorStop(0, "rgba(255,245,180,0.95)");
-        grd.addColorStop(0.25, "rgba(255,180,40,0.8)");
-        grd.addColorStop(0.55, "rgba(255,70,10,0.45)");
-        grd.addColorStop(1, "rgba(180,20,0,0)");
-        ctx2.fillStyle = grd;
-        ctx2.beginPath();
-        ctx2.moveTo(0, -fl.h * 0.85);
-        ctx2.bezierCurveTo(fl.w * 0.7, -fl.h * 0.3, fl.w * 0.55, fl.h * 0.2, 0, fl.h * 0.35);
-        ctx2.bezierCurveTo(-fl.w * 0.55, fl.h * 0.2, -fl.w * 0.7, -fl.h * 0.3, 0, -fl.h * 0.85);
-        ctx2.fill();
-        ctx2.restore();
-      }
-
-      // Embers
-      for (var k = 0; k < __heroFireEmbers.length; k++) {
-        var p = __heroFireEmbers[k];
-        var uu = 1 - p.age / p.life;
-        if (uu <= 0) continue;
-        ctx2.globalAlpha = Math.max(0, uu * 0.9 * fade);
-        var eg = ctx2.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        eg.addColorStop(0, "rgba(255,230,120,1)");
-        eg.addColorStop(0.5, "rgba(255,100,20,0.7)");
-        eg.addColorStop(1, "rgba(255,40,0,0)");
-        ctx2.fillStyle = eg;
-        ctx2.beginPath();
-        ctx2.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx2.fill();
-      }
-      ctx2.globalAlpha = 1;
-      ctx2.globalCompositeOperation = "source-over";
-
-      __heroFireRaf = requestAnimationFrame(tick);
-    }
-    __heroFireRaf = requestAnimationFrame(tick);
+    return; // menu power FX disabled
   }
+
 
 function powerPreviewKindFor(key) {
     return POWER_PREVIEW_KIND[key] || "storm";
   }
 
   function playMenuPowerPreview(optKey) {
-    const key = optKey || ((typeof selectedBlimp !== "undefined") ? selectedBlimp : "blimp1");
-    // Zeppelin Ace: flames only when profile power icon is pressed (5s)
-    if (key === "blimp1") {
-      try { startHeroFireAura(); } catch (e) {}
-      const el = document.getElementById("heroPowerPreview");
-      if (el) el.classList.remove("active");
-      try { if (typeof sfxPowerup === "function") sfxPowerup(); } catch (e) {}
-      return;
-    }
-    try { stopHeroFireAura(); } catch (e) {}
-    const el = document.getElementById("heroPowerPreview");
-    if (!el) return;
-    const kind = powerPreviewKindFor(key);
-    el.className = "heroPowerPreview active " + kind;
-    el.querySelectorAll(".hpp-burst, .hpp-flame, .hpp-ring, .hpp-bolt, .hpp-spark").forEach(function (node) {
-      node.style.animation = "none";
-      void node.offsetWidth;
-      node.style.animation = "";
-    });
-    try { if (typeof sfxPowerup === "function") sfxPowerup(); } catch (e) {}
-    clearTimeout(window.__menuPowerPreviewT);
-    window.__menuPowerPreviewT = setTimeout(function () {
-      el.classList.remove("active");
-    }, 1700);
+    return; // menu power FX disabled
   }
 
+
   function bindMenuPowerPreview() {
-    const icon = document.getElementById("bpPowerIcon");
-    if (!icon) return;
-    icon.style.pointerEvents = "auto";
-    icon.style.cursor = "pointer";
-    icon.title = "Preview power-up";
-    if (!icon.dataset.previewBound) {
-      icon.dataset.previewBound = "1";
-      icon.addEventListener("click", function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        playMenuPowerPreview();
-      });
-    }
+    return; // menu power FX disabled
   }
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", bindMenuPowerPreview);
   } else {

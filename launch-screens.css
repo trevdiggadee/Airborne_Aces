@@ -287,10 +287,31 @@
   cursor: pointer;
   width: min(78vw, 400px);
   line-height: 0;
-  filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.5));
-  transition: none !important;
+  overflow: hidden;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.55));
 }
-.otg-enter-btn::before,
+.otg-enter-btn::before {
+  content: "" !important;
+  display: block !important;
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 55%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.0) 30%,
+    rgba(255, 255, 255, 0.35) 48%,
+    rgba(255, 245, 200, 0.55) 50%,
+    rgba(255, 255, 255, 0.25) 52%,
+    rgba(255, 255, 255, 0.0) 70%,
+    transparent 100%
+  );
+  animation: enterHangarShine 3.6s ease-in-out infinite;
+}
 .otg-enter-btn::after {
   content: none !important;
   display: none !important;
@@ -303,18 +324,23 @@
   border: 0 !important;
   box-shadow: none !important;
   background: transparent !important;
-  background-color: transparent !important;
   transform: none !important;
-  filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.55));
 }
 .otg-enter-btn .enterHangarImg {
   display: block;
   width: 100%;
   height: auto;
   pointer-events: none;
-  background: transparent !important;
+  position: relative;
+  z-index: 1;
 }
 
+@keyframes enterHangarShine {
+  0% { left: -120%; }
+  40% { left: 130%; }
+  100% { left: 130%; }
+}
 
 .otg-footer {
   display: none !important; /* removed under Enter Hangar */
