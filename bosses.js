@@ -278,6 +278,7 @@
 
     stormActive = true;
     stormCharge = 0;
+    if (window.__airborneAirfield) window.__airborneTrainingPowerUsed = true;
     if (window.__airborneAirfield) {
       // Spend 25 coins for activation
       window.__airborneCollectCoins = Math.max(0, (window.__airborneCollectCoins || 0) - 25);

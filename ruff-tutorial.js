@@ -493,6 +493,15 @@
     } catch (e) {}
     syncStageFlags();
 
+    // Always surface first Ruff line for this stage (dialogue visibility fix)
+    try {
+      if (ruffLines && ruffLines.length && name !== "report") {
+        showRadio(ruffLines[0], name === "intro" ? 3.5 : 3.0);
+        ruffLineIdx = 0;
+        ruffLineT = 0;
+      }
+    } catch (e) {}
+
     // Clear items ONCE when entering a stage (never every frame mid-flight)
     if (name === "altitude" || name === "crystals" || name === "powerup") {
       if (typeof obstacles !== "undefined") obstacles = [];
@@ -506,6 +515,7 @@
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.75; // denser obstacles
     } else if (name === "boss1") {
+      try { spawnTrainingBgBalloons(); } catch (e) {}
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
@@ -517,6 +527,8 @@
       try { spawnTrainingBgBalloons(); } catch (e) {}
       // Boss spawned once from stage update only (avoids double spawn)
     } else if (name === "airship") {
+      try { spawnTrainingBgBalloons(); } catch (e) {}
+
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
@@ -584,13 +596,17 @@
       if (typeof obstacles !== "undefined") obstacles = [];
       ruffWaitingAvoid = true;
     } else if (name === "powerup") {
-      if (ruffLines.length) showRadio(ruffLines[0], 2.8);
+      if (ruffLines.length) showRadio(ruffLines[0], 3.2);
       window.__airborneAirfieldAllowPowerup = true;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       if (typeof powerup !== "undefined") powerup = null;
       ruffPowerOrb = null;
-      // Do NOT auto-fill storm — fireball is the training power-up (avoids storm screen dim)
+      window.__airborneFirePickup = null;
+      window.__airborneTrainingPowerUsed = false;
+      window.__airborneTrainingPowerWait = 0;
+      // Coins charge the meter — start empty, spawn lots of coins
       if (typeof stormCharge === "number") stormCharge = 0;
+      try { spawnTrainingCoins(16); } catch (e) {}
       if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay(false);
     } else if (name === "rings") {
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
@@ -1926,8 +1942,6 @@
           nextStage(); // → takeoff
         } else if (ruffStage === "altitude" && ruffMarkers.length === 0) {
           nextStage();
-        } else if (ruffStage === "powerup") {
-          nextStage();
         } else if (ruffStage === "combined" && ruffStageT > 22) {
           nextStage(); // → landing
         }
@@ -2017,37 +2031,38 @@
     } else if (ruffStage === "powerup") {
       ruffCrystals = [];
       window.__airborneAirfieldAllowPowerup = true;
-      if (!window.__airborneFireSpawned) {
-        window.__airborneFireSpawned = true;
-        try {
-          if (typeof window.__airborneSpawnFirePickup === "function") {
-            window.__airborneSpawnFirePickup();
-          }
-        } catch (e) {}
-      }
-      const sm = document.getElementById("stormMeter");
-      if (sm) {
-        sm.style.display = "";
-        sm.style.visibility = "";
-        sm.classList.remove("trainingHidden");
-      }
-      // Fill meter so player can activate power
-      if (typeof stormCharge === "number" && typeof STORM_MAX === "number" && !stormActive) {
-        stormCharge = STORM_MAX;
-        if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay();
-      }
-      // After a beat (or once storm is active), send birds/obstacles to destroy
-      if ((typeof stormActive !== "undefined" && stormActive) || ruffStageT > 3.5) {
+      // NO floating fire pickup — meter is charged by coins only
+      window.__airborneFirePickup = null;
+      try { placeTrainingPowerIcon(); } catch (e) {}
+      // Keep coins flowing so player can reach 25
+      try {
+        if ((ruffCoins || []).length < 8) spawnTrainingCoins(10);
+      } catch (e) {}
+      // Charge meter from coins (25 coins = full)
+      try {
+        if (typeof window.addStormChargeForScore === "function") {
+          window.addStormChargeForScore(typeof score === "number" ? score : 0);
+        }
+      } catch (e) {}
+      // Once charged (or power already used), spawn obstacles to blast
+      var coins = window.__airborneCollectCoins || 0;
+      var charged = (typeof stormCharge === "number" && typeof STORM_MAX === "number" && stormCharge >= STORM_MAX);
+      if (charged || window.__airborneTrainingPowerUsed) {
         window.__airborneAirfieldObstacles = true;
-        if (typeof spawnInterval !== "undefined") spawnInterval = 1.15;
+        if (typeof spawnInterval !== "undefined") spawnInterval = 0.9;
       }
-      if (ruffStageT > 12) {
-        window.__airborneAirfieldObstacles = false;
-        if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      // Detect activation
+      if (typeof stormActive !== "undefined" && stormActive) {
+        window.__airborneTrainingPowerUsed = true;
       }
-      if (!ruffLessonPendingNext && ((typeof stormActive !== "undefined" && stormActive && ruffStageT > 5) || ruffStageT > 18)) {
-        window.__airborneAirfieldObstacles = false;
-        requestNextStage();
+      // Advance only after power was activated, then wait 5 seconds
+      if (window.__airborneTrainingPowerUsed) {
+        window.__airborneTrainingPowerWait = (window.__airborneTrainingPowerWait || 0) + dt;
+        if (!ruffLessonPendingNext && window.__airborneTrainingPowerWait >= 5.0) {
+          window.__airborneAirfieldObstacles = false;
+          if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+          requestNextStage();
+        }
       }
     } else if (ruffStage === "rings") {
       ruffCrystals = [];

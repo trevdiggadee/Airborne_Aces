@@ -260,7 +260,8 @@
     if (game && mapMode === "start") game.style.display = "none";
 
     if (els.title) {
-      els.title.textContent = mapMode === "between" ? "COURSE PLOTTED" : "CHART YOUR COURSE";
+      els.title.textContent = "";
+      els.title.style.display = "none";
     }
     if (els.hint) {
       const cur = MAP_LEVELS[mapCurrent];

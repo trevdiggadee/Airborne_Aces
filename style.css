@@ -4164,3 +4164,18 @@ body:not(.game-playing) #startOverlay {
 #worldMapScreen[style*="display:flex"] {
   display: flex !important;
 }
+
+/* Hide map course title */
+#worldMapTitle, .wm-title {
+  display: none !important;
+  visibility: hidden !important;
+}
+/* Ensure Ruff radio can show when .visible */
+#ruffRadio.visible {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+  pointer-events: none;
+  z-index: 60 !important;
+  transform: none !important;
+}
