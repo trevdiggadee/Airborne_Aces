@@ -122,11 +122,11 @@
     "intro",
     "takeoff",
     "altitude",
-    "crystals",
     "obstacles",
+    "rings",
+    "crystals",
     "shield",
     "powerup",
-    "rings",
     "airship",
     "boss1",
     "combined",
@@ -473,7 +473,7 @@
       if (ft) { ft.style.display = "none"; ft.style.visibility = "hidden"; }
     } catch (e) {}
     try {
-      var stages = ["intro","altitude","crystals","obstacles","shield","powerup","rings","airship","boss1","combined","landing"];
+      var stages = ["intro","altitude","obstacles","rings","crystals","shield","powerup","airship","boss1","combined","landing"];
       var si = stages.indexOf(name);
       if (si < 0) si = 0;
       if (typeof window.updateUnifiedProgress === "function") window.updateUnifiedProgress(((si + 1) / stages.length) * 100);
@@ -486,7 +486,7 @@
       if (ft) { ft.style.display = "none"; ft.style.visibility = "hidden"; }
     } catch (e) {}
     try {
-      var stages = ["intro","altitude","crystals","obstacles","shield","powerup","rings","airship","boss1","combined","landing"];
+      var stages = ["intro","altitude","obstacles","rings","crystals","shield","powerup","airship","boss1","combined","landing"];
       var si = stages.indexOf(name);
       if (si < 0) si = 0;
       if (typeof window.updateUnifiedProgress === "function") window.updateUnifiedProgress(((si + 1) / stages.length) * 100);
@@ -504,7 +504,7 @@
       ruffCrystals = [];
       window.__airborneAirfieldObstacles = true;
       window.__airborneAirfieldRings = false;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 1.35;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 0.75; // denser obstacles
     } else if (name === "boss1") {
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = false;
@@ -533,7 +533,8 @@
       ruffBossDark = 0;
       window.__airborneAirfieldRings = true;
       window.__airborneAirfieldObstacles = true;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 1.55;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 0.85; // denser combined
+      try { spawnTrainingCoins(12); } catch (e) {}
     }
 
     if (name === "intro") {
@@ -572,14 +573,14 @@
       spawnAltitudeMarkers();
     } else if (name === "crystals") {
       if (ruffLines.length) showRadio(ruffLines[0], 3.0);
-      spawnCrystals(5);
-      spawnTrainingCoins(6);
-      ruffWaitingCollect = 3;
+      spawnCrystals(10);
+      spawnTrainingCoins(18);
+      ruffWaitingCollect = 5;
     } else if (name === "obstacles") {
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
       window.__airborneAirfieldObstacles = true;
       window.__airborneAirfieldRings = false;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 1.15;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 0.7; // denser obstacles
       if (typeof obstacles !== "undefined") obstacles = [];
       ruffWaitingAvoid = true;
     } else if (name === "powerup") {
@@ -1778,7 +1779,7 @@
       if (ft) { ft.style.display = "none"; ft.style.visibility = "hidden"; }
     } catch (e) {}
     try {
-      var stages = ["intro","altitude","crystals","obstacles","shield","powerup","rings","airship","boss1","combined","landing"];
+      var stages = ["intro","altitude","obstacles","rings","crystals","shield","powerup","airship","boss1","combined","landing"];
       var si = stages.indexOf(name);
       if (si < 0) si = 0;
       if (typeof window.updateUnifiedProgress === "function") window.updateUnifiedProgress(((si + 1) / stages.length) * 100);
@@ -1805,7 +1806,7 @@
       if (ft) { ft.style.display = "none"; ft.style.visibility = "hidden"; }
     } catch (e) {}
     try {
-      var stages = ["intro","altitude","crystals","obstacles","shield","powerup","rings","airship","boss1","combined","landing"];
+      var stages = ["intro","altitude","obstacles","rings","crystals","shield","powerup","airship","boss1","combined","landing"];
       var si = stages.indexOf(name);
       if (si < 0) si = 0;
       if (typeof window.updateUnifiedProgress === "function") window.updateUnifiedProgress(((si + 1) / stages.length) * 100);
@@ -1966,8 +1967,8 @@
       updateCrystals(dt);
       updateTrainingCoins(dt);
       if (!ruffLessonPendingNext) {
-        if (ruffStats.crystals < 3 && ruffCrystals.length < 2) spawnCrystals(3);
-        if (ruffCoins.length < 2) spawnTrainingCoins(4);
+        if (ruffStats.crystals < 8 && ruffCrystals.length < 5) spawnCrystals(6);
+        if (ruffCoins.length < 8) spawnTrainingCoins(10);
         if ((ruffStats.crystals >= 3 && ruffCrystals.length === 0 && ruffStageT > 3) || ruffStageT > 14) {
           requestNextStage();
         }
@@ -2113,8 +2114,8 @@
           if (typeof triggerBoss === "function") {
             triggerBoss(1);
             if (typeof boss !== "undefined" && boss) {
-              boss.maxHealth = 20;
-              boss.health = 20;
+              boss.maxHealth = 30;
+              boss.health = 30;
             }
           }
           try { bossBanner = null; } catch (e1) {}
@@ -2159,9 +2160,9 @@
           }
         } catch (e) {}
       }
-      if (ruffCrystals.length < 1 && ruffStageT > 3) spawnCrystals(2);
+      if (ruffCrystals.length < 4 && ruffStageT > 2) spawnCrystals(5);
       // Last lesson before landing — coin rain
-      if (ruffCoins.length < 3 && ruffStageT > 1.5) spawnTrainingCoins(5);
+      if (ruffCoins.length < 10 && ruffStageT > 1.0) spawnTrainingCoins(12);
       if (!ruffLessonPendingNext && ruffStageT > 18) {
         requestNextStage();
       }
