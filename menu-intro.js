@@ -1501,6 +1501,15 @@ function enterGameplay(){
   document.getElementById("gameScreen").style.display = "block";
   document.getElementById("startOverlay").classList.add("hidden");
   fadeOutMenuMusic();
+  try { if (window.__airborneShowUnifiedDock) window.__airborneShowUnifiedDock(); } catch (e) {}
+  try {
+    ["ruffRadio","ruffReport","ruffTitleBanner","ruffFlightTrace"].forEach(function(id){
+      var el = document.getElementById(id);
+      if (el && !el.classList.contains("visible")) {
+        el.style.display = "none";
+      }
+    });
+  } catch (e) {}
   if (window.__airborneGameStart) window.__airborneGameStart();
 }
 
@@ -1777,3 +1786,33 @@ try {
   });
   setTimeout(bindMenuPowerPreview, 500);
 } catch (e) {}
+
+(function bindDockVisibility() {
+  function hideDock() {
+    var d = document.getElementById("unifiedDock");
+    if (!d) return;
+    d.classList.add("menuHidden");
+    d.classList.remove("gameActive");
+    d.classList.remove("trainingShow");
+  }
+  function showDock() {
+    var d = document.getElementById("unifiedDock");
+    if (!d) return;
+    d.classList.remove("menuHidden");
+    d.classList.add("gameActive");
+  }
+  window.__airborneHideUnifiedDock = hideDock;
+  window.__airborneShowUnifiedDock = showDock;
+  document.addEventListener("DOMContentLoaded", hideDock);
+  setTimeout(hideDock, 0);
+  // Hide when menu is displayed
+  try {
+    var ms = document.getElementById("menuScreen");
+    if (ms) {
+      var obs = new MutationObserver(function () {
+        if (ms.style.display !== "none") hideDock();
+      });
+      obs.observe(ms, { attributes: true, attributeFilter: ["style", "class"] });
+    }
+  } catch (e) {}
+})();

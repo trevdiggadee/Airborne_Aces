@@ -3896,22 +3896,23 @@ html, body {
 /* ===== Circular unified dock (power + progress rings, time below) ===== */
 #unifiedDock {
   position: fixed;
-  left: 50%;
+  left: auto;
+  right: calc(env(safe-area-inset-right, 0px) + 12px);
   bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
-  transform: translateX(-50%);
+  transform: none;
   z-index: 45;
   pointer-events: none;
   width: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 #unifiedDock .udCircle,
 #stormMeter.udCircle {
   position: relative;
-  width: 88px;
-  height: 88px;
+  width: 176px;
+  height: 176px;
   flex: none;
   pointer-events: auto;
   cursor: pointer;
@@ -3941,25 +3942,25 @@ html, body {
       rgba(120, 200, 255, 0.95) var(--ud-progress, 0%),
       rgba(30, 40, 55, 0.55) var(--ud-progress, 0%)
     );
-  -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
-  mask-image: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+  -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 12px));
+  mask-image: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 12px));
 }
 /* Inner: power charge */
 .udRingPower {
-  inset: 9px;
+  inset: 18px;
   background:
     conic-gradient(
       from -90deg,
       rgba(255, 190, 60, 0.98) var(--ud-charge, 0%),
       rgba(40, 28, 14, 0.55) var(--ud-charge, 0%)
     );
-  -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
-  mask-image: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+  -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 12px));
+  mask-image: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 12px));
   box-shadow: inset 0 0 10px rgba(0,0,0,0.25);
 }
 .udCore {
   position: absolute;
-  inset: 20px;
+  inset: 40px;
   border-radius: 50%;
   background: radial-gradient(circle at 40% 35%, rgba(60, 42, 24, 0.95), rgba(18, 12, 8, 0.98));
   border: 1.5px solid rgba(220, 180, 100, 0.4);
@@ -3971,8 +3972,8 @@ html, body {
 }
 .udCore #stormIcon,
 #stormMeter #stormIcon {
-  width: 36px !important;
-  height: 36px !important;
+  width: 72px !important;
+  height: 72px !important;
   object-fit: contain;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
   position: relative;
@@ -3982,11 +3983,11 @@ html, body {
 #udTimerVal {
   position: absolute;
   left: 50%;
-  bottom: -2px;
+  bottom: 4px;
   transform: translateX(-50%);
   z-index: 3;
   font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: #ffe9a8;
@@ -3996,7 +3997,7 @@ html, body {
 }
 .udProgressReadout {
   font-family: 'Rockwell', Georgia, serif;
-  font-size: 10px;
+  font-size: 13px;
   letter-spacing: 0.08em;
   color: rgba(180, 220, 255, 0.85);
   text-shadow: 0 1px 2px rgba(0,0,0,0.6);
@@ -4033,8 +4034,8 @@ html, body {
   left: auto !important;
   bottom: auto !important;
   transform: none !important;
-  width: 88px !important;
-  height: 88px !important;
+  width: 176px !important;
+  height: 176px !important;
   display: block !important;
   opacity: 1 !important;
   visibility: visible !important;
@@ -4045,4 +4046,69 @@ html, body {
   display: flex !important;
   opacity: 1 !important;
   visibility: visible !important;
+}
+
+/* Never show gameplay/training chrome on menu / map / splash */
+#menuScreen #unifiedDock,
+body.menu-open #unifiedDock,
+#worldMapScreen ~ #unifiedDock {
+  /* dock is outside menuScreen — hide until gameplay */
+}
+#unifiedDock.menuHidden,
+#unifiedDock:not(.gameActive):not(.trainingShow) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+#unifiedDock.gameActive,
+#unifiedDock.trainingShow {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Hide training overlays unless training active */
+#ruffRadio:not(.visible),
+#ruffReport:not(.visible),
+#ruffTitleBanner:empty {
+  display: none !important;
+}
+#ruffRadio, #ruffReport, #ruffTitleBanner, #ruffFlightTrace {
+  pointer-events: none;
+}
+#ruffRadio.visible, #ruffReport.visible {
+  pointer-events: auto;
+}
+
+/* Take Flight button — clean fixed size, no weird stretch */
+.flyBtn {
+  position: absolute !important;
+  top: 53.5% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(48vw, 280px) !important;
+  max-width: min(48vw, 280px) !important;
+  height: auto !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+  z-index: 6 !important;
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.55)) !important;
+}
+.flyBtn .flyBtnImg {
+  display: block !important;
+  width: 100% !important;
+  height: auto !important;
+  max-width: 100% !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  object-position: center !important;
+}
+.flyBtn:active {
+  transform: translate(-50%, -50%) scale(0.97) !important;
 }

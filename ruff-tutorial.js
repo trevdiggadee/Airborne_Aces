@@ -73,7 +73,9 @@
       var dock = document.getElementById("unifiedDock");
       if (dock) {
         dock.classList.add("trainingShow");
-        dock.style.display = "block";
+        dock.classList.add("gameActive");
+        dock.classList.remove("menuHidden");
+        dock.style.display = "flex";
         dock.style.opacity = "1";
         dock.style.visibility = "visible";
       }
@@ -94,6 +96,12 @@
       if (meter) {
         meter.classList.remove("trainingPos");
         meter.classList.remove("trainingHidden");
+      }
+      var dock = document.getElementById("unifiedDock");
+      if (dock) {
+        dock.classList.remove("trainingShow");
+        dock.classList.remove("gameActive");
+        dock.classList.add("menuHidden");
       }
     } catch (e) {}
   }
