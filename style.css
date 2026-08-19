@@ -3728,3 +3728,162 @@ html, body {
   opacity: 1 !important;
   display: block !important;
 }
+
+
+/* ===== Unified bottom dock: progress + power + timer ===== */
+#unifiedDock {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  transform: translateX(-50%);
+  z-index: 45;
+  pointer-events: none;
+  width: min(92vw, 420px);
+}
+#unifiedDock .udPanel {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px 10px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(28, 18, 10, 0.72), rgba(12, 8, 5, 0.88));
+  border: 1.5px solid rgba(220, 180, 100, 0.45);
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.4),
+    0 8px 24px rgba(0,0,0,0.45),
+    inset 0 1px 0 rgba(255,230,180,0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.udSeg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+.udLabel {
+  font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: rgba(255, 220, 160, 0.7);
+  margin-bottom: 3px;
+  text-transform: uppercase;
+}
+.udVal {
+  font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffe9a8;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  letter-spacing: 0.04em;
+}
+.udProgress, .udTimer {
+  flex: 1 1 0;
+  min-width: 70px;
+}
+.udBarTrack {
+  width: 100%;
+  height: 7px;
+  border-radius: 99px;
+  background: rgba(0,0,0,0.45);
+  border: 1px solid rgba(200,160,80,0.3);
+  overflow: hidden;
+  margin-bottom: 3px;
+}
+.udBarFill {
+  height: 100%;
+  width: 0%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #c47a20, #f0c060, #ffe9a8);
+  box-shadow: 0 0 8px rgba(255, 180, 60, 0.55);
+  transition: width 0.25s ease;
+}
+.udTimerVal {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+/* Power centerpiece */
+.udPower {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  flex: 0 0 72px;
+  pointer-events: auto;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.udPower #stormIcon {
+  position: relative;
+  z-index: 2;
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.udPowerRing {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255, 200, 100, 0.25);
+  box-shadow: inset 0 0 12px rgba(255, 160, 40, 0.15);
+  background: conic-gradient(
+    from -90deg,
+    rgba(255, 190, 60, 0.95) var(--ud-charge, 0%),
+    rgba(40, 30, 20, 0.5) var(--ud-charge, 0%)
+  );
+  z-index: 1;
+  transition: filter 0.2s ease;
+}
+.udPowerLabel {
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  color: rgba(255, 220, 160, 0.75);
+  font-family: 'Rockwell', Georgia, serif;
+  z-index: 3;
+}
+#stormMeter.ready .udPowerRing,
+.udPower.ready .udPowerRing {
+  border-color: rgba(255, 220, 120, 0.9);
+  filter: drop-shadow(0 0 10px rgba(255, 180, 60, 0.65));
+  animation: udReadyPulse 1.2s ease-in-out infinite;
+}
+#stormMeter.ready #stormIcon {
+  animation: stormReadyPulse 0.9s ease-in-out infinite;
+}
+@keyframes udReadyPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+/* Training still uses trainingPos on #stormMeter which is inside dock */
+#unifiedDock.trainingShow {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+#stormMeter.trainingPos {
+  /* meter is already center of dock — dock itself is centered */
+  position: relative !important;
+  left: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  width: 72px !important;
+  height: 72px !important;
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 2 !important;
+}
+
+/* Hide old separate timer frame if present during gameplay — mirror into dock */
+#timerFrame {
+  /* keep for now but can be dimmed; dock is primary */
+}

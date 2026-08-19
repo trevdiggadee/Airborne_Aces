@@ -153,6 +153,15 @@
   const flipClockState = { m1: '0', m2: '0', s1: '0', s2: '0' };
 
   function updateFlipClock(ms) {
+    try {
+      var el = document.getElementById("udTimerVal");
+      if (el) {
+        var totalSec2 = Math.max(0, Math.floor((ms || 0) / 1000));
+        var mm = Math.floor(totalSec2 / 60);
+        var ss = totalSec2 % 60;
+        el.textContent = mm + ":" + (ss < 10 ? "0" : "") + ss;
+      }
+    } catch (e) {}
     const totalSec = Math.floor(ms / 1000);
     const m = Math.floor(totalSec / 60);
     const s = totalSec % 60;
@@ -995,3 +1004,22 @@
       } catch (err) {}
     });
   })();
+
+
+window.updateUnifiedProgress = function (pct) {
+  try {
+    var p = Math.max(0, Math.min(100, pct || 0));
+    var fill = document.getElementById("udProgressFill");
+    var val = document.getElementById("udProgressVal");
+    if (fill) fill.style.width = p + "%";
+    if (val) val.textContent = Math.round(p) + "%";
+  } catch (e) {}
+};
+
+(function ensureUnifiedDockVisible() {
+  function show() {
+    var d = document.getElementById("unifiedDock");
+    if (d) { d.style.display = "block"; d.style.opacity = "1"; d.style.visibility = "visible"; }
+  }
+  window.__airborneShowUnifiedDock = show;
+})();

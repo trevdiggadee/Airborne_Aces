@@ -70,6 +70,13 @@
 
   function placeTrainingPowerIcon() {
     try {
+      var dock = document.getElementById("unifiedDock");
+      if (dock) {
+        dock.classList.add("trainingShow");
+        dock.style.display = "block";
+        dock.style.opacity = "1";
+        dock.style.visibility = "visible";
+      }
       var meter = document.getElementById("stormMeter");
       if (!meter) return;
       meter.classList.add("trainingPos");
@@ -446,9 +453,21 @@
     try { updateFlightTrace(name); } catch (e) {}
     window.__airborneAirfieldAllowPowerup = true;
     try { placeTrainingPowerIcon(); } catch (e) {}
+    try {
+      var stages = ["intro","altitude","crystals","obstacles","shield","powerup","rings","airship","boss1","combined","landing"];
+      var si = stages.indexOf(name);
+      if (si < 0) si = 0;
+      if (typeof window.updateUnifiedProgress === "function") window.updateUnifiedProgress(((si + 1) / stages.length) * 100);
+    } catch (e) {}
     if (name !== "powerup") ruffPowerOrb = null;
     if (typeof powerup !== "undefined" && name !== "powerup" && name !== "combined") powerup = null;
     try { placeTrainingPowerIcon(); } catch (e) {}
+    try {
+      var stages = ["intro","altitude","crystals","obstacles","shield","powerup","rings","airship","boss1","combined","landing"];
+      var si = stages.indexOf(name);
+      if (si < 0) si = 0;
+      if (typeof window.updateUnifiedProgress === "function") window.updateUnifiedProgress(((si + 1) / stages.length) * 100);
+    } catch (e) {}
     syncStageFlags();
 
     // Clear items ONCE when entering a stage (never every frame mid-flight)
@@ -1693,6 +1712,12 @@
   function beginRuffTraining() {
     ruffActive = true;
     try { placeTrainingPowerIcon(); } catch (e) {}
+    try {
+      var stages = ["intro","altitude","crystals","obstacles","shield","powerup","rings","airship","boss1","combined","landing"];
+      var si = stages.indexOf(name);
+      if (si < 0) si = 0;
+      if (typeof window.updateUnifiedProgress === "function") window.updateUnifiedProgress(((si + 1) / stages.length) * 100);
+    } catch (e) {}
 
     window.__airborneRuffActive = true;
     window.__airborneRuffStage = "intro";
@@ -1710,6 +1735,12 @@
     if (typeof shieldPickup !== "undefined") shieldPickup = null;
     if (typeof stormCharge === "number") stormCharge = 0;
     try { placeTrainingPowerIcon(); } catch (e) {}
+    try {
+      var stages = ["intro","altitude","crystals","obstacles","shield","powerup","rings","airship","boss1","combined","landing"];
+      var si = stages.indexOf(name);
+      if (si < 0) si = 0;
+      if (typeof window.updateUnifiedProgress === "function") window.updateUnifiedProgress(((si + 1) / stages.length) * 100);
+    } catch (e) {}
 
     if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay();
     ruffStats = { crystals: 0, coins: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, landingStars: 3 };

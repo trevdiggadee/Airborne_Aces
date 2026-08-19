@@ -208,6 +208,13 @@
   // landing in the same frame as a streak bonus — still credits every notch it passed, so the
   // tank can never stall a few points short of full.
   function addStormChargeForScore(currentScore) {
+    try {
+      if (typeof window.updateUnifiedProgress === "function" && !window.__airborneAirfield) {
+        // Soft progress from score (cap 100)
+        window.updateUnifiedProgress(Math.min(100, (currentScore || 0) / 8));
+      }
+    } catch (e) {}
+
     // Training: charge power from coins (25 coins = full activation)
     if (window.__airborneAirfield) {
       if (!window.__airborneAirfieldAllowPowerup) return;
@@ -240,7 +247,14 @@
     }
 
     const isReady = stormCharge >= STORM_MAX && state === "playing" && !stormActive;
-    stormMeterEl.classList.toggle("ready", isReady);
+    if (stormMeterEl) {
+      stormMeterEl.classList.toggle("ready", isReady);
+      // Conic charge ring on unified dock
+      const pct = Math.max(0, Math.min(100, (stormCharge / STORM_MAX) * 100));
+      stormMeterEl.style.setProperty("--ud-charge", pct + "%");
+      const ring = document.getElementById("udPowerRing");
+      if (ring) ring.style.setProperty("--ud-charge", pct + "%");
+    }
 
     if (justCharged) {
       // brief pop each time a notch fills, same idea as the heart's "hit" pulse
@@ -281,7 +295,185 @@
     stormChainBolts = [];
 
     const sel = (typeof selectedBlimp !== "undefined") ? selectedBlimp : "blimp1";
+    // Menu-assigned unique powers drive gameplay
+    const SHIP_POWER_MODE = {
+      blimp1: "fire",
+      blimp2: "shockwave",
+      blimp3: "missile",
+      blimp4: "steam",
+      blimp5: "sunblade",
+      blimp6: "vortex",
+      blimp7: "chain",
+      blimp8: "crystalbeam",
+      blimp9: "swarm",
+      blimp10: "storm",
+      blimp11: "missile",
+      blimp12: "rockets",
+      blimp13: "swarm",
+      blimp14: "swarm",
+      blimp15: "meteors"
+    };
+    const powerMode = SHIP_POWER_MODE[sel] || "storm";
     const swarmKey = SHIP_POWER_ICON_KEYS[sel] || null;
+    stormMode = powerMode;
+
+    // Fire power (Zeppelin Ace) — use existing fire aura system
+    if (powerMode === "fire") {
+      try {
+        window.__airborneFirePowerActive = true;
+        window.__airborneFirePowerUntil = performance.now() + 9000;
+        if (typeof sfxExplosion === "function") sfxExplosion(0.5);
+      } catch (e) {}
+      stormActive = false; // fire system handles itself
+      stormCharge = 0;
+      updateStormMeterDisplay();
+      return;
+    }
+
+    // Shockwave / Steam — clear nearby obstacles in expanding ring
+    if (powerMode === "shockwave" || powerMode === "steam") {
+      if (typeof sfxThunder === "function") sfxThunder();
+      if (typeof sfxExplosion === "function") sfxExplosion(0.45);
+      const radius = Math.min(W, H) * 0.55;
+      if (typeof obstacles !== "undefined" && obstacles) {
+        obstacles.forEach(function (o) {
+          const dx = (o.x + o.w * 0.5) - player.x;
+          const dy = (o.y + o.h * 0.5) - player.y;
+          if (Math.hypot(dx, dy) < radius) {
+            o.onFire = true;
+            o.vy = 60 + Math.random() * 40;
+            o.scored = true;
+            try { score += 3; } catch (e) {}
+          }
+        });
+      }
+      // Visual: reuse swarm as expanding ring particles
+      stormMode = "swarm";
+      for (let i = 0; i < 14; i++) {
+        const ang = (i / 14) * Math.PI * 2;
+        stormSwarm.push({
+          x: player.x, y: player.y,
+          vx: Math.cos(ang) * 220,
+          vy: Math.sin(ang) * 180,
+          spin: ang, spinVel: 8,
+          size: Math.min(40, W * 0.08),
+          life: 0.9, age: 0,
+          iconKey: swarmKey, hit: false, style: "swarm", delay: 0
+        });
+      }
+      stormActive = true;
+      stormUntil = performance.now() + 1200;
+      return;
+    }
+
+    // Chain lightning — zap several obstacles in sequence
+    if (powerMode === "chain") {
+      if (typeof sfxThunder === "function") sfxThunder();
+      const targets = (typeof obstacles !== "undefined" && obstacles)
+        ? obstacles.slice().sort(function (a, b) {
+            return Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y);
+          }).slice(0, 6)
+        : [];
+      targets.forEach(function (o, idx) {
+        setTimeout(function () {
+          if (!o) return;
+          o.onFire = true;
+          o.vy = 50 + Math.random() * 40;
+          o.scored = true;
+          try { score += 4; } catch (e) {}
+          try { if (typeof sfxHit === "function") sfxHit(); } catch (e) {}
+        }, idx * 120);
+      });
+      stormMode = "storm";
+      stormActive = true;
+      stormUntil = performance.now() + 1000;
+      return;
+    }
+
+    // Crystal beam — destroy obstacles in a forward corridor
+    if (powerMode === "crystalbeam") {
+      if (typeof sfxShoot === "function") sfxShoot();
+      if (typeof obstacles !== "undefined" && obstacles) {
+        obstacles.forEach(function (o) {
+          const cy = Math.abs((o.y + o.h * 0.5) - player.y);
+          if (o.x > player.x && cy < Math.max(40, player.h * 0.9)) {
+            o.onFire = true;
+            o.vx = 120;
+            o.vy = (Math.random() - 0.5) * 40;
+            o.scored = true;
+            try { score += 3; } catch (e) {}
+          }
+        });
+      }
+      stormMode = "missile";
+      stormSwarm.push({
+        x: player.x + player.w * 0.3, y: player.y,
+        vx: 500, vy: 0, spin: 0, spinVel: 0,
+        size: Math.min(60, W * 0.12), life: 0.8, age: 0,
+        iconKey: swarmKey, hit: false, style: "missile", delay: 0
+      });
+      stormActive = true;
+      stormUntil = performance.now() + 900;
+      return;
+    }
+
+    // Rockets / meteors / vortex / sunblade — use swarm projectiles with unique motion
+    if (powerMode === "rockets" || powerMode === "meteors" || powerMode === "vortex" || powerMode === "sunblade") {
+      if (typeof sfxShoot === "function") sfxShoot();
+      if (typeof sfxExplosion === "function") sfxExplosion(0.4);
+      stormMode = "missile";
+      const count = powerMode === "meteors" ? 7 : (powerMode === "vortex" ? 12 : 8);
+      for (let i = 0; i < count; i++) {
+        let x, y, vx, vy;
+        if (powerMode === "meteors") {
+          x = player.x + (Math.random() - 0.5) * W * 0.5;
+          y = -20 - Math.random() * 40;
+          vx = (Math.random() - 0.5) * 60;
+          vy = 220 + Math.random() * 120;
+        } else if (powerMode === "vortex") {
+          const ang = (i / count) * Math.PI * 2;
+          x = player.x + Math.cos(ang) * 80;
+          y = player.y + Math.sin(ang) * 60;
+          vx = Math.cos(ang + Math.PI) * 160;
+          vy = Math.sin(ang + Math.PI) * 140;
+        } else if (powerMode === "sunblade") {
+          const ang = (i / count) * Math.PI * 2;
+          x = player.x; y = player.y;
+          vx = Math.cos(ang) * 260;
+          vy = Math.sin(ang) * 220;
+        } else {
+          // rockets forward
+          x = player.x + player.w * 0.25;
+          y = player.y + (Math.random() - 0.5) * player.h * 0.5;
+          vx = 320 + Math.random() * 100;
+          vy = (Math.random() - 0.5) * 50;
+        }
+        stormSwarm.push({
+          x: x, y: y, vx: vx, vy: vy,
+          spin: Math.random() * Math.PI * 2,
+          spinVel: 10,
+          size: Math.min(48, W * 0.09),
+          life: 1.4, age: 0,
+          iconKey: swarmKey, hit: false,
+          style: "missile", delay: i * 0.05
+        });
+      }
+      // Also damage nearby obstacles for vortex/sunblade
+      if ((powerMode === "vortex" || powerMode === "sunblade") && typeof obstacles !== "undefined") {
+        obstacles.forEach(function (o) {
+          const d = Math.hypot((o.x + o.w * 0.5) - player.x, (o.y + o.h * 0.5) - player.y);
+          if (d < Math.min(W, H) * 0.4) {
+            o.onFire = true;
+            o.vy = 40 + Math.random() * 50;
+            o.scored = true;
+            try { score += 3; } catch (e) {}
+          }
+        });
+      }
+      stormActive = true;
+      stormUntil = performance.now() + 1500;
+      return;
+    }
 
     if (swarmKey) {
       stormCloud = null;
