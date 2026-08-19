@@ -1009,10 +1009,12 @@
 window.updateUnifiedProgress = function (pct) {
   try {
     var p = Math.max(0, Math.min(100, pct || 0));
-    var fill = document.getElementById("udProgressFill");
     var val = document.getElementById("udProgressVal");
-    if (fill) fill.style.width = p + "%";
     if (val) val.textContent = Math.round(p) + "%";
+    var ring = document.getElementById("udProgressRing");
+    var circle = document.querySelector("#unifiedDock .udCircle") || document.getElementById("stormMeter");
+    if (ring) ring.style.setProperty("--ud-progress", p + "%");
+    if (circle) circle.style.setProperty("--ud-progress", p + "%");
   } catch (e) {}
 };
 

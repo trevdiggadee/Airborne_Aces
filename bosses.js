@@ -254,6 +254,9 @@
       stormMeterEl.style.setProperty("--ud-charge", pct + "%");
       const ring = document.getElementById("udPowerRing");
       if (ring) ring.style.setProperty("--ud-charge", pct + "%");
+      // also set on circle root
+      const circle = document.querySelector("#unifiedDock .udCircle") || stormMeterEl;
+      if (circle) circle.style.setProperty("--ud-charge", pct + "%");
     }
 
     if (justCharged) {

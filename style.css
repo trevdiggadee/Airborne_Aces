@@ -3891,3 +3891,158 @@ html, body {
 #timerFrame {
   /* keep for now but can be dimmed; dock is primary */
 }
+
+
+/* ===== Circular unified dock (power + progress rings, time below) ===== */
+#unifiedDock {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+  transform: translateX(-50%);
+  z-index: 45;
+  pointer-events: none;
+  width: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+#unifiedDock .udCircle,
+#stormMeter.udCircle {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  flex: none;
+  pointer-events: auto;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  /* reset old panel layout */
+  left: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  display: block !important;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.45));
+}
+.udRing {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+}
+/* Outer: progression */
+.udRingProgress {
+  inset: 0;
+  background:
+    conic-gradient(
+      from -90deg,
+      rgba(120, 200, 255, 0.95) var(--ud-progress, 0%),
+      rgba(30, 40, 55, 0.55) var(--ud-progress, 0%)
+    );
+  -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+  mask-image: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+}
+/* Inner: power charge */
+.udRingPower {
+  inset: 9px;
+  background:
+    conic-gradient(
+      from -90deg,
+      rgba(255, 190, 60, 0.98) var(--ud-charge, 0%),
+      rgba(40, 28, 14, 0.55) var(--ud-charge, 0%)
+    );
+  -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+  mask-image: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.25);
+}
+.udCore {
+  position: absolute;
+  inset: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, rgba(60, 42, 24, 0.95), rgba(18, 12, 8, 0.98));
+  border: 1.5px solid rgba(220, 180, 100, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  box-shadow: inset 0 1px 0 rgba(255,230,180,0.12);
+}
+.udCore #stormIcon,
+#stormMeter #stormIcon {
+  width: 36px !important;
+  height: 36px !important;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  position: relative;
+  z-index: 2;
+}
+.udTime,
+#udTimerVal {
+  position: absolute;
+  left: 50%;
+  bottom: -2px;
+  transform: translateX(-50%);
+  z-index: 3;
+  font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #ffe9a8;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.75);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.udProgressReadout {
+  font-family: 'Rockwell', Georgia, serif;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: rgba(180, 220, 255, 0.85);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+}
+/* Ready state */
+#stormMeter.ready .udRingPower,
+.udCircle.ready .udRingPower {
+  filter: drop-shadow(0 0 8px rgba(255, 180, 60, 0.7));
+  animation: udReadyPulse 1.2s ease-in-out infinite;
+}
+#stormMeter.ready .udCore {
+  border-color: rgba(255, 220, 120, 0.85);
+}
+
+/* Kill old horizontal panel remnants */
+.udPanel, .udSeg, .udLabel, .udBarTrack, .udBarFill, .udPowerLabel, .udProgress, .udTimer {
+  /* unused */
+}
+.udPowerLabel { display: none !important; }
+
+/* Hide old flight-trace circle on the right */
+#ruffFlightTrace,
+#ruffFlightTraceMeter,
+.ft-meter, .ft-track, .ft-fill, .ft-hub, .ft-label {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Training overrides — keep circular dock centered */
+#stormMeter.trainingPos {
+  position: relative !important;
+  left: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  width: 88px !important;
+  height: 88px !important;
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 2 !important;
+}
+#unifiedDock.trainingShow {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}

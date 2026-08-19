@@ -253,11 +253,15 @@
   }
 
   function hideFlightTrace() {
-    const el = document.getElementById("ruffFlightTrace");
-    if (el) {
-      el.classList.remove("visible");
-      el.setAttribute("aria-hidden", "true");
-    }
+    try {
+      const el = document.getElementById("ruffFlightTrace");
+      if (el) {
+        el.classList.remove("visible");
+        el.style.display = "none";
+        el.style.visibility = "hidden";
+        el.setAttribute("aria-hidden", "true");
+      }
+    } catch (e) {}
   }
 
   function updateFlightTrace(stage) {
@@ -457,6 +461,10 @@
     window.__airborneAirfieldAllowPowerup = true;
     try { placeTrainingPowerIcon(); } catch (e) {}
     try {
+      var ft = document.getElementById("ruffFlightTrace");
+      if (ft) { ft.style.display = "none"; ft.style.visibility = "hidden"; }
+    } catch (e) {}
+    try {
       var stages = ["intro","altitude","crystals","obstacles","shield","powerup","rings","airship","boss1","combined","landing"];
       var si = stages.indexOf(name);
       if (si < 0) si = 0;
@@ -465,6 +473,10 @@
     if (name !== "powerup") ruffPowerOrb = null;
     if (typeof powerup !== "undefined" && name !== "powerup" && name !== "combined") powerup = null;
     try { placeTrainingPowerIcon(); } catch (e) {}
+    try {
+      var ft = document.getElementById("ruffFlightTrace");
+      if (ft) { ft.style.display = "none"; ft.style.visibility = "hidden"; }
+    } catch (e) {}
     try {
       var stages = ["intro","altitude","crystals","obstacles","shield","powerup","rings","airship","boss1","combined","landing"];
       var si = stages.indexOf(name);
@@ -1754,6 +1766,10 @@
     ruffActive = true;
     try { placeTrainingPowerIcon(); } catch (e) {}
     try {
+      var ft = document.getElementById("ruffFlightTrace");
+      if (ft) { ft.style.display = "none"; ft.style.visibility = "hidden"; }
+    } catch (e) {}
+    try {
       var stages = ["intro","altitude","crystals","obstacles","shield","powerup","rings","airship","boss1","combined","landing"];
       var si = stages.indexOf(name);
       if (si < 0) si = 0;
@@ -1776,6 +1792,10 @@
     if (typeof shieldPickup !== "undefined") shieldPickup = null;
     if (typeof stormCharge === "number") stormCharge = 0;
     try { placeTrainingPowerIcon(); } catch (e) {}
+    try {
+      var ft = document.getElementById("ruffFlightTrace");
+      if (ft) { ft.style.display = "none"; ft.style.visibility = "hidden"; }
+    } catch (e) {}
     try {
       var stages = ["intro","altitude","crystals","obstacles","shield","powerup","rings","airship","boss1","combined","landing"];
       var si = stages.indexOf(name);
