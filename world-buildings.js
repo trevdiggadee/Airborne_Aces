@@ -391,6 +391,10 @@
       if (rad) rad.classList.remove("visible");
     } catch (e) {}
     if (typeof state !== "undefined") state = "start";
+    try {
+      const gs = document.getElementById("gameScreen");
+      if (gs) gs.style.display = "none";
+    } catch (e) {}
     if (window.__airborneShowWorldMap) {
       window.__airborneShowWorldMap({ mode: "start" });
     } else if (window.__airborneShowMenu) {

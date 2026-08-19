@@ -304,11 +304,14 @@
       });
     }
     const cont = document.getElementById("ruffContinueBtn");
-    if (cont && !cont._ruffBound) {
-      cont._ruffBound = true;
-      cont.addEventListener("click", function () {
+    if (cont) {
+      cont.onclick = function (e) {
+        try { if (e) { e.preventDefault(); e.stopPropagation(); } } catch (err) {}
+        try { if (typeof sfxClick === "function") sfxClick(); } catch (err) {}
         finishToMap();
-      });
+      };
+      cont.style.pointerEvents = "auto";
+      cont.style.zIndex = "80";
     }
   }
 
@@ -1586,6 +1589,20 @@
   function showFlightReport() {
     const el = reportEl();
     if (!el) return;
+    try {
+      el.style.display = "";
+      el.style.pointerEvents = "auto";
+      el.style.zIndex = "70";
+      const cont = document.getElementById("ruffContinueBtn");
+      if (cont) {
+        cont.onclick = function (e) {
+          try { if (e) { e.preventDefault(); e.stopPropagation(); } } catch (err) {}
+          finishToMap();
+        };
+        cont.style.pointerEvents = "auto";
+      }
+    } catch (e) {}
+
     const rows = document.getElementById("ruffReportRows");
     const final = document.getElementById("ruffFinalScore");
     const rankBanner = document.getElementById("ruffRankBanner");
@@ -1673,25 +1690,49 @@
 
   function finishToMap() {
     try { hideFlightTrace(); } catch (e) {}
-    hideRadio();
-    stopSpeak();
-    const el = reportEl();
-    if (el) el.classList.remove("visible");
+    try { hideRadio(); } catch (e) {}
+    try { stopSpeak(); } catch (e) {}
+    try {
+      const el = reportEl();
+      if (el) {
+        el.classList.remove("visible");
+        el.style.display = "none";
+      }
+    } catch (e) {}
     ruffActive = false;
     window.__airborneRuffActive = false;
     window.__airborneRuffStage = "idle";
     window.__airborneRuffRequestLand = false;
     window.__airborneRuffLandArmed = false;
-    // Always end airfield cleanly — never leave land/score running
     try { clearTrainingPowerIcon(); } catch (e) {}
-    if (typeof endAirfieldTrainingToMap === "function") {
-      endAirfieldTrainingToMap();
-    } else if (window.endAirfieldTrainingToMap) {
-      window.endAirfieldTrainingToMap();
-    } else if (window.__airborneShowWorldMap) {
-      window.__airborneShowWorldMap({ mode: "start" });
-    }
+    // Prefer window exports (functions are scoped inside other files)
+    try {
+      if (typeof window.endAirfieldTrainingToMap === "function") {
+        window.endAirfieldTrainingToMap();
+      } else if (typeof endAirfieldTrainingToMap === "function") {
+        endAirfieldTrainingToMap();
+      }
+    } catch (e) { console.warn("endAirfield", e); }
+    // Always force map visible as fallback
+    try {
+      if (typeof window.__airborneShowWorldMap === "function") {
+        window.__airborneShowWorldMap({ mode: "start" });
+      }
+    } catch (e) { console.warn("showWorldMap", e); }
+    try {
+      const gs = document.getElementById("gameScreen");
+      if (gs) gs.style.display = "none";
+      const ms = document.getElementById("worldMapScreen");
+      if (ms) {
+        ms.style.display = "block";
+        ms.style.visibility = "visible";
+        ms.style.opacity = "1";
+      }
+      if (typeof state !== "undefined") state = "start";
+    } catch (e) {}
   }
+  window.__airborneFinishToMap = finishToMap;
+
   window.__airborneShowRuffReport = function() {
     ruffActive = true;
     window.__airborneRuffActive = true;

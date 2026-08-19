@@ -621,6 +621,8 @@
     };
 
     window.__airborneDrawFirePower = function () {
+      try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePowerVisual(); } catch (e) {}
+
       if (typeof ctx === "undefined") return;
       const pickup = window.__airborneFirePickup;
       if (pickup) {
@@ -1730,3 +1732,104 @@ function spawnHealPickup() {
     } catch (e) {}
     if (typeof window.__airborneRuffReact === "function") window.__airborneRuffReact("ring");
   }
+
+
+// Match menu power previews with a short in-game aura around the player
+window.__airborneDrawActivePowerVisual = function () {
+  try {
+    if (typeof ctx === "undefined" || typeof player === "undefined" || !player) return;
+    const kind = window.__airborneActivePowerVisual;
+    const until = window.__airborneActivePowerUntil || 0;
+    if (!kind || performance.now() > until) return;
+    const fade = Math.max(0, Math.min(1, (until - performance.now()) / 5000));
+    const cx = player.x, cy = player.y;
+    const tnow = performance.now() * 0.001;
+    const bw = player.w * 0.55, bh = player.h * 0.45;
+    ctx.save();
+    if (kind === "fire") {
+      for (let i = 0; i < 10; i++) {
+        const ang = tnow * 2 + i * (Math.PI * 2 / 10);
+        const depth = Math.sin(ang);
+        const ox = cx + Math.cos(ang) * bw * 0.9;
+        const oy = cy + Math.sin(ang * 1.1) * bh * 0.75;
+        const r = (depth > 0 ? 8 : 11) * (0.85 + 0.15 * Math.sin(tnow * 12 + i));
+        const g = ctx.createRadialGradient(ox, oy, 0, ox, oy, r * 2.2);
+        g.addColorStop(0, "rgba(255,240,180," + (0.85 * fade) + ")");
+        g.addColorStop(0.4, "rgba(255,120,20," + (0.5 * fade) + ")");
+        g.addColorStop(1, "rgba(180,20,0,0)");
+        ctx.globalCompositeOperation = "lighter";
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(ox, oy, r * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (kind === "shockwave" || kind === "steam") {
+      const elapsed = (5000 - (until - performance.now())) / 1000;
+      for (let ring = 0; ring < 3; ring++) {
+        const phase = elapsed * 1.2 - ring * 0.3;
+        if (phase < 0) continue;
+        const rr = (phase % 1.2) / 1.2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, Math.min(W, H) * (0.08 + rr * 0.4), 0, Math.PI * 2);
+        ctx.strokeStyle = kind === "steam"
+          ? ("rgba(220,220,230," + ((1 - rr) * 0.55 * fade) + ")")
+          : ("rgba(180,230,255," + ((1 - rr) * 0.65 * fade) + ")");
+        ctx.lineWidth = 4 + (1 - rr) * 6;
+        ctx.stroke();
+      }
+    } else if (kind === "saws" || kind === "sunblade") {
+      const R = Math.min(W, H) * 0.12;
+      ctx.globalCompositeOperation = "lighter";
+      for (let s = 0; s < 2; s++) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate((s ? 1 : -1) * (Math.PI / 4) + tnow * 1.5);
+        ctx.scale(1, 0.45);
+        ctx.beginPath();
+        ctx.arc(0, 0, R, 0, Math.PI * 2);
+        ctx.strokeStyle = kind === "sunblade"
+          ? ("rgba(255,180,40," + (0.7 * fade) + ")")
+          : ("rgba(140,210,255," + (0.75 * fade) + ")");
+        ctx.lineWidth = 5;
+        ctx.stroke();
+        ctx.restore();
+      }
+    } else if (kind === "chain" || kind === "electric") {
+      for (let i = 0; i < 6; i++) {
+        const a = tnow * 3 + i;
+        const x2 = cx + Math.cos(a) * bw * 1.4;
+        const y2 = cy + Math.sin(a * 1.2) * bh * 1.2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(x2 + (Math.random() - 0.5) * 12, y2 + (Math.random() - 0.5) * 12);
+        ctx.strokeStyle = "rgba(180,220,255," + (0.7 * fade) + ")";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    } else if (kind === "vortex") {
+      ctx.globalCompositeOperation = "lighter";
+      for (let arm = 0; arm < 4; arm++) {
+        ctx.beginPath();
+        for (let t = 0; t < 12; t++) {
+          const tt = t / 12;
+          const ang = tnow * 4 + arm + tt * 2.5;
+          const rr = 10 + tt * bw * 1.2;
+          const px = cx + bw * 0.8 + Math.cos(ang) * rr;
+          const py = cy + Math.sin(ang) * rr * 0.8;
+          if (t === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = "rgba(180,100,255," + (0.55 * fade) + ")";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+    } else if (kind === "crystalbeam") {
+      ctx.globalCompositeOperation = "lighter";
+      const g = ctx.createLinearGradient(cx, cy, cx + W * 0.5, cy);
+      g.addColorStop(0, "rgba(200,240,255," + (0.8 * fade) + ")");
+      g.addColorStop(1, "rgba(40,100,255,0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(cx, cy - 5, W * 0.5, 10);
+    }
+    ctx.restore();
+  } catch (e) {}
+};
