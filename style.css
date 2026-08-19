@@ -4135,7 +4135,32 @@ body:not(.game-playing) #startOverlay {
   z-index: 30;
   position: relative;
 }
+/* worldMapScreen must stay position:fixed inset:0 — do not override */
+
+
+/* World map — full-screen overlay (must win over earlier rules) */
 #worldMapScreen {
-  z-index: 35;
-  position: relative;
+  display: none;
+  position: fixed !important;
+  inset: 0 !important;
+  left: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 120 !important;
+  background: #0d0a08 !important;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: stretch;
+  margin: 0 !important;
+  padding: 0 !important;
+  opacity: 1 !important;
+  visibility: visible;
+  pointer-events: auto !important;
+}
+#worldMapScreen[style*="display: flex"],
+#worldMapScreen[style*="display:flex"] {
+  display: flex !important;
 }

@@ -271,10 +271,17 @@
 
     placeBlimp(mapCurrent);
     createMarkers();
-    els.screen.style.display = "flex";
+    // Force visible full-screen map
+    els.screen.style.cssText = "display:flex !important; position:fixed !important; inset:0 !important; z-index:120 !important; visibility:visible !important; opacity:1 !important; width:100% !important; height:100% !important; background:#0d0a08 !important;";
     els.screen.classList.remove("wm-enter");
     void els.screen.offsetWidth;
     els.screen.classList.add("wm-enter");
+    try {
+      var so = document.getElementById("startOverlay");
+      if (so) { so.classList.add("hidden"); so.style.display = "none"; }
+      var dock = document.getElementById("unifiedDock");
+      if (dock) { dock.classList.add("menuHidden"); dock.classList.remove("gameActive"); }
+    } catch (e) {}
   }
 
   window.__airborneShowWorldMap = showWorldMap;

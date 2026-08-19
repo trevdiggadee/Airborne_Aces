@@ -1631,9 +1631,19 @@ function endCutscene() {
   stopTutorSpriteAnim();
   cutsceneScreen.style.display = "none";
   // World map before first level
-  if (window.__airborneShowWorldMap) {
-    window.__airborneShowWorldMap({ mode: "start" });
-  } else {
+  try {
+    if (typeof window.__airborneShowWorldMap === "function") {
+      window.__airborneShowWorldMap({ mode: "start" });
+    } else {
+      var ms = document.getElementById("worldMapScreen");
+      if (ms) {
+        ms.style.cssText = "display:flex !important; position:fixed !important; inset:0 !important; z-index:120 !important;";
+      } else {
+        enterGameplay();
+      }
+    }
+  } catch (e) {
+    console.warn("map show failed", e);
     enterGameplay();
   }
 }
