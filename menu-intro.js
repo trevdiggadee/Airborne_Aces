@@ -1499,7 +1499,10 @@ if (_hw) _hw.classList.remove("hero-small");
 function enterGameplay(){
   document.getElementById("menuScreen").style.display = "none";
   document.getElementById("gameScreen").style.display = "block";
-  document.getElementById("startOverlay").classList.add("hidden");
+  try {
+    var so = document.getElementById("startOverlay");
+    if (so) { so.classList.add("hidden"); so.style.display = "none"; so.setAttribute("aria-hidden", "true"); }
+  } catch (e) {}
   fadeOutMenuMusic();
   try { if (window.__airborneShowUnifiedDock) window.__airborneShowUnifiedDock(); } catch (e) {}
   try {
@@ -1815,4 +1818,28 @@ try {
       obs.observe(ms, { attributes: true, attributeFilter: ["style", "class"] });
     }
   } catch (e) {}
+})();
+
+(function forceHideStartOverlayOnMenu() {
+  function hideStart() {
+    var o = document.getElementById("startOverlay");
+    if (!o) return;
+    o.classList.add("hidden");
+    o.style.display = "none";
+    o.setAttribute("aria-hidden", "true");
+  }
+  document.addEventListener("DOMContentLoaded", hideStart);
+  setTimeout(hideStart, 0);
+  setTimeout(hideStart, 200);
+  // When hangar is visible
+  try {
+    var menu = document.getElementById("menuScreen");
+    if (menu) {
+      var mo = new MutationObserver(function () {
+        if (menu.style.display !== "none") hideStart();
+      });
+      mo.observe(menu, { attributes: true, attributeFilter: ["style"] });
+    }
+  } catch (e) {}
+  window.__airborneHideStartOverlay = hideStart;
 })();

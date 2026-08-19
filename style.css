@@ -3911,8 +3911,8 @@ html, body {
 #unifiedDock .udCircle,
 #stormMeter.udCircle {
   position: relative;
-  width: 176px;
-  height: 176px;
+  width: 88px;
+  height: 88px;
   flex: none;
   pointer-events: auto;
   cursor: pointer;
@@ -3942,25 +3942,25 @@ html, body {
       rgba(120, 200, 255, 0.95) var(--ud-progress, 0%),
       rgba(30, 40, 55, 0.55) var(--ud-progress, 0%)
     );
-  -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 12px));
-  mask-image: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 12px));
+  -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+  mask-image: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
 }
 /* Inner: power charge */
 .udRingPower {
-  inset: 18px;
+  inset: 9px;
   background:
     conic-gradient(
       from -90deg,
       rgba(255, 190, 60, 0.98) var(--ud-charge, 0%),
       rgba(40, 28, 14, 0.55) var(--ud-charge, 0%)
     );
-  -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 12px));
-  mask-image: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 12px));
+  -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+  mask-image: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
   box-shadow: inset 0 0 10px rgba(0,0,0,0.25);
 }
 .udCore {
   position: absolute;
-  inset: 40px;
+  inset: 20px;
   border-radius: 50%;
   background: radial-gradient(circle at 40% 35%, rgba(60, 42, 24, 0.95), rgba(18, 12, 8, 0.98));
   border: 1.5px solid rgba(220, 180, 100, 0.4);
@@ -3972,8 +3972,8 @@ html, body {
 }
 .udCore #stormIcon,
 #stormMeter #stormIcon {
-  width: 72px !important;
-  height: 72px !important;
+  width: 36px !important;
+  height: 36px !important;
   object-fit: contain;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
   position: relative;
@@ -3987,7 +3987,7 @@ html, body {
   transform: translateX(-50%);
   z-index: 3;
   font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
-  font-size: 16px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: #ffe9a8;
@@ -3997,7 +3997,7 @@ html, body {
 }
 .udProgressReadout {
   font-family: 'Rockwell', Georgia, serif;
-  font-size: 13px;
+  font-size: 10px;
   letter-spacing: 0.08em;
   color: rgba(180, 220, 255, 0.85);
   text-shadow: 0 1px 2px rgba(0,0,0,0.6);
@@ -4034,8 +4034,8 @@ html, body {
   left: auto !important;
   bottom: auto !important;
   transform: none !important;
-  width: 176px !important;
-  height: 176px !important;
+  width: 88px !important;
+  height: 88px !important;
   display: block !important;
   opacity: 1 !important;
   visibility: visible !important;
@@ -4111,4 +4111,31 @@ body.menu-open #unifiedDock,
 }
 .flyBtn:active {
   transform: translate(-50%, -50%) scale(0.97) !important;
+}
+
+/* Gameplay overlays must never sit on top of the hangar menu */
+#startOverlay.hidden,
+#startOverlay[aria-hidden="true"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+}
+#menuScreen:not([style*="display: none"]) ~ #startOverlay,
+body:not(.game-playing) #startOverlay {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+#startOverlay {
+  z-index: 20;
+}
+#menuScreen {
+  z-index: 30;
+  position: relative;
+}
+#worldMapScreen {
+  z-index: 35;
+  position: relative;
 }

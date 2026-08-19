@@ -126,6 +126,11 @@
   }
 
   function startPlaying(levelId) {
+    try {
+      var so = document.getElementById("startOverlay");
+      if (so) { so.classList.add("hidden"); so.style.display = "none"; }
+    } catch (e) {}
+
     const els = getEls();
     mapFlying = false;
     if (els.screen) els.screen.style.display = "none";
