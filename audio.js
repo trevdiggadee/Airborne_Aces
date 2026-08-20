@@ -14,6 +14,29 @@
   let reverbNode = null;
   let reverbSendGain = null;
 
+  function sfxDest() {
+    if (sfxGainNode) return sfxGainNode;
+    if (masterGain) return masterGain;
+    return audioCtx ? audioCtx.destination : null;
+  }
+  window.__airborneEnsureAudio = function () { try { ensureAudio(); } catch (e) {} };
+  window.__airborneSfxBeep = function (freq, dur, vol) {
+    try {
+      ensureAudio();
+      if (!audioCtx) return;
+      var t0 = audioCtx.currentTime;
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.frequency.value = freq || 660;
+      o.type = "sine";
+      g.gain.setValueAtTime(Math.max(0.001, vol || 0.15), t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + (dur || 0.15));
+      o.connect(g);
+      g.connect(audioCtx.destination);
+      o.start(t0);
+      o.stop(t0 + (dur || 0.15) + 0.02);
+    } catch (e) {}
+  };
   function ensureAudio() {
     if (audioCtx) {
       if (audioCtx.state === "suspended") audioCtx.resume();
@@ -88,6 +111,22 @@
   }
   window.__airborneSetMuted = setMuted;
   window.__airborneIsMuted = function () { return muted; };
+  window.__airborneForceUnmute = function () {
+    muted = false;
+    try { localStorage.setItem("aa_muted", "0"); } catch (e) {}
+    try {
+      ensureAudio();
+      if (masterGain && audioCtx) masterGain.gain.setTargetAtTime(1, audioCtx.currentTime, 0.02);
+      if (sfxGainNode && audioCtx) sfxGainNode.gain.setTargetAtTime(
+        (typeof sfxVolumePref === "number" ? Math.max(0.5, sfxVolumePref) : 1),
+        audioCtx.currentTime, 0.02
+      );
+      if (musicGainNode && audioCtx) musicGainNode.gain.setTargetAtTime(
+        (typeof musicVolumePref === "number" ? Math.max(0.2, musicVolumePref) : 0.35),
+        audioCtx.currentTime, 0.02
+      );
+    } catch (e) {}
+  };
 
   window.__airborneSetSynthMusicVolume = function(v) {
     if (musicGainNode && audioCtx) musicGainNode.gain.setTargetAtTime(v, audioCtx.currentTime, 0.02);
@@ -211,6 +250,7 @@
     // Bright crystalline chime — rising sparkle
     ensureAudio();
     try {
+      if (!audioCtx) return;
       const t0 = audioCtx.currentTime;
       const g = audioCtx.createGain();
       g.connect(audioCtx.destination);
@@ -404,6 +444,7 @@
   let airfieldBirdTimer = 0;
 
   function sfxAirfieldEngineStart() {
+    ensureAudio();
     if (muted || !audioCtx) return;
     sfxAirfieldEngineStop();
     const t0 = audioCtx.currentTime;
@@ -423,7 +464,9 @@
     osc1.connect(filter);
     osc2.connect(filter);
     filter.connect(gain);
-    gain.connect(sfxGainNode);
+    var dest = sfxDest();
+    if (!dest) return;
+    gain.connect(dest);
     osc1.start(t0);
     osc2.start(t0);
     airfieldEngineNodes = { osc1, osc2, filter, gain };
@@ -476,6 +519,7 @@
   }
 
   function sfxAirfieldWindStart() {
+    ensureAudio();
     if (muted || !audioCtx) return;
     sfxAirfieldWindStop();
     const t0 = audioCtx.currentTime;
@@ -493,7 +537,9 @@
     gain.gain.exponentialRampToValueAtTime(0.035, t0 + 0.8);
     src.connect(filter);
     filter.connect(gain);
-    gain.connect(sfxGainNode);
+    var dest = sfxDest();
+    if (!dest) return;
+    gain.connect(dest);
     src.start(t0);
     airfieldWindNodes = { src, filter, gain };
   }
@@ -732,3 +778,21 @@
     musicTheme = theme;
   }
 
+
+// Global exports so training can always reach SFX
+window.ensureAudio = ensureAudio;
+window.sfxCrystalCollect = sfxCrystalCollect;
+window.sfxRingCollect = sfxRingCollect;
+window.sfxAirfieldEngineStart = sfxAirfieldEngineStart;
+window.sfxAirfieldWindStart = sfxAirfieldWindStart;
+window.sfxAirfieldEngineStop = sfxAirfieldEngineStop;
+window.sfxAirfieldWindStop = sfxAirfieldWindStop;
+window.sfxAirfieldTakeoff = sfxAirfieldTakeoff;
+window.sfxAirfieldLand = sfxAirfieldLand;
+window.sfxTouchdown = sfxTouchdown;
+window.sfxLevelCompleteFanfare = sfxLevelCompleteFanfare;
+window.sfxFireworkPop = sfxFireworkPop;
+window.sfxClick = sfxClick;
+window.sfxPowerup = sfxPowerup;
+window.sfxHit = sfxHit;
+window.sfxHeart = sfxHeart;

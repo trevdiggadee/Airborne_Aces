@@ -76,10 +76,10 @@
       if (typeof ensureAudio === "function") ensureAudio();
       if (typeof audioCtx === "undefined" || !audioCtx) return;
       stopTrainingMusic();
-      var dest = (typeof musicGainNode !== "undefined" && musicGainNode) ? musicGainNode : audioCtx.destination;
+      // Direct to destination so menu musicGain=0 cannot silence training bed
       var master = audioCtx.createGain();
-      master.gain.value = 0.12;
-      master.connect(dest);
+      master.gain.value = 0.16;
+      master.connect(audioCtx.destination);
       var osc1 = audioCtx.createOscillator();
       var osc2 = audioCtx.createOscillator();
       var g1 = audioCtx.createGain();
@@ -910,7 +910,9 @@
   function playCrystalCollectSfx() {
     try {
       if (typeof ensureAudio === "function") ensureAudio();
+      if (window.__airborneSfxBeep) window.__airborneSfxBeep(990, 0.1, 0.14);
       if (typeof sfxCrystalCollect === "function") sfxCrystalCollect();
+      else if (window.sfxCrystalCollect) window.sfxCrystalCollect();
       else if (typeof sfxHeart === "function") sfxHeart();
     } catch (e) {}
   }
@@ -1403,6 +1405,7 @@
         c.collected = true;
         ruffStats.coins = (ruffStats.coins || 0) + 1;
         try { if (typeof ensureAudio === "function") ensureAudio(); } catch (e) {}
+        try { if (window.__airborneSfxBeep) window.__airborneSfxBeep(880, 0.09, 0.13); } catch (e) {}
         try { sfxTrainingCoin(); } catch (e) {}
         try { if (typeof sfxClick === "function") sfxClick(); } catch (e) {}
         window.__airborneCollectCoins = (window.__airborneCollectCoins || 0) + 1;
@@ -1936,13 +1939,25 @@
   // ---------- Public API ----------
   function beginRuffTraining() {
     ruffActive = true;
+    // Force-unlock and restore volumes (training audio was silent for many users)
+    try { if (window.__airborneForceUnmute) window.__airborneForceUnmute(); } catch (e) {}
     try { if (typeof ensureAudio === "function") ensureAudio(); } catch (e) {}
-    try { if (typeof audioCtx !== "undefined" && audioCtx && audioCtx.state === "suspended") audioCtx.resume(); } catch (e) {}
+    try { if (window.__airborneEnsureAudio) window.__airborneEnsureAudio(); } catch (e) {}
+    try {
+      if (typeof audioCtx !== "undefined" && audioCtx) {
+        if (audioCtx.state === "suspended") audioCtx.resume();
+      }
+    } catch (e) {}
+    // Audible kick so user immediately hears training audio is live
+    try { if (window.__airborneSfxBeep) window.__airborneSfxBeep(523, 0.12, 0.18); } catch (e) {}
+    try { if (window.__airborneSfxBeep) setTimeout(function(){ window.__airborneSfxBeep(659, 0.12, 0.16); }, 100); } catch (e) {}
     try { playTrainingMusic(); } catch (e) {}
     try {
       if (typeof sfxAirfieldEngineStart === "function") sfxAirfieldEngineStart();
+      else if (window.sfxAirfieldEngineStart) window.sfxAirfieldEngineStart();
       if (typeof sfxAirfieldWindStart === "function") sfxAirfieldWindStart();
-    } catch (e) {}
+      else if (window.sfxAirfieldWindStart) window.sfxAirfieldWindStart();
+    } catch (e) { console.warn("engine/wind", e); }
 
     try { placeTrainingPowerIcon(); } catch (e) {}
     try {
