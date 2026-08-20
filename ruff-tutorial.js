@@ -66,6 +66,7 @@
     landingStars: 3
   };
   let ruffCrystals = [];
+  let ruffLandingCelebrated = false;
 
   // ---- Training audio bed + staged cues (Web Audio, balanced) ----
   var __trainMusicNodes = null;
@@ -75,23 +76,24 @@
       if (typeof ensureAudio === "function") ensureAudio();
       if (typeof audioCtx === "undefined" || !audioCtx) return;
       stopTrainingMusic();
+      var dest = (typeof musicGainNode !== "undefined" && musicGainNode) ? musicGainNode : audioCtx.destination;
       var master = audioCtx.createGain();
-      master.gain.value = 0.048; // quiet bed under SFX
-      master.connect(audioCtx.destination);
+      master.gain.value = 0.12;
+      master.connect(dest);
       var osc1 = audioCtx.createOscillator();
       var osc2 = audioCtx.createOscillator();
       var g1 = audioCtx.createGain();
       var g2 = audioCtx.createGain();
       osc1.type = "sine";
       osc2.type = "triangle";
-      osc1.frequency.value = 110;
-      osc2.frequency.value = 164.5;
-      g1.gain.value = 0.35;
-      g2.gain.value = 0.18;
+      osc1.frequency.value = 130.8;
+      osc2.frequency.value = 196.0;
+      g1.gain.value = 0.4;
+      g2.gain.value = 0.22;
       var lfo = audioCtx.createOscillator();
       var lfoG = audioCtx.createGain();
-      lfo.frequency.value = 0.07;
-      lfoG.gain.value = 8;
+      lfo.frequency.value = 0.08;
+      lfoG.gain.value = 6;
       lfo.connect(lfoG);
       lfoG.connect(osc1.frequency);
       osc1.connect(g1); g1.connect(master);
@@ -99,7 +101,7 @@
       osc1.start(); osc2.start(); lfo.start();
       __trainMusicNodes = { master: master, osc1: osc1, osc2: osc2, lfo: lfo };
       __trainMusicOn = true;
-    } catch (e) {}
+    } catch (e) { console.warn("train music", e); }
   }
   function stopTrainingMusic() {
     try {
@@ -113,7 +115,7 @@
       __trainMusicOn = false;
     } catch (e) {}
   }
-  function sfxTrainingStageClear() {
+    function sfxTrainingStageClear() {
     try {
       if (typeof ensureAudio === "function") ensureAudio();
       if (typeof audioCtx === "undefined" || !audioCtx) return;
@@ -127,7 +129,8 @@
         g.gain.setValueAtTime(0.0001, t0 + i * 0.07);
         g.gain.exponentialRampToValueAtTime(0.09, t0 + i * 0.07 + 0.03);
         g.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.07 + 0.35);
-        o.connect(g); g.connect(audioCtx.destination);
+        var dest = (typeof sfxGainNode !== "undefined" && sfxGainNode) ? sfxGainNode : audioCtx.destination;
+        o.connect(g); g.connect(dest);
         o.start(t0 + i * 0.07); o.stop(t0 + i * 0.07 + 0.4);
       });
     } catch (e) {}
@@ -144,7 +147,8 @@
       o.frequency.exponentialRampToValueAtTime(1320, t0 + 0.08);
       g.gain.setValueAtTime(0.06, t0);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.12);
-      o.connect(g); g.connect(audioCtx.destination);
+      var dest = (typeof sfxGainNode !== "undefined" && sfxGainNode) ? sfxGainNode : audioCtx.destination;
+      o.connect(g); g.connect(dest);
       o.start(t0); o.stop(t0 + 0.13);
     } catch (e) {}
   }
@@ -160,7 +164,8 @@
       o.frequency.linearRampToValueAtTime(420, t0 + 0.2);
       g.gain.setValueAtTime(0.07, t0);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.35);
-      o.connect(g); g.connect(audioCtx.destination);
+      var dest = (typeof sfxGainNode !== "undefined" && sfxGainNode) ? sfxGainNode : audioCtx.destination;
+      o.connect(g); g.connect(dest);
       o.start(t0); o.stop(t0 + 0.36);
     } catch (e) {}
   }
@@ -176,7 +181,8 @@
       o.frequency.exponentialRampToValueAtTime(55, t0 + 0.5);
       g.gain.setValueAtTime(0.05, t0);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.55);
-      o.connect(g); g.connect(audioCtx.destination);
+      var dest = (typeof sfxGainNode !== "undefined" && sfxGainNode) ? sfxGainNode : audioCtx.destination;
+      o.connect(g); g.connect(dest);
       o.start(t0); o.stop(t0 + 0.56);
     } catch (e) {}
   }
@@ -903,6 +909,7 @@
 
   function playCrystalCollectSfx() {
     try {
+      if (typeof ensureAudio === "function") ensureAudio();
       if (typeof sfxCrystalCollect === "function") sfxCrystalCollect();
       else if (typeof sfxHeart === "function") sfxHeart();
     } catch (e) {}
@@ -1395,7 +1402,9 @@
       if (Math.abs(c.x - px) < pw + c.r && Math.abs(c.y - py) < ph + c.r) {
         c.collected = true;
         ruffStats.coins = (ruffStats.coins || 0) + 1;
+        try { if (typeof ensureAudio === "function") ensureAudio(); } catch (e) {}
         try { sfxTrainingCoin(); } catch (e) {}
+        try { if (typeof sfxClick === "function") sfxClick(); } catch (e) {}
         window.__airborneCollectCoins = (window.__airborneCollectCoins || 0) + 1;
         try {
           if (typeof window.addStormChargeForScore === "function") window.addStormChargeForScore(typeof score === "number" ? score : 0);
@@ -1584,11 +1593,21 @@
     // Behind + above with clear gap so sprites never touch
     const gapX = player.w * 0.55 + 36;
     const gapY = player.h * 0.75 + 28;
-    const targetX = player.x - gapX;
-    const targetY = player.y - gapY + Math.sin(ruffBob) * 10 + Math.sin(ruffBob * 1.7) * 3;
+    const H0 = (typeof H !== "undefined" ? H : 600);
+    const W0 = (typeof W !== "undefined" ? W : 400);
+    let targetX = player.x - gapX;
+    let targetY = player.y - gapY + Math.sin(ruffBob) * 10 + Math.sin(ruffBob * 1.7) * 3;
+    // Keep Ruff on-screen — when player is high, stay beside rather than above
+    const minY = H0 * 0.08;
+    const maxY = H0 * 0.72;
+    if (targetY < minY) targetY = Math.max(minY, player.y + player.h * 0.15);
+    targetY = Math.max(minY, Math.min(maxY, targetY));
+    targetX = Math.max(W0 * 0.04, Math.min(W0 * 0.55, targetX));
     const close = ruffSpeakClose > 0 ? 8 : 0;
     ruffX += (targetX + close - ruffX) * Math.min(1, dt * 3.2);
     ruffY += (targetY - ruffY) * Math.min(1, dt * 3.2);
+    ruffX = Math.max(W0 * 0.04, Math.min(W0 * 0.7, ruffX));
+    ruffY = Math.max(minY, Math.min(maxY, ruffY));
     // Motion lean / bank
     ruffTilt = Math.sin(ruffBob * 1.3) * 0.12 + Math.sin(ruffBob * 0.5) * 0.04;
     ruffScalePulse = 1 + Math.sin(ruffBob * 2.1) * 0.03;
@@ -1917,7 +1936,13 @@
   // ---------- Public API ----------
   function beginRuffTraining() {
     ruffActive = true;
+    try { if (typeof ensureAudio === "function") ensureAudio(); } catch (e) {}
+    try { if (typeof audioCtx !== "undefined" && audioCtx && audioCtx.state === "suspended") audioCtx.resume(); } catch (e) {}
     try { playTrainingMusic(); } catch (e) {}
+    try {
+      if (typeof sfxAirfieldEngineStart === "function") sfxAirfieldEngineStart();
+      if (typeof sfxAirfieldWindStart === "function") sfxAirfieldWindStart();
+    } catch (e) {}
 
     try { placeTrainingPowerIcon(); } catch (e) {}
     try {
@@ -2325,6 +2350,7 @@
       if (!window.__airborneRuffLandArmed) {
         window.__airborneRuffLandArmed = true;
         window.__airborneRuffRequestLand = true;
+        ruffLandingCelebrated = false;
         // Force training landing_field art
         try {
           if (typeof ensureAirfieldStripVisible === "function") ensureAirfieldStripVisible();
@@ -2332,6 +2358,39 @@
         } catch (e2) {}
       }
       const ph = window.__airborneAirfieldPhase;
+      // Celebration when touchdown / drive complete
+      if (!ruffLandingCelebrated && (ph === "land_drive" || ph === "landed" || ph === "done" || window.__airborneTrainingReportReady)) {
+        ruffLandingCelebrated = true;
+        try { if (typeof sfxTouchdown === "function") sfxTouchdown(); } catch (e) {}
+        try { if (typeof sfxAirfieldLand === "function") sfxAirfieldLand(); } catch (e) {}
+        try { if (typeof sfxLevelCompleteFanfare === "function") sfxLevelCompleteFanfare(); } catch (e) {}
+        try { if (typeof sfxFireworkPop === "function") sfxFireworkPop(); } catch (e) {}
+        try { if (typeof sfxFireworkPop === "function") setTimeout(function(){ sfxFireworkPop(); }, 200); } catch (e) {}
+        try {
+          // Burst particles like level complete
+          if (typeof particles !== "undefined" && particles && typeof player !== "undefined" && player) {
+            for (var fi = 0; fi < 40; fi++) {
+              var ang = Math.random() * Math.PI * 2;
+              var sp = 60 + Math.random() * 180;
+              particles.push({
+                x: player.x, y: player.y,
+                vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 40,
+                life: 0.9 + Math.random() * 0.7,
+                color: ["#ffd24a", "#ff6b3d", "#7ecbff", "#ffe9a8", "#ff4d6d"][fi % 5],
+                size: 2 + Math.random() * 4
+              });
+            }
+          }
+        } catch (e) {}
+        try {
+          // Extra firework bursts via existing level FX if present
+          if (typeof spawnFirework === "function") {
+            spawnFirework(player.x, player.y - 40);
+            spawnFirework(player.x - 50, player.y - 60);
+            spawnFirework(player.x + 50, player.y - 55);
+          }
+        } catch (e) {}
+      }
       // Report when world-buildings signals ready, or failsafe
       if (window.__airborneTrainingReportReady || ph === "done" || window.__airborneTrainingReportShown) {
         nextStage(); // → report → showFlightReport
