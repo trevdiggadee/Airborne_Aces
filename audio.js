@@ -604,6 +604,8 @@
   }
 
   function sfxTypewriterTick() {
+    return; // disabled — no Ruff voice ticks
+
     playTone({ freq: 1050 + Math.random() * 260, duration: 0.028, type: "square", vol: 0.05, attack: 0.001 });
   }
 

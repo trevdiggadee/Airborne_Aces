@@ -68,124 +68,163 @@
   let ruffCrystals = [];
   let ruffLandingCelebrated = false;
 
-  // ---- Training audio bed + staged cues (Web Audio, balanced) ----
-  var __trainMusicNodes = null;
-  var __trainMusicOn = false;
-  function playTrainingMusic() {
+  
+  // ========== SELF-CONTAINED TRAINING AUDIO (own AudioContext) ==========
+  var __trainCtx = null;
+  var __trainMaster = null;
+  var __trainBed = null;
+  var __trainEngine = null;
+  var __trainWind = null;
+
+  function trainEnsure() {
     try {
-      if (typeof ensureAudio === "function") ensureAudio();
-      if (typeof audioCtx === "undefined" || !audioCtx) return;
-      stopTrainingMusic();
-      // Direct to destination so menu musicGain=0 cannot silence training bed
-      var master = audioCtx.createGain();
-      master.gain.value = 0.16;
-      master.connect(audioCtx.destination);
-      var osc1 = audioCtx.createOscillator();
-      var osc2 = audioCtx.createOscillator();
-      var g1 = audioCtx.createGain();
-      var g2 = audioCtx.createGain();
-      osc1.type = "sine";
-      osc2.type = "triangle";
-      osc1.frequency.value = 130.8;
-      osc2.frequency.value = 196.0;
-      g1.gain.value = 0.4;
-      g2.gain.value = 0.22;
-      var lfo = audioCtx.createOscillator();
-      var lfoG = audioCtx.createGain();
-      lfo.frequency.value = 0.08;
-      lfoG.gain.value = 6;
-      lfo.connect(lfoG);
-      lfoG.connect(osc1.frequency);
-      osc1.connect(g1); g1.connect(master);
-      osc2.connect(g2); g2.connect(master);
-      osc1.start(); osc2.start(); lfo.start();
-      __trainMusicNodes = { master: master, osc1: osc1, osc2: osc2, lfo: lfo };
-      __trainMusicOn = true;
-    } catch (e) { console.warn("train music", e); }
+      if (!__trainCtx) {
+        __trainCtx = new (window.AudioContext || window.webkitAudioContext)();
+        __trainMaster = __trainCtx.createGain();
+        __trainMaster.gain.value = 0.55;
+        __trainMaster.connect(__trainCtx.destination);
+      }
+      if (__trainCtx.state === "suspended") __trainCtx.resume();
+      return true;
+    } catch (e) {
+      console.warn("trainEnsure", e);
+      return false;
+    }
   }
+
+  function trainBeep(freq, dur, vol, type) {
+    if (!trainEnsure()) return;
+    try {
+      var t0 = __trainCtx.currentTime;
+      var o = __trainCtx.createOscillator();
+      var g = __trainCtx.createGain();
+      o.type = type || "sine";
+      o.frequency.setValueAtTime(freq, t0);
+      g.gain.setValueAtTime(Math.max(0.001, vol || 0.2), t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + (dur || 0.15));
+      o.connect(g);
+      g.connect(__trainMaster);
+      o.start(t0);
+      o.stop(t0 + (dur || 0.15) + 0.05);
+    } catch (e) {}
+  }
+
+  function trainChord(freqs, dur, vol) {
+    if (!trainEnsure()) return;
+    freqs.forEach(function (f, i) {
+      setTimeout(function () { trainBeep(f, dur || 0.2, (vol || 0.15), "sine"); }, i * 60);
+    });
+  }
+
+  function playTrainingMusic() {
+    if (!trainEnsure()) return;
+    stopTrainingMusic();
+    try {
+      var t0 = __trainCtx.currentTime;
+      var o1 = __trainCtx.createOscillator();
+      var o2 = __trainCtx.createOscillator();
+      var g1 = __trainCtx.createGain();
+      var g2 = __trainCtx.createGain();
+      o1.type = "sine";
+      o2.type = "triangle";
+      o1.frequency.value = 146.8;
+      o2.frequency.value = 220;
+      g1.gain.value = 0.12;
+      g2.gain.value = 0.07;
+      o1.connect(g1); g1.connect(__trainMaster);
+      o2.connect(g2); g2.connect(__trainMaster);
+      o1.start(); o2.start();
+      __trainBed = { o1: o1, o2: o2, g1: g1, g2: g2 };
+    } catch (e) { console.warn(e); }
+  }
+
   function stopTrainingMusic() {
     try {
-      if (!__trainMusicNodes) { __trainMusicOn = false; return; }
-      var n = __trainMusicNodes;
-      try { n.osc1.stop(); } catch (e) {}
-      try { n.osc2.stop(); } catch (e) {}
-      try { n.lfo.stop(); } catch (e) {}
-      try { n.master.disconnect(); } catch (e) {}
-      __trainMusicNodes = null;
-      __trainMusicOn = false;
+      if (!__trainBed) return;
+      try { __trainBed.o1.stop(); } catch (e) {}
+      try { __trainBed.o2.stop(); } catch (e) {}
+      __trainBed = null;
     } catch (e) {}
   }
-    function sfxTrainingStageClear() {
+
+  function trainEngineStart() {
+    if (!trainEnsure()) return;
+    trainEngineStop();
     try {
-      if (typeof ensureAudio === "function") ensureAudio();
-      if (typeof audioCtx === "undefined" || !audioCtx) return;
-      var t0 = audioCtx.currentTime;
-      var freqs = [392, 494, 587];
-      freqs.forEach(function (f, i) {
-        var o = audioCtx.createOscillator();
-        var g = audioCtx.createGain();
-        o.type = "sine";
-        o.frequency.value = f;
-        g.gain.setValueAtTime(0.0001, t0 + i * 0.07);
-        g.gain.exponentialRampToValueAtTime(0.09, t0 + i * 0.07 + 0.03);
-        g.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.07 + 0.35);
-        var dest = (typeof sfxGainNode !== "undefined" && sfxGainNode) ? sfxGainNode : audioCtx.destination;
-        o.connect(g); g.connect(dest);
-        o.start(t0 + i * 0.07); o.stop(t0 + i * 0.07 + 0.4);
-      });
+      var o1 = __trainCtx.createOscillator();
+      var o2 = __trainCtx.createOscillator();
+      var f = __trainCtx.createBiquadFilter();
+      var g = __trainCtx.createGain();
+      o1.type = "sawtooth";
+      o2.type = "triangle";
+      o1.frequency.value = 55;
+      o2.frequency.value = 98;
+      f.type = "lowpass";
+      f.frequency.value = 320;
+      g.gain.value = 0.08;
+      o1.connect(f); o2.connect(f); f.connect(g); g.connect(__trainMaster);
+      o1.start(); o2.start();
+      __trainEngine = { o1: o1, o2: o2, g: g };
     } catch (e) {}
   }
-  function sfxTrainingCoin() {
+
+  function trainEngineStop() {
     try {
-      if (typeof ensureAudio === "function") ensureAudio();
-      if (typeof audioCtx === "undefined" || !audioCtx) return;
-      var t0 = audioCtx.currentTime;
-      var o = audioCtx.createOscillator();
-      var g = audioCtx.createGain();
-      o.type = "square";
-      o.frequency.setValueAtTime(880, t0);
-      o.frequency.exponentialRampToValueAtTime(1320, t0 + 0.08);
-      g.gain.setValueAtTime(0.06, t0);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.12);
-      var dest = (typeof sfxGainNode !== "undefined" && sfxGainNode) ? sfxGainNode : audioCtx.destination;
-      o.connect(g); g.connect(dest);
-      o.start(t0); o.stop(t0 + 0.13);
+      if (!__trainEngine) return;
+      try { __trainEngine.o1.stop(); } catch (e) {}
+      try { __trainEngine.o2.stop(); } catch (e) {}
+      __trainEngine = null;
     } catch (e) {}
   }
-  function sfxTrainingShield() {
+
+  function trainWindStart() {
+    if (!trainEnsure()) return;
+    trainWindStop();
     try {
-      if (typeof ensureAudio === "function") ensureAudio();
-      if (typeof audioCtx === "undefined" || !audioCtx) return;
-      var t0 = audioCtx.currentTime;
-      var o = audioCtx.createOscillator();
-      var g = audioCtx.createGain();
-      o.type = "triangle";
-      o.frequency.setValueAtTime(240, t0);
-      o.frequency.linearRampToValueAtTime(420, t0 + 0.2);
-      g.gain.setValueAtTime(0.07, t0);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.35);
-      var dest = (typeof sfxGainNode !== "undefined" && sfxGainNode) ? sfxGainNode : audioCtx.destination;
-      o.connect(g); g.connect(dest);
-      o.start(t0); o.stop(t0 + 0.36);
+      var len = __trainCtx.sampleRate * 2;
+      var buf = __trainCtx.createBuffer(1, len, __trainCtx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * 0.4;
+      var src = __trainCtx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      var f = __trainCtx.createBiquadFilter();
+      f.type = "bandpass";
+      f.frequency.value = 800;
+      f.Q.value = 0.5;
+      var g = __trainCtx.createGain();
+      g.gain.value = 0.045;
+      src.connect(f); f.connect(g); g.connect(__trainMaster);
+      src.start();
+      __trainWind = { src: src, g: g };
     } catch (e) {}
   }
-  function sfxTrainingBossWarn() {
+
+  function trainWindStop() {
     try {
-      if (typeof ensureAudio === "function") ensureAudio();
-      if (typeof audioCtx === "undefined" || !audioCtx) return;
-      var t0 = audioCtx.currentTime;
-      var o = audioCtx.createOscillator();
-      var g = audioCtx.createGain();
-      o.type = "sawtooth";
-      o.frequency.setValueAtTime(90, t0);
-      o.frequency.exponentialRampToValueAtTime(55, t0 + 0.5);
-      g.gain.setValueAtTime(0.05, t0);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.55);
-      var dest = (typeof sfxGainNode !== "undefined" && sfxGainNode) ? sfxGainNode : audioCtx.destination;
-      o.connect(g); g.connect(dest);
-      o.start(t0); o.stop(t0 + 0.56);
+      if (!__trainWind) return;
+      try { __trainWind.src.stop(); } catch (e) {}
+      __trainWind = null;
     } catch (e) {}
   }
+
+  function sfxTrainingCoin() { trainBeep(988, 0.1, 0.18, "square"); }
+  function sfxTrainingStageClear() { trainChord([392, 494, 587, 784], 0.22, 0.16); }
+  function sfxTrainingShield() { trainBeep(330, 0.25, 0.15, "triangle"); trainBeep(440, 0.2, 0.1, "sine"); }
+  function sfxTrainingBossWarn() { trainBeep(80, 0.45, 0.2, "sawtooth"); }
+  function sfxTrainingCrystal() { trainBeep(1200, 0.08, 0.16, "sine"); trainBeep(1600, 0.1, 0.12, "sine"); }
+  function sfxTrainingRing() { trainBeep(660, 0.06, 0.14, "triangle"); trainBeep(880, 0.12, 0.12, "sine"); }
+  function sfxTrainingLand() {
+    trainBeep(200, 0.15, 0.2, "triangle");
+    setTimeout(function(){ trainChord([523, 659, 784, 1046], 0.3, 0.18); }, 150);
+  }
+  function sfxTrainingPower() { trainBeep(180, 0.2, 0.18, "sawtooth"); trainBeep(360, 0.25, 0.14, "square"); }
+  function stopAllTrainingAudio() {
+    stopTrainingMusic();
+    trainEngineStop();
+    trainWindStop();
+  }
+
 
 
   let ruffCoins = [];
@@ -699,10 +738,7 @@
       } catch (e) {}
       window.__airborneAirfieldPhase = "taxi";
       window.__airborneResetRunway = true;
-      try {
-        if (typeof sfxAirfieldEngineStart === "function") sfxAirfieldEngineStart();
-        if (typeof sfxAirfieldWindStart === "function") sfxAirfieldWindStart();
-      } catch (e) {}
+      try { trainEngineStart(); trainWindStart(); } catch (e) {}
     } else if (name === "altitude") {
       if (ruffLines.length) showRadio(ruffLines[0], 3.0);
       spawnAltitudeMarkers();
@@ -908,19 +944,10 @@
   }
 
   function playCrystalCollectSfx() {
-    try {
-      if (typeof ensureAudio === "function") ensureAudio();
-      if (window.__airborneSfxBeep) window.__airborneSfxBeep(990, 0.1, 0.14);
-      if (typeof sfxCrystalCollect === "function") sfxCrystalCollect();
-      else if (window.sfxCrystalCollect) window.sfxCrystalCollect();
-      else if (typeof sfxHeart === "function") sfxHeart();
-    } catch (e) {}
+    try { sfxTrainingCrystal(); } catch (e) {}
   }
   function playRingCollectSfx() {
-    try {
-      if (typeof sfxRingCollect === "function") sfxRingCollect();
-      else if (typeof sfxStreak === "function") sfxStreak();
-    } catch (e) {}
+    try { sfxTrainingRing(); } catch (e) {}
   }
   function playRankUpSfx() {
     try {
@@ -1404,10 +1431,7 @@
       if (Math.abs(c.x - px) < pw + c.r && Math.abs(c.y - py) < ph + c.r) {
         c.collected = true;
         ruffStats.coins = (ruffStats.coins || 0) + 1;
-        try { if (typeof ensureAudio === "function") ensureAudio(); } catch (e) {}
-        try { if (window.__airborneSfxBeep) window.__airborneSfxBeep(880, 0.09, 0.13); } catch (e) {}
         try { sfxTrainingCoin(); } catch (e) {}
-        try { if (typeof sfxClick === "function") sfxClick(); } catch (e) {}
         window.__airborneCollectCoins = (window.__airborneCollectCoins || 0) + 1;
         try {
           if (typeof window.addStormChargeForScore === "function") window.addStormChargeForScore(typeof score === "number" ? score : 0);
@@ -1422,10 +1446,7 @@
         } catch (e) {}
         if (typeof score === "number") score += COIN_SCORE;
         if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
-        try {
-          if (typeof sfxRingCollect === "function") sfxRingCollect();
-          else if (typeof sfxPowerup === "function") sfxPowerup();
-        } catch (e) {}
+        try { sfxTrainingCoin(); } catch (e) {}
         for (let s = 0; s < 12; s++) {
           const ang = Math.random() * Math.PI * 2;
           const sp = 50 + Math.random() * 100;
@@ -1874,7 +1895,7 @@
   }
 
   function finishToMap() {
-    try { stopTrainingMusic(); } catch (e) {}
+    try { stopAllTrainingAudio(); } catch (e) {}
 
     try { hideFlightTrace(); } catch (e) {}
     try { hideRadio(); } catch (e) {}
@@ -1939,26 +1960,15 @@
   // ---------- Public API ----------
   function beginRuffTraining() {
     ruffActive = true;
-    // Force-unlock and restore volumes (training audio was silent for many users)
-    try { if (window.__airborneForceUnmute) window.__airborneForceUnmute(); } catch (e) {}
-    try { if (typeof ensureAudio === "function") ensureAudio(); } catch (e) {}
-    try { if (window.__airborneEnsureAudio) window.__airborneEnsureAudio(); } catch (e) {}
     try {
-      if (typeof audioCtx !== "undefined" && audioCtx) {
-        if (audioCtx.state === "suspended") audioCtx.resume();
-      }
-    } catch (e) {}
-    // Audible kick so user immediately hears training audio is live
-    try { if (window.__airborneSfxBeep) window.__airborneSfxBeep(523, 0.12, 0.18); } catch (e) {}
-    try { if (window.__airborneSfxBeep) setTimeout(function(){ window.__airborneSfxBeep(659, 0.12, 0.16); }, 100); } catch (e) {}
-    try { playTrainingMusic(); } catch (e) {}
-    try {
-      if (typeof sfxAirfieldEngineStart === "function") sfxAirfieldEngineStart();
-      else if (window.sfxAirfieldEngineStart) window.sfxAirfieldEngineStart();
-      if (typeof sfxAirfieldWindStart === "function") sfxAirfieldWindStart();
-      else if (window.sfxAirfieldWindStart) window.sfxAirfieldWindStart();
-    } catch (e) { console.warn("engine/wind", e); }
-
+      trainEnsure();
+      playTrainingMusic();
+      trainEngineStart();
+      trainWindStart();
+      trainBeep(523, 0.1, 0.22);
+      setTimeout(function(){ trainBeep(659, 0.1, 0.2); }, 120);
+      setTimeout(function(){ trainBeep(784, 0.12, 0.18); }, 240);
+    } catch (e) { console.warn("train audio start", e); }
     try { placeTrainingPowerIcon(); } catch (e) {}
     try {
       var ft = document.getElementById("ruffFlightTrace");
@@ -2226,6 +2236,9 @@
       }
       // Detect activation
       if (typeof stormActive !== "undefined" && stormActive) {
+        if (!window.__airborneTrainingPowerUsed) {
+          try { sfxTrainingPower(); } catch (e) {}
+        }
         window.__airborneTrainingPowerUsed = true;
       }
       // Advance only after power was activated, then wait 5 seconds
@@ -2376,11 +2389,8 @@
       // Celebration when touchdown / drive complete
       if (!ruffLandingCelebrated && (ph === "land_drive" || ph === "landed" || ph === "done" || window.__airborneTrainingReportReady)) {
         ruffLandingCelebrated = true;
-        try { if (typeof sfxTouchdown === "function") sfxTouchdown(); } catch (e) {}
-        try { if (typeof sfxAirfieldLand === "function") sfxAirfieldLand(); } catch (e) {}
-        try { if (typeof sfxLevelCompleteFanfare === "function") sfxLevelCompleteFanfare(); } catch (e) {}
-        try { if (typeof sfxFireworkPop === "function") sfxFireworkPop(); } catch (e) {}
-        try { if (typeof sfxFireworkPop === "function") setTimeout(function(){ sfxFireworkPop(); }, 200); } catch (e) {}
+        try { sfxTrainingLand(); } catch (e) {}
+        try { trainChord([523, 659, 784, 1046, 1318], 0.25, 0.2); } catch (e) {}
         try {
           // Burst particles like level complete
           if (typeof particles !== "undefined" && particles && typeof player !== "undefined" && player) {
