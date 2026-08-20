@@ -66,6 +66,122 @@
     landingStars: 3
   };
   let ruffCrystals = [];
+
+  // ---- Training audio bed + staged cues (Web Audio, balanced) ----
+  var __trainMusicNodes = null;
+  var __trainMusicOn = false;
+  function playTrainingMusic() {
+    try {
+      if (typeof ensureAudio === "function") ensureAudio();
+      if (typeof audioCtx === "undefined" || !audioCtx) return;
+      stopTrainingMusic();
+      var master = audioCtx.createGain();
+      master.gain.value = 0.048; // quiet bed under SFX
+      master.connect(audioCtx.destination);
+      var osc1 = audioCtx.createOscillator();
+      var osc2 = audioCtx.createOscillator();
+      var g1 = audioCtx.createGain();
+      var g2 = audioCtx.createGain();
+      osc1.type = "sine";
+      osc2.type = "triangle";
+      osc1.frequency.value = 110;
+      osc2.frequency.value = 164.5;
+      g1.gain.value = 0.35;
+      g2.gain.value = 0.18;
+      var lfo = audioCtx.createOscillator();
+      var lfoG = audioCtx.createGain();
+      lfo.frequency.value = 0.07;
+      lfoG.gain.value = 8;
+      lfo.connect(lfoG);
+      lfoG.connect(osc1.frequency);
+      osc1.connect(g1); g1.connect(master);
+      osc2.connect(g2); g2.connect(master);
+      osc1.start(); osc2.start(); lfo.start();
+      __trainMusicNodes = { master: master, osc1: osc1, osc2: osc2, lfo: lfo };
+      __trainMusicOn = true;
+    } catch (e) {}
+  }
+  function stopTrainingMusic() {
+    try {
+      if (!__trainMusicNodes) { __trainMusicOn = false; return; }
+      var n = __trainMusicNodes;
+      try { n.osc1.stop(); } catch (e) {}
+      try { n.osc2.stop(); } catch (e) {}
+      try { n.lfo.stop(); } catch (e) {}
+      try { n.master.disconnect(); } catch (e) {}
+      __trainMusicNodes = null;
+      __trainMusicOn = false;
+    } catch (e) {}
+  }
+  function sfxTrainingStageClear() {
+    try {
+      if (typeof ensureAudio === "function") ensureAudio();
+      if (typeof audioCtx === "undefined" || !audioCtx) return;
+      var t0 = audioCtx.currentTime;
+      var freqs = [392, 494, 587];
+      freqs.forEach(function (f, i) {
+        var o = audioCtx.createOscillator();
+        var g = audioCtx.createGain();
+        o.type = "sine";
+        o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t0 + i * 0.07);
+        g.gain.exponentialRampToValueAtTime(0.09, t0 + i * 0.07 + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.07 + 0.35);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(t0 + i * 0.07); o.stop(t0 + i * 0.07 + 0.4);
+      });
+    } catch (e) {}
+  }
+  function sfxTrainingCoin() {
+    try {
+      if (typeof ensureAudio === "function") ensureAudio();
+      if (typeof audioCtx === "undefined" || !audioCtx) return;
+      var t0 = audioCtx.currentTime;
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.type = "square";
+      o.frequency.setValueAtTime(880, t0);
+      o.frequency.exponentialRampToValueAtTime(1320, t0 + 0.08);
+      g.gain.setValueAtTime(0.06, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.12);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t0); o.stop(t0 + 0.13);
+    } catch (e) {}
+  }
+  function sfxTrainingShield() {
+    try {
+      if (typeof ensureAudio === "function") ensureAudio();
+      if (typeof audioCtx === "undefined" || !audioCtx) return;
+      var t0 = audioCtx.currentTime;
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.type = "triangle";
+      o.frequency.setValueAtTime(240, t0);
+      o.frequency.linearRampToValueAtTime(420, t0 + 0.2);
+      g.gain.setValueAtTime(0.07, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.35);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t0); o.stop(t0 + 0.36);
+    } catch (e) {}
+  }
+  function sfxTrainingBossWarn() {
+    try {
+      if (typeof ensureAudio === "function") ensureAudio();
+      if (typeof audioCtx === "undefined" || !audioCtx) return;
+      var t0 = audioCtx.currentTime;
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(90, t0);
+      o.frequency.exponentialRampToValueAtTime(55, t0 + 0.5);
+      g.gain.setValueAtTime(0.05, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.55);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t0); o.stop(t0 + 0.56);
+    } catch (e) {}
+  }
+
+
   let ruffCoins = [];
 
   function placeTrainingPowerIcon() {
@@ -516,6 +632,7 @@
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.75; // denser obstacles
     } else if (name === "boss1") {
       try { spawnTrainingBgBalloons(); } catch (e) {}
+      try { sfxTrainingBossWarn(); } catch (e) {}
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
@@ -527,7 +644,7 @@
       try { spawnTrainingBgBalloons(); } catch (e) {}
       // Boss spawned once from stage update only (avoids double spawn)
     } else if (name === "airship") {
-      try { spawnTrainingBgBalloons(); } catch (e) {}
+      ruffBgBalloons = []; // no bg balloons on airship lesson
 
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = false;
@@ -659,6 +776,7 @@
   }
 
   function nextStage() {
+    try { sfxTrainingStageClear(); } catch (e) {}
     const i = STAGE_ORDER.indexOf(ruffStage);
     if (i < 0 || i >= STAGE_ORDER.length - 1) {
       setStage("report");
@@ -750,11 +868,18 @@
 
   // ---------- Crystals ----------
   function spawnCrystals(n) {
-    ruffCrystals = [];
+    // APPEND only — never wipe crystals already on screen (was causing random disappear)
+    n = n || 4;
+    const existing = (ruffCrystals || []).filter(function (c) { return c && !c.collected; });
+    ruffCrystals = existing;
+    const W0 = (typeof W !== "undefined" ? W : 400);
+    const H0 = (typeof H !== "undefined" ? H : 600);
+    let maxX = W0;
+    existing.forEach(function (c) { if (c.x > maxX) maxX = c.x; });
     for (let i = 0; i < n; i++) {
       ruffCrystals.push({
-        x: (typeof W !== "undefined" ? W : 400) + 80 + i * 140,
-        y: (typeof H !== "undefined" ? H : 600) * (0.28 + Math.random() * 0.35),
+        x: Math.max(W0 + 80, maxX + 100) + i * 150,
+        y: H0 * (0.28 + Math.random() * 0.35),
         r: 18,
         frame: Math.floor(Math.random() * CRYSTAL_FRAME_COUNT),
         frameT: 0,
@@ -1270,6 +1395,7 @@
       if (Math.abs(c.x - px) < pw + c.r && Math.abs(c.y - py) < ph + c.r) {
         c.collected = true;
         ruffStats.coins = (ruffStats.coins || 0) + 1;
+        try { sfxTrainingCoin(); } catch (e) {}
         window.__airborneCollectCoins = (window.__airborneCollectCoins || 0) + 1;
         try {
           if (typeof window.addStormChargeForScore === "function") window.addStormChargeForScore(typeof score === "number" ? score : 0);
@@ -1726,6 +1852,8 @@
   }
 
   function finishToMap() {
+    try { stopTrainingMusic(); } catch (e) {}
+
     try { hideFlightTrace(); } catch (e) {}
     try { hideRadio(); } catch (e) {}
     try { stopSpeak(); } catch (e) {}
@@ -1789,6 +1917,8 @@
   // ---------- Public API ----------
   function beginRuffTraining() {
     ruffActive = true;
+    try { playTrainingMusic(); } catch (e) {}
+
     try { placeTrainingPowerIcon(); } catch (e) {}
     try {
       var ft = document.getElementById("ruffFlightTrace");
@@ -1981,9 +2111,12 @@
       updateCrystals(dt);
       updateTrainingCoins(dt);
       if (!ruffLessonPendingNext) {
-        if (ruffStats.crystals < 8 && ruffCrystals.length < 5) spawnCrystals(6);
-        if (ruffCoins.length < 8) spawnTrainingCoins(10);
-        if ((ruffStats.crystals >= 3 && ruffCrystals.length === 0 && ruffStageT > 3) || ruffStageT > 14) {
+        // Top-up gently — only when almost empty, never wipe mid-screen
+        var liveC = (ruffCrystals || []).filter(function (c) { return c && !c.collected && c.x > -20; }).length;
+        if (ruffStats.crystals < 8 && liveC < 2) spawnCrystals(4);
+        if ((ruffCoins || []).length < 6) spawnTrainingCoins(6);
+        // Finish when enough collected and field is clear (or long timeout)
+        if ((ruffStats.crystals >= 5 && liveC === 0 && ruffStageT > 4) || ruffStageT > 22) {
           requestNextStage();
         }
       }
