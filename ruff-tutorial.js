@@ -219,7 +219,40 @@
     setTimeout(function(){ trainChord([523, 659, 784, 1046], 0.3, 0.18); }, 150);
   }
   function sfxTrainingPower() { trainBeep(180, 0.2, 0.18, "sawtooth"); trainBeep(360, 0.25, 0.14, "square"); }
+  
+  // Boss lesson exclusive track
+  var __trainBossAudio = null;
+  function playTrainingBossMusic() {
+    try {
+      stopTrainingBossMusic();
+      var a = new Audio("the_engine_s_decree.mp3?v=ruff181");
+      a.loop = true;
+      a.volume = 0.55;
+      a.play().catch(function (e) { console.warn("boss mp3", e); });
+      __trainBossAudio = a;
+      // Dip the soft bed while boss track plays
+      try {
+        if (__trainBed && __trainBed.g1) __trainBed.g1.gain.value = 0.03;
+        if (__trainBed && __trainBed.g2) __trainBed.g2.gain.value = 0.02;
+      } catch (e) {}
+    } catch (e) { console.warn(e); }
+  }
+  function stopTrainingBossMusic() {
+    try {
+      if (__trainBossAudio) {
+        __trainBossAudio.pause();
+        __trainBossAudio.currentTime = 0;
+        __trainBossAudio = null;
+      }
+      try {
+        if (__trainBed && __trainBed.g1) __trainBed.g1.gain.value = 0.12;
+        if (__trainBed && __trainBed.g2) __trainBed.g2.gain.value = 0.07;
+      } catch (e) {}
+    } catch (e) {}
+  }
+
   function stopAllTrainingAudio() {
+    stopTrainingBossMusic();
     stopTrainingMusic();
     trainEngineStop();
     trainWindStop();
@@ -612,6 +645,9 @@
 
   // ---------- Stage control ----------
   function setStage(name) {
+    if (name !== "boss1") {
+      try { stopTrainingBossMusic(); } catch (e) {}
+    }
     ruffStage = name;
     ruffStageT = 0;
     ruffLessonPendingNext = false;
@@ -678,6 +714,7 @@
     } else if (name === "boss1") {
       try { spawnTrainingBgBalloons(); } catch (e) {}
       try { sfxTrainingBossWarn(); } catch (e) {}
+      try { playTrainingBossMusic(); } catch (e) {}
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
