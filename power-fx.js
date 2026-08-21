@@ -109,18 +109,39 @@
       case "swarm":
         burst(x, y, { count: 26, colors: ["#fda4af", "#fb7185", "#ffe4e6"], speed: 150, radial: true, glow: true });
         break;
+      case "blueflame":
+        for (var bi = 0; bi < 16; bi++) {
+          var ba = -0.30 + Math.random() * 0.60;
+          var bsp = 180 + Math.random() * 160;
+          pushP({
+            x: x + 20, y: y,
+            vx: Math.cos(ba) * bsp,
+            vy: Math.sin(ba) * bsp * 0.52,
+            life: 0.35 + Math.random() * 0.25,
+            age: 0,
+            r: 3.8 + Math.random() * 4.5,
+            color: ["#e0f2fe", "#7dd3fc", "#38bdf8", "#0284c7"][(Math.random()*4)|0],
+            gravity: -20,
+            drag: 0.3,
+            glow: true
+          });
+        }
+        break;
+      case "fireball":
+        burst(x, y, { count: 16, colors: ["#ffd24a", "#ff8a1a", "#ff3b00"], speed: 120, gravity: -20, glow: true });
+        break;
       case "flamethrower":
-        // Forward cone of fire from nose gun
-        for (var fi = 0; fi < 18; fi++) {
-          var fa = -0.35 + Math.random() * 0.7;
+        // Forward cone of fire from nose gun (thinned 5%)
+        for (var fi = 0; fi < 16; fi++) {
+          var fa = -0.30 + Math.random() * 0.60;
           var fsp = 180 + Math.random() * 160;
           pushP({
             x: x + 20, y: y,
             vx: Math.cos(fa) * fsp,
-            vy: Math.sin(fa) * fsp * 0.55,
+            vy: Math.sin(fa) * fsp * 0.52,
             life: 0.35 + Math.random() * 0.25,
             age: 0,
-            r: 4 + Math.random() * 5,
+            r: 3.8 + Math.random() * 4.5,
             color: ["#fff5c0", "#ffd24a", "#ff8a1a", "#ff3b00"][(Math.random()*4)|0],
             gravity: -20,
             drag: 0.3,
@@ -217,17 +238,59 @@
       g.addColorStop(1, "rgba(40,120,255,0)");
       ctx.fillStyle = g;
       ctx.fillRect(cx, cy - 6, 280, 12);
-    } else if (kind === "flamethrower") {
-      // Short nose-gun jet, lowered 2%
+    } else if (kind === "blueflame") {
+      // Short nose-gun jet, lowered 2%, thinned 5%
       var dropY = cy + ((typeof H !== "undefined" ? H : 600) * 0.02);
       for (i = 0; i < 7; i++) {
         var dist = 12 + (i * 11) + (Math.sin(t * 20 + i) * 3);
         if (dist > 95) continue;
-        var spread = (Math.sin(t * 14 + i * 1.7) * 0.14);
+        var spread = (Math.sin(t * 14 + i * 1.7) * 0.13);
         ox = cx + 16 + dist * Math.cos(spread);
-        oy = dropY + dist * Math.sin(spread) * 0.75 + Math.sin(t * 18 + i) * 2;
-        r = 8 + 4 * (1 - i / 7) + Math.sin(t * 25 + i) * 1.5;
-        g = ctx.createRadialGradient(ox, oy, 0, ox, oy, r * 2);
+        oy = dropY + dist * Math.sin(spread) * 0.71 + Math.sin(t * 18 + i) * 1.9;
+        r = (8 + 4 * (1 - i / 7) + Math.sin(t * 25 + i) * 1.5) * 0.95;
+        g = ctx.createRadialGradient(ox, oy, 0, ox, oy, r * 1.9);
+        var a0 = (0.85 - i * 0.1) * fade;
+        g.addColorStop(0, "rgba(220,245,255," + a0 + ")");
+        g.addColorStop(0.4, "rgba(56,189,248," + (a0 * 0.7) + ")");
+        g.addColorStop(0.75, "rgba(14,100,200," + (a0 * 0.3) + ")");
+        g.addColorStop(1, "rgba(40,0,0,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(ox, oy, r * 1.9, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      g = ctx.createRadialGradient(cx + 16, dropY, 0, cx + 16, dropY, 11.4);
+      g.addColorStop(0, "rgba(200,240,255," + (0.85 * fade) + ")");
+      g.addColorStop(0.5, "rgba(56,189,248," + (0.45 * fade) + ")");
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(cx + 16, dropY, 11.4, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === "fireball") {
+      for (i = 0; i < 6; i++) {
+        ang = t * 3 + i;
+        ox = cx + Math.cos(ang) * 28;
+        oy = cy + Math.sin(ang) * 20;
+        g = ctx.createRadialGradient(ox, oy, 0, ox, oy, 12);
+        g.addColorStop(0, "rgba(255,220,120," + (0.7 * fade) + ")");
+        g.addColorStop(1, "rgba(255,80,0,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(ox, oy, 12, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (kind === "flamethrower") {
+      // Short nose-gun jet, lowered 2%, thinned 5%
+      var dropY = cy + ((typeof H !== "undefined" ? H : 600) * 0.02);
+      for (i = 0; i < 7; i++) {
+        var dist = 12 + (i * 11) + (Math.sin(t * 20 + i) * 3);
+        if (dist > 95) continue;
+        var spread = (Math.sin(t * 14 + i * 1.7) * 0.13);
+        ox = cx + 16 + dist * Math.cos(spread);
+        oy = dropY + dist * Math.sin(spread) * 0.71 + Math.sin(t * 18 + i) * 1.9;
+        r = (8 + 4 * (1 - i / 7) + Math.sin(t * 25 + i) * 1.5) * 0.95;
+        g = ctx.createRadialGradient(ox, oy, 0, ox, oy, r * 1.9);
         var a0 = (0.85 - i * 0.1) * fade;
         g.addColorStop(0, "rgba(255,250,200," + a0 + ")");
         g.addColorStop(0.4, "rgba(255,140,20," + (a0 * 0.7) + ")");
@@ -235,16 +298,16 @@
         g.addColorStop(1, "rgba(40,0,0,0)");
         ctx.fillStyle = g;
         ctx.beginPath();
-        ctx.arc(ox, oy, r * 2, 0, Math.PI * 2);
+        ctx.arc(ox, oy, r * 1.9, 0, Math.PI * 2);
         ctx.fill();
       }
-      g = ctx.createRadialGradient(cx + 16, dropY, 0, cx + 16, dropY, 12);
+      g = ctx.createRadialGradient(cx + 16, dropY, 0, cx + 16, dropY, 11.4);
       g.addColorStop(0, "rgba(255,255,220," + (0.85 * fade) + ")");
       g.addColorStop(0.5, "rgba(255,120,0," + (0.45 * fade) + ")");
       g.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = g;
       ctx.beginPath();
-      ctx.arc(cx + 16, dropY, 12, 0, Math.PI * 2);
+      ctx.arc(cx + 16, dropY, 11.4, 0, Math.PI * 2);
       ctx.fill();
     } else if (kind === "rockets" || kind === "meteors" || kind === "swarm" || kind === "storm") {
       for (i = 0; i < 8; i++) {

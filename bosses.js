@@ -304,12 +304,12 @@
     const SHIP_POWER_MODE = {
       blimp1: "fire",
       blimp2: "shockwave",
-      blimp3: "missile",
+      blimp3: "blueflame",
       blimp4: "steam",
       blimp5: "sunblade",
       blimp6: "vortex",
       blimp7: "chain",
-      blimp8: "crystalbeam",
+      blimp8: "fireball",
       blimp9: "swarm",
       blimp10: "storm",
       blimp11: "missile",
@@ -344,20 +344,39 @@
 
     
     // Pirate Rocket — nose-gun flamethrower
-    if (powerMode === "flamethrower") {
+    if (powerMode === "flamethrower" || powerMode === "blueflame") {
       if (typeof sfxExplosion === "function") sfxExplosion(0.35);
       if (typeof sfxShoot === "function") sfxShoot();
       stormActive = true;
-      stormMode = "flamethrower";
+      stormMode = powerMode; // flamethrower | blueflame
       stormTimer = 5.0;
       stormCharge = 0;
       window.__airborneFlamethrowerUntil = performance.now() + 5000;
-      window.__airborneActivePowerVisual = "flamethrower";
+      window.__airborneActivePowerVisual = powerMode;
       window.__airborneActivePowerUntil = performance.now() + 5000;
       try {
         if (window.PowerFX && typeof player !== "undefined" && player) {
-          window.PowerFX.activate("flamethrower", player.x + 20, player.y);
+          window.PowerFX.activate(powerMode, player.x + 20, player.y);
         }
+      } catch (e) {}
+      updateStormMeterDisplay();
+      return;
+    }
+
+    // Ironworks — lob fireballs with smoke trails that ignite obstacles
+    if (powerMode === "fireball") {
+      if (typeof sfxShoot === "function") sfxShoot();
+      if (typeof sfxExplosion === "function") sfxExplosion(0.4);
+      stormActive = true;
+      stormMode = "fireball";
+      stormTimer = 5.0;
+      stormCharge = 0;
+      window.__airborneFireballUntil = performance.now() + 5000;
+      window.__airborneActivePowerVisual = "fireball";
+      window.__airborneActivePowerUntil = performance.now() + 5000;
+      window.__airborneFireballs = [];
+      try {
+        if (window.PowerFX && player) window.PowerFX.activate("fireball", player.x, player.y);
       } catch (e) {}
       updateStormMeterDisplay();
       return;
@@ -754,7 +773,7 @@
     if (!stormActive) return;
 
     // ---- Pirate Rocket flamethrower cone ----
-    if (stormMode === "flamethrower") {
+    if (stormMode === "flamethrower" || stormMode === "blueflame") {
       var nowFt = performance.now();
       var untilFt = window.__airborneFlamethrowerUntil || 0;
       if (!untilFt || nowFt >= untilFt) {
@@ -778,20 +797,23 @@
         var noseY = player.y + drop;
         // Short flame reach (match visual ~90–110px)
         var flameReach = Math.min(115, (typeof W !== "undefined" ? W : 400) * 0.28);
-        var coneHalf = 0.28; // tighter cone
+        var coneHalf = 0.266; // tighter cone (-5%)
         // Particles — short range forward
         if (window.PowerFX) {
           try {
             for (var fi = 0; fi < 2; fi++) {
-              window.PowerFX.burst(noseX, noseY, {
+              var flameCols = (stormMode === "blueflame")
+              ? ["#e0f2fe", "#7dd3fc", "#38bdf8", "#0284c7", "#1e3a8a"]
+              : ["#fff5c0", "#ffd24a", "#ff8a1a", "#ff3b00"];
+            window.PowerFX.burst(noseX, noseY, {
                 count: 2,
-                colors: ["#fff5c0", "#ffd24a", "#ff8a1a", "#ff3b00"],
+                colors: flameCols,
                 speed: 90 + Math.random() * 50,
                 angle: 0,
-                spread: 0.32,
+                spread: 0.30,
                 gravity: -15,
                 life: 0.28,
-                size: 4,
+                size: 3.8,
                 glow: true
               });
             }
@@ -833,6 +855,101 @@
               if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
             } catch (e) {}
           }
+        }
+      }
+      return;
+    }
+
+
+    // ---- Ironworks fireballs ----
+    if (stormMode === "fireball") {
+      var nowFb = performance.now();
+      var untilFb = window.__airborneFireballUntil || 0;
+      if (!untilFb || nowFb >= untilFb) {
+        stormActive = false;
+        stormMode = "storm";
+        stormTimer = 0;
+        window.__airborneActivePowerVisual = null;
+        window.__airborneActivePowerUntil = 0;
+        window.__airborneFireballUntil = 0;
+        window.__airborneFireballs = [];
+        return;
+      }
+      window.__airborneActivePowerVisual = "fireball";
+      window.__airborneActivePowerUntil = untilFb;
+      if (!window.__airborneFireballs) window.__airborneFireballs = [];
+      // Spawn fireballs periodically from hull
+      if (!window.__airborneFireballSpawnT) window.__airborneFireballSpawnT = 0;
+      window.__airborneFireballSpawnT -= dt;
+      if (window.__airborneFireballSpawnT <= 0 && typeof player !== "undefined" && player) {
+        window.__airborneFireballSpawnT = 0.28;
+        var ang = -0.35 + Math.random() * 0.7;
+        var sp = 160 + Math.random() * 80;
+        window.__airborneFireballs.push({
+          x: player.x + (player.w || 40) * 0.25,
+          y: player.y + (Math.random() - 0.5) * (player.h || 30) * 0.4,
+          vx: Math.cos(ang) * sp,
+          vy: Math.sin(ang) * sp * 0.6 - 20,
+          life: 1.6,
+          age: 0,
+          r: 10 + Math.random() * 4,
+          trails: []
+        });
+      }
+      // Update fireballs
+      var fbs = window.__airborneFireballs;
+      for (var fi = fbs.length - 1; fi >= 0; fi--) {
+        var fb = fbs[fi];
+        fb.age += dt;
+        fb.x += fb.vx * dt;
+        fb.y += fb.vy * dt;
+        fb.vy += 90 * dt; // mild gravity
+        // Smoke trail
+        if (Math.random() < 0.7) {
+          fb.trails.push({
+            x: fb.x, y: fb.y,
+            vx: -20 + Math.random() * 10,
+            vy: -30 - Math.random() * 20,
+            life: 0.5 + Math.random() * 0.3,
+            age: 0,
+            r: 4 + Math.random() * 5
+          });
+        }
+        for (var ti = fb.trails.length - 1; ti >= 0; ti--) {
+          var tr = fb.trails[ti];
+          tr.age += dt;
+          tr.x += tr.vx * dt;
+          tr.y += tr.vy * dt;
+          tr.r += 8 * dt;
+          if (tr.age >= tr.life) fb.trails.splice(ti, 1);
+        }
+        // Hit obstacles → catch fire
+        if (typeof obstacles !== "undefined") {
+          for (var oi = obstacles.length - 1; oi >= 0; oi--) {
+            var o = obstacles[oi];
+            if (!o || o.onFire) continue;
+            var ox = o.x + o.w * 0.5;
+            var oy = o.y + o.h * 0.5;
+            if (Math.hypot(fb.x - ox, fb.y - oy) < fb.r + Math.max(o.w, o.h) * 0.35) {
+              o.onFire = true;
+              o.vy = 40;
+              try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
+              try {
+                if (window.PowerFX) window.PowerFX.burst(ox, oy, {
+                  count: 12, colors: ["#ff6b3d", "#ffd24a", "#ff1a00"], speed: 80, gravity: -30, life: 0.5, glow: true
+                });
+              } catch (e) {}
+              try {
+                if (typeof score === "number") score += 25;
+                if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
+              } catch (e) {}
+              fb.age = fb.life; // consume fireball
+              break;
+            }
+          }
+        }
+        if (fb.age >= fb.life || fb.x > (typeof W !== "undefined" ? W : 400) + 40 || fb.y > (typeof H !== "undefined" ? H : 600) + 40) {
+          fbs.splice(fi, 1);
         }
       }
       return;
@@ -1054,6 +1171,40 @@
       stormChainBolts = stormChainBolts.filter(b => b.age < b.life);
     }
   }
+
+  function drawFireballs() {
+    var fbs = window.__airborneFireballs;
+    if (!fbs || !fbs.length || typeof ctx === "undefined") return;
+    ctx.save();
+    for (var i = 0; i < fbs.length; i++) {
+      var fb = fbs[i];
+      // smoke trails
+      for (var ti = 0; ti < (fb.trails || []).length; ti++) {
+        var tr = fb.trails[ti];
+        var ta = 1 - tr.age / tr.life;
+        ctx.globalAlpha = ta * 0.45;
+        ctx.fillStyle = "rgba(60,55,50,1)";
+        ctx.beginPath();
+        ctx.arc(tr.x, tr.y, tr.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // fireball core
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "lighter";
+      var g = ctx.createRadialGradient(fb.x, fb.y, 0, fb.x, fb.y, fb.r * 2.2);
+      g.addColorStop(0, "rgba(255,250,200,0.95)");
+      g.addColorStop(0.35, "rgba(255,140,20,0.8)");
+      g.addColorStop(0.7, "rgba(200,40,0,0.4)");
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(fb.x, fb.y, fb.r * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalCompositeOperation = "source-over";
+    }
+    ctx.restore();
+  }
+  window.__airborneDrawFireballs = drawFireballs;
 
   function drawStorm() {
     if (!stormActive) return;
