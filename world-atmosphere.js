@@ -381,7 +381,9 @@
     // Roster-tuned exhaust look
     switch (effect) {
       case "flame":
-        return { color: "255,160,40", size: 5, alpha: 0.9, life: 0.55, rise: 2, drag: 180, mode: "flame" };
+        return { color: "255,160,40", size: 5, alpha: 0.9, life: 0.55, rise: 2, drag: 180, mode: "flame", jets: 1 };
+      case "dualFlame":
+        return { color: "255,160,40", size: 4.5, alpha: 0.9, life: 0.55, rise: 2, drag: 180, mode: "flame", jets: 2 };
       case "steam":
         return { color: "230,240,250", size: 3.2, alpha: 0.45, life: 0.7, rise: 28, drag: 35, mode: "steam" };
       case "blackSmoke":

@@ -138,6 +138,7 @@
   let stormMilestoneCount = 0; // how many 25-point thresholds have been counted toward charge so far
   let stormWasReady = false;   // tracks ready-state transitions so the ready sound only fires once
   let stormActive = false;
+  let stormTimer = 0;
   let stormUntil = 0;
   let stormCloud = null; // single descending cloud/bomb while the ability is active
   let stormLightning = null; // { points, life, age } — the current main bolt, if any
@@ -348,11 +349,11 @@
       if (typeof sfxShoot === "function") sfxShoot();
       stormActive = true;
       stormMode = "flamethrower";
-      stormTimer = 5.5;
+      stormTimer = 5.0;
       stormCharge = 0;
-      window.__airborneFlamethrowerUntil = performance.now() + 5500;
+      window.__airborneFlamethrowerUntil = performance.now() + 5000;
       window.__airborneActivePowerVisual = "flamethrower";
-      window.__airborneActivePowerUntil = performance.now() + 5500;
+      window.__airborneActivePowerUntil = performance.now() + 5000;
       try {
         if (window.PowerFX && typeof player !== "undefined" && player) {
           window.PowerFX.activate("flamethrower", player.x + 20, player.y);
@@ -754,85 +755,88 @@
 
     // ---- Pirate Rocket flamethrower cone ----
     if (stormMode === "flamethrower") {
-      if (typeof stormTimer === "number") {
-        stormTimer -= dt;
-        if (stormTimer <= 0) {
-          stormActive = false;
-          stormMode = "storm";
-          window.__airborneActivePowerVisual = null;
-          return;
-        }
-      } else if (window.__airborneFlamethrowerUntil && performance.now() > window.__airborneFlamethrowerUntil) {
+      var nowFt = performance.now();
+      var untilFt = window.__airborneFlamethrowerUntil || 0;
+      if (!untilFt || nowFt >= untilFt) {
         stormActive = false;
         stormMode = "storm";
+        stormTimer = 0;
         window.__airborneActivePowerVisual = null;
+        window.__airborneActivePowerUntil = 0;
+        window.__airborneFlamethrowerUntil = 0;
         return;
       }
-      // Keep visual aura alive
+      var remain = (untilFt - nowFt) / 1000;
+      stormTimer = remain;
+      // Aura only while active
       window.__airborneActivePowerVisual = "flamethrower";
-      window.__airborneActivePowerUntil = performance.now() + 200;
-      // Continuous flame particles from nose
-      if (typeof player !== "undefined" && player && window.PowerFX) {
-        try {
-          var noseX = player.x + (player.w || 40) * 0.35;
-          var noseY = player.y;
-          for (var fi = 0; fi < 3; fi++) {
-            window.PowerFX.burst(noseX, noseY, {
-              count: 2,
-              colors: ["#fff5c0", "#ffd24a", "#ff8a1a", "#ff3b00", "#ff1a00"],
-              speed: 220 + Math.random() * 100,
-              angle: 0,
-              spread: 0.55,
-              gravity: -25,
-              life: 0.4,
-              size: 5,
-              glow: true
-            });
-          }
-        } catch (e) {}
-      }
-      // Damage obstacles in forward cone
-      if (typeof player !== "undefined" && player && typeof obstacles !== "undefined") {
-        var px = player.x + (player.w || 40) * 0.2;
-        var py = player.y;
-        var maxDist = Math.min(typeof W !== "undefined" ? W : 400, 280);
-        var cone = 0.55; // radians half-angle
-        for (var oi = obstacles.length - 1; oi >= 0; oi--) {
-          var o = obstacles[oi];
-          if (!o) continue;
-          var ox = o.x + o.w * 0.5;
-          var oy = o.y + o.h * 0.5;
-          var dx = ox - px;
-          var dy = oy - py;
-          if (dx < 10) continue; // only in front
-          var dist = Math.hypot(dx, dy);
-          if (dist > maxDist) continue;
-          var ang = Math.atan2(dy, dx);
-          if (Math.abs(ang) > cone) continue;
-          // Hit — burn effect
-          if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy);
-          if (window.PowerFX) {
-            try {
-              window.PowerFX.burst(ox, oy, {
-                count: 8,
-                colors: ["#ff6b3d", "#ffd24a", "#ff1a00"],
-                speed: 80,
-                gravity: -40,
-                life: 0.5,
+      window.__airborneActivePowerUntil = untilFt;
+      if (typeof player !== "undefined" && player) {
+        // Lower jet 2% of screen height to line up with front gun
+        var drop = (typeof H !== "undefined" ? H : 600) * 0.02;
+        var noseX = player.x + (player.w || 40) * 0.38;
+        var noseY = player.y + drop;
+        // Short flame reach (match visual ~90–110px)
+        var flameReach = Math.min(115, (typeof W !== "undefined" ? W : 400) * 0.28);
+        var coneHalf = 0.28; // tighter cone
+        // Particles — short range forward
+        if (window.PowerFX) {
+          try {
+            for (var fi = 0; fi < 2; fi++) {
+              window.PowerFX.burst(noseX, noseY, {
+                count: 2,
+                colors: ["#fff5c0", "#ffd24a", "#ff8a1a", "#ff3b00"],
+                speed: 90 + Math.random() * 50,
+                angle: 0,
+                spread: 0.32,
+                gravity: -15,
+                life: 0.28,
+                size: 4,
                 glow: true
               });
+            }
+          } catch (e) {}
+        }
+        // Burn obstacles in tight cone (Zeppelin Ace style — catch fire, fall)
+        if (typeof obstacles !== "undefined") {
+          for (var oi = obstacles.length - 1; oi >= 0; oi--) {
+            var o = obstacles[oi];
+            if (!o || o.onFire) continue;
+            var ox = o.x + o.w * 0.5;
+            var oy = o.y + o.h * 0.5;
+            var dx = ox - noseX;
+            var dy = oy - noseY;
+            if (dx < 8) continue;
+            var dist = Math.hypot(dx, dy);
+            if (dist > flameReach) continue;
+            var ang = Math.atan2(dy, dx);
+            if (Math.abs(ang) > coneHalf) continue;
+            o.onFire = true;
+            o.vy = 40;
+            try {
+              if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy);
+            } catch (e) {}
+            try {
+              if (window.PowerFX) {
+                window.PowerFX.burst(ox, oy, {
+                  count: 10,
+                  colors: ["#ff6b3d", "#ffd24a", "#ff1a00"],
+                  speed: 70,
+                  gravity: -30,
+                  life: 0.45,
+                  glow: true
+                });
+              }
+            } catch (e) {}
+            try {
+              if (typeof score === "number") score += 25;
+              if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
             } catch (e) {}
           }
-          try {
-            if (typeof score === "number") score += 25;
-            if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
-          } catch (e) {}
-          obstacles.splice(oi, 1);
         }
       }
       return;
     }
-
 
     // ---- Spinning power-icon swarm (blimps 5/7/8/9) ----
     if (stormMode === "swarm" || stormMode === "missile") {

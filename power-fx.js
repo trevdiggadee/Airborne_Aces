@@ -218,32 +218,33 @@
       ctx.fillStyle = g;
       ctx.fillRect(cx, cy - 6, 280, 12);
     } else if (kind === "flamethrower") {
-      // Nose gun flamethrower — jets forward (right)
-      for (i = 0; i < 10; i++) {
-        var dist = 18 + (i * 14) + (Math.sin(t * 20 + i) * 4);
-        var spread = (Math.sin(t * 14 + i * 1.7) * 0.18);
-        ox = cx + dist * Math.cos(spread);
-        oy = cy + dist * Math.sin(spread) * 0.9 + Math.sin(t * 18 + i) * 3;
-        r = 10 + 6 * (1 - i / 10) + Math.sin(t * 25 + i) * 2;
-        g = ctx.createRadialGradient(ox, oy, 0, ox, oy, r * 2.2);
-        var a0 = (0.9 - i * 0.07) * fade;
+      // Short nose-gun jet, lowered 2%
+      var dropY = cy + ((typeof H !== "undefined" ? H : 600) * 0.02);
+      for (i = 0; i < 7; i++) {
+        var dist = 12 + (i * 11) + (Math.sin(t * 20 + i) * 3);
+        if (dist > 95) continue;
+        var spread = (Math.sin(t * 14 + i * 1.7) * 0.14);
+        ox = cx + 16 + dist * Math.cos(spread);
+        oy = dropY + dist * Math.sin(spread) * 0.75 + Math.sin(t * 18 + i) * 2;
+        r = 8 + 4 * (1 - i / 7) + Math.sin(t * 25 + i) * 1.5;
+        g = ctx.createRadialGradient(ox, oy, 0, ox, oy, r * 2);
+        var a0 = (0.85 - i * 0.1) * fade;
         g.addColorStop(0, "rgba(255,250,200," + a0 + ")");
-        g.addColorStop(0.35, "rgba(255,140,20," + (a0 * 0.75) + ")");
-        g.addColorStop(0.7, "rgba(220,40,0," + (a0 * 0.35) + ")");
+        g.addColorStop(0.4, "rgba(255,140,20," + (a0 * 0.7) + ")");
+        g.addColorStop(0.75, "rgba(220,40,0," + (a0 * 0.3) + ")");
         g.addColorStop(1, "rgba(40,0,0,0)");
         ctx.fillStyle = g;
         ctx.beginPath();
-        ctx.arc(ox, oy, r * 2.2, 0, Math.PI * 2);
+        ctx.arc(ox, oy, r * 2, 0, Math.PI * 2);
         ctx.fill();
       }
-      // Muzzle flash at gun
-      g = ctx.createRadialGradient(cx + 14, cy, 0, cx + 14, cy, 16);
-      g.addColorStop(0, "rgba(255,255,220," + (0.9 * fade) + ")");
-      g.addColorStop(0.5, "rgba(255,120,0," + (0.5 * fade) + ")");
+      g = ctx.createRadialGradient(cx + 16, dropY, 0, cx + 16, dropY, 12);
+      g.addColorStop(0, "rgba(255,255,220," + (0.85 * fade) + ")");
+      g.addColorStop(0.5, "rgba(255,120,0," + (0.45 * fade) + ")");
       g.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = g;
       ctx.beginPath();
-      ctx.arc(cx + 14, cy, 16, 0, Math.PI * 2);
+      ctx.arc(cx + 16, dropY, 12, 0, Math.PI * 2);
       ctx.fill();
     } else if (kind === "rockets" || kind === "meteors" || kind === "swarm" || kind === "storm") {
       for (i = 0; i < 8; i++) {
