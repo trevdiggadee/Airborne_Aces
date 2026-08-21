@@ -109,6 +109,25 @@
       case "swarm":
         burst(x, y, { count: 26, colors: ["#fda4af", "#fb7185", "#ffe4e6"], speed: 150, radial: true, glow: true });
         break;
+      case "flamethrower":
+        // Forward cone of fire from nose gun
+        for (var fi = 0; fi < 18; fi++) {
+          var fa = -0.35 + Math.random() * 0.7;
+          var fsp = 180 + Math.random() * 160;
+          pushP({
+            x: x + 20, y: y,
+            vx: Math.cos(fa) * fsp,
+            vy: Math.sin(fa) * fsp * 0.55,
+            life: 0.35 + Math.random() * 0.25,
+            age: 0,
+            r: 4 + Math.random() * 5,
+            color: ["#fff5c0", "#ffd24a", "#ff8a1a", "#ff3b00"][(Math.random()*4)|0],
+            gravity: -20,
+            drag: 0.3,
+            glow: true
+          });
+        }
+        break;
       case "storm":
       default:
         burst(x, y, { count: 20, colors: ["#94a3b8", "#e2e8f0", "#38bdf8"], speed: 130, gravity: 20, glow: true });
@@ -198,6 +217,34 @@
       g.addColorStop(1, "rgba(40,120,255,0)");
       ctx.fillStyle = g;
       ctx.fillRect(cx, cy - 6, 280, 12);
+    } else if (kind === "flamethrower") {
+      // Nose gun flamethrower — jets forward (right)
+      for (i = 0; i < 10; i++) {
+        var dist = 18 + (i * 14) + (Math.sin(t * 20 + i) * 4);
+        var spread = (Math.sin(t * 14 + i * 1.7) * 0.18);
+        ox = cx + dist * Math.cos(spread);
+        oy = cy + dist * Math.sin(spread) * 0.9 + Math.sin(t * 18 + i) * 3;
+        r = 10 + 6 * (1 - i / 10) + Math.sin(t * 25 + i) * 2;
+        g = ctx.createRadialGradient(ox, oy, 0, ox, oy, r * 2.2);
+        var a0 = (0.9 - i * 0.07) * fade;
+        g.addColorStop(0, "rgba(255,250,200," + a0 + ")");
+        g.addColorStop(0.35, "rgba(255,140,20," + (a0 * 0.75) + ")");
+        g.addColorStop(0.7, "rgba(220,40,0," + (a0 * 0.35) + ")");
+        g.addColorStop(1, "rgba(40,0,0,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(ox, oy, r * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Muzzle flash at gun
+      g = ctx.createRadialGradient(cx + 14, cy, 0, cx + 14, cy, 16);
+      g.addColorStop(0, "rgba(255,255,220," + (0.9 * fade) + ")");
+      g.addColorStop(0.5, "rgba(255,120,0," + (0.5 * fade) + ")");
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(cx + 14, cy, 16, 0, Math.PI * 2);
+      ctx.fill();
     } else if (kind === "rockets" || kind === "meteors" || kind === "swarm" || kind === "storm") {
       for (i = 0; i < 8; i++) {
         ang = t * 2 + i * 0.8;

@@ -314,7 +314,7 @@
       blimp11: "missile",
       blimp12: "rockets",
       blimp13: "swarm",
-      blimp14: "swarm",
+      blimp14: "flamethrower",
       blimp15: "meteors"
     };
     const powerMode = SHIP_POWER_MODE[sel] || "storm";
@@ -341,7 +341,28 @@
       return;
     }
 
-    // Shockwave / Steam — clear nearby obstacles in expanding ring
+    
+    // Pirate Rocket — nose-gun flamethrower
+    if (powerMode === "flamethrower") {
+      if (typeof sfxExplosion === "function") sfxExplosion(0.35);
+      if (typeof sfxShoot === "function") sfxShoot();
+      stormActive = true;
+      stormMode = "flamethrower";
+      stormTimer = 5.5;
+      stormCharge = 0;
+      window.__airborneFlamethrowerUntil = performance.now() + 5500;
+      window.__airborneActivePowerVisual = "flamethrower";
+      window.__airborneActivePowerUntil = performance.now() + 5500;
+      try {
+        if (window.PowerFX && typeof player !== "undefined" && player) {
+          window.PowerFX.activate("flamethrower", player.x + 20, player.y);
+        }
+      } catch (e) {}
+      updateStormMeterDisplay();
+      return;
+    }
+
+// Shockwave / Steam — clear nearby obstacles in expanding ring
     if (powerMode === "shockwave" || powerMode === "steam") {
       if (typeof sfxThunder === "function") sfxThunder();
       if (typeof sfxExplosion === "function") sfxExplosion(0.45);
@@ -730,6 +751,88 @@
 
   function updateStorm(dt) {
     if (!stormActive) return;
+
+    // ---- Pirate Rocket flamethrower cone ----
+    if (stormMode === "flamethrower") {
+      if (typeof stormTimer === "number") {
+        stormTimer -= dt;
+        if (stormTimer <= 0) {
+          stormActive = false;
+          stormMode = "storm";
+          window.__airborneActivePowerVisual = null;
+          return;
+        }
+      } else if (window.__airborneFlamethrowerUntil && performance.now() > window.__airborneFlamethrowerUntil) {
+        stormActive = false;
+        stormMode = "storm";
+        window.__airborneActivePowerVisual = null;
+        return;
+      }
+      // Keep visual aura alive
+      window.__airborneActivePowerVisual = "flamethrower";
+      window.__airborneActivePowerUntil = performance.now() + 200;
+      // Continuous flame particles from nose
+      if (typeof player !== "undefined" && player && window.PowerFX) {
+        try {
+          var noseX = player.x + (player.w || 40) * 0.35;
+          var noseY = player.y;
+          for (var fi = 0; fi < 3; fi++) {
+            window.PowerFX.burst(noseX, noseY, {
+              count: 2,
+              colors: ["#fff5c0", "#ffd24a", "#ff8a1a", "#ff3b00", "#ff1a00"],
+              speed: 220 + Math.random() * 100,
+              angle: 0,
+              spread: 0.55,
+              gravity: -25,
+              life: 0.4,
+              size: 5,
+              glow: true
+            });
+          }
+        } catch (e) {}
+      }
+      // Damage obstacles in forward cone
+      if (typeof player !== "undefined" && player && typeof obstacles !== "undefined") {
+        var px = player.x + (player.w || 40) * 0.2;
+        var py = player.y;
+        var maxDist = Math.min(typeof W !== "undefined" ? W : 400, 280);
+        var cone = 0.55; // radians half-angle
+        for (var oi = obstacles.length - 1; oi >= 0; oi--) {
+          var o = obstacles[oi];
+          if (!o) continue;
+          var ox = o.x + o.w * 0.5;
+          var oy = o.y + o.h * 0.5;
+          var dx = ox - px;
+          var dy = oy - py;
+          if (dx < 10) continue; // only in front
+          var dist = Math.hypot(dx, dy);
+          if (dist > maxDist) continue;
+          var ang = Math.atan2(dy, dx);
+          if (Math.abs(ang) > cone) continue;
+          // Hit — burn effect
+          if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy);
+          if (window.PowerFX) {
+            try {
+              window.PowerFX.burst(ox, oy, {
+                count: 8,
+                colors: ["#ff6b3d", "#ffd24a", "#ff1a00"],
+                speed: 80,
+                gravity: -40,
+                life: 0.5,
+                glow: true
+              });
+            } catch (e) {}
+          }
+          try {
+            if (typeof score === "number") score += 25;
+            if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
+          } catch (e) {}
+          obstacles.splice(oi, 1);
+        }
+      }
+      return;
+    }
+
 
     // ---- Spinning power-icon swarm (blimps 5/7/8/9) ----
     if (stormMode === "swarm" || stormMode === "missile") {
