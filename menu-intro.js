@@ -364,6 +364,20 @@ function startHeroAnimation(key) {
       layer.style.opacity = "1";
 
       function tick(now) {
+        // Shared aura (matches in-game PowerFX)
+        try {
+          if (window.PowerFX && __heroFxKind) {
+            var fadeM = Math.max(0, Math.min(1, (__heroFxUntil - now) / 5000));
+            var tM = now * 0.001;
+            [cBack, cFront].forEach(function (cv) {
+              if (!cv) return;
+              var c = cv.getContext("2d");
+              if (!c) return;
+              window.PowerFX.drawAura(c, __heroFxKind === "saws" ? "missile" : __heroFxKind, cv.width * 0.5, cv.height * 0.52, tM, fadeM);
+            });
+          }
+        } catch (e) {}
+
         if (gen !== heroAnimGen) return;
         if (now - heroLastTick >= frameMs) {
           heroLastTick = now;
@@ -774,6 +788,20 @@ function powerPreviewKindFor(key) {
     }
 
     function tick(now) {
+        // Shared aura (matches in-game PowerFX)
+        try {
+          if (window.PowerFX && __heroFxKind) {
+            var fadeM = Math.max(0, Math.min(1, (__heroFxUntil - now) / 5000));
+            var tM = now * 0.001;
+            [cBack, cFront].forEach(function (cv) {
+              if (!cv) return;
+              var c = cv.getContext("2d");
+              if (!c) return;
+              window.PowerFX.drawAura(c, __heroFxKind === "saws" ? "missile" : __heroFxKind, cv.width * 0.5, cv.height * 0.52, tM, fadeM);
+            });
+          }
+        } catch (e) {}
+
       var key = (typeof selectedBlimp !== "undefined") ? selectedBlimp : "blimp1";
       var needMap = {
         fire: "blimp1", shockwave: "blimp2", saws: "blimp3", steam: "blimp4",

@@ -1271,6 +1271,8 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
   }
 
   function updateHitParticles(dt) {
+    try { if (window.PowerFX) window.PowerFX.update(dt); } catch (e) {}
+
     hitParticles.forEach(p => {
       p.age += dt;
       p.x += p.vx * dt;
@@ -1363,6 +1365,8 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
   }
 
   function drawHitParticles() {
+    try { if (window.PowerFX) window.PowerFX.draw(ctx); } catch (e) {}
+
     // explosion flash bursts first (underneath the sparks/smoke)
     explosionBursts.forEach(b => {
       const t = b.age / b.life;

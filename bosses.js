@@ -320,6 +320,13 @@
     const powerMode = SHIP_POWER_MODE[sel] || "storm";
     const swarmKey = SHIP_POWER_ICON_KEYS[sel] || null;
     stormMode = powerMode;
+    window.__airborneActivePowerVisual = powerMode;
+    window.__airborneActivePowerUntil = performance.now() + 5500;
+    try {
+      if (window.PowerFX && typeof player !== "undefined" && player) {
+        window.PowerFX.activate(powerMode, player.x, player.y);
+      }
+    } catch (e) {}
 
     // Fire power (Zeppelin Ace) — use existing fire aura system
     if (powerMode === "fire") {

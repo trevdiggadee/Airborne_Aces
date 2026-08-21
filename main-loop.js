@@ -189,6 +189,7 @@
       updateShieldPickup(dt);
       updateWindParticles(dt);
       updateStorm(dt);
+      try { if (window.PowerFX) window.PowerFX.update(dt); } catch (e) {}
       updateBonusRound(dt);
       updateLevelEnd(dt);
       updateComboPopups();
@@ -242,7 +243,7 @@
       drawPlayerBombs();
     }
     if (typeof drawBossSinking === 'function') drawBossSinking();
-    drawHitParticles();
+    drawHitParticles(); try { if (window.PowerFX) window.PowerFX.draw(ctx); } catch (e) {};
     drawPowerup();
     drawBonusRound();
     drawLevelEnd();
@@ -251,7 +252,7 @@
     drawShieldPickup();
     drawBlimpHeadlight();
     if (typeof drawAirfieldShadow === "function") drawAirfieldShadow();
-    drawPlayer();
+    drawPlayer(); try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePowerVisual(); } catch(e) {};
     try { if (typeof drawRingFronts === "function") drawRingFronts(); else if (window.__airborneDrawRingFronts) window.__airborneDrawRingFronts(); } catch (e) {}
     // Soft clouds in FRONT of mountains + blimp (50% alpha) — fly-through like L3
     drawClouds();
