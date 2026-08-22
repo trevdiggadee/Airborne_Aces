@@ -127,6 +127,9 @@
           });
         }
         break;
+      case "jollybomb":
+        burst(x, y, { count: 16, colors: ["#1a1a1a", "#c9a227", "#ff8a1a", "#fff"], speed: 100, glow: true });
+        break;
       case "barrelbomb":
         burst(x, y, { count: 14, colors: ["#c4a574", "#8B4513", "#ffd24a", "#ff6b3d"], speed: 110, glow: true });
         break;

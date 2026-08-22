@@ -2494,7 +2494,7 @@ function finishToMap() {
       try {
         if ((ruffCoins || []).length < 8) spawnTrainingCoins(10);
       } catch (e) {}
-      // Charge meter from coins (25 coins = full)
+      // Charge meter from coins (1 coin = full)
       try {
         if (typeof window.addStormChargeForScore === "function") {
           window.addStormChargeForScore(typeof score === "number" ? score : 0);

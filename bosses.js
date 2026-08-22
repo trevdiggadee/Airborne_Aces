@@ -221,7 +221,7 @@
       if (!window.__airborneAirfieldAllowPowerup) return;
       const coins = window.__airborneCollectCoins || 0;
       // Map coins directly: 25 coins => 100% charge
-      const target = Math.min(STORM_MAX, Math.floor((coins / 25) * STORM_MAX));
+      const target = Math.min(STORM_MAX, Math.floor((coins / 1) * STORM_MAX)); // TEST: 1 coin
       if (target > stormCharge) {
         stormCharge = target;
         updateStormMeterDisplay(true);
@@ -282,14 +282,14 @@
     if (window.__airborneAirfield) window.__airborneTrainingPowerUsed = true;
     if (window.__airborneAirfield) {
       // Spend 25 coins for activation
-      window.__airborneCollectCoins = Math.max(0, (window.__airborneCollectCoins || 0) - 25);
+      window.__airborneCollectCoins = Math.max(0, (window.__airborneCollectCoins || 0) - 1); // TEST: 1 coin
       try {
         const coinEl = document.getElementById("collectPowerPct");
         if (coinEl) coinEl.textContent = String(window.__airborneCollectCoins || 0);
       } catch (e) {}
       try {
         if (typeof ruffStats !== "undefined" && ruffStats) {
-          ruffStats.coins = Math.max(0, (ruffStats.coins || 0) - 25);
+          ruffStats.coins = Math.max(0, (ruffStats.coins || 0) - 1); // TEST: 1 coin
         }
       } catch (e) {}
     }
@@ -310,7 +310,7 @@
       blimp6: "vortex",
       blimp7: "chain",
       blimp8: "fireball",
-      blimp9: "swarm",
+      blimp9: "jollybomb",
       blimp10: "storm",
       blimp11: "warshark",
       blimp12: "heatseek",
@@ -402,6 +402,43 @@
       window.__airborneWarSharkImg = wi;
       try {
         if (window.PowerFX && player) window.PowerFX.activate("warshark", player.x, player.y);
+      } catch (e) {}
+      updateStormMeterDisplay();
+      return;
+    }
+
+    if (powerMode === "jollybomb") {
+      if (typeof sfxShoot === "function") sfxShoot();
+      if (typeof sfxExplosion === "function") sfxExplosion(0.3);
+      stormActive = true;
+      stormMode = "jollybomb";
+      stormTimer = 5.5;
+      stormCharge = 0;
+      window.__airborneHeatseekUntil = performance.now() + 5500;
+      window.__airborneActivePowerVisual = "jollybomb";
+      window.__airborneActivePowerUntil = performance.now() + 5500;
+      window.__airborneHeatseekers = [];
+      // Pre-spawn arcing spinning bombs
+      for (var ji = 0; ji < 5; ji++) {
+        var ang = -0.85 + ji * 0.35 + (Math.random() - 0.5) * 0.08;
+        var sp = 160 + Math.random() * 50;
+        window.__airborneHeatseekers.push({
+          x: (typeof player !== "undefined" && player) ? player.x + (player.w || 40) * 0.2 : 100,
+          y: (typeof player !== "undefined" && player) ? player.y : 200,
+          vx: Math.cos(ang) * sp,
+          vy: Math.sin(ang) * sp - 80 - Math.random() * 40, // upward arch
+          life: 2.5,
+          age: 0,
+          rot: Math.random() * Math.PI * 2,
+          spin: 8 + Math.random() * 6,
+          trails: [],
+          target: null,
+          kind: "jollybomb",
+          gravity: 220
+        });
+      }
+      try {
+        if (window.PowerFX && player) window.PowerFX.activate("jollybomb", player.x, player.y);
       } catch (e) {}
       updateStormMeterDisplay();
       return;
@@ -902,7 +939,7 @@
       }
     }
     // Keep updating in-flight missiles after power window ends
-    if ((!stormActive || (stormMode !== "heatseek" && stormMode !== "warshark" && stormMode !== "barrelbomb")) &&
+    if ((!stormActive || (stormMode !== "heatseek" && stormMode !== "warshark" && stormMode !== "barrelbomb" && stormMode !== "jollybomb")) &&
         window.__airborneHeatseekers && window.__airborneHeatseekers.length) {
       stormMode = window.__airborneHeatseekers[0].kind || "heatseek";
       stormActive = true;
@@ -1156,7 +1193,7 @@
 
 
     // ---- Sky Rocket heat-seekers ----
-    if (stormMode === "heatseek" || stormMode === "warshark" || stormMode === "barrelbomb") {
+    if (stormMode === "heatseek" || stormMode === "warshark" || stormMode === "barrelbomb" || stormMode === "jollybomb") {
       var nowHs = performance.now();
       var untilHs = window.__airborneHeatseekUntil || 0;
       if (!untilHs || nowHs >= untilHs) {
@@ -1203,8 +1240,8 @@
       for (var ri = rockets.length - 1; ri >= 0; ri--) {
         var rk = rockets[ri];
         rk.age += dt;
-        // Acquire nearest obstacle as heat target
-        if (typeof obstacles !== "undefined" && obstacles.length) {
+        // Acquire nearest obstacle as heat target (not for arcing jolly bombs)
+        if (rk.kind !== "jollybomb" && typeof obstacles !== "undefined" && obstacles.length) {
           var best = null, bestD = 1e9;
           for (var oi = 0; oi < obstacles.length; oi++) {
             var o = obstacles[oi];
@@ -1230,10 +1267,16 @@
           rk.vx = Math.cos(rk.rot) * spd;
           rk.vy = Math.sin(rk.rot) * spd;
         }
+        // Arch + spin for Jolly bombs
+        if (rk.kind === "jollybomb") {
+          rk.vy += (rk.gravity || 220) * dt;
+          rk.spin = rk.spin || 10;
+          rk.rot = (rk.rot || 0) + rk.spin * dt;
+        }
         rk.x += rk.vx * dt;
         rk.y += rk.vy * dt;
         // Exhaust trail at rear (lighter for barrel bombs)
-        if (Math.random() < (rk.kind === "barrelbomb" ? 0.35 : 0.85)) {
+        if (Math.random() < ((rk.kind === "barrelbomb" || rk.kind === "jollybomb") ? 0.35 : 0.85)) {
           var bx = -Math.cos(rk.rot);
           var by = -Math.sin(rk.rot);
           rk.trails.push({
@@ -1243,7 +1286,7 @@
             life: 0.35 + Math.random() * 0.25,
             age: 0,
             r: 3 + Math.random() * 4,
-            kind: rk.kind === "barrelbomb" ? "smoke" : (Math.random() < 0.55 ? "flame" : "smoke")
+            kind: (rk.kind === "barrelbomb" || rk.kind === "jollybomb") ? "smoke" : (Math.random() < 0.55 ? "flame" : "smoke")
           });
         }
         for (var ti = rk.trails.length - 1; ti >= 0; ti--) {
@@ -1256,7 +1299,7 @@
         }
         // Mid-air fuse for War Shark barrel bombs (~0.55s then AOE)
         var fuseBoom = false;
-        if (rk.kind === "barrelbomb" && rk.age >= 1.55 && !rk.fused) {
+        if ((rk.kind === "barrelbomb" || rk.kind === "jollybomb") && rk.age >= 1.05 && !rk.fused) {
           rk.fused = true;
           fuseBoom = true;
         }
@@ -1291,20 +1334,30 @@
           }
           try {
             if (window.PowerFX) {
-              // Core fire
+              // Bright flash core
               window.PowerFX.burst(cx, cy, {
-                count: 36, colors: ["#fff5c0", "#ffd24a", "#ff8a1a", "#ff3b00", "#ff1a00"],
-                speed: 200, gravity: 20, life: 0.7, glow: true, radial: true, size: 6
+                count: 18, colors: ["#ffffff", "#fff5c0", "#ffd24a"],
+                speed: 60, gravity: 0, life: 0.25, glow: true, radial: true, size: 10
               });
-              // Smoke
+              // Rising fireball
               window.PowerFX.burst(cx, cy, {
-                count: 22, colors: ["#5c5346", "#3d3830", "#2a2620", "#1a1814"],
-                speed: 90, gravity: -25, life: 1.1, glow: false, radial: true, size: 8
+                count: 42, colors: ["#fff5c0", "#ffd24a", "#ff8a1a", "#ff3b00", "#cc1100"],
+                speed: 220, gravity: 15, life: 0.85, glow: true, radial: true, size: 7
               });
-              // Debris (wood/metal bits)
+              // Rolling smoke plume
               window.PowerFX.burst(cx, cy, {
-                count: 18, colors: ["#c4a574", "#8B4513", "#a08060", "#6b4423", "#d4c4a8"],
-                speed: 160, gravity: 120, life: 0.9, glow: false, radial: true, size: 4
+                count: 30, colors: ["#6b6358", "#4a453c", "#2e2a24", "#1a1814", "#0d0c0a"],
+                speed: 70, gravity: -40, life: 1.4, glow: false, radial: true, size: 10
+              });
+              // Heavy debris
+              window.PowerFX.burst(cx, cy, {
+                count: 24, colors: ["#c4a574", "#8B4513", "#a08060", "#6b4423", "#d4c4a8", "#555"],
+                speed: 190, gravity: 160, life: 1.0, glow: false, radial: true, size: 5
+              });
+              // Embers
+              window.PowerFX.burst(cx, cy, {
+                count: 20, colors: ["#ff6b3d", "#ffb347", "#ff3b00"],
+                speed: 140, gravity: 80, life: 0.7, glow: true, radial: true, size: 3
               });
             }
           } catch (e) {}
@@ -1326,7 +1379,7 @@
           var hby = boss.y + boss.h * 0.5;
           if (Math.hypot(rk.x - hbx, rk.y - hby) < 28 + Math.max(boss.w, boss.h) * 0.3) {
             hit = true;
-            aoeDestroyAt(rk.x, rk.y, rk.kind === "barrelbomb" ? 95 : 40);
+            aoeDestroyAt(rk.x, rk.y, (rk.kind === "barrelbomb" || rk.kind === "jollybomb") ? 95 : 40);
           }
         }
         if (typeof obstacles !== "undefined") {
@@ -1337,7 +1390,7 @@
             var oy = o.y + o.h * 0.5;
             if (Math.hypot(rk.x - ox, rk.y - oy) < 22 + Math.max(o.w, o.h) * 0.3) {
               hit = true;
-              if (rk.kind === "barrelbomb") {
+              if (rk.kind === "barrelbomb" || rk.kind === "jollybomb") {
                 aoeDestroyAt(rk.x, rk.y, 95);
               } else {
                 try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
@@ -1359,7 +1412,7 @@
           }
         }
         if (hit || rk.age >= rk.life || rk.x > (typeof W !== "undefined" ? W : 400) + 60) {
-          if (hit && window.PowerFX && rk.kind !== "barrelbomb") {
+          if (hit && window.PowerFX && rk.kind !== "barrelbomb" && rk.kind !== "jollybomb") {
             try { window.PowerFX.burst(rk.x, rk.y, { count: 14, colors: ["#ff8a1a", "#fff5c0"], speed: 100, glow: true }); } catch (e) {}
           }
           if (!window.__airborneOrphanTrails) window.__airborneOrphanTrails = [];
@@ -1722,6 +1775,7 @@ function drawHeatseekers() {
       var rk = rockets[i];
       var img = (rk.kind === "barrelbomb") ? window.__airborneBarrelBombImg
         : (rk.kind === "warshark") ? window.__airborneWarSharkImg
+        : (rk.kind === "jollybomb") ? null
         : window.__airborneRocketImg;
       // trails
       for (var ti = 0; ti < (rk.trails || []).length; ti++) {
@@ -1754,6 +1808,22 @@ function drawHeatseekers() {
         rw = 52;
         rh = rw * aspect;
         ctx.drawImage(img, -rw * 0.35, -rh / 2, rw, rh);
+      } else if (rk.kind === "jollybomb") {
+        // Spinning skull bomb
+        var br = 14;
+        ctx.fillStyle = "#1a1a1a";
+        ctx.beginPath(); ctx.arc(0, 0, br, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#c9a227"; ctx.lineWidth = 2;
+        ctx.stroke();
+        // skull
+        ctx.fillStyle = "#f0e6d0";
+        ctx.beginPath(); ctx.arc(0, -2, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#1a1a1a";
+        ctx.beginPath(); ctx.arc(-2.5, -3, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(2.5, -3, 1.5, 0, Math.PI * 2); ctx.fill();
+        // fuse spark
+        ctx.fillStyle = "#ff8a1a";
+        ctx.beginPath(); ctx.arc(0, -br - 2, 2.5, 0, Math.PI * 2); ctx.fill();
       } else {
         ctx.fillStyle = "#3a6a9a";
         ctx.fillRect(-12, -6, 28, 12);

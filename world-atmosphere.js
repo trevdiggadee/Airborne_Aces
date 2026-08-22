@@ -442,7 +442,7 @@
             xOff = player.w * 0.02;
           }
           if (selEx === "blimp14" && jets > 1 && ji === 1) {
-            yOff = player.h * 0.10; // raised 2% from 0.12
+            yOff = player.h * 0.09; // raised further
           }
         } catch (e) {}
         var jx = exhaustX - sinR * yOff + cosR * xOff;
