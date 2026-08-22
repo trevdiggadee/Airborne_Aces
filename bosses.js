@@ -842,6 +842,25 @@
   }
 
   function updateStorm(dt) {
+    // Always tick orphan missile trails so marks never stick
+    if (window.__airborneOrphanTrails && window.__airborneOrphanTrails.length) {
+      for (var oi = window.__airborneOrphanTrails.length - 1; oi >= 0; oi--) {
+        var ot = window.__airborneOrphanTrails[oi];
+        ot.age += dt;
+        ot.x += (ot.vx || 0) * dt;
+        ot.y += (ot.vy || 0) * dt;
+        ot.r += ((ot.kind === "smoke") ? 10 : 4) * dt;
+        if (ot.age >= ot.life) window.__airborneOrphanTrails.splice(oi, 1);
+      }
+    }
+    // Keep updating in-flight missiles after power window ends
+    if ((!stormActive || (stormMode !== "heatseek" && stormMode !== "warshark")) &&
+        window.__airborneHeatseekers && window.__airborneHeatseekers.length) {
+      stormMode = window.__airborneHeatseekers[0].kind || "heatseek";
+      stormActive = true;
+      window.__airborneHeatseekUntil = 0; // no new spawns
+    }
+
     if (!stormActive) return;
 
     // ---- Pirate Rocket flamethrower cone ----
@@ -1077,21 +1096,27 @@
       var nowHs = performance.now();
       var untilHs = window.__airborneHeatseekUntil || 0;
       if (!untilHs || nowHs >= untilHs) {
-        stormActive = false;
-        stormMode = "storm";
-        stormTimer = 0;
+        // Stop spawning; let in-flight missiles finish (trails fade naturally)
+        window.__airborneHeatseekUntil = 0;
         window.__airborneActivePowerVisual = null;
         window.__airborneActivePowerUntil = 0;
-        window.__airborneHeatseekUntil = 0;
-        window.__airborneHeatseekers = [];
-        return;
+        var stillFlying = (window.__airborneHeatseekers && window.__airborneHeatseekers.length) ||
+          (window.__airborneWarBullets && window.__airborneWarBullets.length);
+        if (!stillFlying) {
+          stormActive = false;
+          stormMode = "storm";
+          stormTimer = 0;
+          return;
+        }
+        // Keep updating existing rockets until gone
       }
       window.__airborneActivePowerVisual = stormMode;
       window.__airborneActivePowerUntil = untilHs;
       if (!window.__airborneHeatseekers) window.__airborneHeatseekers = [];
       if (!window.__airborneHeatseekSpawnT) window.__airborneHeatseekSpawnT = 0;
       window.__airborneHeatseekSpawnT -= dt;
-      if (window.__airborneHeatseekSpawnT <= 0 && typeof player !== "undefined" && player) {
+      var canSpawnHs = window.__airborneHeatseekUntil && performance.now() < window.__airborneHeatseekUntil;
+      if (canSpawnHs && window.__airborneHeatseekSpawnT <= 0 && typeof player !== "undefined" && player) {
         window.__airborneHeatseekSpawnT = 0.45;
         var ang = -0.25 + Math.random() * 0.5;
         var sp = 200 + Math.random() * 60;
@@ -1215,6 +1240,13 @@
         if (hit || rk.age >= rk.life || rk.x > (typeof W !== "undefined" ? W : 400) + 60) {
           if (hit && window.PowerFX) {
             try { window.PowerFX.burst(rk.x, rk.y, { count: 14, colors: ["#ff8a1a", "#fff5c0"], speed: 100, glow: true }); } catch (e) {}
+          }
+          // Orphan trails fade out instead of freezing as marks
+          if (!window.__airborneOrphanTrails) window.__airborneOrphanTrails = [];
+          if (rk.trails && rk.trails.length) {
+            for (var oti = 0; oti < rk.trails.length; oti++) {
+              window.__airborneOrphanTrails.push(rk.trails[oti]);
+            }
           }
           rockets.splice(ri, 1);
         }
@@ -1451,7 +1483,7 @@
         var cosR = Math.cos(rot), sinR = Math.sin(rot);
         // Local offset: front of blimp
         var localX = (player.w || 40) * 0.42;
-        var localY = (player.h || 30) * 0.07; // +2% lower on War Shark nose
+        var localY = (player.h || 30) * 0.09; // lower on War Shark nose
         var hx = player.x + localX * cosR - localY * sinR;
         var hy = player.y + localX * sinR + localY * cosR;
         ctx.save();

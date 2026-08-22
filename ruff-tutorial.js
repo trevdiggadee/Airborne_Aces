@@ -1945,7 +1945,9 @@
 
   
   
-  function hardResetTrainingState() {
+  function hardResetTrainingState(opts) {
+    opts = opts || {};
+    var keepAirfield = !!opts.keepAirfield;
     try {
       ruffActive = false;
       ruffStage = "idle";
@@ -1967,6 +1969,8 @@
       ruffSpeakLines = [];
       ruffFrame = 0;
       ruffFrameT = 0;
+      ruffX = 0;
+      ruffY = 0;
     } catch (e) {}
     window.__airborneRuffActive = false;
     window.__airborneRuffStage = "idle";
@@ -1979,16 +1983,19 @@
     window.__airborneTrainingReportReady = false;
     window.__airborneTrainingReportShown = false;
     window.__airborneForceTrainRestart = true;
-    window.__airborneAirfield = false;
-    window.__airborneTrainingFlight = false;
-    window.__airborneAirfieldPhase = "done";
-    window.__airborneAirfieldHold = false;
-    window.__airborneAirfieldPaused = false;
+    if (!keepAirfield) {
+      window.__airborneAirfield = false;
+      window.__airborneTrainingFlight = false;
+      window.__airborneAirfieldPhase = "done";
+      window.__airborneAirfieldHold = false;
+      window.__airborneAirfieldPaused = false;
+    }
     window.__airborneResetRunway = true;
     try {
       window.__airborneFireballs = [];
       window.__airborneHeatseekers = [];
       window.__airborneWarBullets = [];
+      window.__airborneOrphanTrails = [];
       window.__airborneActivePowerVisual = null;
       window.__airborneActivePowerUntil = 0;
     } catch (e) {}
@@ -2156,10 +2163,17 @@ function finishToMap() {
 
   // ---------- Public API ----------
   function beginRuffTraining() {
-    try { hardResetTrainingState(); } catch (e) {}
+    try { hardResetTrainingState({ keepAirfield: true }); } catch (e) {}
     ruffActive = true;
     window.__airborneRuffActive = true;
     ruffStage = "intro";
+    // Appear immediately (no wait)
+    try {
+      if (typeof W !== "undefined" && typeof H !== "undefined") {
+        ruffX = W * 0.12;
+        ruffY = H * 0.28;
+      }
+    } catch (e) {}
     ruffStageT = 0;
     ruffLineIdx = 0;
     ruffLandingCelebrated = false;

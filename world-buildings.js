@@ -266,7 +266,7 @@
 
   function beginAirfieldTraining() {
     try {
-      if (window.__airborneHardResetTraining) window.__airborneHardResetTraining();
+      if (window.__airborneHardResetTraining) window.__airborneHardResetTraining({ keepAirfield: true });
     } catch (e) {}
     airfieldMode = true;
     airfieldPhase = "taxi";
@@ -280,12 +280,15 @@
     airfieldTakeoffSpeed = 50;
     airfieldStripGone = false;
     airfieldUseLandingArt = false;
-    airfieldTiles = [];
+    airfieldFlags = [];
+    airfieldLights = [];
     window.__airborneAirfield = true;
     window.__airborneTrainingFlight = true;
     window.__airborneAirfieldPhase = "taxi";
     window.__airborneForceTrainRestart = false;
-    window.__airborneResetRunway = true;
+    window.__airborneResetRunway = false;
+    // Rebuild runway immediately so background is never blank
+    try { initAirfieldStrip(); } catch (e) { airfieldTiles = []; window.__airborneResetRunway = true; }
     window.__airborneRuffLandArmed = false;
     window.__airborneRuffRequestLand = false;
     window.__airborneTrainingBoss = false;
