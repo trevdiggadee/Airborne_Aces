@@ -2206,27 +2206,53 @@ function finishToMap() {
 
   // ---------- Public API ----------
   function beginRuffTraining() {
+    // Soft clear without killing airfield flags
     try { hardResetTrainingState({ keepAirfield: true }); } catch (e) {}
+    try { if (window.__airborneClearAllGameplay) window.__airborneClearAllGameplay(); } catch (e) {}
+
     ruffActive = true;
     window.__airborneRuffActive = true;
+    window.__airborneRuffStage = "intro";
     ruffStage = "intro";
-    // Appear immediately (no wait)
-    try {
-      if (typeof W !== "undefined" && typeof H !== "undefined") {
-        ruffX = W * 0.12;
-        ruffY = H * 0.28;
-      }
-    } catch (e) {}
     ruffStageT = 0;
     ruffLineIdx = 0;
+    ruffLineT = 0;
     ruffLandingCelebrated = false;
-    window.__airborneRuffStage = "intro";
+    ruffIntroFly = true;
+    ruffIntroFlyT = 0;
+    ruffIntroLineArmed = false;
+    ruffSpeechDone = true;
+    ruffScalePulse = 1.15;
+    ruffWaitingInput = false;
+    ruffWaitingCollect = 0;
+    ruffWaitingAvoid = false;
+    ruffWaitingRing = 0;
     window.__airborneRuffLandArmed = false;
     window.__airborneRuffRequestLand = false;
     window.__airborneTrainingPowerUsed = false;
+    window.__airborneTrainingBoss = false;
+    window.__airborneTrainingBossDone = false;
+    window.__airborneTrainingBossTried = false;
+
+    // Visible from first frame (fly-in starts on-screen)
+    var _W = (typeof W !== "undefined" && W > 0) ? W : 390;
+    var _H = (typeof H !== "undefined" && H > 0) ? H : 700;
+    ruffX = _W * 0.88;
+    ruffY = _H * 0.22;
+    ruffTilt = -0.2;
+    ruffFrame = 0;
+    ruffFrameT = 0;
+
+    ruffLines = (DIALOGUE && DIALOGUE.intro) ? DIALOGUE.intro.slice() : [];
+    ruffLineDuration = 3.5;
+
     ruffCrystals = [];
     ruffCoins = [];
-    try { ruffStats = { crystals: 0, coins: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, landingStars: 3 }; } catch (e) {}
+    try { if (typeof ruffRings !== "undefined") ruffRings = []; } catch (e) {}
+    ruffBgBalloons = [];
+    try {
+      ruffStats = { crystals: 0, coins: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, survivingStars: 3 };
+    } catch (e) {}
 
     try {
       trainEnsure();
@@ -2237,76 +2263,30 @@ function finishToMap() {
       setTimeout(function(){ trainBeep(659, 0.1, 0.2); }, 120);
       setTimeout(function(){ trainBeep(784, 0.12, 0.18); }, 240);
     } catch (e) { console.warn("train audio start", e); }
+
     try { placeTrainingPowerIcon(); } catch (e) {}
     try {
       var ft = document.getElementById("ruffFlightTrace");
       if (ft) { ft.style.display = "none"; ft.style.visibility = "hidden"; }
     } catch (e) {}
-    try {
-      var stages = ["intro","altitude","obstacles","rings","crystals","shield","powerup","airship","boss1","combined","landing"];
-      var si = stages.indexOf(name);
-      if (si < 0) si = 0;
-      if (typeof window.updateUnifiedProgress === "function") window.updateUnifiedProgress(((si + 1) / stages.length) * 100);
-    } catch (e) {}
 
-    window.__airborneRuffActive = true;
-    window.__airborneRuffStage = "intro";
-    console.log("[R.U.F.F.] beginRuffTraining active=", ruffActive);
-    // Visible start position (right side)
-    ruffX = (typeof W !== "undefined" ? W : 400) * 0.85;
-    ruffY = (typeof H !== "undefined" ? H : 600) * 0.28;
-    ruffIntroFly = true;
-    ruffIntroFlyT = 0;
-    ruffIntroLineArmed = false;
-    ruffScalePulse = 1.2;
-    ruffFrame = 0;
-    window.__airborneAirfieldAllowPowerup = true;
-    if (typeof powerup !== "undefined") powerup = null;
-    if (typeof shieldPickup !== "undefined") shieldPickup = null;
-    if (typeof stormCharge === "number") stormCharge = 0;
-    try { placeTrainingPowerIcon(); } catch (e) {}
+    // Use setStage for full intro wiring (does not clear ruffActive)
     try {
-      var ft = document.getElementById("ruffFlightTrace");
-      if (ft) { ft.style.display = "none"; ft.style.visibility = "hidden"; }
-    } catch (e) {}
-    try {
-      var stages = ["intro","altitude","obstacles","rings","crystals","shield","powerup","airship","boss1","combined","landing"];
-      var si = stages.indexOf(name);
-      if (si < 0) si = 0;
-      if (typeof window.updateUnifiedProgress === "function") window.updateUnifiedProgress(((si + 1) / stages.length) * 100);
-    } catch (e) {}
-
-    if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay();
-    ruffStats = { crystals: 0, coins: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, landingStars: 3 };
-    ruffCrystals = [];
-    ruffCoins = [];
-    window.__airborneCollectCoins = 0;
-    window.__airborneFireSpawned = false;
-    window.__airborneFireSpawned2 = false;
-    window.__airborneFirePowerActive = false;
-    try {
-      if (typeof updateCollectDock === "function") updateCollectDock();
-      const coinEl = document.getElementById("collectPowerPct");
-      if (coinEl) coinEl.textContent = "0";
-    } catch (e) {}
-    ruffMarkers = [];
-    ruffCombo = 0;
-    ruffIntroDone = false;
-    ensureSkipHandler();
-    showFlightTrace();
-    showFlightTraceBanner();
-    setStage("intro");
-    // Re-assert after setStage so he is visible immediately
+      // Avoid recursive hard clear inside setStage collectible wipe only
+      setStage("intro");
+    } catch (e) {
+      console.warn("setStage intro", e);
+    }
+    // setStage resets intro fly — re-arm after
     ruffActive = true;
     window.__airborneRuffActive = true;
-    window.__airborneRuffStage = "intro";
     ruffIntroFly = true;
     ruffIntroFlyT = 0;
-    ruffX = (typeof W !== "undefined" ? W : 400) * 0.8;
-    ruffY = (typeof H !== "undefined" ? H : 600) * 0.26;
-    ruffScalePulse = 1.25;
-    console.log("[R.U.F.F.] on screen at", Math.round(ruffX), Math.round(ruffY));
+    ruffX = _W * 0.88;
+    ruffY = _H * 0.22;
+    console.log("[R.U.F.F.] begin", ruffActive, ruffStage, Math.round(ruffX), Math.round(ruffY));
   }
+
 
   function updateRuff(dt) {
     if (!ruffActive && window.__airborneRuffActive) {
@@ -2717,15 +2697,17 @@ function finishToMap() {
       window.__ruffDrawLogged = true;
       console.log("[R.U.F.F.] drawing", ruffStage, Math.round(ruffX), Math.round(ruffY));
     }
-    drawMarkers();
-    drawCrystals();
-    try { drawTrainingCoins();
+    try { drawMarkers(); } catch (e) {}
+    try { drawCrystals(); } catch (e) {}
+    try { drawTrainingCoins(); } catch (e) {}
     try { drawTrainingBgBalloons(); } catch (e) {}
     try { drawTrainingAirship(); } catch (e) {}
     try { drawScreenDust(); } catch (e) {}
-    if (ruffStage !== "boss1" && window.__airborneRuffStage !== "boss1") { try { drawTrainingBossDark(); } catch (e) {} } } catch (e) {}
-    drawSparkles();
-    drawRuffCompanion();
+    if (ruffStage !== "boss1" && window.__airborneRuffStage !== "boss1") {
+      try { drawTrainingBossDark(); } catch (e) {}
+    }
+    try { drawSparkles(); } catch (e) {}
+    try { drawRuffCompanion(); } catch (e) {}
   }
 
   function drawPowerOrb() {

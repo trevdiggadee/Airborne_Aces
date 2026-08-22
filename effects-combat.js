@@ -1173,13 +1173,13 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
   let explosionBursts = [];
 
   window.__airborneClearCombatFx = function () {
-    try { hitParticles = []; } catch (e) {}
-    try { explosionBursts = []; } catch (e) {}
-    try { playerBombTrailParticles = []; } catch (e) {}
-    try { rocketTrailParticles = []; } catch (e) {}
-    try { windParticles = []; } catch (e) {}
-    try { dustParticles = []; } catch (e) {}
-    try { shellTrailParticles = []; } catch (e) {}
+    try { hitParticles.length = 0; hitParticles = []; } catch (e) {}
+    try { explosionBursts.length = 0; explosionBursts = []; } catch (e) {}
+    try { playerBombTrailParticles.length = 0; playerBombTrailParticles = []; } catch (e) {}
+    try { rocketTrailParticles.length = 0; rocketTrailParticles = []; } catch (e) {}
+    try { windParticles.length = 0; windParticles = []; } catch (e) {}
+    try { dustParticles.length = 0; dustParticles = []; } catch (e) {}
+    try { shellTrailParticles.length = 0; shellTrailParticles = []; } catch (e) {}
   };
 
   let shockwaves = []; // expanding glow rings — used for the boss-defeat spectacle

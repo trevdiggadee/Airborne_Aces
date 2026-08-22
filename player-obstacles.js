@@ -212,15 +212,17 @@
   // ---------- Obstacles ----------
   let obstacles = [];
   window.__airborneClearObstacles = function () {
-    try { obstacles = []; } catch (e) {}
-    try { if (typeof hearts !== "undefined") hearts = []; } catch (e) {}
+    try { obstacles.length = 0; obstacles = []; } catch (e) {}
+    try { if (typeof hearts !== "undefined") { hearts.length = 0; hearts = []; } } catch (e) {}
     try {
       window.__airborneFirePowerActive = false;
       window.__airborneFirePickup = null;
       window.__airborneFireAura = [];
       window.__airborneFireTrail = [];
     } catch (e) {}
+    try { window.__airborneObstacles = obstacles; } catch (e) {}
   };
+  window.__airborneGetObstacles = function () { return obstacles; };
 
   let spawnTimer = 0;
   let spawnInterval = 1.7; // seconds, decreases slightly as score rises

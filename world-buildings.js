@@ -353,8 +353,23 @@
     } catch (e) {}
     // Start R.U.F.F. FIRST so he appears before any runway motion
     window.__airborneRuffStage = "intro";
+    window.__airborneRuffActive = true;
+    window.__airborneAirfield = true;
+    window.__airborneTrainingFlight = true;
+    window.__airborneAirfieldPhase = "taxi";
     if (typeof window.__airborneBeginRuff === "function") {
       try { window.__airborneBeginRuff(); } catch (e) { console.warn(e); }
+    }
+    // Re-assert after begin (hardReset soft may have toggled)
+    window.__airborneRuffActive = true;
+    window.__airborneRuffStage = "intro";
+    window.__airborneAirfield = true;
+    window.__airborneTrainingFlight = true;
+    window.__airborneAirfieldPhase = "taxi";
+    airfieldMode = true;
+    airfieldPhase = "taxi";
+    if (!airfieldTiles || !airfieldTiles.length) {
+      try { initAirfieldStrip(); } catch (e) {}
     }
     airfieldPhaseT = 0;
     airfieldRunwayT = 0;

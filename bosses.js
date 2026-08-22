@@ -1507,7 +1507,7 @@
         var cosR = Math.cos(rot), sinR = Math.sin(rot);
         // Local offset: front of blimp
         var localX = (player.w || 40) * 0.42;
-        var localY = (player.h || 30) * 0.09; // lower on War Shark nose
+        var localY = (player.h || 30) * 0.14; // lower on War Shark nose (~toward gun line)
         var hx = player.x + localX * cosR - localY * sinR;
         var hy = player.y + localX * sinR + localY * cosR;
         ctx.save();
