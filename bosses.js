@@ -398,7 +398,7 @@
       window.__airborneWarBullets = [];
       window.__airborneWarSharkImg = null;
       var wi = new Image();
-      wi.src = "war_shark_missile.png?v=ruff193";
+      wi.src = "war_shark_barrel_bomb.png?v=ruff199";
       window.__airborneWarSharkImg = wi;
       try {
         if (window.PowerFX && player) window.PowerFX.activate("warshark", player.x, player.y);
@@ -955,6 +955,7 @@
           for (var oi = obstacles.length - 1; oi >= 0; oi--) {
             var o = obstacles[oi];
             if (!o || o.onFire) continue;
+            if (o.isRing || o.type === "gold_ring" || o.type === "ring") continue;
             var ox = o.x + o.w * 0.5;
             var oy = o.y + o.h * 0.5;
             var dx = ox - noseX;
@@ -1093,6 +1094,7 @@
           for (var oi = obstacles.length - 1; oi >= 0; oi--) {
             var o = obstacles[oi];
             if (!o || o.onFire) continue;
+            if (o.isRing || o.type === "gold_ring" || o.type === "ring") continue;
             var ox = o.x + o.w * 0.5;
             var oy = o.y + o.h * 0.5;
             if (Math.hypot(fb.x - ox, fb.y - oy) < fb.r + Math.max(o.w, o.h) * 0.35) {
@@ -1172,20 +1174,8 @@
           target: null,
           kind: stormMode
         });
-        // War Shark: also fire small top-gun bullets
-        if (stormMode === "warshark" && typeof player !== "undefined" && player) {
-          if (!window.__airborneWarBullets) window.__airborneWarBullets = [];
-          for (var bi = 0; bi < 2; bi++) {
-            window.__airborneWarBullets.push({
-              x: player.x + (player.w || 40) * 0.15,
-              y: player.y - (player.h || 30) * 0.35,
-              vx: 320 + Math.random() * 40,
-              vy: (Math.random() - 0.5) * 40,
-              life: 0.9,
-              age: 0
-            });
-          }
-        }
+        // War Shark: no continuous bullets — barrel bombs only
+
       }
       var rockets = window.__airborneHeatseekers;
       for (var ri = rockets.length - 1; ri >= 0; ri--) {
@@ -1220,8 +1210,8 @@
         }
         rk.x += rk.vx * dt;
         rk.y += rk.vy * dt;
-        // Exhaust flame + smoke trail at rear
-        if (Math.random() < 0.85) {
+        // Exhaust trail at rear (lighter for barrel bombs)
+        if (Math.random() < (rk.kind === "warshark" ? 0.35 : 0.85)) {
           var bx = -Math.cos(rk.rot);
           var by = -Math.sin(rk.rot);
           rk.trails.push({
@@ -1231,7 +1221,7 @@
             life: 0.35 + Math.random() * 0.25,
             age: 0,
             r: 3 + Math.random() * 4,
-            kind: Math.random() < 0.55 ? "flame" : "smoke"
+            kind: rk.kind === "warshark" ? "smoke" : (Math.random() < 0.55 ? "flame" : "smoke")
           });
         }
         for (var ti = rk.trails.length - 1; ti >= 0; ti--) {
@@ -1242,46 +1232,94 @@
           tr.r += (tr.kind === "smoke" ? 10 : 4) * dt;
           if (tr.age >= tr.life) rk.trails.splice(ti, 1);
         }
-        // Contact explode
+        // Mid-air fuse for War Shark barrel bombs (~0.55s then AOE)
+        var fuseBoom = false;
+        if (rk.kind === "warshark" && rk.age >= 0.55 && !rk.fused) {
+          rk.fused = true;
+          fuseBoom = true;
+        }
+        // Contact explode (obstacles only — never rings)
         var hit = false;
+        function isRingObs(o) {
+          return !!(o && (o.isRing || o.type === "gold_ring" || o.type === "ring"));
+        }
+        function aoeDestroyAt(cx, cy, radius) {
+          if (typeof obstacles === "undefined") return;
+          for (var oi = obstacles.length - 1; oi >= 0; oi--) {
+            var o = obstacles[oi];
+            if (!o || isRingObs(o)) continue;
+            var ox = o.x + o.w * 0.5;
+            var oy = o.y + o.h * 0.5;
+            if (Math.hypot(cx - ox, cy - oy) < radius + Math.max(o.w, o.h) * 0.25) {
+              try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
+              try { if (typeof triggerBigExplosion === "function") triggerBigExplosion(ox, oy, 0.5); } catch (e) {}
+              try {
+                if (typeof score === "number") score += 30;
+                if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
+              } catch (e) {}
+              obstacles.splice(oi, 1);
+            }
+          }
+          if (typeof bossActive !== "undefined" && bossActive && boss) {
+            var hbx = boss.x + boss.w * 0.5;
+            var hby = boss.y + boss.h * 0.5;
+            if (Math.hypot(cx - hbx, cy - hby) < radius + Math.max(boss.w, boss.h) * 0.3) {
+              try { damageBossFromPower(Math.max(4, Math.ceil((boss.maxHealth || 30) * 0.12)), hbx, hby); } catch (e) {}
+            }
+          }
+          try {
+            if (window.PowerFX) window.PowerFX.burst(cx, cy, {
+              count: 28, colors: ["#ffd24a", "#ff6b3d", "#fff", "#8B4513", "#ff1a00"],
+              speed: 180, gravity: 40, life: 0.6, glow: true, radial: true
+            });
+          } catch (e) {}
+          try { if (typeof sfxExplosion === "function") sfxExplosion(0.45); } catch (e) {}
+        }
+        if (fuseBoom) {
+          aoeDestroyAt(rk.x, rk.y, 95);
+          hit = true;
+        }
         if (typeof bossActive !== "undefined" && bossActive && boss) {
           var hbx = boss.x + boss.w * 0.5;
           var hby = boss.y + boss.h * 0.5;
           if (Math.hypot(rk.x - hbx, rk.y - hby) < 28 + Math.max(boss.w, boss.h) * 0.3) {
             hit = true;
-            damageBossFromPower(Math.max(4, Math.ceil((boss.maxHealth || 30) * 0.12)), hbx, hby);
+            aoeDestroyAt(rk.x, rk.y, rk.kind === "warshark" ? 95 : 40);
           }
         }
         if (typeof obstacles !== "undefined") {
           for (var oi = obstacles.length - 1; oi >= 0; oi--) {
             var o = obstacles[oi];
-            if (!o) continue;
+            if (!o || isRingObs(o)) continue;
             var ox = o.x + o.w * 0.5;
             var oy = o.y + o.h * 0.5;
             if (Math.hypot(rk.x - ox, rk.y - oy) < 22 + Math.max(o.w, o.h) * 0.3) {
               hit = true;
-              try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
-              try { if (typeof triggerBigExplosion === "function") triggerBigExplosion(ox, oy, 0.7); } catch (e) {}
-              try {
-                if (window.PowerFX) window.PowerFX.burst(ox, oy, {
-                  count: 22, colors: ["#ffd24a", "#ff6b3d", "#fff", "#ff1a00"],
-                  speed: 160, gravity: 30, life: 0.55, glow: true, radial: true
-                });
-              } catch (e) {}
-              try {
-                if (typeof score === "number") score += 40;
-                if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
-              } catch (e) {}
-              obstacles.splice(oi, 1);
+              if (rk.kind === "warshark") {
+                aoeDestroyAt(rk.x, rk.y, 95);
+              } else {
+                try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
+                try { if (typeof triggerBigExplosion === "function") triggerBigExplosion(ox, oy, 0.7); } catch (e) {}
+                try {
+                  if (window.PowerFX) window.PowerFX.burst(ox, oy, {
+                    count: 22, colors: ["#ffd24a", "#ff6b3d", "#fff", "#ff1a00"],
+                    speed: 160, gravity: 30, life: 0.55, glow: true, radial: true
+                  });
+                } catch (e) {}
+                try {
+                  if (typeof score === "number") score += 40;
+                  if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
+                } catch (e) {}
+                obstacles.splice(oi, 1);
+              }
               break;
             }
           }
         }
         if (hit || rk.age >= rk.life || rk.x > (typeof W !== "undefined" ? W : 400) + 60) {
-          if (hit && window.PowerFX) {
+          if (hit && window.PowerFX && rk.kind !== "warshark") {
             try { window.PowerFX.burst(rk.x, rk.y, { count: 14, colors: ["#ff8a1a", "#fff5c0"], speed: 100, glow: true }); } catch (e) {}
           }
-          // Orphan trails fade out instead of freezing as marks
           if (!window.__airborneOrphanTrails) window.__airborneOrphanTrails = [];
           if (rk.trails && rk.trails.length) {
             for (var oti = 0; oti < rk.trails.length; oti++) {
@@ -1376,6 +1414,7 @@
         if (!p.hit) {
           for (let i = obstacles.length - 1; i >= 0; i--) {
             const o = obstacles[i];
+            if (o.isRing || o.type === "gold_ring" || o.type === "ring") continue;
             const ox = o.x + o.w * 0.5;
             const oy = o.y + o.h * 0.5;
             if (Math.hypot(p.x - ox, p.y - oy) < p.size * 0.55 + Math.max(o.w, o.h) * 0.35) {
@@ -1573,7 +1612,7 @@
         var cosR = Math.cos(rot), sinR = Math.sin(rot);
         // Local offset: front of blimp
         var localX = (player.w || 40) * 0.42;
-        var localY = (player.h || 30) * 0.18; // lower on War Shark nose
+        var localY = (player.h || 30) * 0.21; // lower on War Shark nose
         var hx = player.x + localX * cosR - localY * sinR;
         var hy = player.y + localX * sinR + localY * cosR;
         ctx.save();
