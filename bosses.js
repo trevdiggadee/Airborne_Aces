@@ -376,6 +376,13 @@
       window.__airborneActivePowerUntil = performance.now() + 5000;
       window.__airborneFireballs = [];
       window.__airborneFireballKind = powerMode;
+      window.__airborneGreenSpiralAng = 0;
+      if (powerMode === "greenfireball") {
+        // Burst of sunlight from center
+        if (!window.__airborneSunBurst) window.__airborneSunBurst = [];
+        window.__airborneSunBurst.push({ x: player.x, y: player.y, age: 0, life: 0.7 });
+        try { if (typeof triggerScreenShake === "function") triggerScreenShake(4, 200); } catch (e) {}
+      }
       try {
         if (window.PowerFX && player) window.PowerFX.activate(powerMode, player.x, player.y);
       } catch (e) {}
@@ -494,35 +501,53 @@
     if (powerMode === "shockwave" || powerMode === "steam") {
       if (typeof sfxThunder === "function") sfxThunder();
       if (typeof sfxExplosion === "function") sfxExplosion(0.45);
-      const radius = Math.min(W, H) * 0.55;
+      try { if (typeof triggerScreenShake === "function") triggerScreenShake(9, 420); } catch (e) {}
+      const radius = Math.min(W, H) * 0.58;
+      // Obstacles: shake then fall off screen (no swarm orbs)
       if (typeof obstacles !== "undefined" && obstacles) {
         obstacles.forEach(function (o) {
+          if (!o) return;
+          if (o.isRing || o.type === "gold_ring" || o.type === "ring") return;
           const dx = (o.x + o.w * 0.5) - player.x;
           const dy = (o.y + o.h * 0.5) - player.y;
           if (Math.hypot(dx, dy) < radius) {
-            o.onFire = true;
-            o.vy = 60 + Math.random() * 40;
+            o.shockShake = 0.55 + Math.random() * 0.25;
+            o.shockFall = true;
+            o.vy = 90 + Math.random() * 70;
+            o.vx = (Math.random() - 0.5) * 80;
             o.scored = true;
             try { score += 3; } catch (e) {}
           }
         });
       }
-      // Visual: reuse swarm as expanding ring particles
-      stormMode = "swarm";
-      for (let i = 0; i < 14; i++) {
-        const ang = (i / 14) * Math.PI * 2;
-        stormSwarm.push({
+      // Sonic ring particles (not orbs)
+      if (!window.__airborneShockFX) window.__airborneShockFX = [];
+      for (var si = 0; si < 3; si++) {
+        window.__airborneShockFX.push({
+          x: player.x, y: player.y, r: 12 + si * 8, maxR: radius * (0.7 + si * 0.15),
+          life: 0.55 + si * 0.12, age: 0, width: 5 - si
+        });
+      }
+      for (var pi = 0; pi < 36; pi++) {
+        var a = (pi / 36) * Math.PI * 2;
+        var sp = 140 + Math.random() * 100;
+        window.__airborneShockFX.push({
+          kind: "spark",
           x: player.x, y: player.y,
-          vx: Math.cos(ang) * 220,
-          vy: Math.sin(ang) * 180,
-          spin: ang, spinVel: 8,
-          size: Math.min(40, W * 0.08),
-          life: 0.9, age: 0,
-          iconKey: swarmKey, hit: false, style: "swarm", delay: 0
+          vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+          life: 0.4 + Math.random() * 0.3, age: 0, r: 2 + Math.random() * 2
         });
       }
       stormActive = true;
+      stormMode = "shockwave";
+      stormTimer = 1.2;
       stormUntil = performance.now() + 1200;
+      window.__airborneActivePowerVisual = powerMode === "steam" ? "steam" : "shockwave";
+      window.__airborneActivePowerUntil = performance.now() + 1200;
+      try {
+        if (window.PowerFX && player) window.PowerFX.activate(powerMode === "steam" ? "steam" : "shockwave", player.x, player.y);
+      } catch (e) {}
+      updateStormMeterDisplay();
       return;
     }
 
@@ -929,6 +954,46 @@
 
   function updateStorm(dt) {
     try { updateBombBlasts(dt); } catch (e) {}
+    if (window.__airborneSunBurst && window.__airborneSunBurst.length) {
+      for (var sbi = window.__airborneSunBurst.length - 1; sbi >= 0; sbi--) {
+        window.__airborneSunBurst[sbi].age += dt;
+        if (window.__airborneSunBurst[sbi].age >= window.__airborneSunBurst[sbi].life)
+          window.__airborneSunBurst.splice(sbi, 1);
+      }
+    }
+    // Shockwave particle rings + obstacle fall
+    if (window.__airborneShockFX && window.__airborneShockFX.length) {
+      for (var sxi = window.__airborneShockFX.length - 1; sxi >= 0; sxi--) {
+        var sx = window.__airborneShockFX[sxi];
+        sx.age += dt;
+        if (sx.kind === "spark") {
+          sx.x += sx.vx * dt; sx.y += sx.vy * dt;
+          sx.vx *= (1 - 1.5 * dt); sx.vy *= (1 - 1.5 * dt);
+        } else {
+          sx.r += (sx.maxR - 12) * dt * 2.2;
+        }
+        if (sx.age >= sx.life) window.__airborneShockFX.splice(sxi, 1);
+      }
+    }
+    if (typeof obstacles !== "undefined" && obstacles) {
+      for (var oi = obstacles.length - 1; oi >= 0; oi--) {
+        var o = obstacles[oi];
+        if (!o) continue;
+        if (o.shockShake && o.shockShake > 0) {
+          o.shockShake -= dt;
+          o.x += (Math.random() - 0.5) * 10;
+          o.y += (Math.random() - 0.5) * 6;
+        }
+        if (o.shockFall) {
+          o.y += (o.vy || 100) * dt;
+          o.x += (o.vx || 0) * dt;
+          o.vy = (o.vy || 100) + 220 * dt;
+          if (o.y > (typeof H !== "undefined" ? H : 700) + 80) {
+            obstacles.splice(oi, 1);
+          }
+        }
+      }
+    }
     // Always tick orphan missile trails so marks never stick
     if (window.__airborneOrphanTrails && window.__airborneOrphanTrails.length) {
       for (var oi = window.__airborneOrphanTrails.length - 1; oi >= 0; oi--) {
@@ -1105,13 +1170,21 @@
         } else if (stormMode === "greenfireball") {
           fbColors = ["#d1fae5", "#6ee7b7", "#10b981", "#047857"];
           smokeCol = "rgba(40,70,50,1)";
-          // Slightly different arc — more floaty green orbs
-          sp = 140 + Math.random() * 70;
-          ang = -0.5 + Math.random() * 1.0;
+          // Spiral release
+          if (window.__airborneGreenSpiralAng == null) window.__airborneGreenSpiralAng = 0;
+          window.__airborneGreenSpiralAng += 0.65;
+          ang = window.__airborneGreenSpiralAng;
+          sp = 130 + (window.__airborneGreenSpiralAng % 3) * 25;
+        }
+        var spawnX = player.x + (player.w || 40) * 0.25;
+        var spawnY = player.y + (Math.random() - 0.5) * (player.h || 30) * 0.4;
+        if (stormMode === "greenfireball") {
+          spawnX = player.x + Math.cos(ang) * 12;
+          spawnY = player.y + Math.sin(ang) * 10;
         }
         window.__airborneFireballs.push({
-          x: player.x + (player.w || 40) * 0.25,
-          y: player.y + (Math.random() - 0.5) * (player.h || 30) * 0.4,
+          x: spawnX,
+          y: spawnY,
           vx: Math.cos(ang) * sp,
           vy: Math.sin(ang) * sp * (stormMode === "greenfireball" ? 0.45 : 0.6) - (stormMode === "greenfireball" ? 35 : 20),
           life: stormMode === "greenfireball" ? 1.9 : 1.6,
@@ -1891,6 +1964,73 @@
   window.__airborneDrawBombBlasts = drawBombBlasts;
   window.__airborneSpawnBombExplosion = spawnRealisticBombExplosion;
 
+
+  
+  
+  function drawSunBurst() {
+    var list = window.__airborneSunBurst;
+    if (!list || !list.length || typeof ctx === "undefined") return;
+    ctx.save();
+    for (var i = 0; i < list.length; i++) {
+      var s = list[i];
+      var t = Math.max(0, 1 - s.age / s.life);
+      var r = 20 + (1 - t) * 120;
+      ctx.globalCompositeOperation = "lighter";
+      var g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, r);
+      g.addColorStop(0, "rgba(255,250,200," + (t * 0.95) + ")");
+      g.addColorStop(0.35, "rgba(255,220,100," + (t * 0.55) + ")");
+      g.addColorStop(0.7, "rgba(255,180,40," + (t * 0.25) + ")");
+      g.addColorStop(1, "rgba(255,160,0,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      // Rays
+      for (var ri = 0; ri < 12; ri++) {
+        var a = (ri / 12) * Math.PI * 2 + s.age * 2;
+        ctx.strokeStyle = "rgba(255,240,180," + (t * 0.4) + ")";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(s.x + Math.cos(a) * 8, s.y + Math.sin(a) * 8);
+        ctx.lineTo(s.x + Math.cos(a) * r * 0.95, s.y + Math.sin(a) * r * 0.95);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawShockFX() {
+    var list = window.__airborneShockFX;
+    if (!list || !list.length || typeof ctx === "undefined") return;
+    ctx.save();
+    for (var i = 0; i < list.length; i++) {
+      var p = list[i];
+      var t = Math.max(0, 1 - p.age / p.life);
+      if (p.kind === "spark") {
+        ctx.globalAlpha = t;
+        ctx.globalCompositeOperation = "lighter";
+        ctx.fillStyle = "rgba(200,240,255," + t + ")";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * t, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.globalAlpha = t * 0.85;
+        ctx.globalCompositeOperation = "lighter";
+        ctx.strokeStyle = "rgba(180,230,255," + (t * 0.9) + ")";
+        ctx.lineWidth = Math.max(1, (p.width || 4) * t);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(255,255,255," + (t * 0.5) + ")";
+        ctx.lineWidth = Math.max(1, (p.width || 4) * 0.4 * t);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * 0.92, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+  window.__airborneDrawShockFX = drawShockFX;
 
   function drawHeatseekers() {
     var rockets = window.__airborneHeatseekers;

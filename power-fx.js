@@ -143,7 +143,8 @@
         burst(x, y, { count: 16, colors: ["#e0f2fe", "#38bdf8", "#0284c7"], speed: 120, gravity: -20, glow: true });
         break;
       case "greenfireball":
-        burst(x, y, { count: 16, colors: ["#d1fae5", "#34d399", "#059669"], speed: 110, gravity: -35, glow: true });
+        burst(x, y, { count: 20, colors: ["#fffbeb", "#fde68a", "#fbbf24", "#d1fae5"], speed: 140, gravity: -20, glow: true });
+        ring(x, y, { r0: 8, r1: 100, color: "rgba(253,230,138,0.9)", life: 0.45, width: 5 });
         break;
       case "fireball":
         burst(x, y, { count: 16, colors: ["#ffd24a", "#ff8a1a", "#ff3b00"], speed: 120, gravity: -20, glow: true });
@@ -298,19 +299,23 @@
         ctx.arc(ox, oy, 10, 0, Math.PI * 2);
         ctx.fill();
       }
-    } else if (kind === "fireball") {
-      for (i = 0; i < 6; i++) {
-        ang = t * 3 + i;
-        ox = cx + Math.cos(ang) * 28;
-        oy = cy + Math.sin(ang) * 20;
-        g = ctx.createRadialGradient(ox, oy, 0, ox, oy, 12);
-        g.addColorStop(0, "rgba(255,220,120," + (0.7 * fade) + ")");
+    } else if (kind === "fireball" || kind === "greenfireball" || kind === "bluefireball") {
+      // Soft hull glow only — no spinning orbs
+      g = ctx.createRadialGradient(cx, cy, 4, cx, cy, 36);
+      if (kind === "greenfireball") {
+        g.addColorStop(0, "rgba(200,255,210," + (0.45 * fade) + ")");
+        g.addColorStop(1, "rgba(16,185,129,0)");
+      } else if (kind === "bluefireball") {
+        g.addColorStop(0, "rgba(200,230,255," + (0.45 * fade) + ")");
+        g.addColorStop(1, "rgba(2,132,199,0)");
+      } else {
+        g.addColorStop(0, "rgba(255,220,120," + (0.45 * fade) + ")");
         g.addColorStop(1, "rgba(255,80,0,0)");
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(ox, oy, 12, 0, Math.PI * 2);
-        ctx.fill();
       }
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 36, 0, Math.PI * 2);
+      ctx.fill();
     } else if (kind === "flamethrower") {
       // Short nose-gun jet, lowered 2%, thinned 5%
       var dropY = cy + ((typeof H !== "undefined" ? H : 600) * 0.02);
