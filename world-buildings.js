@@ -266,10 +266,19 @@
 
   function beginAirfieldTraining() {
     try {
+      if (window.__airborneClearAllGameplay) window.__airborneClearAllGameplay();
+    } catch (e) {}
+    try {
       if (window.__airborneHardResetTraining) window.__airborneHardResetTraining({ keepAirfield: true });
     } catch (e) {}
     airfieldMode = true;
     airfieldPhase = "taxi";
+    airfieldLesson = 0;
+    airfieldLessonT = 0;
+    airfieldSub = "tip";
+    airfieldLandT = 0;
+    airfieldScoreT = 0;
+    airfieldDidLand = false;
     // Full reset so re-entry always starts at the beginning
     airfieldPhaseT = 0;
     airfieldRunwayT = 0;
@@ -289,6 +298,23 @@
     window.__airborneResetRunway = false;
     // Rebuild runway immediately so background is never blank
     try { initAirfieldStrip(); } catch (e) { airfieldTiles = []; window.__airborneResetRunway = true; }
+    try {
+      if (typeof player !== "undefined" && player && typeof W !== "undefined") {
+        player.x = W * 0.22;
+        player.y = (typeof H !== "undefined" ? H : 600) * 0.72;
+        player.vy = 0;
+        player.rotation = 0;
+        if (player.maxHealth) player.health = player.maxHealth;
+      }
+    } catch (e) {}
+    try {
+      var gs = document.getElementById("gameScreen");
+      if (gs) gs.style.display = "block";
+      var menu = document.getElementById("menuScreen");
+      if (menu) menu.style.display = "none";
+      var map = document.getElementById("worldMapScreen");
+      if (map) { map.style.display = "none"; map.classList.add("hidden"); }
+    } catch (e) {}
     window.__airborneRuffLandArmed = false;
     window.__airborneRuffRequestLand = false;
     window.__airborneTrainingBoss = false;

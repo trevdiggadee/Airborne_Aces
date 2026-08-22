@@ -373,6 +373,16 @@
 
   // Continuous jet ribbon + hull damage smoke
   let jetTrail = [];
+  window.__airborneClearAtmosphereFx = function () {
+    try { jetTrail = []; } catch (e) {}
+    try {
+      if (typeof blimpPersonality !== "undefined" && blimpPersonality) {
+        blimpPersonality.exhaustParticles = [];
+        blimpPersonality.speedStreaks = [];
+      }
+    } catch (e) {}
+  };
+
   let damageSmoke = [];
   const JET_TRAIL_MAX = 18;
   const DAMAGE_SMOKE_MAX = 28;

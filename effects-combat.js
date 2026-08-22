@@ -1171,6 +1171,17 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
   let bossShakeUntil = 0;
   let hitParticles = [];
   let explosionBursts = [];
+
+  window.__airborneClearCombatFx = function () {
+    try { hitParticles = []; } catch (e) {}
+    try { explosionBursts = []; } catch (e) {}
+    try { playerBombTrailParticles = []; } catch (e) {}
+    try { rocketTrailParticles = []; } catch (e) {}
+    try { windParticles = []; } catch (e) {}
+    try { dustParticles = []; } catch (e) {}
+    try { shellTrailParticles = []; } catch (e) {}
+  };
+
   let shockwaves = []; // expanding glow rings — used for the boss-defeat spectacle
 
   function triggerShockwave(cx, cy, maxR, color) {

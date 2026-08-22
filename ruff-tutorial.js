@@ -658,6 +658,17 @@
     if (name !== "boss1") {
       try { stopTrainingBossMusic(); } catch (e) {}
     }
+    // Clear lesson collectibles/obstacles so nothing freezes from prior stage
+    // (power missiles keep flying via bosses.js)
+    try {
+      ruffCrystals = [];
+      ruffCoins = [];
+      if (typeof ruffRings !== "undefined") ruffRings = [];
+      if (typeof obstacles !== "undefined") {
+        // Keep only burning obstacles mid-fall; remove the rest
+        obstacles = obstacles.filter(function(o) { return o && o.onFire; });
+      }
+    } catch (e) {}
     ruffStage = name;
     ruffStageT = 0;
     ruffLessonPendingNext = false;
@@ -1945,9 +1956,41 @@
 
   
   
+  
+  function clearAllGameplayEntities() {
+    try { if (window.__airborneClearCombatFx) window.__airborneClearCombatFx(); } catch (e) {}
+    try { if (window.__airborneClearAtmosphereFx) window.__airborneClearAtmosphereFx(); } catch (e) {}
+    try { if (window.__airborneClearPowerEntities) window.__airborneClearPowerEntities(); } catch (e) {}
+    try { if (window.__airborneClearObstacles) window.__airborneClearObstacles(); } catch (e) {}
+    try {
+      ruffCrystals = [];
+      ruffCoins = [];
+      if (typeof ruffRings !== "undefined") ruffRings = [];
+      ruffBgBalloons = [];
+    } catch (e) {}
+    try {
+      window.__airborneHeatseekers = [];
+      window.__airborneWarBullets = [];
+      window.__airborneOrphanTrails = [];
+      window.__airborneFireballs = [];
+      window.__airborneActivePowerVisual = null;
+    } catch (e) {}
+    try {
+      // Training boss atmosphere
+      window.__airborneTrainingBoss = false;
+      window.__airborneTrainingBossBalloons = null;
+    } catch (e) {}
+    try {
+      if (typeof score === "number") score = 0;
+      if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = "0";
+    } catch (e) {}
+  }
+  window.__airborneClearAllGameplay = clearAllGameplayEntities;
+
   function hardResetTrainingState(opts) {
     opts = opts || {};
     var keepAirfield = !!opts.keepAirfield;
+    try { clearAllGameplayEntities(); } catch (e) {}
     try {
       ruffActive = false;
       ruffStage = "idle";

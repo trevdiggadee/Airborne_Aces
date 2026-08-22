@@ -211,6 +211,17 @@
 
   // ---------- Obstacles ----------
   let obstacles = [];
+  window.__airborneClearObstacles = function () {
+    try { obstacles = []; } catch (e) {}
+    try { if (typeof hearts !== "undefined") hearts = []; } catch (e) {}
+    try {
+      window.__airborneFirePowerActive = false;
+      window.__airborneFirePickup = null;
+      window.__airborneFireAura = [];
+      window.__airborneFireTrail = [];
+    } catch (e) {}
+  };
+
   let spawnTimer = 0;
   let spawnInterval = 1.7; // seconds, decreases slightly as score rises
   let obstacleSpeed = 220; // px/s, increases with score

@@ -819,6 +819,30 @@
   }
 
   
+  
+  window.__airborneClearPowerEntities = function () {
+    try {
+      window.__airborneHeatseekers = [];
+      window.__airborneWarBullets = [];
+      window.__airborneOrphanTrails = [];
+      window.__airborneFireballs = [];
+      window.__airborneActivePowerVisual = null;
+      window.__airborneActivePowerUntil = 0;
+      window.__airborneHeatseekUntil = 0;
+      window.__airborneFireballUntil = 0;
+      window.__airborneFlamethrowerUntil = 0;
+      if (typeof stormActive !== "undefined") stormActive = false;
+      if (typeof stormMode !== "undefined") stormMode = "storm";
+      if (typeof stormTimer !== "undefined") stormTimer = 0;
+      if (typeof stormCharge !== "undefined") stormCharge = 0;
+      if (typeof bombs !== "undefined") bombs = [];
+      if (typeof powerup !== "undefined") powerup = null;
+      if (typeof bossActive !== "undefined") bossActive = false;
+      if (typeof boss !== "undefined") boss = null;
+      if (window.PowerFX && window.PowerFX.particles) window.PowerFX.particles = [];
+    } catch (e) {}
+  };
+
   function damageBossFromPower(amount, x, y) {
     try {
       if (!(typeof bossActive !== "undefined" && bossActive && boss)) return false;
