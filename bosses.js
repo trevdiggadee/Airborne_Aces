@@ -884,6 +884,20 @@
       stormActive = true;
       window.__airborneHeatseekUntil = 0; // no new spawns
     }
+    // Always update war bullets (even if stormMode already cleared)
+    if (window.__airborneWarBullets && window.__airborneWarBullets.length) {
+      var _wbs = window.__airborneWarBullets;
+      for (var _wi = _wbs.length - 1; _wi >= 0; _wi--) {
+        var _wb = _wbs[_wi];
+        _wb.age = (_wb.age || 0) + dt;
+        _wb.x += (_wb.vx || 0) * dt;
+        _wb.y += (_wb.vy || 0) * dt;
+        if (_wb.age >= (_wb.life || 0.9) || _wb.x > (typeof W !== "undefined" ? W : 400) + 40) {
+          _wbs.splice(_wi, 1);
+        }
+      }
+    }
+
 
     if (!stormActive) return;
 
@@ -1275,6 +1289,56 @@
           rockets.splice(ri, 1);
         }
       }
+
+      // War Shark top-gun bullets — MUST update or they freeze on screen
+      if (!window.__airborneWarBullets) window.__airborneWarBullets = [];
+      var wbs = window.__airborneWarBullets;
+      for (var wi = wbs.length - 1; wi >= 0; wi--) {
+        var wb = wbs[wi];
+        wb.age = (wb.age || 0) + dt;
+        wb.x += (wb.vx || 0) * dt;
+        wb.y += (wb.vy || 0) * dt;
+        var hitB = false;
+        if (typeof obstacles !== "undefined") {
+          for (var oi = obstacles.length - 1; oi >= 0; oi--) {
+            var o = obstacles[oi];
+            if (!o) continue;
+            var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
+            if (Math.hypot(wb.x - ox, wb.y - oy) < 14 + Math.max(o.w, o.h) * 0.25) {
+              hitB = true;
+              try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
+              try {
+                if (typeof score === "number") {
+                  score += 15;
+                  if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
+                }
+              } catch (e) {}
+              obstacles.splice(oi, 1);
+              break;
+            }
+          }
+        }
+        if (typeof bossActive !== "undefined" && bossActive && boss) {
+          var bx = boss.x + boss.w * 0.5, by = boss.y + boss.h * 0.5;
+          if (Math.hypot(wb.x - bx, wb.y - by) < 20 + Math.max(boss.w, boss.h) * 0.25) {
+            hitB = true;
+            try { damageBossFromPower(Math.max(1, Math.ceil((boss.maxHealth || 30) * 0.04)), bx, by); } catch (e) {}
+          }
+        }
+        if (hitB || wb.age >= (wb.life || 0.9) || wb.x > (typeof W !== "undefined" ? W : 400) + 40) {
+          wbs.splice(wi, 1);
+        }
+      }
+
+      // Stay in this mode until rockets AND bullets are gone
+      var still = (window.__airborneHeatseekers && window.__airborneHeatseekers.length) ||
+                  (window.__airborneWarBullets && window.__airborneWarBullets.length) ||
+                  (window.__airborneOrphanTrails && window.__airborneOrphanTrails.length);
+      if (!still && !(window.__airborneHeatseekUntil && performance.now() < window.__airborneHeatseekUntil)) {
+        stormActive = false;
+        stormMode = "storm";
+        stormTimer = 0;
+      }
       return;
     }
 
@@ -1507,7 +1571,7 @@
         var cosR = Math.cos(rot), sinR = Math.sin(rot);
         // Local offset: front of blimp
         var localX = (player.w || 40) * 0.42;
-        var localY = (player.h || 30) * 0.14; // lower on War Shark nose (~toward gun line)
+        var localY = (player.h || 30) * 0.16; // lower on War Shark nose
         var hx = player.x + localX * cosR - localY * sinR;
         var hy = player.y + localX * sinR + localY * cosR;
         ctx.save();

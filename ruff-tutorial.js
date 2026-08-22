@@ -1969,11 +1969,16 @@
       ruffBgBalloons = [];
     } catch (e) {}
     try {
+      if (window.__airborneHeatseekers) window.__airborneHeatseekers.length = 0;
+      if (window.__airborneWarBullets) window.__airborneWarBullets.length = 0;
+      if (window.__airborneOrphanTrails) window.__airborneOrphanTrails.length = 0;
+      if (window.__airborneFireballs) window.__airborneFireballs.length = 0;
       window.__airborneHeatseekers = [];
       window.__airborneWarBullets = [];
       window.__airborneOrphanTrails = [];
       window.__airborneFireballs = [];
       window.__airborneActivePowerVisual = null;
+      window.__airborneHeatseekUntil = 0;
     } catch (e) {}
     try {
       // Training boss atmosphere
@@ -2289,6 +2294,23 @@ function finishToMap() {
 
 
   function updateRuff(dt) {
+    // Force Ruff visible whenever training airfield is active
+    if (window.__airborneAirfield && !ruffActive) {
+      ruffActive = true;
+      window.__airborneRuffActive = true;
+      if (!ruffStage || ruffStage === "idle") {
+        ruffStage = "intro";
+        window.__airborneRuffStage = "intro";
+        ruffIntroFly = true;
+        ruffIntroFlyT = 0;
+        var _W = (typeof W !== "undefined" && W > 0) ? W : 390;
+        var _H = (typeof H !== "undefined" && H > 0) ? H : 700;
+        ruffX = _W * 0.88;
+        ruffY = _H * 0.22;
+        ruffLines = (typeof DIALOGUE !== "undefined" && DIALOGUE.intro) ? DIALOGUE.intro.slice() : [];
+      }
+    }
+
     if (!ruffActive && window.__airborneRuffActive) {
       ruffActive = true;
       if (!ruffStage || ruffStage === "idle") {
