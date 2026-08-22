@@ -312,7 +312,7 @@
       blimp8: "fireball",
       blimp9: "swarm",
       blimp10: "storm",
-      blimp11: "missile",
+      blimp11: "warshark",
       blimp12: "heatseek",
       blimp13: "swarm",
       blimp14: "flamethrower",
@@ -384,6 +384,30 @@
     }
 
     // Sky Rocket — heat-seeking missiles (image + flame/smoke, explode on contact)
+    if (powerMode === "warshark") {
+      if (typeof sfxShoot === "function") sfxShoot();
+      if (typeof sfxExplosion === "function") sfxExplosion(0.35);
+      stormActive = true;
+      stormMode = "warshark";
+      stormTimer = 5.5;
+      stormCharge = 0;
+      window.__airborneHeatseekUntil = performance.now() + 5500;
+      window.__airborneActivePowerVisual = "warshark";
+      window.__airborneActivePowerUntil = performance.now() + 5500;
+      window.__airborneHeatseekers = [];
+      window.__airborneWarBullets = [];
+      if (!window.__airborneWarSharkImg) {
+        var wi = new Image();
+        wi.src = "war_shark_missile.jpg";
+        window.__airborneWarSharkImg = wi;
+      }
+      try {
+        if (window.PowerFX && player) window.PowerFX.activate("warshark", player.x, player.y);
+      } catch (e) {}
+      updateStormMeterDisplay();
+      return;
+    }
+
     if (powerMode === "heatseek") {
       if (typeof sfxShoot === "function") sfxShoot();
       if (typeof sfxExplosion === "function") sfxExplosion(0.35);
@@ -1050,7 +1074,7 @@
 
 
     // ---- Sky Rocket heat-seekers ----
-    if (stormMode === "heatseek") {
+    if (stormMode === "heatseek" || stormMode === "warshark") {
       var nowHs = performance.now();
       var untilHs = window.__airborneHeatseekUntil || 0;
       if (!untilHs || nowHs >= untilHs) {
@@ -1063,7 +1087,7 @@
         window.__airborneHeatseekers = [];
         return;
       }
-      window.__airborneActivePowerVisual = "heatseek";
+      window.__airborneActivePowerVisual = stormMode;
       window.__airborneActivePowerUntil = untilHs;
       if (!window.__airborneHeatseekers) window.__airborneHeatseekers = [];
       if (!window.__airborneHeatseekSpawnT) window.__airborneHeatseekSpawnT = 0;
@@ -1081,8 +1105,23 @@
           age: 0,
           rot: ang,
           trails: [],
-          target: null
+          target: null,
+          kind: stormMode
         });
+        // War Shark: also fire small top-gun bullets
+        if (stormMode === "warshark" && typeof player !== "undefined" && player) {
+          if (!window.__airborneWarBullets) window.__airborneWarBullets = [];
+          for (var bi = 0; bi < 2; bi++) {
+            window.__airborneWarBullets.push({
+              x: player.x + (player.w || 40) * 0.15,
+              y: player.y - (player.h || 30) * 0.35,
+              vx: 320 + Math.random() * 40,
+              vy: (Math.random() - 0.5) * 40,
+              life: 0.9,
+              age: 0
+            });
+          }
+        }
       }
       var rockets = window.__airborneHeatseekers;
       for (var ri = rockets.length - 1; ri >= 0; ri--) {
@@ -1402,13 +1441,75 @@
   }
 
   
-  function drawHeatseekers() {
+  
+  function drawWarSharkExtras() {
+    if (typeof ctx === "undefined") return;
+    // Headlamp on War Shark blimp when power active or always subtle for blimp11
+    try {
+      var sel = (typeof selectedBlimp !== "undefined") ? selectedBlimp : "";
+      if (sel === "blimp11" && typeof player !== "undefined" && player) {
+        var hx = player.x + (player.w || 40) * 0.42;
+        var hy = player.y + (player.h || 30) * 0.05;
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        var pulse = 0.75 + 0.25 * Math.sin(performance.now() * 0.008);
+        var g = ctx.createRadialGradient(hx, hy, 0, hx, hy, 28);
+        g.addColorStop(0, "rgba(255,250,200," + (0.85 * pulse) + ")");
+        g.addColorStop(0.35, "rgba(255,220,120," + (0.35 * pulse) + ")");
+        g.addColorStop(1, "rgba(255,200,80,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(hx, hy, 28, 0, Math.PI * 2);
+        ctx.fill();
+        // beam forward
+        var beam = ctx.createLinearGradient(hx, hy, hx + 90, hy);
+        beam.addColorStop(0, "rgba(255,245,200," + (0.25 * pulse) + ")");
+        beam.addColorStop(1, "rgba(255,245,200,0)");
+        ctx.fillStyle = beam;
+        ctx.beginPath();
+        ctx.moveTo(hx, hy - 4);
+        ctx.lineTo(hx + 90, hy - 18);
+        ctx.lineTo(hx + 90, hy + 18);
+        ctx.lineTo(hx, hy + 4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+    } catch (e) {}
+    // Bullets
+    var wbs = window.__airborneWarBullets;
+    if (!wbs || !wbs.length) return;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (var i = 0; i < wbs.length; i++) {
+      var wb = wbs[i];
+      var g2 = ctx.createRadialGradient(wb.x, wb.y, 0, wb.x, wb.y, 5);
+      g2.addColorStop(0, "rgba(255,255,200,1)");
+      g2.addColorStop(0.5, "rgba(255,200,80,0.8)");
+      g2.addColorStop(1, "rgba(255,100,0,0)");
+      ctx.fillStyle = g2;
+      ctx.beginPath();
+      ctx.arc(wb.x, wb.y, 5, 0, Math.PI * 2);
+      ctx.fill();
+      // streak
+      ctx.strokeStyle = "rgba(255,220,120,0.7)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(wb.x - 10, wb.y);
+      ctx.lineTo(wb.x, wb.y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  window.__airborneDrawWarSharkExtras = drawWarSharkExtras;
+
+function drawHeatseekers() {
     var rockets = window.__airborneHeatseekers;
     if (!rockets || !rockets.length || typeof ctx === "undefined") return;
-    var img = window.__airborneRocketImg;
     ctx.save();
     for (var i = 0; i < rockets.length; i++) {
       var rk = rockets[i];
+      var img = (rk.kind === "warshark") ? window.__airborneWarSharkImg : window.__airborneRocketImg;
       // trails
       for (var ti = 0; ti < (rk.trails || []).length; ti++) {
         var tr = rk.trails[ti];

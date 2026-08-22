@@ -267,6 +267,36 @@
   function beginAirfieldTraining() {
     airfieldMode = true;
     airfieldPhase = "taxi";
+    // Full reset so re-entry always starts at the beginning
+    airfieldPhaseT = 0;
+    airfieldRunwayT = 0;
+    airfieldClimbStartY = 0;
+    airfieldAltFrac = 0;
+    airfieldDriveDist = 0;
+    airfieldHoldTime = 0;
+    airfieldTakeoffSpeed = 50;
+    airfieldStripGone = false;
+    airfieldUseLandingArt = false;
+    airfieldTiles = [];
+    window.__airborneAirfield = true;
+    window.__airborneTrainingFlight = true;
+    window.__airborneAirfieldPhase = "taxi";
+    window.__airborneResetRunway = true;
+    window.__airborneRuffLandArmed = false;
+    window.__airborneRuffRequestLand = false;
+    window.__airborneTrainingBoss = false;
+    window.__airborneTrainingBossDone = false;
+    window.__airborneTrainingBossTried = false;
+    window.__airborneTrainingReportReady = false;
+    window.__airborneTrainingReportShown = false;
+    try { if (typeof obstacles !== "undefined") obstacles = []; } catch (e) {}
+    try { if (typeof score === "number") score = 0; } catch (e) {}
+    try {
+      if (typeof player !== "undefined" && player) {
+        player.health = player.maxHealth || 3;
+        player.vy = 0;
+      }
+    } catch (e) {}
     // Start R.U.F.F. FIRST so he appears before any runway motion
     window.__airborneRuffStage = "intro";
     if (typeof window.__airborneBeginRuff === "function") {
@@ -396,20 +426,25 @@
       if (gs) gs.style.display = "none";
     } catch (e) {}
     if (window.__airborneReturnToHangar) {
-      window.__airborneReturnToHangar = false;
       try {
         if (typeof state !== "undefined") state = "menu";
         var map = document.getElementById("worldMapScreen");
-        if (map) { map.style.display = "none"; map.classList.add("hidden"); }
+        if (map) {
+          map.style.display = "none";
+          map.style.visibility = "hidden";
+          map.classList.add("hidden");
+          map.setAttribute("aria-hidden", "true");
+        }
         var menu = document.getElementById("menuScreen");
         if (menu) {
           menu.style.display = "flex";
           menu.style.visibility = "visible";
           menu.classList.remove("hidden");
         }
-        if (window.__airborneShowMenu) window.__airborneShowMenu();
         if (window.__airborneShowHangar) window.__airborneShowHangar();
+        else if (window.__airborneShowMenu) window.__airborneShowMenu();
       } catch (e) {}
+      // do NOT clear flag here — finishToHangar clears after delay
     } else if (window.__airborneShowWorldMap) {
       window.__airborneShowWorldMap({ mode: "start" });
     } else if (window.__airborneShowMenu) {

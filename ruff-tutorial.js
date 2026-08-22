@@ -1948,59 +1948,70 @@
     try { hideRadio(); } catch (e) {}
     try { stopSpeak(); } catch (e) {}
     try {
-      const el = reportEl();
-      if (el) {
-        el.classList.remove("visible");
-        el.style.display = "none";
-      }
+      var el = reportEl();
+      if (el) { el.classList.remove("visible"); el.style.display = "none"; }
     } catch (e) {}
     ruffActive = false;
     window.__airborneRuffActive = false;
     window.__airborneRuffStage = "idle";
     window.__airborneRuffRequestLand = false;
     window.__airborneRuffLandArmed = false;
+    window.__airborneTrainingBoss = false;
+    window.__airborneTrainingBossDone = false;
     try { clearTrainingPowerIcon(); } catch (e) {}
     try {
       if (typeof window.endAirfieldTrainingToMap === "function") window.endAirfieldTrainingToMap();
-      else if (typeof endAirfieldTrainingToMap === "function") endAirfieldTrainingToMap();
     } catch (e) {}
-    // Force hangar UI (do not leave on map)
-    try {
-      if (typeof state !== "undefined") state = "menu";
-    } catch (e) {}
+    // ALWAYS force hangar — never leave map visible
+    try { if (typeof state !== "undefined") state = "menu"; } catch (e) {}
     try {
       var map = document.getElementById("worldMapScreen");
       if (map) {
         map.style.display = "none";
+        map.style.visibility = "hidden";
         map.classList.add("hidden");
         map.setAttribute("aria-hidden", "true");
       }
     } catch (e) {}
     try {
       var gs = document.getElementById("gameScreen");
-      if (gs) gs.style.display = "none";
+      if (gs) { gs.style.display = "none"; }
     } catch (e) {}
     try {
-      var start = document.getElementById("startOverlay");
-      if (start) { start.classList.add("hidden"); start.style.display = "none"; }
+      var so = document.getElementById("startOverlay");
+      if (so) { so.classList.add("hidden"); so.style.display = "none"; }
     } catch (e) {}
     try {
       var menu = document.getElementById("menuScreen");
       if (menu) {
         menu.style.display = "flex";
         menu.style.visibility = "visible";
+        menu.style.opacity = "1";
         menu.classList.remove("hidden");
       }
     } catch (e) {}
-    try {
-      if (typeof window.__airborneShowHangar === "function") window.__airborneShowHangar();
-    } catch (e) {}
-    try {
-      if (typeof startMenuMusic === "function") startMenuMusic();
-    } catch (e) {}
-    window.__airborneReturnToHangar = false;
+    try { if (window.__airborneShowHangar) window.__airborneShowHangar(); } catch (e) {}
+    try { if (window.__airborneShowMenu) window.__airborneShowMenu(); } catch (e) {}
+    try { if (typeof startMenuMusic === "function") startMenuMusic(); } catch (e) {}
+    // Hide map again after any async map show
+    setTimeout(function () {
+      try {
+        var map2 = document.getElementById("worldMapScreen");
+        if (map2) {
+          map2.style.display = "none";
+          map2.classList.add("hidden");
+        }
+        var menu2 = document.getElementById("menuScreen");
+        if (menu2) {
+          menu2.style.display = "flex";
+          menu2.classList.remove("hidden");
+        }
+      } catch (e) {}
+      window.__airborneReturnToHangar = false;
+    }, 50);
   }
   window.__airborneFinishToHangar = finishToHangar;
+
 
 function finishToMap() {
     try { stopAllTrainingAudio(); } catch (e) {}
@@ -2068,6 +2079,18 @@ function finishToMap() {
   // ---------- Public API ----------
   function beginRuffTraining() {
     ruffActive = true;
+    ruffStage = "intro";
+    ruffStageT = 0;
+    ruffLineIdx = 0;
+    ruffLandingCelebrated = false;
+    window.__airborneRuffStage = "intro";
+    window.__airborneRuffLandArmed = false;
+    window.__airborneRuffRequestLand = false;
+    window.__airborneTrainingPowerUsed = false;
+    ruffCrystals = [];
+    ruffCoins = [];
+    try { ruffStats = { crystals: 0, coins: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, landingStars: 3 }; } catch (e) {}
+
     try {
       trainEnsure();
       playTrainingMusic();
