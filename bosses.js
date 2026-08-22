@@ -313,7 +313,7 @@
       blimp9: "swarm",
       blimp10: "storm",
       blimp11: "missile",
-      blimp12: "rockets",
+      blimp12: "heatseek",
       blimp13: "swarm",
       blimp14: "flamethrower",
       blimp15: "meteors"
@@ -377,6 +377,31 @@
       window.__airborneFireballs = [];
       try {
         if (window.PowerFX && player) window.PowerFX.activate("fireball", player.x, player.y);
+      } catch (e) {}
+      updateStormMeterDisplay();
+      return;
+    }
+
+    // Sky Rocket — heat-seeking missiles (image + flame/smoke, explode on contact)
+    if (powerMode === "heatseek") {
+      if (typeof sfxShoot === "function") sfxShoot();
+      if (typeof sfxExplosion === "function") sfxExplosion(0.35);
+      stormActive = true;
+      stormMode = "heatseek";
+      stormTimer = 5.5;
+      stormCharge = 0;
+      window.__airborneHeatseekUntil = performance.now() + 5500;
+      window.__airborneActivePowerVisual = "heatseek";
+      window.__airborneActivePowerUntil = performance.now() + 5500;
+      window.__airborneHeatseekers = [];
+      // Preload image
+      if (!window.__airborneRocketImg) {
+        var ri = new Image();
+        ri.src = "sky_rocket_missile.jpg";
+        window.__airborneRocketImg = ri;
+      }
+      try {
+        if (window.PowerFX && player) window.PowerFX.activate("heatseek", player.x, player.y);
       } catch (e) {}
       updateStormMeterDisplay();
       return;
@@ -796,8 +821,8 @@
         var noseX = player.x + (player.w || 40) * 0.38;
         var noseY = player.y + drop;
         // Short flame reach (match visual ~90–110px)
-        var flameReach = Math.min(115, (typeof W !== "undefined" ? W : 400) * 0.28);
-        var coneHalf = 0.266; // tighter cone (-5%)
+        var flameReach = Math.min(stormMode === "blueflame" ? 126 : 115, (typeof W !== "undefined" ? W : 400) * (stormMode === "blueflame" ? 0.31 : 0.28));
+        var coneHalf = (stormMode === "blueflame") ? 0.25 : 0.266;
         // Particles — short range forward
         if (window.PowerFX) {
           try {
@@ -808,12 +833,12 @@
             window.PowerFX.burst(noseX, noseY, {
                 count: 2,
                 colors: flameCols,
-                speed: 90 + Math.random() * 50,
+                speed: (stormMode === "blueflame" ? 105 : 90) + Math.random() * 50,
                 angle: 0,
-                spread: 0.30,
+                spread: (stormMode === "blueflame" ? 0.28 : 0.30),
                 gravity: -15,
-                life: 0.28,
-                size: 3.8,
+                life: (stormMode === "blueflame" ? 0.32 : 0.28),
+                size: (stormMode === "blueflame" ? 3.6 : 3.8),
                 glow: true
               });
             }
@@ -950,6 +975,134 @@
         }
         if (fb.age >= fb.life || fb.x > (typeof W !== "undefined" ? W : 400) + 40 || fb.y > (typeof H !== "undefined" ? H : 600) + 40) {
           fbs.splice(fi, 1);
+        }
+      }
+      return;
+    }
+
+
+    // ---- Sky Rocket heat-seekers ----
+    if (stormMode === "heatseek") {
+      var nowHs = performance.now();
+      var untilHs = window.__airborneHeatseekUntil || 0;
+      if (!untilHs || nowHs >= untilHs) {
+        stormActive = false;
+        stormMode = "storm";
+        stormTimer = 0;
+        window.__airborneActivePowerVisual = null;
+        window.__airborneActivePowerUntil = 0;
+        window.__airborneHeatseekUntil = 0;
+        window.__airborneHeatseekers = [];
+        return;
+      }
+      window.__airborneActivePowerVisual = "heatseek";
+      window.__airborneActivePowerUntil = untilHs;
+      if (!window.__airborneHeatseekers) window.__airborneHeatseekers = [];
+      if (!window.__airborneHeatseekSpawnT) window.__airborneHeatseekSpawnT = 0;
+      window.__airborneHeatseekSpawnT -= dt;
+      if (window.__airborneHeatseekSpawnT <= 0 && typeof player !== "undefined" && player) {
+        window.__airborneHeatseekSpawnT = 0.45;
+        var ang = -0.25 + Math.random() * 0.5;
+        var sp = 200 + Math.random() * 60;
+        window.__airborneHeatseekers.push({
+          x: player.x + (player.w || 40) * 0.3,
+          y: player.y + (Math.random() - 0.5) * (player.h || 30) * 0.35,
+          vx: Math.cos(ang) * sp,
+          vy: Math.sin(ang) * sp * 0.5,
+          life: 2.2,
+          age: 0,
+          rot: ang,
+          trails: [],
+          target: null
+        });
+      }
+      var rockets = window.__airborneHeatseekers;
+      for (var ri = rockets.length - 1; ri >= 0; ri--) {
+        var rk = rockets[ri];
+        rk.age += dt;
+        // Acquire nearest obstacle as heat target
+        if (typeof obstacles !== "undefined" && obstacles.length) {
+          var best = null, bestD = 1e9;
+          for (var oi = 0; oi < obstacles.length; oi++) {
+            var o = obstacles[oi];
+            if (!o || o.onFire) continue;
+            var ox = o.x + o.w * 0.5;
+            var oy = o.y + o.h * 0.5;
+            if (ox < rk.x - 10) continue; // prefer ahead
+            var d = Math.hypot(ox - rk.x, oy - rk.y);
+            if (d < bestD) { bestD = d; best = o; }
+          }
+          rk.target = best;
+        }
+        if (rk.target) {
+          var tx = rk.target.x + rk.target.w * 0.5;
+          var ty = rk.target.y + rk.target.h * 0.5;
+          var desired = Math.atan2(ty - rk.y, tx - rk.x);
+          var da = desired - rk.rot;
+          while (da > Math.PI) da -= Math.PI * 2;
+          while (da < -Math.PI) da += Math.PI * 2;
+          rk.rot += Math.max(-3.5 * dt, Math.min(3.5 * dt, da));
+          var spd = Math.hypot(rk.vx, rk.vy) || 200;
+          spd = Math.min(280, spd + 40 * dt);
+          rk.vx = Math.cos(rk.rot) * spd;
+          rk.vy = Math.sin(rk.rot) * spd;
+        }
+        rk.x += rk.vx * dt;
+        rk.y += rk.vy * dt;
+        // Exhaust flame + smoke trail at rear
+        if (Math.random() < 0.85) {
+          var bx = -Math.cos(rk.rot);
+          var by = -Math.sin(rk.rot);
+          rk.trails.push({
+            x: rk.x + bx * 14, y: rk.y + by * 14,
+            vx: bx * 40 + (Math.random() - 0.5) * 20,
+            vy: by * 40 + (Math.random() - 0.5) * 20,
+            life: 0.35 + Math.random() * 0.25,
+            age: 0,
+            r: 3 + Math.random() * 4,
+            kind: Math.random() < 0.55 ? "flame" : "smoke"
+          });
+        }
+        for (var ti = rk.trails.length - 1; ti >= 0; ti--) {
+          var tr = rk.trails[ti];
+          tr.age += dt;
+          tr.x += tr.vx * dt;
+          tr.y += tr.vy * dt;
+          tr.r += (tr.kind === "smoke" ? 10 : 4) * dt;
+          if (tr.age >= tr.life) rk.trails.splice(ti, 1);
+        }
+        // Contact explode
+        var hit = false;
+        if (typeof obstacles !== "undefined") {
+          for (var oi = obstacles.length - 1; oi >= 0; oi--) {
+            var o = obstacles[oi];
+            if (!o) continue;
+            var ox = o.x + o.w * 0.5;
+            var oy = o.y + o.h * 0.5;
+            if (Math.hypot(rk.x - ox, rk.y - oy) < 22 + Math.max(o.w, o.h) * 0.3) {
+              hit = true;
+              try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
+              try { if (typeof triggerBigExplosion === "function") triggerBigExplosion(ox, oy, 0.7); } catch (e) {}
+              try {
+                if (window.PowerFX) window.PowerFX.burst(ox, oy, {
+                  count: 22, colors: ["#ffd24a", "#ff6b3d", "#fff", "#ff1a00"],
+                  speed: 160, gravity: 30, life: 0.55, glow: true, radial: true
+                });
+              } catch (e) {}
+              try {
+                if (typeof score === "number") score += 40;
+                if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
+              } catch (e) {}
+              obstacles.splice(oi, 1);
+              break;
+            }
+          }
+        }
+        if (hit || rk.age >= rk.life || rk.x > (typeof W !== "undefined" ? W : 400) + 60) {
+          if (hit && window.PowerFX) {
+            try { window.PowerFX.burst(rk.x, rk.y, { count: 14, colors: ["#ff8a1a", "#fff5c0"], speed: 100, glow: true }); } catch (e) {}
+          }
+          rockets.splice(ri, 1);
         }
       }
       return;
@@ -1172,7 +1325,69 @@
     }
   }
 
-  function drawFireballs() {
+  
+  function drawHeatseekers() {
+    var rockets = window.__airborneHeatseekers;
+    if (!rockets || !rockets.length || typeof ctx === "undefined") return;
+    var img = window.__airborneRocketImg;
+    ctx.save();
+    for (var i = 0; i < rockets.length; i++) {
+      var rk = rockets[i];
+      // trails
+      for (var ti = 0; ti < (rk.trails || []).length; ti++) {
+        var tr = rk.trails[ti];
+        var ta = 1 - tr.age / tr.life;
+        ctx.globalAlpha = ta * (tr.kind === "flame" ? 0.85 : 0.4);
+        ctx.globalCompositeOperation = tr.kind === "flame" ? "lighter" : "source-over";
+        if (tr.kind === "flame") {
+          var g = ctx.createRadialGradient(tr.x, tr.y, 0, tr.x, tr.y, tr.r * 2);
+          g.addColorStop(0, "rgba(255,250,200," + ta + ")");
+          g.addColorStop(0.4, "rgba(255,140,20," + (ta * 0.7) + ")");
+          g.addColorStop(1, "rgba(200,40,0,0)");
+          ctx.fillStyle = g;
+        } else {
+          ctx.fillStyle = "rgba(50,45,40," + ta + ")";
+        }
+        ctx.beginPath();
+        ctx.arc(tr.x, tr.y, tr.r * (tr.kind === "smoke" ? 1.4 : 2), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+      // rocket body image
+      ctx.save();
+      ctx.translate(rk.x, rk.y);
+      ctx.rotate(rk.rot);
+      var rw = 48, rh = 22;
+      if (img && img.complete && img.naturalWidth) {
+        var aspect = img.naturalHeight / img.naturalWidth;
+        rw = 52;
+        rh = rw * aspect;
+        ctx.drawImage(img, -rw * 0.35, -rh / 2, rw, rh);
+      } else {
+        ctx.fillStyle = "#3a6a9a";
+        ctx.fillRect(-12, -6, 28, 12);
+        ctx.fillStyle = "#c9a227";
+        ctx.beginPath();
+        ctx.moveTo(16, 0); ctx.lineTo(8, -6); ctx.lineTo(8, 6); ctx.fill();
+      }
+      // rear flame glow on sprite
+      ctx.globalCompositeOperation = "lighter";
+      var fg = ctx.createRadialGradient(-18, 0, 0, -18, 0, 16);
+      fg.addColorStop(0, "rgba(255,240,180,0.9)");
+      fg.addColorStop(0.5, "rgba(255,120,20,0.5)");
+      fg.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = fg;
+      ctx.beginPath();
+      ctx.arc(-18, 0, 16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+  window.__airborneDrawHeatseekers = drawHeatseekers;
+
+function drawFireballs() {
     var fbs = window.__airborneFireballs;
     if (!fbs || !fbs.length || typeof ctx === "undefined") return;
     ctx.save();

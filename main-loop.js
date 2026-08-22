@@ -244,7 +244,8 @@
     }
     if (typeof drawBossSinking === 'function') drawBossSinking();
     drawHitParticles(); try { if (window.PowerFX) window.PowerFX.draw(ctx); } catch (e) {}
-      try { if (window.__airborneDrawFireballs) window.__airborneDrawFireballs(); } catch (e) {};
+      try { if (window.__airborneDrawFireballs) window.__airborneDrawFireballs(); } catch (e) {}
+      try { if (window.__airborneDrawHeatseekers) window.__airborneDrawHeatseekers(); } catch (e) {};
     drawPowerup();
     drawBonusRound();
     drawLevelEnd();

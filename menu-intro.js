@@ -1467,7 +1467,7 @@ function powerPreviewKindFor(key) {
       blimp7: "chain",
       blimp8: "crystalbeam",
       blimp8: "fireball",
-      blimp12: "rockets",
+      blimp12: "heatseek",
       blimp14: "flamethrower",
       blimp15: "meteors"
     };

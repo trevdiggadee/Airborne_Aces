@@ -127,6 +127,9 @@
           });
         }
         break;
+      case "heatseek":
+        burst(x, y, { count: 12, colors: ["#ffd24a", "#7dd3fc", "#ff8a1a"], speed: 100, glow: true });
+        break;
       case "fireball":
         burst(x, y, { count: 16, colors: ["#ffd24a", "#ff8a1a", "#ff3b00"], speed: 120, gravity: -20, glow: true });
         break;
@@ -239,34 +242,47 @@
       ctx.fillStyle = g;
       ctx.fillRect(cx, cy - 6, 280, 12);
     } else if (kind === "blueflame") {
-      // Short nose-gun jet, lowered 2%, thinned 5%
+      // Blue nose-gun jet — 5% thinner, 10% longer
       var dropY = cy + ((typeof H !== "undefined" ? H : 600) * 0.02);
-      for (i = 0; i < 7; i++) {
-        var dist = 12 + (i * 11) + (Math.sin(t * 20 + i) * 3);
-        if (dist > 95) continue;
-        var spread = (Math.sin(t * 14 + i * 1.7) * 0.13);
+      for (i = 0; i < 8; i++) {
+        var dist = 12 + (i * 12.1) + (Math.sin(t * 20 + i) * 3);
+        if (dist > 105) continue;
+        var spread = (Math.sin(t * 14 + i * 1.7) * 0.12);
         ox = cx + 16 + dist * Math.cos(spread);
-        oy = dropY + dist * Math.sin(spread) * 0.71 + Math.sin(t * 18 + i) * 1.9;
-        r = (8 + 4 * (1 - i / 7) + Math.sin(t * 25 + i) * 1.5) * 0.95;
-        g = ctx.createRadialGradient(ox, oy, 0, ox, oy, r * 1.9);
-        var a0 = (0.85 - i * 0.1) * fade;
+        oy = dropY + dist * Math.sin(spread) * 0.67 + Math.sin(t * 18 + i) * 1.8;
+        r = (7.6 + 3.8 * (1 - i / 8) + Math.sin(t * 25 + i) * 1.4) * 0.95;
+        g = ctx.createRadialGradient(ox, oy, 0, ox, oy, r * 1.85);
+        var a0 = (0.85 - i * 0.09) * fade;
         g.addColorStop(0, "rgba(220,245,255," + a0 + ")");
-        g.addColorStop(0.4, "rgba(56,189,248," + (a0 * 0.7) + ")");
-        g.addColorStop(0.75, "rgba(14,100,200," + (a0 * 0.3) + ")");
-        g.addColorStop(1, "rgba(40,0,0,0)");
+        g.addColorStop(0.35, "rgba(56,189,248," + (a0 * 0.75) + ")");
+        g.addColorStop(0.7, "rgba(14,100,200," + (a0 * 0.35) + ")");
+        g.addColorStop(1, "rgba(0,20,60,0)");
         ctx.fillStyle = g;
         ctx.beginPath();
-        ctx.arc(ox, oy, r * 1.9, 0, Math.PI * 2);
+        ctx.arc(ox, oy, r * 1.85, 0, Math.PI * 2);
         ctx.fill();
       }
-      g = ctx.createRadialGradient(cx + 16, dropY, 0, cx + 16, dropY, 11.4);
-      g.addColorStop(0, "rgba(200,240,255," + (0.85 * fade) + ")");
-      g.addColorStop(0.5, "rgba(56,189,248," + (0.45 * fade) + ")");
+      g = ctx.createRadialGradient(cx + 16, dropY, 0, cx + 16, dropY, 10.8);
+      g.addColorStop(0, "rgba(200,240,255," + (0.9 * fade) + ")");
+      g.addColorStop(0.5, "rgba(56,189,248," + (0.5 * fade) + ")");
       g.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = g;
       ctx.beginPath();
-      ctx.arc(cx + 16, dropY, 11.4, 0, Math.PI * 2);
+      ctx.arc(cx + 16, dropY, 10.8, 0, Math.PI * 2);
       ctx.fill();
+    } else if (kind === "heatseek") {
+      for (i = 0; i < 5; i++) {
+        ang = t * 4 + i;
+        ox = cx + Math.cos(ang) * 24;
+        oy = cy + Math.sin(ang) * 16;
+        g = ctx.createRadialGradient(ox, oy, 0, ox, oy, 10);
+        g.addColorStop(0, "rgba(255,200,80," + (0.65 * fade) + ")");
+        g.addColorStop(1, "rgba(255,80,0,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(ox, oy, 10, 0, Math.PI * 2);
+        ctx.fill();
+      }
     } else if (kind === "fireball") {
       for (i = 0; i < 6; i++) {
         ang = t * 3 + i;
