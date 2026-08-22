@@ -1370,7 +1370,8 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     // explosion flash bursts first (underneath the sparks/smoke)
     explosionBursts.forEach(b => {
       const t = b.age / b.life;
-      const r = b.maxR * t;
+      const r = Math.max(0.5, (b.maxR || 20) * Math.max(0, t));
+      if (!isFinite(b.x) || !isFinite(b.y) || !isFinite(r)) return;
       ctx.save();
       ctx.globalAlpha = Math.max(0, 1 - t) * 0.8;
       const grad = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r);
@@ -1389,7 +1390,8 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
       ctx.save();
       if (p.type === "smoke") {
         ctx.globalAlpha = Math.max(0, t) * 0.55;
-        const r = p.r * (1 + (1 - t) * p.growth);
+        const r = Math.max(0.5, p.r * (1 + (1 - t) * (p.growth || 1)));
+        if (!isFinite(p.x) || !isFinite(p.y)) { ctx.restore(); return; }
         const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
         grad.addColorStop(0, "rgba(90,85,80,0.8)");
         grad.addColorStop(1, "rgba(90,85,80,0)");

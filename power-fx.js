@@ -393,7 +393,7 @@
       else ctx.globalCompositeOperation = "source-over";
       ctx.fillStyle = p.color;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r * (1 - t * 0.4), 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, Math.max(0.5, p.r * (1 - t * 0.4)), 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
