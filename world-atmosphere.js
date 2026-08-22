@@ -430,8 +430,8 @@
       for (var ji = 0; ji < jets; ji++) {
         var yOff = 0;
         if (jets > 1) {
-          // Top jet -12% h; bottom jet raised 1% (was +12%, now +11%)
-          yOff = (ji === 0 ? -1 : 1) * player.h * (ji === 1 ? 0.11 : 0.12);
+          // Top jet -12% h; bottom jet lowered 1% (was +12%, now +13%)
+          yOff = (ji === 0 ? -1 : 1) * player.h * (ji === 1 ? 0.13 : 0.12);
         }
         // Sky Rocket: shift bottom jet 2% of width to the right
         var xOff = 0;

@@ -127,6 +127,9 @@
           });
         }
         break;
+      case "barrelbomb":
+        burst(x, y, { count: 14, colors: ["#c4a574", "#8B4513", "#ffd24a", "#ff6b3d"], speed: 110, glow: true });
+        break;
       case "warshark":
         burst(x, y, { count: 14, colors: ["#a3e635", "#ffd24a", "#84cc16"], speed: 110, glow: true });
         break;

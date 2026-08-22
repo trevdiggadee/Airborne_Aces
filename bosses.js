@@ -315,7 +315,7 @@
       blimp11: "warshark",
       blimp12: "heatseek",
       blimp13: "swarm",
-      blimp14: "flamethrower",
+      blimp14: "barrelbomb",
       blimp15: "meteors"
     };
     const powerMode = SHIP_POWER_MODE[sel] || "storm";
@@ -398,10 +398,32 @@
       window.__airborneWarBullets = [];
       window.__airborneWarSharkImg = null;
       var wi = new Image();
-      wi.src = "war_shark_barrel_bomb.png?v=ruff199";
+      wi.src = "war_shark_missile.png?v=ruff200";
       window.__airborneWarSharkImg = wi;
       try {
         if (window.PowerFX && player) window.PowerFX.activate("warshark", player.x, player.y);
+      } catch (e) {}
+      updateStormMeterDisplay();
+      return;
+    }
+
+    if (powerMode === "barrelbomb") {
+      if (typeof sfxShoot === "function") sfxShoot();
+      if (typeof sfxExplosion === "function") sfxExplosion(0.35);
+      stormActive = true;
+      stormMode = "barrelbomb";
+      stormTimer = 5.5;
+      stormCharge = 0;
+      window.__airborneHeatseekUntil = performance.now() + 5500;
+      window.__airborneActivePowerVisual = "barrelbomb";
+      window.__airborneActivePowerUntil = performance.now() + 5500;
+      window.__airborneHeatseekers = [];
+      window.__airborneWarBullets = [];
+      var bi = new Image();
+      bi.src = "pirate_barrel_bomb.png?v=ruff200";
+      window.__airborneBarrelBombImg = bi;
+      try {
+        if (window.PowerFX && player) window.PowerFX.activate("barrelbomb", player.x, player.y);
       } catch (e) {}
       updateStormMeterDisplay();
       return;
@@ -880,7 +902,7 @@
       }
     }
     // Keep updating in-flight missiles after power window ends
-    if ((!stormActive || (stormMode !== "heatseek" && stormMode !== "warshark")) &&
+    if ((!stormActive || (stormMode !== "heatseek" && stormMode !== "warshark" && stormMode !== "barrelbomb")) &&
         window.__airborneHeatseekers && window.__airborneHeatseekers.length) {
       stormMode = window.__airborneHeatseekers[0].kind || "heatseek";
       stormActive = true;
@@ -1134,7 +1156,7 @@
 
 
     // ---- Sky Rocket heat-seekers ----
-    if (stormMode === "heatseek" || stormMode === "warshark") {
+    if (stormMode === "heatseek" || stormMode === "warshark" || stormMode === "barrelbomb") {
       var nowHs = performance.now();
       var untilHs = window.__airborneHeatseekUntil || 0;
       if (!untilHs || nowHs >= untilHs) {
@@ -1211,7 +1233,7 @@
         rk.x += rk.vx * dt;
         rk.y += rk.vy * dt;
         // Exhaust trail at rear (lighter for barrel bombs)
-        if (Math.random() < (rk.kind === "warshark" ? 0.35 : 0.85)) {
+        if (Math.random() < (rk.kind === "barrelbomb" ? 0.35 : 0.85)) {
           var bx = -Math.cos(rk.rot);
           var by = -Math.sin(rk.rot);
           rk.trails.push({
@@ -1221,7 +1243,7 @@
             life: 0.35 + Math.random() * 0.25,
             age: 0,
             r: 3 + Math.random() * 4,
-            kind: rk.kind === "warshark" ? "smoke" : (Math.random() < 0.55 ? "flame" : "smoke")
+            kind: rk.kind === "barrelbomb" ? "smoke" : (Math.random() < 0.55 ? "flame" : "smoke")
           });
         }
         for (var ti = rk.trails.length - 1; ti >= 0; ti--) {
@@ -1234,7 +1256,7 @@
         }
         // Mid-air fuse for War Shark barrel bombs (~0.55s then AOE)
         var fuseBoom = false;
-        if (rk.kind === "warshark" && rk.age >= 0.55 && !rk.fused) {
+        if (rk.kind === "barrelbomb" && rk.age >= 0.55 && !rk.fused) {
           rk.fused = true;
           fuseBoom = true;
         }
@@ -1284,7 +1306,7 @@
           var hby = boss.y + boss.h * 0.5;
           if (Math.hypot(rk.x - hbx, rk.y - hby) < 28 + Math.max(boss.w, boss.h) * 0.3) {
             hit = true;
-            aoeDestroyAt(rk.x, rk.y, rk.kind === "warshark" ? 95 : 40);
+            aoeDestroyAt(rk.x, rk.y, rk.kind === "barrelbomb" ? 95 : 40);
           }
         }
         if (typeof obstacles !== "undefined") {
@@ -1295,7 +1317,7 @@
             var oy = o.y + o.h * 0.5;
             if (Math.hypot(rk.x - ox, rk.y - oy) < 22 + Math.max(o.w, o.h) * 0.3) {
               hit = true;
-              if (rk.kind === "warshark") {
+              if (rk.kind === "barrelbomb") {
                 aoeDestroyAt(rk.x, rk.y, 95);
               } else {
                 try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
@@ -1317,7 +1339,7 @@
           }
         }
         if (hit || rk.age >= rk.life || rk.x > (typeof W !== "undefined" ? W : 400) + 60) {
-          if (hit && window.PowerFX && rk.kind !== "warshark") {
+          if (hit && window.PowerFX && rk.kind !== "barrelbomb") {
             try { window.PowerFX.burst(rk.x, rk.y, { count: 14, colors: ["#ff8a1a", "#fff5c0"], speed: 100, glow: true }); } catch (e) {}
           }
           if (!window.__airborneOrphanTrails) window.__airborneOrphanTrails = [];
@@ -1678,7 +1700,9 @@ function drawHeatseekers() {
     ctx.save();
     for (var i = 0; i < rockets.length; i++) {
       var rk = rockets[i];
-      var img = (rk.kind === "warshark") ? window.__airborneWarSharkImg : window.__airborneRocketImg;
+      var img = (rk.kind === "barrelbomb") ? window.__airborneBarrelBombImg
+        : (rk.kind === "warshark") ? window.__airborneWarSharkImg
+        : window.__airborneRocketImg;
       // trails
       for (var ti = 0; ti < (rk.trails || []).length; ti++) {
         var tr = rk.trails[ti];

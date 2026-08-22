@@ -1469,7 +1469,7 @@ function powerPreviewKindFor(key) {
       blimp8: "fireball",
       blimp11: "warshark",
       blimp12: "heatseek",
-      blimp14: "flamethrower",
+      blimp14: "barrelbomb",
       blimp15: "meteors"
     };
     if (map[key]) {
