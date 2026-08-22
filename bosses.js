@@ -304,9 +304,9 @@
     const SHIP_POWER_MODE = {
       blimp1: "fire",
       blimp2: "shockwave",
-      blimp3: "blueflame",
+      blimp3: "bluefireball",
       blimp4: "steam",
-      blimp5: "sunblade",
+      blimp5: "greenfireball",
       blimp6: "vortex",
       blimp7: "chain",
       blimp8: "fireball",
@@ -364,19 +364,20 @@
     }
 
     // Ironworks — lob fireballs with smoke trails that ignite obstacles
-    if (powerMode === "fireball") {
+    if (powerMode === "fireball" || powerMode === "bluefireball" || powerMode === "greenfireball") {
       if (typeof sfxShoot === "function") sfxShoot();
       if (typeof sfxExplosion === "function") sfxExplosion(0.4);
       stormActive = true;
-      stormMode = "fireball";
+      stormMode = powerMode; // fireball | bluefireball | greenfireball
       stormTimer = 5.0;
       stormCharge = 0;
       window.__airborneFireballUntil = performance.now() + 5000;
-      window.__airborneActivePowerVisual = "fireball";
+      window.__airborneActivePowerVisual = powerMode;
       window.__airborneActivePowerUntil = performance.now() + 5000;
       window.__airborneFireballs = [];
+      window.__airborneFireballKind = powerMode;
       try {
-        if (window.PowerFX && player) window.PowerFX.activate("fireball", player.x, player.y);
+        if (window.PowerFX && player) window.PowerFX.activate(powerMode, player.x, player.y);
       } catch (e) {}
       updateStormMeterDisplay();
       return;
@@ -794,6 +795,29 @@
     bumpScorePop();
   }
 
+  
+  function damageBossFromPower(amount, x, y) {
+    try {
+      if (!(typeof bossActive !== "undefined" && bossActive && boss)) return false;
+      var dmg = amount || Math.max(2, Math.ceil((boss.maxHealth || 30) * 0.08));
+      boss.health -= dmg;
+      bossHitFlashUntil = performance.now() + 180;
+      bossShakeUntil = performance.now() + 250;
+      try {
+        if (typeof triggerBigExplosion === "function")
+          triggerBigExplosion(x || (boss.x + boss.w / 2), y || (boss.y + boss.h / 2), boss.w * 0.4, boss.h * 0.4);
+      } catch (e) {}
+      try {
+        if (typeof spawnHitParticles === "function")
+          spawnHitParticles(x || (boss.x + boss.w * 0.5), y || (boss.y + boss.h * 0.5));
+      } catch (e) {}
+      if (boss.health <= 0) {
+        try { defeatBoss(); } catch (e) {}
+      }
+      return true;
+    } catch (e) { return false; }
+  }
+
   function updateStorm(dt) {
     if (!stormActive) return;
 
@@ -881,13 +905,32 @@
             } catch (e) {}
           }
         }
+        // Damage boss in cone (training + campaign)
+        if (typeof bossActive !== "undefined" && bossActive && boss) {
+          var bx = boss.x + boss.w * 0.5;
+          var by = boss.y + boss.h * 0.5;
+          var dxb = bx - noseX;
+          var dyb = by - noseY;
+          var distB = Math.hypot(dxb, dyb);
+          if (dxb > 8 && distB < flameReach * 1.15) {
+            var angB = Math.atan2(dyb, dxb);
+            if (Math.abs(angB) <= coneHalf + 0.15) {
+              if (!window.__airborneFlameBossTick) window.__airborneFlameBossTick = 0;
+              window.__airborneFlameBossTick -= dt;
+              if (window.__airborneFlameBossTick <= 0) {
+                window.__airborneFlameBossTick = 0.25;
+                damageBossFromPower(Math.max(2, Math.ceil((boss.maxHealth || 30) * 0.06)), bx, by);
+              }
+            }
+          }
+        }
       }
       return;
     }
 
 
     // ---- Ironworks fireballs ----
-    if (stormMode === "fireball") {
+    if (stormMode === "fireball" || stormMode === "bluefireball" || stormMode === "greenfireball") {
       var nowFb = performance.now();
       var untilFb = window.__airborneFireballUntil || 0;
       if (!untilFb || nowFb >= untilFb) {
@@ -910,15 +953,30 @@
         window.__airborneFireballSpawnT = 0.28;
         var ang = -0.35 + Math.random() * 0.7;
         var sp = 160 + Math.random() * 80;
+        var fbColors = ["#ffd24a", "#ff8a1a", "#ff3b00"];
+        var smokeCol = "rgba(60,55,50,1)";
+        if (stormMode === "bluefireball") {
+          fbColors = ["#e0f2fe", "#7dd3fc", "#38bdf8", "#0284c7"];
+          smokeCol = "rgba(40,60,90,1)";
+        } else if (stormMode === "greenfireball") {
+          fbColors = ["#d1fae5", "#6ee7b7", "#10b981", "#047857"];
+          smokeCol = "rgba(40,70,50,1)";
+          // Slightly different arc — more floaty green orbs
+          sp = 140 + Math.random() * 70;
+          ang = -0.5 + Math.random() * 1.0;
+        }
         window.__airborneFireballs.push({
           x: player.x + (player.w || 40) * 0.25,
           y: player.y + (Math.random() - 0.5) * (player.h || 30) * 0.4,
           vx: Math.cos(ang) * sp,
-          vy: Math.sin(ang) * sp * 0.6 - 20,
-          life: 1.6,
+          vy: Math.sin(ang) * sp * (stormMode === "greenfireball" ? 0.45 : 0.6) - (stormMode === "greenfireball" ? 35 : 20),
+          life: stormMode === "greenfireball" ? 1.9 : 1.6,
           age: 0,
           r: 10 + Math.random() * 4,
-          trails: []
+          trails: [],
+          colors: fbColors,
+          smokeCol: smokeCol,
+          kind: stormMode
         });
       }
       // Update fireballs
@@ -960,8 +1018,9 @@
               o.vy = 40;
               try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
               try {
+                var cols = fb.colors || ["#ff6b3d", "#ffd24a", "#ff1a00"];
                 if (window.PowerFX) window.PowerFX.burst(ox, oy, {
-                  count: 12, colors: ["#ff6b3d", "#ffd24a", "#ff1a00"], speed: 80, gravity: -30, life: 0.5, glow: true
+                  count: 12, colors: cols, speed: 80, gravity: -30, life: 0.5, glow: true
                 });
               } catch (e) {}
               try {
@@ -971,6 +1030,15 @@
               fb.age = fb.life; // consume fireball
               break;
             }
+          }
+        }
+        // Damage training / campaign boss
+        if (typeof bossActive !== "undefined" && bossActive && boss && fb.age < fb.life) {
+          var bx = boss.x + boss.w * 0.5;
+          var by = boss.y + boss.h * 0.5;
+          if (Math.hypot(fb.x - bx, fb.y - by) < fb.r + Math.max(boss.w, boss.h) * 0.35) {
+            damageBossFromPower(Math.max(3, Math.ceil((boss.maxHealth || 30) * 0.1)), bx, by);
+            fb.age = fb.life;
           }
         }
         if (fb.age >= fb.life || fb.x > (typeof W !== "undefined" ? W : 400) + 40 || fb.y > (typeof H !== "undefined" ? H : 600) + 40) {
@@ -1073,6 +1141,14 @@
         }
         // Contact explode
         var hit = false;
+        if (typeof bossActive !== "undefined" && bossActive && boss) {
+          var hbx = boss.x + boss.w * 0.5;
+          var hby = boss.y + boss.h * 0.5;
+          if (Math.hypot(rk.x - hbx, rk.y - hby) < 28 + Math.max(boss.w, boss.h) * 0.3) {
+            hit = true;
+            damageBossFromPower(Math.max(4, Math.ceil((boss.maxHealth || 30) * 0.12)), hbx, hby);
+          }
+        }
         if (typeof obstacles !== "undefined") {
           for (var oi = obstacles.length - 1; oi >= 0; oi--) {
             var o = obstacles[oi];
@@ -1398,7 +1474,7 @@ function drawFireballs() {
         var tr = fb.trails[ti];
         var ta = 1 - tr.age / tr.life;
         ctx.globalAlpha = ta * 0.45;
-        ctx.fillStyle = "rgba(60,55,50,1)";
+        ctx.fillStyle = fb.smokeCol || "rgba(60,55,50,1)";
         ctx.beginPath();
         ctx.arc(tr.x, tr.y, tr.r, 0, Math.PI * 2);
         ctx.fill();
@@ -1407,10 +1483,22 @@ function drawFireballs() {
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "lighter";
       var g = ctx.createRadialGradient(fb.x, fb.y, 0, fb.x, fb.y, fb.r * 2.2);
-      g.addColorStop(0, "rgba(255,250,200,0.95)");
-      g.addColorStop(0.35, "rgba(255,140,20,0.8)");
-      g.addColorStop(0.7, "rgba(200,40,0,0.4)");
-      g.addColorStop(1, "rgba(0,0,0,0)");
+      if (fb.kind === "bluefireball") {
+        g.addColorStop(0, "rgba(220,245,255,0.95)");
+        g.addColorStop(0.35, "rgba(56,189,248,0.85)");
+        g.addColorStop(0.7, "rgba(14,100,200,0.4)");
+        g.addColorStop(1, "rgba(0,0,0,0)");
+      } else if (fb.kind === "greenfireball") {
+        g.addColorStop(0, "rgba(220,255,230,0.95)");
+        g.addColorStop(0.35, "rgba(52,211,153,0.85)");
+        g.addColorStop(0.7, "rgba(4,120,87,0.4)");
+        g.addColorStop(1, "rgba(0,0,0,0)");
+      } else {
+        g.addColorStop(0, "rgba(255,250,200,0.95)");
+        g.addColorStop(0.35, "rgba(255,140,20,0.8)");
+        g.addColorStop(0.7, "rgba(200,40,0,0.4)");
+        g.addColorStop(1, "rgba(0,0,0,0)");
+      }
       ctx.fillStyle = g;
       ctx.beginPath();
       ctx.arc(fb.x, fb.y, fb.r * 2.2, 0, Math.PI * 2);

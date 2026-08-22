@@ -1460,9 +1460,9 @@ function powerPreviewKindFor(key) {
     var map = {
       blimp1: "fire",
       blimp2: "shockwave",
-      blimp3: "blueflame",
+      blimp3: "bluefireball",
       blimp4: "steam",
-      blimp5: "sunblade",
+      blimp5: "greenfireball",
       blimp6: "vortex",
       blimp7: "chain",
       blimp8: "crystalbeam",

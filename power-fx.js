@@ -130,6 +130,12 @@
       case "heatseek":
         burst(x, y, { count: 12, colors: ["#ffd24a", "#7dd3fc", "#ff8a1a"], speed: 100, glow: true });
         break;
+      case "bluefireball":
+        burst(x, y, { count: 16, colors: ["#e0f2fe", "#38bdf8", "#0284c7"], speed: 120, gravity: -20, glow: true });
+        break;
+      case "greenfireball":
+        burst(x, y, { count: 16, colors: ["#d1fae5", "#34d399", "#059669"], speed: 110, gravity: -35, glow: true });
+        break;
       case "fireball":
         burst(x, y, { count: 16, colors: ["#ffd24a", "#ff8a1a", "#ff3b00"], speed: 120, gravity: -20, glow: true });
         break;

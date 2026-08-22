@@ -395,7 +395,22 @@
       const gs = document.getElementById("gameScreen");
       if (gs) gs.style.display = "none";
     } catch (e) {}
-    if (window.__airborneShowWorldMap) {
+    if (window.__airborneReturnToHangar) {
+      window.__airborneReturnToHangar = false;
+      try {
+        if (typeof state !== "undefined") state = "menu";
+        var map = document.getElementById("worldMapScreen");
+        if (map) { map.style.display = "none"; map.classList.add("hidden"); }
+        var menu = document.getElementById("menuScreen");
+        if (menu) {
+          menu.style.display = "flex";
+          menu.style.visibility = "visible";
+          menu.classList.remove("hidden");
+        }
+        if (window.__airborneShowMenu) window.__airborneShowMenu();
+        if (window.__airborneShowHangar) window.__airborneShowHangar();
+      } catch (e) {}
+    } else if (window.__airborneShowWorldMap) {
       window.__airborneShowWorldMap({ mode: "start" });
     } else if (window.__airborneShowMenu) {
       window.__airborneShowMenu();

@@ -228,7 +228,7 @@
       stopTrainingBossMusic();
       var a = new Audio("the_engine_s_decree.mp3?v=ruff181");
       a.loop = true;
-      a.volume = 0.55;
+      a.volume = 0.275; // 50% boss track track level
       a.play().catch(function (e) { console.warn("boss mp3", e); });
       __trainBossAudio = a;
       // Dip the soft bed while boss track plays
@@ -1942,6 +1942,7 @@
 
   
   function finishToHangar() {
+    window.__airborneReturnToHangar = true;
     try { stopAllTrainingAudio(); } catch (e) {}
     try { hideFlightTrace(); } catch (e) {}
     try { hideRadio(); } catch (e) {}
@@ -1963,21 +1964,31 @@
       if (typeof window.endAirfieldTrainingToMap === "function") window.endAirfieldTrainingToMap();
       else if (typeof endAirfieldTrainingToMap === "function") endAirfieldTrainingToMap();
     } catch (e) {}
+    // Force hangar UI (do not leave on map)
     try {
       if (typeof state !== "undefined") state = "menu";
+    } catch (e) {}
+    try {
+      var map = document.getElementById("worldMapScreen");
+      if (map) {
+        map.style.display = "none";
+        map.classList.add("hidden");
+        map.setAttribute("aria-hidden", "true");
+      }
     } catch (e) {}
     try {
       var gs = document.getElementById("gameScreen");
       if (gs) gs.style.display = "none";
     } catch (e) {}
     try {
-      var map = document.getElementById("worldMapScreen");
-      if (map) { map.style.display = "none"; map.classList.add("hidden"); }
+      var start = document.getElementById("startOverlay");
+      if (start) { start.classList.add("hidden"); start.style.display = "none"; }
     } catch (e) {}
     try {
       var menu = document.getElementById("menuScreen");
       if (menu) {
-        menu.style.display = "block";
+        menu.style.display = "flex";
+        menu.style.visibility = "visible";
         menu.classList.remove("hidden");
       }
     } catch (e) {}
@@ -1985,13 +1996,13 @@
       if (typeof window.__airborneShowHangar === "function") window.__airborneShowHangar();
     } catch (e) {}
     try {
-      // resume menu music softly
       if (typeof startMenuMusic === "function") startMenuMusic();
     } catch (e) {}
+    window.__airborneReturnToHangar = false;
   }
   window.__airborneFinishToHangar = finishToHangar;
 
-  function finishToMap() {
+function finishToMap() {
     try { stopAllTrainingAudio(); } catch (e) {}
 
     try { hideFlightTrace(); } catch (e) {}
