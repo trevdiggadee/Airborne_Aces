@@ -895,7 +895,9 @@
         o.animTimer -= frameDuration;
         o.animFrame = (o.animFrame + 1) % OBSTACLE_ANIM_FRAME_COUNT;
       }
-      maybeEmitWind(o.x + o.w * 0.55, o.y + o.h / 2, o.w * 0.3, o.h, 7, dt, "obstacle");
+      // Wind streaks on ALL obstacles (birds, balloons, mini-blimps, etc.)
+      maybeEmitWind(o.x + o.w * 0.55, o.y + o.h / 2, o.w * 0.35, o.h, 12, dt, "obstacle");
+      maybeEmitWind(o.x + o.w * 0.4, o.y + o.h * 0.35, o.w * 0.25, o.h * 0.5, 6, dt, "obstacle");
       // Wake turbulence when the player slices close past this flyer
       const wakeDx = Math.abs(player.x - (o.x + o.w * 0.5));
       const wakeDy = Math.abs(player.y - (o.y + o.h * 0.5));

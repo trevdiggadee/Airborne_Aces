@@ -885,6 +885,7 @@
       window.__airborneWarBullets = [];
       window.__airborneOrphanTrails = [];
       window.__airborneFireballs = [];
+      window.__airborneBombBlasts = [];
       try { if (typeof ruffAirship !== "undefined") ruffAirship = null; } catch (e) {}
       window.__airborneRuffAirship = null;
       window.__airborneActivePowerVisual = null;
@@ -927,6 +928,7 @@
   }
 
   function updateStorm(dt) {
+    try { updateBombBlasts(dt); } catch (e) {}
     // Always tick orphan missile trails so marks never stick
     if (window.__airborneOrphanTrails && window.__airborneOrphanTrails.length) {
       for (var oi = window.__airborneOrphanTrails.length - 1; oi >= 0; oi--) {
@@ -1317,7 +1319,11 @@
             var oy = o.y + o.h * 0.5;
             if (Math.hypot(cx - ox, cy - oy) < radius + Math.max(o.w, o.h) * 0.25) {
               try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
-              try { if (typeof triggerBigExplosion === "function") triggerBigExplosion(ox, oy, 0.5); } catch (e) {}
+              // Feathers when birds are destroyed by bomb
+              try {
+                var isBird = o.isBird || o.type === "bird" || (o.key && /bird/i.test(String(o.key)));
+                if (isBird && typeof spawnFeathers === "function") spawnFeathers(ox, oy);
+              } catch (e) {}
               try {
                 if (typeof score === "number") score += 30;
                 if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
@@ -1332,42 +1338,7 @@
               try { damageBossFromPower(Math.max(4, Math.ceil((boss.maxHealth || 30) * 0.12)), hbx, hby); } catch (e) {}
             }
           }
-          try {
-            if (window.PowerFX) {
-              // Bright flash core
-              window.PowerFX.burst(cx, cy, {
-                count: 18, colors: ["#ffffff", "#fff5c0", "#ffd24a"],
-                speed: 60, gravity: 0, life: 0.25, glow: true, radial: true, size: 10
-              });
-              // Rising fireball
-              window.PowerFX.burst(cx, cy, {
-                count: 42, colors: ["#fff5c0", "#ffd24a", "#ff8a1a", "#ff3b00", "#cc1100"],
-                speed: 220, gravity: 15, life: 0.85, glow: true, radial: true, size: 7
-              });
-              // Rolling smoke plume
-              window.PowerFX.burst(cx, cy, {
-                count: 30, colors: ["#6b6358", "#4a453c", "#2e2a24", "#1a1814", "#0d0c0a"],
-                speed: 70, gravity: -40, life: 1.4, glow: false, radial: true, size: 10
-              });
-              // Heavy debris
-              window.PowerFX.burst(cx, cy, {
-                count: 24, colors: ["#c4a574", "#8B4513", "#a08060", "#6b4423", "#d4c4a8", "#555"],
-                speed: 190, gravity: 160, life: 1.0, glow: false, radial: true, size: 5
-              });
-              // Embers
-              window.PowerFX.burst(cx, cy, {
-                count: 20, colors: ["#ff6b3d", "#ffb347", "#ff3b00"],
-                speed: 140, gravity: 80, life: 0.7, glow: true, radial: true, size: 3
-              });
-            }
-          } catch (e) {}
-          try {
-            if (typeof spawnHitParticles === "function") {
-              spawnHitParticles(cx, cy);
-              spawnHitParticles(cx + 10, cy - 8);
-            }
-          } catch (e) {}
-          try { if (typeof triggerBigExplosion === "function") triggerBigExplosion(cx, cy, 1.0); } catch (e) {}
+          try { spawnRealisticBombExplosion(cx, cy); } catch (e) {}
           try { if (typeof sfxExplosion === "function") sfxExplosion(0.55); } catch (e) {}
         }
         if (fuseBoom) {
@@ -1767,7 +1738,161 @@
   }
   window.__airborneDrawWarSharkExtras = drawWarSharkExtras;
 
-function drawHeatseekers() {
+
+  // Realistic bomb blast: elongated exhaust-like flames (inner) + smoke (outer) — not balls
+  window.__airborneBombBlasts = window.__airborneBombBlasts || [];
+  function spawnRealisticBombExplosion(cx, cy) {
+    if (!window.__airborneBombBlasts) window.__airborneBombBlasts = [];
+    var list = window.__airborneBombBlasts;
+    // Inner flame tongues (teardrop streaks)
+    for (var i = 0; i < 28; i++) {
+      var a = (Math.PI * 2 * i) / 28 + (Math.random() - 0.5) * 0.4;
+      var sp = 80 + Math.random() * 160;
+      list.push({
+        x: cx, y: cy,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp - 30 - Math.random() * 40,
+        life: 0.35 + Math.random() * 0.35,
+        age: 0,
+        len: 18 + Math.random() * 28,
+        w: 3 + Math.random() * 4,
+        ang: a,
+        kind: "flame",
+        heat: 0.7 + Math.random() * 0.3
+      });
+    }
+    // Outer smoke puffs (soft, expanding, rising)
+    for (var s = 0; s < 20; s++) {
+      var a2 = Math.random() * Math.PI * 2;
+      var sp2 = 30 + Math.random() * 70;
+      list.push({
+        x: cx + Math.cos(a2) * 8,
+        y: cy + Math.sin(a2) * 8,
+        vx: Math.cos(a2) * sp2 * 0.5,
+        vy: Math.sin(a2) * sp2 * 0.3 - 25 - Math.random() * 35,
+        life: 0.7 + Math.random() * 0.7,
+        age: 0,
+        r: 10 + Math.random() * 16,
+        kind: "smoke"
+      });
+    }
+    // Embers
+    for (var e = 0; e < 14; e++) {
+      var a3 = Math.random() * Math.PI * 2;
+      var sp3 = 60 + Math.random() * 120;
+      list.push({
+        x: cx, y: cy,
+        vx: Math.cos(a3) * sp3,
+        vy: Math.sin(a3) * sp3 - 40,
+        life: 0.4 + Math.random() * 0.4,
+        age: 0,
+        r: 1.5 + Math.random() * 2.5,
+        kind: "ember"
+      });
+    }
+    // Debris
+    for (var d = 0; d < 12; d++) {
+      var a4 = Math.random() * Math.PI * 2;
+      var sp4 = 70 + Math.random() * 110;
+      list.push({
+        x: cx, y: cy,
+        vx: Math.cos(a4) * sp4,
+        vy: Math.sin(a4) * sp4 - 20,
+        life: 0.6 + Math.random() * 0.5,
+        age: 0,
+        r: 2 + Math.random() * 3,
+        rot: Math.random() * Math.PI * 2,
+        spin: (Math.random() - 0.5) * 10,
+        kind: "debris"
+      });
+    }
+  }
+  function updateBombBlasts(dt) {
+    var list = window.__airborneBombBlasts;
+    if (!list || !list.length) return;
+    for (var i = list.length - 1; i >= 0; i--) {
+      var p = list[i];
+      p.age += dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      if (p.kind === "flame") {
+        p.vy += 20 * dt;
+        p.vx *= (1 - 1.2 * dt);
+        p.len *= (1 - 0.8 * dt);
+      } else if (p.kind === "smoke") {
+        p.vy -= 15 * dt;
+        p.r += 18 * dt;
+        p.vx *= (1 - 0.5 * dt);
+      } else if (p.kind === "ember") {
+        p.vy += 90 * dt;
+      } else if (p.kind === "debris") {
+        p.vy += 180 * dt;
+        p.rot += (p.spin || 0) * dt;
+      }
+      if (p.age >= p.life) list.splice(i, 1);
+    }
+  }
+  function drawBombBlasts() {
+    var list = window.__airborneBombBlasts;
+    if (!list || !list.length || typeof ctx === "undefined") return;
+    ctx.save();
+    for (var i = 0; i < list.length; i++) {
+      var p = list[i];
+      var t = Math.max(0, 1 - p.age / p.life);
+      if (p.kind === "smoke") {
+        ctx.globalAlpha = t * 0.45;
+        ctx.globalCompositeOperation = "source-over";
+        ctx.fillStyle = "rgba(40,36,32," + (t * 0.5) + ")";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (p.kind === "flame") {
+        // Exhaust-style teardrop flame (not a ball)
+        ctx.globalAlpha = t * 0.95;
+        ctx.globalCompositeOperation = "lighter";
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.ang);
+        var len = Math.max(4, p.len * t);
+        var w = Math.max(1.5, p.w * t);
+        var grd = ctx.createLinearGradient(-len * 0.2, 0, len, 0);
+        grd.addColorStop(0, "rgba(255,250,220," + (t * p.heat) + ")");
+        grd.addColorStop(0.35, "rgba(255,160,40," + (t * 0.85) + ")");
+        grd.addColorStop(0.7, "rgba(255,60,10," + (t * 0.55) + ")");
+        grd.addColorStop(1, "rgba(120,20,0,0)");
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.moveTo(-len * 0.15, 0);
+        ctx.quadraticCurveTo(len * 0.2, -w, len, 0);
+        ctx.quadraticCurveTo(len * 0.2, w, -len * 0.15, 0);
+        ctx.fill();
+        ctx.restore();
+      } else if (p.kind === "ember") {
+        ctx.globalAlpha = t;
+        ctx.globalCompositeOperation = "lighter";
+        ctx.fillStyle = "rgba(255,140,40," + t + ")";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * t, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (p.kind === "debris") {
+        ctx.globalAlpha = t * 0.9;
+        ctx.globalCompositeOperation = "source-over";
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot || 0);
+        ctx.fillStyle = "rgba(139,90,43," + t + ")";
+        ctx.fillRect(-p.r, -p.r * 0.4, p.r * 2, p.r * 0.8);
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+  }
+  window.__airborneUpdateBombBlasts = updateBombBlasts;
+  window.__airborneDrawBombBlasts = drawBombBlasts;
+  window.__airborneSpawnBombExplosion = spawnRealisticBombExplosion;
+
+
+  function drawHeatseekers() {
     var rockets = window.__airborneHeatseekers;
     if (!rockets || !rockets.length || typeof ctx === "undefined") return;
     ctx.save();
@@ -1805,7 +1930,7 @@ function drawHeatseekers() {
       var rw = 48, rh = 22;
       if (img && img.complete && img.naturalWidth) {
         var aspect = img.naturalHeight / img.naturalWidth;
-        rw = 52;
+        rw = (rk.kind === "barrelbomb") ? 47 : 52; // pirate barrels 10% smaller
         rh = rw * aspect;
         ctx.drawImage(img, -rw * 0.35, -rh / 2, rw, rh);
       } else if (rk.kind === "jollybomb") {
