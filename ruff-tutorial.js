@@ -1967,6 +1967,9 @@
       ruffCoins = [];
       if (typeof ruffRings !== "undefined") ruffRings = [];
       ruffBgBalloons = [];
+      ruffAirship = null;
+      ruffPowerOrb = null;
+      window.__airborneRuffAirship = null;
     } catch (e) {}
     try {
       if (window.__airborneHeatseekers) window.__airborneHeatseekers.length = 0;

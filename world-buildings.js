@@ -296,8 +296,23 @@
     window.__airborneAirfieldPhase = "taxi";
     window.__airborneForceTrainRestart = false;
     window.__airborneResetRunway = false;
+    airfieldStripGone = false;
+    airfieldUseLandingArt = false;
+    airfieldStripY = 0;
     // Rebuild runway immediately so background is never blank
-    try { initAirfieldStrip(); } catch (e) { airfieldTiles = []; window.__airborneResetRunway = true; }
+    try {
+      initAirfieldStrip();
+      // If image wasn't ready, keep trying next frames
+      if (!airfieldTiles || !airfieldTiles.length) {
+        window.__airborneResetRunway = true;
+      }
+    } catch (e) {
+      airfieldTiles = [];
+      window.__airborneResetRunway = true;
+    }
+    // Ensure draw path is active
+    airfieldMode = true;
+    window.__airborneAirfield = true;
     try {
       if (typeof player !== "undefined" && player && typeof W !== "undefined") {
         player.x = W * 0.22;
@@ -529,6 +544,14 @@
   ];
 
   function updateAirfield(dt) {
+    // rebuild strip if missing during taxi/intro (restart safety)
+    if (airfieldMode && !airfieldUseLandingArt &&
+        (airfieldPhase === "taxi" || airfieldPhase === "accel" || window.__airborneRuffStage === "intro") &&
+        (!airfieldTiles || !airfieldTiles.length || airfieldStripGone)) {
+      airfieldStripGone = false;
+      try { initAirfieldStrip(); } catch (e) {}
+    }
+
     if (!airfieldMode) return;
     try {
     if (!(dt > 0) || !isFinite(dt)) dt = 0.016;

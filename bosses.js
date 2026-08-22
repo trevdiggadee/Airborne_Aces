@@ -826,6 +826,8 @@
       window.__airborneWarBullets = [];
       window.__airborneOrphanTrails = [];
       window.__airborneFireballs = [];
+      try { if (typeof ruffAirship !== "undefined") ruffAirship = null; } catch (e) {}
+      window.__airborneRuffAirship = null;
       window.__airborneActivePowerVisual = null;
       window.__airborneActivePowerUntil = 0;
       window.__airborneHeatseekUntil = 0;
@@ -1571,7 +1573,7 @@
         var cosR = Math.cos(rot), sinR = Math.sin(rot);
         // Local offset: front of blimp
         var localX = (player.w || 40) * 0.42;
-        var localY = (player.h || 30) * 0.16; // lower on War Shark nose
+        var localY = (player.h || 30) * 0.18; // lower on War Shark nose
         var hx = player.x + localX * cosR - localY * sinR;
         var hy = player.y + localX * sinR + localY * cosR;
         ctx.save();
