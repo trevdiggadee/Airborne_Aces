@@ -430,15 +430,19 @@
       for (var ji = 0; ji < jets; ji++) {
         var yOff = 0;
         if (jets > 1) {
-          // Top jet -12% h; bottom jet lowered 1% (was +12%, now +13%)
-          yOff = (ji === 0 ? -1 : 1) * player.h * (ji === 1 ? 0.13 : 0.12);
+          // Top jet -12% h; bottom jet default +12%
+          yOff = (ji === 0 ? -1 : 1) * player.h * 0.12;
         }
         // Sky Rocket: shift bottom jet 2% of width to the right
+        // Pirate Rocket: raise bottom jet 2%
         var xOff = 0;
         try {
           var selEx = (typeof selectedBlimp !== "undefined") ? selectedBlimp : "";
           if (selEx === "blimp12" && jets > 1 && ji === 1) {
             xOff = player.w * 0.02;
+          }
+          if (selEx === "blimp14" && jets > 1 && ji === 1) {
+            yOff = player.h * 0.10; // raised 2% from 0.12
           }
         } catch (e) {}
         var jx = exhaustX - sinR * yOff + cosR * xOff;

@@ -1189,7 +1189,7 @@
           y: player.y + (Math.random() - 0.5) * (player.h || 30) * 0.35,
           vx: Math.cos(ang) * sp,
           vy: Math.sin(ang) * sp * 0.5,
-          life: 2.2,
+          life: stormMode === "barrelbomb" ? 3.2 : 2.2,
           age: 0,
           rot: ang,
           trails: [],
@@ -1256,7 +1256,7 @@
         }
         // Mid-air fuse for War Shark barrel bombs (~0.55s then AOE)
         var fuseBoom = false;
-        if (rk.kind === "barrelbomb" && rk.age >= 0.55 && !rk.fused) {
+        if (rk.kind === "barrelbomb" && rk.age >= 1.55 && !rk.fused) {
           rk.fused = true;
           fuseBoom = true;
         }
@@ -1290,12 +1290,32 @@
             }
           }
           try {
-            if (window.PowerFX) window.PowerFX.burst(cx, cy, {
-              count: 28, colors: ["#ffd24a", "#ff6b3d", "#fff", "#8B4513", "#ff1a00"],
-              speed: 180, gravity: 40, life: 0.6, glow: true, radial: true
-            });
+            if (window.PowerFX) {
+              // Core fire
+              window.PowerFX.burst(cx, cy, {
+                count: 36, colors: ["#fff5c0", "#ffd24a", "#ff8a1a", "#ff3b00", "#ff1a00"],
+                speed: 200, gravity: 20, life: 0.7, glow: true, radial: true, size: 6
+              });
+              // Smoke
+              window.PowerFX.burst(cx, cy, {
+                count: 22, colors: ["#5c5346", "#3d3830", "#2a2620", "#1a1814"],
+                speed: 90, gravity: -25, life: 1.1, glow: false, radial: true, size: 8
+              });
+              // Debris (wood/metal bits)
+              window.PowerFX.burst(cx, cy, {
+                count: 18, colors: ["#c4a574", "#8B4513", "#a08060", "#6b4423", "#d4c4a8"],
+                speed: 160, gravity: 120, life: 0.9, glow: false, radial: true, size: 4
+              });
+            }
           } catch (e) {}
-          try { if (typeof sfxExplosion === "function") sfxExplosion(0.45); } catch (e) {}
+          try {
+            if (typeof spawnHitParticles === "function") {
+              spawnHitParticles(cx, cy);
+              spawnHitParticles(cx + 10, cy - 8);
+            }
+          } catch (e) {}
+          try { if (typeof triggerBigExplosion === "function") triggerBigExplosion(cx, cy, 1.0); } catch (e) {}
+          try { if (typeof sfxExplosion === "function") sfxExplosion(0.55); } catch (e) {}
         }
         if (fuseBoom) {
           aoeDestroyAt(rk.x, rk.y, 95);
