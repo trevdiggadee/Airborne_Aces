@@ -1444,12 +1444,17 @@
   
   function drawWarSharkExtras() {
     if (typeof ctx === "undefined") return;
-    // Headlamp on War Shark blimp when power active or always subtle for blimp11
+    // Headlamp locked to nose of War Shark — follows blimp rotation
     try {
       var sel = (typeof selectedBlimp !== "undefined") ? selectedBlimp : "";
       if (sel === "blimp11" && typeof player !== "undefined" && player) {
-        var hx = player.x + (player.w || 40) * 0.42;
-        var hy = player.y + (player.h || 30) * 0.05;
+        var rot = (typeof player.rotation === "number") ? player.rotation : 0;
+        var cosR = Math.cos(rot), sinR = Math.sin(rot);
+        // Local offset: front of blimp
+        var localX = (player.w || 40) * 0.42;
+        var localY = (player.h || 30) * 0.05;
+        var hx = player.x + localX * cosR - localY * sinR;
+        var hy = player.y + localX * sinR + localY * cosR;
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
         var pulse = 0.75 + 0.25 * Math.sin(performance.now() * 0.008);
@@ -1461,22 +1466,26 @@
         ctx.beginPath();
         ctx.arc(hx, hy, 28, 0, Math.PI * 2);
         ctx.fill();
-        // beam forward
-        var beam = ctx.createLinearGradient(hx, hy, hx + 90, hy);
-        beam.addColorStop(0, "rgba(255,245,200," + (0.25 * pulse) + ")");
+        // Beam in facing direction
+        var beamLen = 90;
+        var tipX = hx + cosR * beamLen;
+        var tipY = hy + sinR * beamLen;
+        var perpX = -sinR, perpY = cosR;
+        var beam = ctx.createLinearGradient(hx, hy, tipX, tipY);
+        beam.addColorStop(0, "rgba(255,245,200," + (0.28 * pulse) + ")");
         beam.addColorStop(1, "rgba(255,245,200,0)");
         ctx.fillStyle = beam;
         ctx.beginPath();
-        ctx.moveTo(hx, hy - 4);
-        ctx.lineTo(hx + 90, hy - 18);
-        ctx.lineTo(hx + 90, hy + 18);
-        ctx.lineTo(hx, hy + 4);
+        ctx.moveTo(hx + perpX * 4, hy + perpY * 4);
+        ctx.lineTo(tipX + perpX * 18, tipY + perpY * 18);
+        ctx.lineTo(tipX - perpX * 18, tipY - perpY * 18);
+        ctx.lineTo(hx - perpX * 4, hy - perpY * 4);
         ctx.closePath();
         ctx.fill();
         ctx.restore();
       }
     } catch (e) {}
-    // Bullets
+// Bullets
     var wbs = window.__airborneWarBullets;
     if (!wbs || !wbs.length) return;
     ctx.save();

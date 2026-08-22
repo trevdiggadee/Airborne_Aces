@@ -289,6 +289,27 @@
     window.__airborneTrainingBossTried = false;
     window.__airborneTrainingReportReady = false;
     window.__airborneTrainingReportShown = false;
+    // Hard reset training systems so re-entry never resumes mid-lesson
+    try {
+      window.__airborneFireballs = [];
+      window.__airborneHeatseekers = [];
+      window.__airborneWarBullets = [];
+      window.__airborneActivePowerVisual = null;
+      if (typeof stormActive !== "undefined") stormActive = false;
+      if (typeof stormCharge !== "undefined") stormCharge = 0;
+      if (typeof stormTimer !== "undefined") stormTimer = 0;
+      if (typeof bombs !== "undefined") bombs = [];
+      if (typeof powerup !== "undefined") powerup = null;
+      if (typeof hearts !== "undefined") hearts = [];
+      if (typeof bossActive !== "undefined") bossActive = false;
+      if (typeof boss !== "undefined") boss = null;
+      window.__airborneTrainingBoss = false;
+      window.__airborneTrainingBossDone = false;
+      window.__airborneTrainingBossTried = false;
+      window.__airborneRuffStage = "intro";
+      window.__airborneRuffActive = true;
+    } catch (e) {}
+
     try { if (typeof obstacles !== "undefined") obstacles = []; } catch (e) {}
     try { if (typeof score === "number") score = 0; } catch (e) {}
     try {
@@ -444,8 +465,7 @@
         if (window.__airborneShowHangar) window.__airborneShowHangar();
         else if (window.__airborneShowMenu) window.__airborneShowMenu();
       } catch (e) {}
-      // do NOT clear flag here — finishToHangar clears after delay
-    } else if (window.__airborneShowWorldMap) {
+    } else if (!window.__airborneReturnToHangar && window.__airborneShowWorldMap) {
       window.__airborneShowWorldMap({ mode: "start" });
     } else if (window.__airborneShowMenu) {
       window.__airborneShowMenu();

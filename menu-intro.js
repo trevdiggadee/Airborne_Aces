@@ -13,7 +13,7 @@ const BLIMP_DATA = {
   blimp8: { url: "ship_cargo_01.webp", key: "ship_cargo_01", name: "Ironworks", effect: "blackSmoke" },
   blimp9: { url: "ship_pirate_01.webp", key: "ship_pirate_01", name: "Jolly Rogers", effect: null },
   blimp10: { url: "ship_ivory_01.webp", key: "ship_ivory_01", name: "Ivory Anchor", effect: null },
-  blimp11: { url: "blimp11_flight_01.webp", key: "blimp11_flight_01", name: "War Shark", effect: "flame" },
+  blimp11: { url: "blimp11_flight_01.webp", key: "blimp11_flight_01", name: "War Shark", effect: "dualFlame" },
   blimp12: { url: "blimp12_flight_01.webp", key: "blimp12_flight_01", name: "Sky Rocket", effect: "dualFlame" },
   blimp13: { url: "blimp13_flight_01.webp", key: "blimp13_flight_01", name: "Iron Lattice", effect: "steam" },
   blimp14: { url: "blimp14_flight_01.webp", key: "blimp14_flight_01", name: "Pirate Rocket", effect: "dualFlame" },

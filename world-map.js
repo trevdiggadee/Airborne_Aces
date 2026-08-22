@@ -137,6 +137,14 @@
 
     // Tell the game which map post we're entering (1–6)
     window.__airbornePendingMapLevel = Number(levelId) || 1;
+    // Force training to restart from intro whenever level 1 is chosen
+    if (Number(levelId) === 1) {
+      window.__airborneForceTrainRestart = true;
+      window.__airborneRuffStage = "intro";
+      window.__airborneTrainingBossDone = false;
+      window.__airborneTrainingBossTried = false;
+      window.__airborneTrainingReportShown = false;
+    }
 
     if (mapMode === "start") {
       if (typeof window.__airborneEnterGameplay === "function") {
@@ -234,6 +242,13 @@
   }
 
   function showWorldMap(opts) {
+    if (window.__airborneReturnToHangar) {
+      try {
+        var map = document.getElementById("worldMapScreen");
+        if (map) { map.style.display = "none"; map.classList.add("hidden"); }
+      } catch (e) {}
+      return;
+    }
     opts = opts || {};
     mapMode = opts.mode || "start";
     mapPendingResume = opts.onContinue || null;
