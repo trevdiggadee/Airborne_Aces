@@ -139,6 +139,7 @@
     window.__airbornePendingMapLevel = Number(levelId) || 1;
     // Force training to restart from intro whenever level 1 is chosen
     if (Number(levelId) === 1) {
+      try { if (window.__airborneHardResetTraining) window.__airborneHardResetTraining(); } catch (e) {}
       window.__airborneForceTrainRestart = true;
       window.__airborneRuffStage = "intro";
       window.__airborneTrainingBossDone = false;

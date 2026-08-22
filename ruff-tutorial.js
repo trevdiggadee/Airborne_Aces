@@ -1944,8 +1944,83 @@
   }
 
   
+  
+  function hardResetTrainingState() {
+    try {
+      ruffActive = false;
+      ruffStage = "idle";
+      ruffStageT = 0;
+      ruffLineIdx = 0;
+      ruffLineT = 0;
+      ruffLines = [];
+      ruffWaitingInput = false;
+      ruffWaitingCollect = 0;
+      ruffWaitingAvoid = false;
+      ruffWaitingRing = 0;
+      ruffLandingCelebrated = false;
+      ruffCrystals = [];
+      ruffCoins = [];
+      if (typeof ruffRings !== "undefined") ruffRings = [];
+      ruffStats = { crystals: 0, coins: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, survivingStars: 3 };
+      ruffJetParticles = [];
+      ruffMotionGhosts = [];
+      ruffSpeakLines = [];
+      ruffFrame = 0;
+      ruffFrameT = 0;
+    } catch (e) {}
+    window.__airborneRuffActive = false;
+    window.__airborneRuffStage = "idle";
+    window.__airborneRuffLandArmed = false;
+    window.__airborneRuffRequestLand = false;
+    window.__airborneTrainingPowerUsed = false;
+    window.__airborneTrainingBoss = false;
+    window.__airborneTrainingBossDone = false;
+    window.__airborneTrainingBossTried = false;
+    window.__airborneTrainingReportReady = false;
+    window.__airborneTrainingReportShown = false;
+    window.__airborneForceTrainRestart = true;
+    window.__airborneAirfield = false;
+    window.__airborneTrainingFlight = false;
+    window.__airborneAirfieldPhase = "done";
+    window.__airborneAirfieldHold = false;
+    window.__airborneAirfieldPaused = false;
+    window.__airborneResetRunway = true;
+    try {
+      window.__airborneFireballs = [];
+      window.__airborneHeatseekers = [];
+      window.__airborneWarBullets = [];
+      window.__airborneActivePowerVisual = null;
+      window.__airborneActivePowerUntil = 0;
+    } catch (e) {}
+    try {
+      if (typeof obstacles !== "undefined") obstacles = [];
+      if (typeof bombs !== "undefined") bombs = [];
+      if (typeof powerup !== "undefined") powerup = null;
+      if (typeof hearts !== "undefined") hearts = [];
+      if (typeof bossActive !== "undefined") bossActive = false;
+      if (typeof boss !== "undefined") boss = null;
+      if (typeof stormActive !== "undefined") stormActive = false;
+      if (typeof stormCharge !== "undefined") stormCharge = 0;
+      if (typeof stormTimer !== "undefined") stormTimer = 0;
+      if (typeof score === "number") score = 0;
+      if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = "0";
+    } catch (e) {}
+    try {
+      var rep = document.getElementById("ruffReport");
+      if (rep) { rep.classList.remove("visible"); rep.style.display = "none"; }
+      var rad = document.getElementById("ruffRadio");
+      if (rad) { rad.classList.remove("visible"); rad.style.display = "none"; }
+    } catch (e) {}
+    try { stopAllTrainingAudio(); } catch (e) {}
+    try { hideFlightTrace(); } catch (e) {}
+    try { hideRadio(); } catch (e) {}
+    try { clearTrainingPowerIcon(); } catch (e) {}
+  }
+  window.__airborneHardResetTraining = hardResetTrainingState;
+
   function finishToHangar() {
     window.__airborneReturnToHangar = true;
+    try { hardResetTrainingState(); } catch (e) {}
     try { stopAllTrainingAudio(); } catch (e) {}
     try { hideFlightTrace(); } catch (e) {}
     try { hideRadio(); } catch (e) {}
@@ -2081,7 +2156,9 @@ function finishToMap() {
 
   // ---------- Public API ----------
   function beginRuffTraining() {
+    try { hardResetTrainingState(); } catch (e) {}
     ruffActive = true;
+    window.__airborneRuffActive = true;
     ruffStage = "intro";
     ruffStageT = 0;
     ruffLineIdx = 0;

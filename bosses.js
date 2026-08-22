@@ -396,11 +396,10 @@
       window.__airborneActivePowerUntil = performance.now() + 5500;
       window.__airborneHeatseekers = [];
       window.__airborneWarBullets = [];
-      if (!window.__airborneWarSharkImg) {
-        var wi = new Image();
-        wi.src = "war_shark_missile.jpg";
-        window.__airborneWarSharkImg = wi;
-      }
+      window.__airborneWarSharkImg = null;
+      var wi = new Image();
+      wi.src = "war_shark_missile.png?v=ruff193";
+      window.__airborneWarSharkImg = wi;
       try {
         if (window.PowerFX && player) window.PowerFX.activate("warshark", player.x, player.y);
       } catch (e) {}
@@ -1452,7 +1451,7 @@
         var cosR = Math.cos(rot), sinR = Math.sin(rot);
         // Local offset: front of blimp
         var localX = (player.w || 40) * 0.42;
-        var localY = (player.h || 30) * 0.05;
+        var localY = (player.h || 30) * 0.07; // +2% lower on War Shark nose
         var hx = player.x + localX * cosR - localY * sinR;
         var hy = player.y + localX * sinR + localY * cosR;
         ctx.save();

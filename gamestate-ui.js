@@ -493,6 +493,7 @@
     } else {
       // Always train on level 1 / hangar start
       window.__airbornePendingMapLevel = null;
+      try { if (window.__airborneHardResetTraining) window.__airborneHardResetTraining(); } catch (e) {}
       const startTrain = window.beginAirfieldTraining ||
         (typeof beginAirfieldTraining === "function" ? beginAirfieldTraining : null);
       if (startTrain) {

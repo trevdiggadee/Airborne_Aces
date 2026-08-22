@@ -265,6 +265,9 @@
   }
 
   function beginAirfieldTraining() {
+    try {
+      if (window.__airborneHardResetTraining) window.__airborneHardResetTraining();
+    } catch (e) {}
     airfieldMode = true;
     airfieldPhase = "taxi";
     // Full reset so re-entry always starts at the beginning
@@ -281,6 +284,7 @@
     window.__airborneAirfield = true;
     window.__airborneTrainingFlight = true;
     window.__airborneAirfieldPhase = "taxi";
+    window.__airborneForceTrainRestart = false;
     window.__airborneResetRunway = true;
     window.__airborneRuffLandArmed = false;
     window.__airborneRuffRequestLand = false;
