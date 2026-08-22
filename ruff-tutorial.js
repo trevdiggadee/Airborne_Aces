@@ -66,6 +66,7 @@
     landingStars: 3
   };
   let ruffCrystals = [];
+  window.__airborneRuffMuted = true; // mute Ruff dialog for now
   let ruffLandingCelebrated = false;
 
   
@@ -552,6 +553,12 @@
 
   // ---------- Radio UI ----------
   function showRadio(text, duration) {
+    // Ruff voice/dialog muted for now
+    if (window.__airborneRuffMuted !== false) {
+      try { hideRadio(); } catch (e) {}
+      ruffSpeechDone = true;
+      return;
+    }
     ensureSkipHandler();
     const el = radioEl();
     const tx = radioText();
@@ -1838,9 +1845,11 @@
       el.style.zIndex = "70";
       const cont = document.getElementById("ruffContinueBtn");
       if (cont) {
+        cont.textContent = "RETURN TO HANGAR ▶";
         cont.onclick = function (e) {
           try { if (e) { e.preventDefault(); e.stopPropagation(); } } catch (err) {}
-          finishToMap();
+          if (typeof finishToHangar === "function") finishToHangar();
+          else finishToMap();
         };
         cont.style.pointerEvents = "auto";
       }
@@ -1930,6 +1939,57 @@
   function row(label, val) {
     return '<div class="row"><span>' + label + '</span><span>' + val + '</span></div>';
   }
+
+  
+  function finishToHangar() {
+    try { stopAllTrainingAudio(); } catch (e) {}
+    try { hideFlightTrace(); } catch (e) {}
+    try { hideRadio(); } catch (e) {}
+    try { stopSpeak(); } catch (e) {}
+    try {
+      const el = reportEl();
+      if (el) {
+        el.classList.remove("visible");
+        el.style.display = "none";
+      }
+    } catch (e) {}
+    ruffActive = false;
+    window.__airborneRuffActive = false;
+    window.__airborneRuffStage = "idle";
+    window.__airborneRuffRequestLand = false;
+    window.__airborneRuffLandArmed = false;
+    try { clearTrainingPowerIcon(); } catch (e) {}
+    try {
+      if (typeof window.endAirfieldTrainingToMap === "function") window.endAirfieldTrainingToMap();
+      else if (typeof endAirfieldTrainingToMap === "function") endAirfieldTrainingToMap();
+    } catch (e) {}
+    try {
+      if (typeof state !== "undefined") state = "menu";
+    } catch (e) {}
+    try {
+      var gs = document.getElementById("gameScreen");
+      if (gs) gs.style.display = "none";
+    } catch (e) {}
+    try {
+      var map = document.getElementById("worldMapScreen");
+      if (map) { map.style.display = "none"; map.classList.add("hidden"); }
+    } catch (e) {}
+    try {
+      var menu = document.getElementById("menuScreen");
+      if (menu) {
+        menu.style.display = "block";
+        menu.classList.remove("hidden");
+      }
+    } catch (e) {}
+    try {
+      if (typeof window.__airborneShowHangar === "function") window.__airborneShowHangar();
+    } catch (e) {}
+    try {
+      // resume menu music softly
+      if (typeof startMenuMusic === "function") startMenuMusic();
+    } catch (e) {}
+  }
+  window.__airborneFinishToHangar = finishToHangar;
 
   function finishToMap() {
     try { stopAllTrainingAudio(); } catch (e) {}

@@ -833,6 +833,31 @@
       }
     });
   }
+  
+  const pauseHangarBtn = document.getElementById("pauseHangarBtn");
+  if (pauseHangarBtn) {
+    pauseHangarBtn.addEventListener("click", (e) => {
+      try { if (e) { e.preventDefault(); e.stopPropagation(); } } catch (err) {}
+      try { closePauseMenu(); } catch (err) {}
+      try {
+        if (typeof window.__airborneFinishToHangar === "function") {
+          window.__airborneFinishToHangar();
+        } else if (typeof finishToHangar === "function") {
+          finishToHangar();
+        } else if (typeof window.__airborneFinishToMap === "function") {
+          window.__airborneFinishToMap();
+        }
+      } catch (err) { console.warn(err); }
+      try {
+        if (typeof state !== "undefined") state = "menu";
+        var gsEl = document.getElementById("gameScreen");
+        if (gsEl) gsEl.style.display = "none";
+        var menu = document.getElementById("menuScreen");
+        if (menu) { menu.style.display = "block"; menu.classList.remove("hidden"); }
+      } catch (err) {}
+    });
+  }
+
   if (pauseOverlay) {
     pauseOverlay.addEventListener("click", (e) => {
       if (e.target === pauseOverlay) closePauseMenu();

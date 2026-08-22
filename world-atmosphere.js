@@ -422,8 +422,16 @@
         if (jets > 1) {
           yOff = (ji === 0 ? -1 : 1) * player.h * 0.12;
         }
-        var jx = exhaustX - sinR * yOff;
-        var jy = exhaustY + cosR * yOff;
+        // Sky Rocket: shift bottom jet 2% of width to the right
+        var xOff = 0;
+        try {
+          var selEx = (typeof selectedBlimp !== "undefined") ? selectedBlimp : "";
+          if (selEx === "blimp12" && jets > 1 && ji === 1) {
+            xOff = player.w * 0.02;
+          }
+        } catch (e) {}
+        var jx = exhaustX - sinR * yOff + cosR * xOff;
+        var jy = exhaustY + cosR * yOff + sinR * xOff;
         jetTrail.push({
           along: 0,
           w: player.h * 0.15 * (burst ? 1.12 : 1) * (jets > 1 ? 0.85 : 1),
