@@ -278,7 +278,7 @@
     var W0 = (typeof W !== "undefined") ? W : 400;
     var H0 = (typeof H !== "undefined") ? H : 600;
     var big = Math.random() < 0.12;
-    var r = big ? (16 + Math.random() * 10) : (6 + Math.random() * 10);
+    var r = big ? (20 + Math.random() * 12) : (10 + Math.random() * 12);
     // Mix of vertical and dramatic diagonal angles
     var vertical = Math.random() < 0.35;
     var ang = vertical
@@ -761,6 +761,11 @@
       window.__airborneLatticeUntil = performance.now() + 4000;
       window.__airborneLatticeTorps = [];
       window.__airborneLatticeSpawnT = 0;
+      if (!window.__airborneLatticeImg || !window.__airborneLatticeImg.complete) {
+        window.__airborneLatticeImg = new Image();
+        window.__airborneLatticeImg.crossOrigin = "anonymous";
+        window.__airborneLatticeImg.src = "iron_lattice_torpedo.png?v=ruff216";
+      }
       for (var li = 0; li < 5; li++) {
         var ang = -0.35 + (li / 4) * 0.7;
         window.__airborneLatticeTorps.push({
@@ -769,7 +774,7 @@
           vx: Math.cos(ang) * (220 + Math.random() * 40),
           vy: Math.sin(ang) * 80,
           life: 2.8, age: 0, rot: ang,
-          w: 56, h: 32
+          w: 78, h: 54
         });
       }
       try { if (window.PowerFX) window.PowerFX.activate("swarm", player.x, player.y); } catch (e) {}
@@ -1127,7 +1132,7 @@
             y: player.y + (Math.random() - 0.5) * (player.h || 30),
             vx: Math.cos(ang) * (230 + Math.random() * 50),
             vy: Math.sin(ang) * 70,
-            life: 2.6, age: 0, rot: ang, w: 56, h: 32
+            life: 2.6, age: 0, rot: ang, w: 78, h: 54
           });
         }
       }
@@ -2264,7 +2269,7 @@
         var cosR = Math.cos(rot), sinR = Math.sin(rot);
         // Local offset: front of blimp
         var localX = (player.w || 40) * 0.42;
-        var localY = (player.h || 30) * 0.29; // lower another ~5% on War Shark nose
+        var localY = (player.h || 30) * 0.31; // lower another ~2% on War Shark nose
         var hx = player.x + localX * cosR - localY * sinR;
         var hy = player.y + localX * sinR + localY * cosR;
         ctx.save();
@@ -2533,42 +2538,54 @@
     if (!list || !list.length || typeof ctx === "undefined") return;
     if (!window.__airborneLatticeImg) {
       window.__airborneLatticeImg = new Image();
-      window.__airborneLatticeImg.src = "iron_lattice_torpedo.png";
+      window.__airborneLatticeImg.crossOrigin = "anonymous";
+      window.__airborneLatticeImg.src = "iron_lattice_torpedo.png?v=ruff216";
     }
     var img = window.__airborneLatticeImg;
-    ctx.save();
     list.forEach(function(lt) {
-      // trail first
+      // trails
       (lt.trail || []).forEach(function(p) {
-        var t = 1 - p.age / p.life;
-        ctx.globalAlpha = t * 0.6;
+        var t = Math.max(0, 1 - p.age / p.life);
+        ctx.save();
+        ctx.globalAlpha = t * 0.65;
         if (p.kind === "spark") {
           ctx.globalCompositeOperation = "lighter";
           ctx.fillStyle = "rgba(255,180,60," + t + ")";
         } else {
-          ctx.globalCompositeOperation = "source-over";
-          ctx.fillStyle = "rgba(80,70,60," + (t * 0.5) + ")";
+          ctx.fillStyle = "rgba(80,70,60," + (t * 0.55) + ")";
         }
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r * t, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(1, p.r * t), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       });
-      ctx.globalAlpha = 1;
-      ctx.globalCompositeOperation = "source-over";
+      ctx.save();
       ctx.translate(lt.x, lt.y);
       ctx.rotate(lt.rot || 0);
-      if (img.complete && img.naturalWidth) {
-        ctx.drawImage(img, -lt.w * 0.5, -lt.h * 0.5, lt.w, lt.h);
+      var dw = lt.w || 72;
+      var dh = lt.h || 48;
+      if (img && img.complete && img.naturalWidth > 0) {
+        ctx.drawImage(img, -dw * 0.5, -dh * 0.5, dw, dh);
       } else {
+        // Visible brass fallback so player always sees projectiles
         ctx.fillStyle = "#b45309";
-        ctx.beginPath(); ctx.ellipse(0, 0, lt.w * 0.45, lt.h * 0.35, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(0, 0, dw * 0.45, dh * 0.32, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fbbf24";
+        ctx.beginPath();
+        ctx.arc(dw * 0.28, 0, 5, 0, Math.PI * 2);
+        ctx.fill();
       }
-      // nose glow
       ctx.globalCompositeOperation = "lighter";
-      ctx.fillStyle = "rgba(255,200,100,0.35)";
-      ctx.beginPath(); ctx.arc(lt.w * 0.35, 0, 6, 0, Math.PI * 2); ctx.fill();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = "rgba(255,200,100,0.4)";
+      ctx.beginPath();
+      ctx.arc(dw * 0.35, 0, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     });
-    ctx.restore();
   }
+
 
   function drawIvoryFireballs() {
     var list = window.__airborneIvoryFireballs;
@@ -2694,20 +2711,26 @@
       ctx.moveTo(mt.x - Math.cos(ang) * tail, mt.y - Math.sin(ang) * tail);
       ctx.lineTo(mt.x, mt.y);
       ctx.stroke();
-      // Orange/yellow flame body
-      var fg = ctx.createRadialGradient(mt.x, mt.y, 0, mt.x, mt.y, mt.r * 2.2);
-      fg.addColorStop(0, "rgba(255,250,220,1)");
-      fg.addColorStop(0.25, "rgba(255,200,60,0.95)");
-      fg.addColorStop(0.55, "rgba(255,100,20,0.7)");
-      fg.addColorStop(1, "rgba(180,30,0,0)");
+      // Visible fireball body (larger + brighter)
+      var bodyR = Math.max(10, mt.r * 2.8);
+      var fg = ctx.createRadialGradient(mt.x, mt.y, 0, mt.x, mt.y, bodyR);
+      fg.addColorStop(0, "rgba(255,255,240,1)");
+      fg.addColorStop(0.15, "rgba(255,230,120,1)");
+      fg.addColorStop(0.4, "rgba(255,140,30,0.95)");
+      fg.addColorStop(0.7, "rgba(255,60,10,0.65)");
+      fg.addColorStop(1, "rgba(120,20,0,0)");
       ctx.fillStyle = fg;
       ctx.beginPath();
-      ctx.arc(mt.x, mt.y, mt.r * 2.2, 0, Math.PI * 2);
+      ctx.arc(mt.x, mt.y, bodyR, 0, Math.PI * 2);
       ctx.fill();
-      // Bright fiery core
-      ctx.fillStyle = "rgba(255,255,240,0.95)";
+      // Bright fiery core — clearly visible fireball
+      var cg = ctx.createRadialGradient(mt.x, mt.y, 0, mt.x, mt.y, mt.r * 0.85);
+      cg.addColorStop(0, "rgba(255,255,255,1)");
+      cg.addColorStop(0.5, "rgba(255,240,180,1)");
+      cg.addColorStop(1, "rgba(255,180,40,0.8)");
+      ctx.fillStyle = cg;
       ctx.beginPath();
-      ctx.arc(mt.x, mt.y, mt.r * 0.45, 0, Math.PI * 2);
+      ctx.arc(mt.x, mt.y, Math.max(5, mt.r * 0.7), 0, Math.PI * 2);
       ctx.fill();
       // Sparks
       (mt.sparks || []).forEach(function(sp) {
@@ -2758,8 +2781,17 @@
   window.__airborneDrawShockFX = drawShockFX;
 
   function drawHeatseekers() {
+    if (typeof ctx === "undefined") return;
+    // Always draw lattice torpedoes + meteor shower when active
+    try { drawLatticeTorps(); } catch (e) {}
+    try { drawMeteorMarks(); } catch (e) {}
+    try { drawIvoryFireballs(); } catch (e) {}
+    try { drawSpyShield(); } catch (e) {}
+    try { drawSteamParts(); } catch (e) {}
+    try { drawShockFX(); } catch (e) {}
+    try { drawSunBurst(); } catch (e) {}
     var rockets = window.__airborneHeatseekers;
-    if (!rockets || !rockets.length || typeof ctx === "undefined") return;
+    if (!rockets || !rockets.length) return;
     ctx.save();
     for (var i = 0; i < rockets.length; i++) {
       var rk = rockets[i];
