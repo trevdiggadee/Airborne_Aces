@@ -811,7 +811,16 @@
       window.__airborneMeteorMarks = [];
       window.__airborneMeteorSkyDark = { age: 0, life: 6.0, alpha: 0 };
       window.__airborneMeteorSpawnT = 0;
-      for (var ms = 0; ms < 18; ms++) {
+      // Preload rock art
+      if (!window.__airborneMeteorRocks) {
+        window.__airborneMeteorRocks = [];
+        for (var ri = 1; ri <= 6; ri++) {
+          var im = new Image();
+          im.src = "meteor_rock_" + ri + ".png?v=ruff218";
+          window.__airborneMeteorRocks.push(im);
+        }
+      }
+      for (var ms = 0; ms < 22; ms++) {
         if (typeof window.__airborneMakeMeteor === "function")
           window.__airborneMeteors.push(window.__airborneMakeMeteor());
       }
@@ -2705,185 +2714,134 @@
     }
     ctx.restore();
   }
-  function drawMeteorMarks() {
+  
+  // drawMeteorMarks defined below
+function drawMeteorMarks() {
     if (typeof ctx === "undefined") return;
-    if (window.__airborneMeteorSkyDark && window.__airborneMeteorSkyDark.alpha > 0) {
-      ctx.save();
-      ctx.fillStyle = "rgba(10,5,20," + window.__airborneMeteorSkyDark.alpha + ")";
-      ctx.fillRect(0, 0, typeof W !== "undefined" ? W : 800, typeof H !== "undefined" ? H : 600);
-      ctx.restore();
+    var list = window.__airborneMeteors;
+    // Sky darken
+    if (window.__airborneMeteorSkyDark) {
+      var sd = window.__airborneMeteorSkyDark;
+      var a = sd.alpha || 0;
+      if (a > 0.01) {
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.fillStyle = "rgb(8,4,18)";
+        ctx.fillRect(0, 0, (typeof W !== "undefined" ? W : 800), (typeof H !== "undefined" ? H : 600));
+        ctx.restore();
+      }
     }
+    // Flash
     if (window.__airborneMeteorFlash) {
       var fl = window.__airborneMeteorFlash;
-      fl.age += 0.016;
-      var ft = Math.max(0, 1 - fl.age / fl.life);
+      fl.age = (fl.age || 0) + 0.016;
+      var ft = Math.max(0, 1 - fl.age / (fl.life || 0.15));
       if (ft > 0) {
         ctx.save();
-        ctx.globalAlpha = ft * (fl.big ? 0.5 : 0.28);
-        ctx.fillStyle = "#fff5e6";
-        ctx.fillRect(0, 0, typeof W !== "undefined" ? W : 800, typeof H !== "undefined" ? H : 600);
+        ctx.globalAlpha = ft * (fl.big ? 0.55 : 0.3);
+        ctx.fillStyle = "#fff8e7";
+        ctx.fillRect(0, 0, (typeof W !== "undefined" ? W : 800), (typeof H !== "undefined" ? H : 600));
         ctx.restore();
-      } else window.__airborneMeteorFlash = null;
+      } else {
+        window.__airborneMeteorFlash = null;
+      }
     }
-    if (!window.__airborneMeteors) return;
+    if (!list || !list.length) return;
+
+    // Ensure rock images
     if (!window.__airborneMeteorRocks) {
       window.__airborneMeteorRocks = [];
       for (var ri = 1; ri <= 6; ri++) {
         var im = new Image();
-        im.crossOrigin = "anonymous";
-        im.src = "meteor_rock_" + ri + ".png?v=ruff217";
+        im.src = "meteor_rock_" + ri + ".png?v=ruff218";
         window.__airborneMeteorRocks.push(im);
       }
     }
-    ctx.save();
-    window.__airborneMeteors.forEach(function(mt) {
-      var ang = Math.atan2(mt.vy, mt.vx);
-      mt.spin = (mt.spin || 0) + (mt.spinVel || 0) * 0.016;
-      // Long fiery tail behind rock
+
+    for (var mi = 0; mi < list.length; mi++) {
+      var mt = list[mi];
+      if (!mt) continue;
+      var ang = Math.atan2(mt.vy || 1, mt.vx || 0);
+      var tail = mt.tailLen || 50;
+
+      // Tail
+      ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      var tail = mt.tailLen || 45;
       var g = ctx.createLinearGradient(
         mt.x - Math.cos(ang) * tail, mt.y - Math.sin(ang) * tail,
         mt.x, mt.y
       );
       g.addColorStop(0, "rgba(255,40,0,0)");
-      g.addColorStop(0.4, "rgba(255,100,20,0.5)");
-      g.addColorStop(0.8, "rgba(255,200,80,0.85)");
-      g.addColorStop(1, "rgba(255,255,200,0.95)");
+      g.addColorStop(0.5, "rgba(255,120,20,0.7)");
+      g.addColorStop(1, "rgba(255,240,160,1)");
       ctx.strokeStyle = g;
-      ctx.lineWidth = Math.max(6, mt.r * 0.9);
+      ctx.lineWidth = Math.max(8, (mt.r || 14) * 1.1);
       ctx.lineCap = "round";
       ctx.beginPath();
       ctx.moveTo(mt.x - Math.cos(ang) * tail, mt.y - Math.sin(ang) * tail);
       ctx.lineTo(mt.x, mt.y);
       ctx.stroke();
-      // Outer flame halo around rock
-      var bodyR = Math.max(14, mt.r * 2.4);
-      var fg = ctx.createRadialGradient(mt.x, mt.y, mt.r * 0.3, mt.x, mt.y, bodyR);
-      fg.addColorStop(0, "rgba(255,240,180,0.9)");
-      fg.addColorStop(0.4, "rgba(255,120,30,0.55)");
-      fg.addColorStop(1, "rgba(200,40,0,0)");
+
+      // Flame halo
+      var bodyR = Math.max(16, (mt.r || 14) * 2.6);
+      var fg = ctx.createRadialGradient(mt.x, mt.y, 2, mt.x, mt.y, bodyR);
+      fg.addColorStop(0, "rgba(255,255,220,1)");
+      fg.addColorStop(0.35, "rgba(255,160,40,0.85)");
+      fg.addColorStop(1, "rgba(255,40,0,0)");
       ctx.fillStyle = fg;
       ctx.beginPath();
       ctx.arc(mt.x, mt.y, bodyR, 0, Math.PI * 2);
       ctx.fill();
-      // Rock sprite — oriented vertical (nose down along velocity)
+      ctx.restore();
+
+      // Rock image (vertical along velocity)
       var rocks = window.__airborneMeteorRocks;
-      var img = rocks && rocks[mt.rockIdx % 6];
-      var rw = mt.r * 2.4, rh = mt.r * 2.8;
-      ctx.globalCompositeOperation = "source-over";
+      var img = rocks[(mt.rockIdx || 0) % 6];
+      var rw = Math.max(28, (mt.r || 14) * 2.6);
+      var rh = Math.max(32, (mt.r || 14) * 3.0);
       ctx.save();
       ctx.translate(mt.x, mt.y);
-      // vertical: point rock along fall direction (angle + 90° if art is upright)
       ctx.rotate(ang + Math.PI / 2);
       ctx.rotate(mt.spin || 0);
       if (img && img.complete && img.naturalWidth > 0) {
         ctx.drawImage(img, -rw * 0.5, -rh * 0.5, rw, rh);
       } else {
-        ctx.fillStyle = "#555";
+        // Always-visible rock fallback
+        ctx.fillStyle = "#6b7280";
         ctx.beginPath();
-        ctx.ellipse(0, 0, rw * 0.4, rh * 0.4, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, rw * 0.42, rh * 0.38, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#9ca3af";
+        ctx.beginPath();
+        ctx.ellipse(-rw * 0.1, -rh * 0.1, rw * 0.2, rh * 0.15, 0.3, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.restore();
-      // Bright core highlight in front
+
+      // Core glow on top
+      ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      ctx.fillStyle = "rgba(255,255,220,0.55)";
+      ctx.fillStyle = "rgba(255,250,200,0.7)";
       ctx.beginPath();
-      ctx.arc(mt.x, mt.y, Math.max(4, mt.r * 0.35), 0, Math.PI * 2);
+      ctx.arc(mt.x, mt.y, Math.max(5, (mt.r || 14) * 0.4), 0, Math.PI * 2);
       ctx.fill();
-      // Sparks
       (mt.sparks || []).forEach(function(sp) {
         var t = 1 - sp.age / sp.life;
+        if (t <= 0) return;
         ctx.globalAlpha = t;
         ctx.fillStyle = "rgba(255,200,60,1)";
         ctx.beginPath();
         ctx.arc(sp.x, sp.y, sp.r * t, 0, Math.PI * 2);
         ctx.fill();
       });
-      ctx.globalAlpha = 1;
-    });
-    ctx.restore();
-  }
-function drawMeteorMarks() {
-    if (typeof ctx === "undefined") return;
-    // Sky darken overlay
-    if (window.__airborneMeteorSkyDark && window.__airborneMeteorSkyDark.alpha > 0) {
-      ctx.save();
-      ctx.fillStyle = "rgba(10,5,20," + window.__airborneMeteorSkyDark.alpha + ")";
-      ctx.fillRect(0, 0, typeof W !== "undefined" ? W : 800, typeof H !== "undefined" ? H : 600);
       ctx.restore();
     }
-    // Screen flash on impact
-    if (window.__airborneMeteorFlash) {
-      var fl = window.__airborneMeteorFlash;
-      fl.age += 0.016;
-      var ft = Math.max(0, 1 - fl.age / fl.life);
-      if (ft > 0) {
-        ctx.save();
-        ctx.globalAlpha = ft * (fl.big ? 0.45 : 0.25);
-        ctx.fillStyle = "#fff5e6";
-        ctx.fillRect(0, 0, typeof W !== "undefined" ? W : 800, typeof H !== "undefined" ? H : 600);
-        ctx.restore();
-      } else {
-        window.__airborneMeteorFlash = null;
-      }
-    }
-    if (!window.__airborneMeteors) return;
-    ctx.save();
-    window.__airborneMeteors.forEach(function(mt) {
-      var ang = Math.atan2(mt.vy, mt.vx);
-      // Long glowing tail
-      ctx.globalCompositeOperation = "lighter";
-      var tail = mt.tailLen || 40;
-      var g = ctx.createLinearGradient(
-        mt.x - Math.cos(ang) * tail, mt.y - Math.sin(ang) * tail,
-        mt.x, mt.y
-      );
-      g.addColorStop(0, "rgba(255,80,0,0)");
-      g.addColorStop(0.5, "rgba(255,140,30,0.45)");
-      g.addColorStop(1, "rgba(255,230,150,0.9)");
-      ctx.strokeStyle = g;
-      ctx.lineWidth = mt.r * 0.85;
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(mt.x - Math.cos(ang) * tail, mt.y - Math.sin(ang) * tail);
-      ctx.lineTo(mt.x, mt.y);
-      ctx.stroke();
-      // Visible fireball body (larger + brighter)
-      var bodyR = Math.max(10, mt.r * 2.8);
-      var fg = ctx.createRadialGradient(mt.x, mt.y, 0, mt.x, mt.y, bodyR);
-      fg.addColorStop(0, "rgba(255,255,240,1)");
-      fg.addColorStop(0.15, "rgba(255,230,120,1)");
-      fg.addColorStop(0.4, "rgba(255,140,30,0.95)");
-      fg.addColorStop(0.7, "rgba(255,60,10,0.65)");
-      fg.addColorStop(1, "rgba(120,20,0,0)");
-      ctx.fillStyle = fg;
-      ctx.beginPath();
-      ctx.arc(mt.x, mt.y, bodyR, 0, Math.PI * 2);
-      ctx.fill();
-      // Bright fiery core — clearly visible fireball
-      var cg = ctx.createRadialGradient(mt.x, mt.y, 0, mt.x, mt.y, mt.r * 0.85);
-      cg.addColorStop(0, "rgba(255,255,255,1)");
-      cg.addColorStop(0.5, "rgba(255,240,180,1)");
-      cg.addColorStop(1, "rgba(255,180,40,0.8)");
-      ctx.fillStyle = cg;
-      ctx.beginPath();
-      ctx.arc(mt.x, mt.y, Math.max(5, mt.r * 0.7), 0, Math.PI * 2);
-      ctx.fill();
-      // Sparks
-      (mt.sparks || []).forEach(function(sp) {
-        var t = 1 - sp.age / sp.life;
-        ctx.globalAlpha = t;
-        ctx.fillStyle = "rgba(255," + (180 + Math.floor(Math.random() * 40)) + ",40,1)";
-        ctx.beginPath();
-        ctx.arc(sp.x, sp.y, sp.r * t, 0, Math.PI * 2);
-        ctx.fill();
-      });
-      ctx.globalAlpha = 1;
-    });
-    ctx.restore();
   }
+  window.__airborneDrawMeteors = drawMeteorMarks;
+
+
+
+
 
 
   function drawShockFX() {

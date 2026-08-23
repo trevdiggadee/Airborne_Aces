@@ -246,6 +246,7 @@
     drawHitParticles(); try { if (window.PowerFX) window.PowerFX.draw(ctx); } catch (e) {}
       try { if (window.__airborneDrawFireballs) window.__airborneDrawFireballs(); } catch (e) {}
       try { if (window.__airborneDrawHeatseekers) window.__airborneDrawHeatseekers(); } catch (e) {}
+      try { if (window.__airborneDrawMeteors) window.__airborneDrawMeteors(); } catch (e) {}
       try { if (window.__airborneDrawWarSharkExtras) window.__airborneDrawWarSharkExtras(); try { if (window.__airborneDrawBombBlasts) window.__airborneDrawBombBlasts(); } catch(e) {}; } catch (e) {};
     drawPowerup();
     drawBonusRound();
