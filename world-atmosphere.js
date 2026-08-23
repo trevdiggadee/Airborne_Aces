@@ -423,7 +423,7 @@
     // Sky Rocket — shift exhaust 3% further right
     try {
       if (typeof selectedBlimp !== "undefined" && selectedBlimp === "blimp12") {
-        localX += player.w * 0.03;
+        localX += player.w * 0.06; // +3% then +3% more right
       }
     } catch (e) {}
     var exhaustX = player.x + localX * cosR - localY * sinR;

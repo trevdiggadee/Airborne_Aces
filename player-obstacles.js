@@ -21,9 +21,9 @@
     else if (sel === "blimp4") scale = 1.20 * 1.05;  // Steampunk
     else if (sel === "blimp8") scale = 1.15;         // Ironworks +15%
     else if (sel === "blimp9") scale = 1.10;         // Jolly Rogers +10%
-    else if (sel === "blimp11") scale = 1.05;        // War Shark +5%
-    else if (sel === "blimp12") scale = 1.15 * 1.05; // Sky Rocket
-    else if (sel === "blimp13") scale = 1.05;        // Iron Lattice +5%
+    else if (sel === "blimp11") scale = 1.05 * 1.05; // War Shark +5% then +5%
+    else if (sel === "blimp12") scale = 1.15 * 1.05 * 1.05; // Sky Rocket stack +5%
+    else if (sel === "blimp13") scale = 1.05 * 1.05; // Iron Lattice +5% then +5%
     else if (sel === "blimp14") scale = 1.10;        // Pirate Rocket +10%
     else if (sel === "blimp15") scale = 1.10;        // Royal Stripe +10%
 
