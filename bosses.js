@@ -277,7 +277,7 @@
   window.__airborneMakeMeteor = function () {
     var W0 = (typeof W !== "undefined") ? W : 400;
     var big = Math.random() < 0.14;
-    var r = big ? (22 + Math.random() * 14) : (12 + Math.random() * 14);
+    var r = big ? (11 + Math.random() * 7) : (6 + Math.random() * 7); // 50% smaller
     // Mostly vertical fall; some dramatic diagonals
     var vertical = Math.random() < 0.55;
     var ang = vertical
@@ -2731,107 +2731,113 @@ function drawMeteorMarks() {
         ctx.restore();
       }
     }
-    // Flash
     if (window.__airborneMeteorFlash) {
       var fl = window.__airborneMeteorFlash;
       fl.age = (fl.age || 0) + 0.016;
       var ft = Math.max(0, 1 - fl.age / (fl.life || 0.15));
       if (ft > 0) {
         ctx.save();
-        ctx.globalAlpha = ft * (fl.big ? 0.55 : 0.3);
+        ctx.globalAlpha = ft * (fl.big ? 0.5 : 0.28);
         ctx.fillStyle = "#fff8e7";
         ctx.fillRect(0, 0, (typeof W !== "undefined" ? W : 800), (typeof H !== "undefined" ? H : 600));
         ctx.restore();
-      } else {
-        window.__airborneMeteorFlash = null;
-      }
+      } else window.__airborneMeteorFlash = null;
     }
     if (!list || !list.length) return;
-
-    // Ensure rock images
-    if (!window.__airborneMeteorRocks) {
-      window.__airborneMeteorRocks = [];
-      for (var ri = 1; ri <= 6; ri++) {
-        var im = new Image();
-        im.src = "meteor_rock_" + ri + ".png?v=ruff218";
-        window.__airborneMeteorRocks.push(im);
-      }
-    }
 
     for (var mi = 0; mi < list.length; mi++) {
       var mt = list[mi];
       if (!mt) continue;
       var ang = Math.atan2(mt.vy || 1, mt.vx || 0);
-      var tail = mt.tailLen || 50;
+      var r = Math.max(4, (mt.r || 8) * 0.5); // 50% smaller on draw too
+      var tail = (mt.tailLen || 50) * 0.55;
+      mt.spin = (mt.spin || 0) + (mt.spinVel || 0.5) * 0.016;
 
-      // Tail
+      // —— Fiery tail ——
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      var g = ctx.createLinearGradient(
+      var tg = ctx.createLinearGradient(
         mt.x - Math.cos(ang) * tail, mt.y - Math.sin(ang) * tail,
         mt.x, mt.y
       );
-      g.addColorStop(0, "rgba(255,40,0,0)");
-      g.addColorStop(0.5, "rgba(255,120,20,0.7)");
-      g.addColorStop(1, "rgba(255,240,160,1)");
-      ctx.strokeStyle = g;
-      ctx.lineWidth = Math.max(8, (mt.r || 14) * 1.1);
+      tg.addColorStop(0, "rgba(255,40,0,0)");
+      tg.addColorStop(0.45, "rgba(255,100,15,0.55)");
+      tg.addColorStop(1, "rgba(255,230,120,0.95)");
+      ctx.strokeStyle = tg;
+      ctx.lineWidth = Math.max(4, r * 1.4);
       ctx.lineCap = "round";
       ctx.beginPath();
       ctx.moveTo(mt.x - Math.cos(ang) * tail, mt.y - Math.sin(ang) * tail);
       ctx.lineTo(mt.x, mt.y);
       ctx.stroke();
 
-      // Flame halo
-      var bodyR = Math.max(16, (mt.r || 14) * 2.6);
-      var fg = ctx.createRadialGradient(mt.x, mt.y, 2, mt.x, mt.y, bodyR);
-      fg.addColorStop(0, "rgba(255,255,220,1)");
-      fg.addColorStop(0.35, "rgba(255,160,40,0.85)");
-      fg.addColorStop(1, "rgba(255,40,0,0)");
+      // —— Outer fireball ——
+      var fireR = r * 2.8;
+      var fg = ctx.createRadialGradient(mt.x, mt.y, r * 0.2, mt.x, mt.y, fireR);
+      fg.addColorStop(0, "rgba(255,255,220,0.95)");
+      fg.addColorStop(0.25, "rgba(255,200,60,0.9)");
+      fg.addColorStop(0.55, "rgba(255,100,20,0.7)");
+      fg.addColorStop(1, "rgba(180,20,0,0)");
       ctx.fillStyle = fg;
       ctx.beginPath();
-      ctx.arc(mt.x, mt.y, bodyR, 0, Math.PI * 2);
+      ctx.arc(mt.x, mt.y, fireR, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
 
-      // Rock image (vertical along velocity)
-      var rocks = window.__airborneMeteorRocks;
-      var img = rocks[(mt.rockIdx || 0) % 6];
-      var rw = Math.max(28, (mt.r || 14) * 2.6);
-      var rh = Math.max(32, (mt.r || 14) * 3.0);
+      // —— Procedural rock inside fireball (no image asset) ——
       ctx.save();
       ctx.translate(mt.x, mt.y);
-      ctx.rotate(ang + Math.PI / 2);
-      ctx.rotate(mt.spin || 0);
-      if (img && img.complete && img.naturalWidth > 0) {
-        ctx.drawImage(img, -rw * 0.5, -rh * 0.5, rw, rh);
-      } else {
-        // Always-visible rock fallback
-        ctx.fillStyle = "#6b7280";
+      ctx.rotate(ang + Math.PI / 2 + (mt.spin || 0));
+      // seed-ish variation from rockIdx
+      var seed = (mt.rockIdx || 0) * 17 + 3;
+      var lumps = 6 + (seed % 3);
+      ctx.beginPath();
+      for (var k = 0; k < lumps; k++) {
+        var a = (k / lumps) * Math.PI * 2;
+        var jagged = 0.75 + 0.25 * Math.sin(a * 3 + seed) + 0.12 * Math.cos(a * 5 + seed * 0.7);
+        var px = Math.cos(a) * r * jagged;
+        var py = Math.sin(a) * r * jagged * 0.9;
+        if (k === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      // rock fill
+      var rg = ctx.createRadialGradient(-r * 0.2, -r * 0.25, r * 0.1, 0, 0, r * 1.1);
+      rg.addColorStop(0, "#9ca3af");
+      rg.addColorStop(0.45, "#6b7280");
+      rg.addColorStop(1, "#374151");
+      ctx.fillStyle = rg;
+      ctx.fill();
+      // crater dots
+      ctx.fillStyle = "rgba(30,30,35,0.55)";
+      for (var c = 0; c < 3; c++) {
+        var cx = Math.cos(seed + c * 2.1) * r * 0.35;
+        var cy = Math.sin(seed + c * 1.7) * r * 0.3;
         ctx.beginPath();
-        ctx.ellipse(0, 0, rw * 0.42, rh * 0.38, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "#9ca3af";
-        ctx.beginPath();
-        ctx.ellipse(-rw * 0.1, -rh * 0.1, rw * 0.2, rh * 0.15, 0.3, 0, Math.PI * 2);
+        ctx.arc(cx, cy, r * (0.08 + (c % 2) * 0.06), 0, Math.PI * 2);
         ctx.fill();
       }
+      // lit edge
+      ctx.strokeStyle = "rgba(200,200,210,0.35)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
       ctx.restore();
 
-      // Core glow on top
+      // —— Hot core glow over rock ——
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      ctx.fillStyle = "rgba(255,250,200,0.7)";
+      ctx.fillStyle = "rgba(255,240,180,0.55)";
       ctx.beginPath();
-      ctx.arc(mt.x, mt.y, Math.max(5, (mt.r || 14) * 0.4), 0, Math.PI * 2);
+      ctx.arc(mt.x, mt.y, Math.max(2, r * 0.35), 0, Math.PI * 2);
       ctx.fill();
+      // sparks
       (mt.sparks || []).forEach(function(sp) {
         var t = 1 - sp.age / sp.life;
         if (t <= 0) return;
         ctx.globalAlpha = t;
         ctx.fillStyle = "rgba(255,200,60,1)";
         ctx.beginPath();
-        ctx.arc(sp.x, sp.y, sp.r * t, 0, Math.PI * 2);
+        ctx.arc(sp.x, sp.y, Math.max(1, sp.r * t * 0.7), 0, Math.PI * 2);
         ctx.fill();
       });
       ctx.restore();
