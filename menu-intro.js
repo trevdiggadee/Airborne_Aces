@@ -1465,22 +1465,26 @@ function powerPreviewKindFor(key) {
       blimp5: "greenfireball",
       blimp6: "vortex",
       blimp7: "chain",
-      blimp8: "crystalbeam",
       blimp8: "fireball",
+      blimp9: "jollybomb",
+      blimp10: "storm",
       blimp11: "warshark",
       blimp12: "heatseek",
+      blimp13: "swarm",
       blimp14: "barrelbomb",
       blimp15: "meteors"
     };
-    if (map[key]) {
-      startHeroPowerFx(map[key]);
-      try { if (typeof sfxPowerup === "function") sfxPowerup(); } catch (e) {}
-      return;
-    }
-    stopHeroFireAura();
+    var kind = map[key] || "storm";
+    startHeroPowerFx(kind);
+    try {
+      if (window.PowerFX) {
+        var wrap = document.querySelector(".heroBlimpWrap");
+        var rect = wrap ? wrap.getBoundingClientRect() : { width: 200, height: 120 };
+        window.PowerFX.activate(kind, rect.width * 0.5, rect.height * 0.5);
+      }
+    } catch (e) {}
+    try { if (typeof sfxPowerup === "function") sfxPowerup(); } catch (e) {}
   }
-
-
 
   function bindMenuPowerPreview() {
     var icon = document.getElementById("bpPowerIcon");
