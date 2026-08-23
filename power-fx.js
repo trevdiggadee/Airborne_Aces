@@ -287,18 +287,12 @@
       ctx.arc(cx + 16, dropY, 10.8, 0, Math.PI * 2);
       ctx.fill();
     } else if (kind === "heatseek") {
-      for (i = 0; i < 5; i++) {
-        ang = t * 4 + i;
-        ox = cx + Math.cos(ang) * 24;
-        oy = cy + Math.sin(ang) * 16;
-        g = ctx.createRadialGradient(ox, oy, 0, ox, oy, 10);
-        g.addColorStop(0, "rgba(255,200,80," + (0.65 * fade) + ")");
-        g.addColorStop(1, "rgba(255,80,0,0)");
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(ox, oy, 10, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      // Soft engine glow only — no orbiting orbs
+      g = ctx.createRadialGradient(cx, cy, 2, cx, cy, 28);
+      g.addColorStop(0, "rgba(255,200,100," + (0.35 * fade) + ")");
+      g.addColorStop(1, "rgba(255,80,0,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(cx, cy, 28, 0, Math.PI * 2); ctx.fill();
     } else if (kind === "fireball" || kind === "greenfireball" || kind === "bluefireball") {
       // Soft hull glow only — no spinning orbs
       g = ctx.createRadialGradient(cx, cy, 4, cx, cy, 36);

@@ -399,7 +399,8 @@
       case "blackSmoke":
         return { color: "35,32,28", size: 5.5, alpha: 0.55, life: 1.1, rise: 6, drag: 45, mode: "smoke" };
       case "smoke":
-        return { color: "200,190,180", size: 3.5, alpha: 0.4, life: 0.75, rise: 12, drag: 50, mode: "smoke" };
+        // Deco Liner — grayish exhaust with longer trails
+        return { color: "110,108,105", size: 5.2, alpha: 0.52, life: 1.2, rise: 7, drag: 32, mode: "smoke" };
       case "propeller":
       default:
         return { color: "190,180,165", size: 2.8, alpha: 0.32, life: 0.55, rise: 8, drag: 40, mode: "smoke" };
@@ -599,6 +600,7 @@
     if (effect === "blackSmoke") emitRate *= 0.65;
     if (effect === "flame" || effect === "dualFlame") emitRate = 0.030; // fixed cadence → constant trail density/length
     if (effect === "steam") emitRate *= 0.8;
+    if (effect === "smoke") emitRate *= 1.35; // Deco denser gray trails
     if (onRunway && effect !== "flame") emitRate *= 0.7; // visible exhaust while driving
     blimpPersonality.exhaustTimer += dt;
     while (blimpPersonality.exhaustTimer > emitRate) {

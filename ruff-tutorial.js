@@ -1958,6 +1958,13 @@
   
   
   function clearAllGameplayEntities() {
+    try {
+      window.__udProgressTarget = 0;
+      window.__airborneOneShotUsed = {};
+      window.__udProgressShown = 0;
+      if (window.updateUnifiedProgress) window.updateUnifiedProgress(0);
+      if (window.tickUnifiedProgress) window.tickUnifiedProgress(1);
+    } catch (e) {}
     try { if (window.__airborneClearCombatFx) window.__airborneClearCombatFx(); } catch (e) {}
     try { if (window.__airborneClearAtmosphereFx) window.__airborneClearAtmosphereFx(); } catch (e) {}
     try { if (window.__airborneClearPowerEntities) window.__airborneClearPowerEntities(); } catch (e) {}
@@ -2076,6 +2083,7 @@
   }
   window.__airborneHardResetTraining = hardResetTrainingState;
 
+  function finishToHangar_mark(){ try { window.__airborneOneShotUsed = {}; } catch(e) {} }
   function finishToHangar() {
     window.__airborneReturnToHangar = true;
     try { hardResetTrainingState(); } catch (e) {}

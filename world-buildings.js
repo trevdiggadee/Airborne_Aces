@@ -265,6 +265,7 @@
   }
 
   function beginAirfieldTraining() {
+    try { if (window.resetUnifiedProgress) window.resetUnifiedProgress(); } catch (e) {}
     try {
       if (window.__airborneClearAllGameplay) window.__airborneClearAllGameplay();
     } catch (e) {}

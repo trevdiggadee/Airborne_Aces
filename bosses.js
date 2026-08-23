@@ -276,6 +276,13 @@
   function activateStorm() {
     if (window.__airborneAirfield && !window.__airborneAirfieldAllowPowerup) return;
     if (state !== "playing" || stormActive || stormCharge < STORM_MAX) return;
+    // One-shot powers: Steampunk, Deco, Storm Chaser
+    var selPre = (typeof selectedBlimp !== "undefined") ? selectedBlimp : "";
+    var oneShot = { blimp2: 1, blimp4: 1, blimp7: 1 };
+    if (!window.__airborneOneShotUsed) window.__airborneOneShotUsed = {};
+    if (oneShot[selPre] && window.__airborneOneShotUsed[selPre]) {
+      return; // already used this run
+    }
 
     stormActive = true;
     stormCharge = 0;
@@ -519,6 +526,8 @@
 
 // Shockwave / Steam — clear nearby obstacles in expanding ring
     if (powerMode === "steam") {
+      window.__airborneOneShotUsed = window.__airborneOneShotUsed || {};
+      window.__airborneOneShotUsed["blimp4"] = true;
       if (typeof sfxThunder === "function") sfxThunder();
       try { if (typeof triggerScreenShake === "function") triggerScreenShake(5, 280); } catch (e) {}
       stormActive = true;
@@ -558,6 +567,8 @@
     }
 
     if (powerMode === "shockwave") {
+      window.__airborneOneShotUsed = window.__airborneOneShotUsed || {};
+      window.__airborneOneShotUsed["blimp2"] = true;
       if (typeof sfxThunder === "function") sfxThunder();
       if (typeof sfxExplosion === "function") sfxExplosion(0.45);
       try { if (typeof triggerScreenShake === "function") triggerScreenShake(9, 420); } catch (e) {}
@@ -599,10 +610,12 @@
       }
       stormActive = true;
       stormMode = "shockwave";
-      stormTimer = 1.2;
-      stormUntil = performance.now() + 1200;
-      window.__airborneActivePowerVisual = powerMode === "steam" ? "steam" : "shockwave";
-      window.__airborneActivePowerUntil = performance.now() + 1200;
+      stormTimer = 4.5;
+      stormUntil = performance.now() + 4500;
+      window.__airborneActivePowerVisual = "shockwave";
+      window.__airborneActivePowerUntil = performance.now() + 4500;
+      window.__airborneShockPulseT = 0;
+      window.__airborneShockPulseCount = 0;
       try {
         if (window.PowerFX && player) window.PowerFX.activate(powerMode === "steam" ? "steam" : "shockwave", player.x, player.y);
       } catch (e) {}
@@ -613,33 +626,52 @@
     // Chain lightning — zap several obstacles in sequence
     if (powerMode === "ivorybolt") {
       if (typeof sfxThunder === "function") sfxThunder();
-      try { if (typeof triggerScreenShake === "function") triggerScreenShake(5, 300); } catch (e) {}
       stormActive = true;
       stormMode = "ivorybolt";
-      stormTimer = 5.5;
+      stormTimer = 5.0;
       window.__airborneActivePowerVisual = "ivorybolt";
-      window.__airborneActivePowerUntil = performance.now() + 5500;
+      window.__airborneActivePowerUntil = performance.now() + 5000;
+      window.__airborneIvoryUntil = performance.now() + 5000;
       window.__airborneIvoryBolts = [];
-      window.__airborneIvoryUntil = performance.now() + 5500;
-      try { if (window.PowerFX) window.PowerFX.activate("chain", player.x, player.y); } catch (e) {}
+      window.__airborneIvoryFireballs = [];
+      // Initial sky fireballs
+      for (var ifb = 0; ifb < 8; ifb++) {
+        var ix = (typeof W !== "undefined" ? W : 400) * (0.15 + Math.random() * 0.7);
+        window.__airborneIvoryFireballs.push({
+          x: ix, y: -30 - Math.random() * 80,
+          vx: (Math.random() - 0.5) * 30,
+          vy: 180 + Math.random() * 100,
+          life: 3.5, age: 0, r: 11 + Math.random() * 5
+        });
+      }
+      try { if (window.PowerFX) window.PowerFX.activate("fireball", player.x, player.y); } catch (e) {}
       updateStormMeterDisplay();
       return;
     }
 
+
     if (powerMode === "chain") {
+      window.__airborneOneShotUsed = window.__airborneOneShotUsed || {};
+      window.__airborneOneShotUsed["blimp7"] = true;
       if (typeof sfxThunder === "function") sfxThunder();
       try { if (typeof triggerScreenShake === "function") triggerScreenShake(7, 350); } catch (e) {}
       const targets = (typeof obstacles !== "undefined" && obstacles)
         ? obstacles.filter(function(o){ return o && !o.isRing; }).slice().sort(function (a, b) {
             return Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y);
-          }).slice(0, 8)
+          }).slice(0, 10)
         : [];
       targets.forEach(function (o, idx) {
         setTimeout(function () {
           if (!o) return;
           o.onFire = true;
-          o.vy = 50 + Math.random() * 40;
+          o.lightningFire = true;
+          o.vy = 55 + Math.random() * 45;
           o.scored = true;
+          try {
+            if (window.PowerFX) window.PowerFX.burst(o.x + o.w * 0.5, o.y + o.h * 0.5, {
+              count: 8, colors: ["#fff", "#7dd3fc", "#ff8a1a", "#ff3b00"], speed: 90, glow: true
+            });
+          } catch (e) {}
           try { score += 4; } catch (e) {}
           try { if (typeof sfxHit === "function") sfxHit(); } catch (e) {}
         }, idx * 120);
@@ -1088,8 +1120,74 @@
 
   function updateStorm(dt) {
     try { updateBombBlasts(dt); } catch (e) {}
+    // Deco continuous pulsing shockwave
+    if (stormMode === "shockwave" && stormActive) {
+      window.__airborneShockPulseT = (window.__airborneShockPulseT || 0) + dt;
+      if (window.__airborneShockPulseT >= 0.55) {
+        window.__airborneShockPulseT = 0;
+        window.__airborneShockPulseCount = (window.__airborneShockPulseCount || 0) + 1;
+        var radius = Math.min(W || 400, H || 600) * 0.5;
+        if (!window.__airborneShockFX) window.__airborneShockFX = [];
+        for (var si = 0; si < 2; si++) {
+          window.__airborneShockFX.push({
+            x: player.x, y: player.y, r: 10 + si * 6, maxR: radius * (0.65 + si * 0.2),
+            life: 0.5, age: 0, width: 4 - si
+          });
+        }
+        if (typeof obstacles !== "undefined" && player) {
+          obstacles.forEach(function(o) {
+            if (!o || o.isRing) return;
+            var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
+            if (Math.hypot(ox - player.x, oy - player.y) < radius) {
+              o.shockShake = 0.3;
+              o.shockFall = true;
+              o.vy = 70 + Math.random() * 50;
+              o.vx = (Math.random() - 0.5) * 60;
+            }
+          });
+        }
+        try { if (typeof triggerScreenShake === "function") triggerScreenShake(4, 150); } catch (e) {}
+      }
+      if (stormUntil && performance.now() > stormUntil) {
+        stormActive = false; stormMode = "storm";
+      }
+    }
 
-    if (stormMode === "ivorybolt" || (window.__airborneIvoryBolts && window.__airborneIvoryBolts.length)) {
+    if (window.__airborneIvoryFireballs && window.__airborneIvoryFireballs.length) {
+      var untilIv2 = window.__airborneIvoryUntil || 0;
+      // Spawn more while active
+      if (stormMode === "ivorybolt" && untilIv2 && performance.now() < untilIv2 && Math.random() < 0.08) {
+        var ix = (typeof W !== "undefined" ? W : 400) * (0.1 + Math.random() * 0.8);
+        window.__airborneIvoryFireballs.push({
+          x: ix, y: -20, vx: (Math.random()-0.5)*40, vy: 200+Math.random()*80, life: 3, age: 0, r: 10+Math.random()*6
+        });
+      }
+      for (var ifi = window.__airborneIvoryFireballs.length - 1; ifi >= 0; ifi--) {
+        var ifb = window.__airborneIvoryFireballs[ifi];
+        ifb.age += dt; ifb.x += ifb.vx * dt; ifb.y += ifb.vy * dt; ifb.vy += 80 * dt;
+        if (typeof obstacles !== "undefined") {
+          for (var oi = obstacles.length - 1; oi >= 0; oi--) {
+            var o = obstacles[oi];
+            if (!o || o.isRing) continue;
+            var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
+            if (Math.hypot(ifb.x - ox, ifb.y - oy) < ifb.r + Math.max(o.w, o.h) * 0.3) {
+              try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
+              try { if (window.PowerFX) window.PowerFX.burst(ox, oy, { count: 10, colors: ["#fff","#ffd24a","#ff8a1a"], speed: 100, glow: true }); } catch (e) {}
+              try { score += 30; } catch (e) {}
+              obstacles.splice(oi, 1);
+              ifb.age = ifb.life;
+              break;
+            }
+          }
+        }
+        if (ifb.age >= ifb.life || ifb.y > (typeof H !== "undefined" ? H : 700) + 40)
+          window.__airborneIvoryFireballs.splice(ifi, 1);
+      }
+      if (untilIv2 && performance.now() > untilIv2 && !window.__airborneIvoryFireballs.length) {
+        stormActive = false; stormMode = "storm";
+      }
+    }
+    if (false && (stormMode === "ivorybolt" || (window.__airborneIvoryBolts && window.__airborneIvoryBolts.length))) {
       var untilIv = window.__airborneIvoryUntil || 0;
       if (untilIv && performance.now() > untilIv && !(window.__airborneIvoryBolts && window.__airborneIvoryBolts.length)) {
         stormActive = false; stormMode = "storm";
@@ -1544,9 +1642,17 @@
             if (Math.hypot(fb.x - ox, fb.y - oy) < fb.r + Math.max(o.w, o.h) * 0.35) {
               o.onFire = true;
               o.vy = 40;
+              if (fb.kind === "greenfireball") {
+                o.greenFire = true;
+                o.vy = 55 + Math.random() * 30;
+              }
+              if (fb.kind === "bluefireball") {
+                o.blueFire = true;
+              }
               try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
               try {
                 var cols = fb.colors || ["#ff6b3d", "#ffd24a", "#ff1a00"];
+                if (fb.kind === "greenfireball") cols = ["#d1fae5", "#34d399", "#059669", "#fff"];
                 if (window.PowerFX) window.PowerFX.burst(ox, oy, {
                   count: 12, colors: cols, speed: 80, gravity: -30, life: 0.5, glow: true
                 });
@@ -2324,6 +2430,25 @@
   }
   
   
+  function drawIvoryFireballs() {
+    var list = window.__airborneIvoryFireballs;
+    if (!list || !list.length || typeof ctx === "undefined") return;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    list.forEach(function(fb) {
+      var g = ctx.createRadialGradient(fb.x, fb.y, 0, fb.x, fb.y, fb.r * 2);
+      g.addColorStop(0, "rgba(255,250,200,0.95)");
+      g.addColorStop(0.4, "rgba(255,160,40,0.8)");
+      g.addColorStop(1, "rgba(255,60,0,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(fb.x, fb.y, fb.r * 2, 0, Math.PI * 2); ctx.fill();
+      // trail
+      ctx.strokeStyle = "rgba(255,120,30,0.5)";
+      ctx.lineWidth = fb.r * 0.5;
+      ctx.beginPath(); ctx.moveTo(fb.x, fb.y - 25); ctx.lineTo(fb.x, fb.y); ctx.stroke();
+    });
+    ctx.restore();
+  }
   function drawIvoryBolts() {
     var list = window.__airborneIvoryBolts;
     if (!list || !list.length || typeof ctx === "undefined") return;

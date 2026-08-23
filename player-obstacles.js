@@ -16,7 +16,12 @@
     // Normalize on-screen size so every vessel reads about the same scale.
     // Little Spy (blimp6) stays intentionally smaller.
     const sel = (typeof selectedBlimp !== "undefined" && selectedBlimp) ? selectedBlimp : "blimp1";
-    const scale = (sel === "blimp6") ? 0.72 : 1.0; // Little Spy smaller; all others match Zeppelin scale
+    let scale = 1.0;
+    if (sel === "blimp6") scale = 0.72 * 1.10;       // Little Spy +10% from prior small
+    else if (sel === "blimp4") scale = 1.20;          // Steampunk +20%
+    else if (sel === "blimp8") scale = 1.10;          // Ironworks +10%
+    else if (sel === "blimp12") scale = 1.15;         // Sky Rocket +15%
+
     const firstFrame = currentPlayerImage();
     const aspect = (firstFrame && firstFrame.naturalWidth && firstFrame.naturalHeight / firstFrame.naturalWidth) || 0.55;
     // Fit inside a shared bounding box (width-capped) so large/tall sprites don't dominate
