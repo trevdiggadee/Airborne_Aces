@@ -1888,3 +1888,15 @@ try {
   } catch (e) {}
   window.__airborneHideStartOverlay = hideStart;
 })();
+
+(function () {
+  try {
+    var orig = window.selectBlimp || null;
+    // Re-apply icon whenever selection changes
+    document.addEventListener("click", function () {
+      setTimeout(function () {
+        if (typeof window.__airborneApplyShipPowerIcon === "function") window.__airborneApplyShipPowerIcon();
+      }, 50);
+    }, true);
+  } catch (e) {}
+})();

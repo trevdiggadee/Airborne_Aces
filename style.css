@@ -3911,8 +3911,8 @@ html, body {
 #unifiedDock .udCircle,
 #stormMeter.udCircle {
   position: relative;
-  width: 97px; /* +10% */
-  height: 97px;
+  width: 121px; /* +25% from 97 */
+  height: 121px;
   flex: none;
   pointer-events: auto;
   cursor: pointer;
@@ -3942,8 +3942,8 @@ html, body {
       rgba(120, 200, 255, 0.95) var(--ud-progress, 0%),
       rgba(30, 40, 55, 0.55) var(--ud-progress, 0%)
     );
-  -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
-  mask-image: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+  -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 11px), #000 calc(100% - 9px));
+  mask-image: radial-gradient(farthest-side, transparent calc(100% - 11px), #000 calc(100% - 9px));
 }
 /* Inner: power charge */
 .udRingPower {
@@ -3960,22 +3960,26 @@ html, body {
 }
 .udCore {
   position: absolute;
-  inset: 20px;
+  inset: 26px;
   border-radius: 50%;
   background: radial-gradient(circle at 40% 35%, rgba(60, 42, 24, 0.95), rgba(18, 12, 8, 0.98));
-  border: 1.5px solid rgba(220, 180, 100, 0.4);
+  border: 1.5px solid rgba(220, 180, 100, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 2;
-  box-shadow: inset 0 1px 0 rgba(255,230,180,0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255,230,180,0.12),
+    0 0 12px rgba(255, 200, 80, 0.25);
 }
 .udCore #stormIcon,
 #stormMeter #stormIcon {
-  width: 36px !important;
-  height: 36px !important;
+  width: 42px !important;
+  height: 42px !important;
   object-fit: contain;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  filter: drop-shadow(0 0 6px var(--power-icon-glow, rgba(255, 200, 80, 0.85)))
+          drop-shadow(0 0 12px var(--power-icon-glow, rgba(255, 180, 40, 0.55)))
+          drop-shadow(0 2px 4px rgba(0,0,0,0.5));
   position: relative;
   z-index: 2;
 }
@@ -4208,3 +4212,63 @@ body:not(.game-playing) #startOverlay {
 }
 #unifiedDock .udCircle { overflow: visible !important; }
 #unifiedDock { bottom: calc(env(safe-area-inset-bottom, 0px) + 28px) !important; }
+
+
+/* v225 — larger dock, thicker rings, power icon glow, premium clock */
+#unifiedDock .udCircle,
+#stormMeter.udCircle {
+  width: 121px !important;
+  height: 121px !important;
+}
+.udRingProgress {
+  -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 10px)) !important;
+  mask-image: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 10px)) !important;
+}
+.udRingPower {
+  inset: 13px !important;
+  -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 10px)) !important;
+  mask-image: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 10px)) !important;
+}
+.udCore {
+  inset: 28px !important;
+}
+.udCore #stormIcon,
+#stormMeter #stormIcon {
+  width: 44px !important;
+  height: 44px !important;
+  filter:
+    drop-shadow(0 0 5px var(--power-icon-glow, rgba(255, 210, 90, 0.95)))
+    drop-shadow(0 0 14px var(--power-icon-glow, rgba(255, 170, 40, 0.65)))
+    drop-shadow(0 2px 3px rgba(0,0,0,0.5)) !important;
+  animation: powerIconPulse 2.4s ease-in-out infinite;
+}
+@keyframes powerIconPulse {
+  0%, 100% { filter: drop-shadow(0 0 5px var(--power-icon-glow, rgba(255,210,90,0.9))) drop-shadow(0 0 12px var(--power-icon-glow, rgba(255,170,40,0.5))); transform: scale(1); }
+  50% { filter: drop-shadow(0 0 8px var(--power-icon-glow, rgba(255,220,120,1))) drop-shadow(0 0 18px var(--power-icon-glow, rgba(255,180,50,0.75))); transform: scale(1.06); }
+}
+#unifiedDock .udTime,
+#udTimerVal {
+  position: absolute !important;
+  left: 50% !important;
+  bottom: -22px !important;
+  transform: translateX(-50%) !important;
+  min-width: 64px !important;
+  padding: 3px 10px 4px !important;
+  border-radius: 10px !important;
+  background: linear-gradient(180deg, rgba(40, 28, 14, 0.92), rgba(18, 12, 8, 0.96)) !important;
+  border: 1px solid rgba(220, 180, 100, 0.55) !important;
+  box-shadow:
+    0 0 10px rgba(255, 190, 60, 0.25),
+    inset 0 1px 0 rgba(255, 230, 180, 0.15),
+    0 3px 8px rgba(0,0,0,0.4) !important;
+  font-family: "Segoe UI", system-ui, sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  color: #ffe9a8 !important;
+  text-shadow: 0 0 8px rgba(255, 200, 80, 0.55), 0 1px 2px rgba(0,0,0,0.6) !important;
+  text-align: center !important;
+  line-height: 1.2 !important;
+  z-index: 3 !important;
+  pointer-events: none !important;
+}

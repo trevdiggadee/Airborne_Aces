@@ -191,7 +191,64 @@
   let pirateBlastParticles = [];
   let pirateFireBolts = [];
   const stormMeterEl = document.getElementById("stormMeter");
-  const stormIconDisplayEl = document.getElementById("stormIcon");
+  
+  // Per-blimp power icon in unified dock center
+  window.__airbornePowerIconByShip = window.__airbornePowerIconByShip || {
+    blimp1: "01_flame_ring.webp",
+    blimp2: "02_spike_burst.webp",
+    blimp3: "03_frost_trail.webp",
+    blimp4: "04_steam_engine.webp",
+    blimp5: "05_solar_flare.webp",
+    blimp6: "06_void_vortex.webp",
+    blimp7: "07_storm_lightning.webp",
+    blimp8: "08_meteor_trail.webp",
+    blimp9: "09_bomb_skull.webp",
+    blimp10: "10_storm_cloud.webp",
+    blimp11: "11_shark_torpedo.webp",
+    blimp12: "12_rocket_missile.webp",
+    blimp13: "13_bomb_cluster.webp",
+    blimp14: "14_powder_keg.webp",
+    blimp15: "15_meteor_shower.webp"
+  };
+  window.__airbornePowerIconGlow = window.__airbornePowerIconGlow || {
+    blimp1: "rgba(255,140,40,0.95)",
+    blimp2: "rgba(200,220,255,0.95)",
+    blimp3: "rgba(100,200,255,0.95)",
+    blimp4: "rgba(220,220,230,0.95)",
+    blimp5: "rgba(80,255,140,0.95)",
+    blimp6: "rgba(180,100,255,0.95)",
+    blimp7: "rgba(120,200,255,0.95)",
+    blimp8: "rgba(255,160,40,0.95)",
+    blimp9: "rgba(255,80,80,0.95)",
+    blimp10: "rgba(150,180,255,0.95)",
+    blimp11: "rgba(80,220,255,0.95)",
+    blimp12: "rgba(255,120,40,0.95)",
+    blimp13: "rgba(255,190,60,0.95)",
+    blimp14: "rgba(255,100,40,0.95)",
+    blimp15: "rgba(255,140,40,0.95)"
+  };
+  window.__airborneApplyShipPowerIcon = function () {
+    try {
+      var sel = (typeof selectedBlimp !== "undefined" && selectedBlimp) ? selectedBlimp : "blimp1";
+      var icon = (window.__airbornePowerIconByShip && window.__airbornePowerIconByShip[sel]) || "01_flame_ring.webp";
+      var glow = (window.__airbornePowerIconGlow && window.__airbornePowerIconGlow[sel]) || "rgba(255,200,80,0.9)";
+      var el = document.getElementById("stormIcon");
+      if (el) {
+        var src = icon + (icon.indexOf("?") >= 0 ? "&" : "?") + "v=ruff225";
+        if (el.dataset.shipIcon !== sel) {
+          el.dataset.shipIcon = sel;
+          el.src = src;
+          el.alt = "Power";
+        }
+      }
+      var core = document.querySelector(".udCore");
+      if (core) core.style.setProperty("--power-icon-glow", glow);
+      var meter = document.getElementById("stormMeter");
+      if (meter) meter.style.setProperty("--power-icon-glow", glow);
+    } catch (e) {}
+  };
+
+const stormIconDisplayEl = document.getElementById("stormIcon");
 
   // 5-stage icon set — mirrors the health meter's fill-state pattern.
   // Stage 0 = empty tank, stage 4 = fully charged/ready (matches storm_icon_1..5.webp)
@@ -242,7 +299,9 @@
   function updateStormMeterDisplay(justCharged) {
     try { if (typeof updateCollectDock === "function") updateCollectDock(); } catch (e) {}
     const stage = Math.min(STORM_ICON_URLS.length - 1, Math.floor(stormCharge / STORM_CHARGE_PER_MILESTONE));
-    if (stormIconDisplayEl && stormIconDisplayEl.dataset.stage !== String(stage)) {
+    if (typeof window.__airborneApplyShipPowerIcon === "function") {
+      window.__airborneApplyShipPowerIcon();
+    } else if (stormIconDisplayEl && stormIconDisplayEl.dataset.stage !== String(stage)) {
       stormIconDisplayEl.dataset.stage = String(stage);
       stormIconDisplayEl.src = STORM_ICON_URLS[stage];
     }

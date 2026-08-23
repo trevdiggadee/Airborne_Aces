@@ -1064,3 +1064,11 @@ window.tickUnifiedProgress = function (dt) {
   }
   window.__airborneShowUnifiedDock = show;
 })();
+
+try {
+  var _obsDock = new MutationObserver(function () {
+    if (typeof window.__airborneApplyShipPowerIcon === "function") window.__airborneApplyShipPowerIcon();
+  });
+  var _dock = document.getElementById("unifiedDock");
+  if (_dock) _obsDock.observe(_dock, { attributes: true, attributeFilter: ["class"] });
+} catch (e) {}

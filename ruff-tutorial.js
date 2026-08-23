@@ -1771,7 +1771,7 @@
         if (images && images[k2] && images[k2].naturalWidth) { img = images[k2]; break; }
       }
     }
-    const size = Math.max(68, (typeof player !== "undefined" && player ? player.h * 1.55 : 98) * 0.75); // 25% smaller
+    const size = 85; // fixed size regardless of blimp
     const sc = size * (ruffScalePulse || 1);
 
     // Jetpack particles (world space, behind body)
@@ -2206,6 +2206,7 @@ function finishToMap() {
 
   window.__airborneShowRuffReport = function() {
     ruffActive = true;
+    try { if (typeof window.__airborneApplyShipPowerIcon === "function") window.__airborneApplyShipPowerIcon(); } catch (e) {};
     window.__airborneRuffActive = true;
     window.__airborneRuffStage = "report";
     window.__airborneRuffRequestLand = false;
