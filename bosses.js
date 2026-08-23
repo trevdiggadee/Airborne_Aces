@@ -273,6 +273,35 @@
     stormWasReady = isReady;
   }
 
+  
+  window.__airborneMakeMeteor = function () {
+    var W0 = (typeof W !== "undefined") ? W : 400;
+    var H0 = (typeof H !== "undefined") ? H : 600;
+    var big = Math.random() < 0.12;
+    var r = big ? (16 + Math.random() * 10) : (6 + Math.random() * 10);
+    // Mix of vertical and dramatic diagonal angles
+    var vertical = Math.random() < 0.35;
+    var ang = vertical
+      ? (Math.PI / 2 + (Math.random() - 0.5) * 0.25)
+      : (0.6 + Math.random() * 1.0); // diagonal down-right or vary
+    if (!vertical && Math.random() < 0.5) ang = Math.PI - ang; // down-left
+    var speed = (vertical ? 220 : 180) + Math.random() * 200 + (big ? 40 : 0);
+    var x = Math.random() * W0 * 1.2 - W0 * 0.1;
+    return {
+      x: x, y: -20 - Math.random() * 120,
+      vx: Math.cos(ang) * speed * 0.55,
+      vy: Math.sin(ang) * speed,
+      r: r, big: big,
+      age: 0, life: 4 + Math.random() * 2,
+      // visual variation
+      coreHue: 25 + Math.random() * 25,
+      tailLen: 30 + Math.random() * 50 + (big ? 30 : 0),
+      sparkRate: 0.4 + Math.random() * 0.5,
+      wobble: Math.random() * 6,
+      sparks: []
+    };
+  };
+
   function activateStorm() {
     if (window.__airborneAirfield && !window.__airborneAirfieldAllowPowerup) return;
     if (state !== "playing" || stormActive || stormCharge < STORM_MAX) return;
@@ -478,16 +507,32 @@
       if (typeof sfxExplosion === "function") sfxExplosion(0.35);
       stormActive = true;
       stormMode = "barrelbomb";
-      stormTimer = 5.5;
+      stormTimer = 4.0;
       stormCharge = 0;
-      window.__airborneHeatseekUntil = performance.now() + 5500;
+      // Short window — all 5 fire at once, no continuous spawn
+      window.__airborneHeatseekUntil = performance.now() + 200;
       window.__airborneActivePowerVisual = "barrelbomb";
-      window.__airborneActivePowerUntil = performance.now() + 5500;
+      window.__airborneActivePowerUntil = performance.now() + 4000;
       window.__airborneHeatseekers = [];
       window.__airborneWarBullets = [];
       var bi = new Image();
       bi.src = "pirate_barrel_bomb.png?v=ruff200";
       window.__airborneBarrelBombImg = bi;
+      // Fire 5 barrel bombs at once in a spread
+      if (typeof player !== "undefined" && player) {
+        for (var bi5 = 0; bi5 < 5; bi5++) {
+          var ang5 = -0.55 + (bi5 / 4) * 1.1;
+          var sp5 = 160 + Math.random() * 40;
+          window.__airborneHeatseekers.push({
+            x: player.x + (player.w || 40) * 0.25,
+            y: player.y + (bi5 - 2) * 10,
+            vx: Math.cos(ang5) * sp5,
+            vy: Math.sin(ang5) * sp5 * 0.55 - 40,
+            life: 3.2, age: 0, rot: ang5, spin: Math.random() * 6,
+            kind: "barrelbomb", fused: false, trail: []
+          });
+        }
+      }
       try {
         if (window.PowerFX && player) window.PowerFX.activate("barrelbomb", player.x, player.y);
       } catch (e) {}
@@ -716,7 +761,6 @@
       window.__airborneLatticeUntil = performance.now() + 4000;
       window.__airborneLatticeTorps = [];
       window.__airborneLatticeSpawnT = 0;
-      // Initial volley forward
       for (var li = 0; li < 5; li++) {
         var ang = -0.35 + (li / 4) * 0.7;
         window.__airborneLatticeTorps.push({
@@ -733,79 +777,29 @@
       return;
     }
 
-
-    if (powerMode === "vortex") {
-      if (typeof sfxShoot === "function") sfxShoot();
-      try { if (typeof triggerScreenShake === "function") triggerScreenShake(6, 400); } catch (e) {}
-      stormActive = true;
-      stormMode = "vortex";
-      stormTimer = 3.2;
-      window.__airborneActivePowerVisual = "vortex";
-      window.__airborneActivePowerUntil = performance.now() + 3200;
-      // Expand full-screen shield then retract, capturing obstacles
-      window.__airborneSpyShield = {
-        age: 0, life: 2.8,
-        phase: "expand", // expand -> hold -> retract
-        r: 20,
-        maxR: Math.max(W || 400, H || 600) * 0.72,
-        captured: []
-      };
-      try { if (window.PowerFX) window.PowerFX.activate("vortex", player.x, player.y); } catch (e) {}
-      updateStormMeterDisplay();
-      return;
-    }
-
-
     if (powerMode === "meteors") {
       if (typeof sfxShoot === "function") sfxShoot();
+      if (typeof sfxThunder === "function") sfxThunder();
+      try { if (typeof triggerScreenShake === "function") triggerScreenShake(6, 400); } catch (e) {}
       stormActive = true;
       stormMode = "meteors";
-      stormTimer = 4.5;
+      stormTimer = 6.0;
       window.__airborneActivePowerVisual = "meteors";
-      window.__airborneActivePowerUntil = performance.now() + 4500;
+      window.__airborneActivePowerUntil = performance.now() + 6000;
+      window.__airborneMeteorUntil = performance.now() + 6000;
       window.__airborneMeteors = [];
       window.__airborneMeteorMarks = [];
-      var targets = [];
-      if (typeof obstacles !== "undefined") {
-        for (var mi = 0; mi < obstacles.length && targets.length < 5; mi++) {
-          var o = obstacles[mi];
-          if (!o || o.isRing) continue;
-          targets.push({ x: o.x + o.w * 0.5, y: o.y + o.h * 0.5 });
-        }
+      window.__airborneMeteorSkyDark = { age: 0, life: 6.0, alpha: 0 };
+      window.__airborneMeteorSpawnT = 0;
+      for (var ms = 0; ms < 18; ms++) {
+        if (typeof window.__airborneMakeMeteor === "function")
+          window.__airborneMeteors.push(window.__airborneMakeMeteor());
       }
-      while (targets.length < 4) {
-        targets.push({
-          x: (typeof W !== "undefined" ? W : 400) * (0.35 + Math.random() * 0.5),
-          y: (typeof H !== "undefined" ? H : 600) * (0.25 + Math.random() * 0.5)
-        });
-      }
-      targets.forEach(function(t, idx) {
-        window.__airborneMeteorMarks.push({ x: t.x, y: t.y, age: 0, life: 0.75 + idx * 0.1, big: false });
-        window.__airborneMeteors.push({
-          x: t.x, y: -50 - idx * 30, tx: t.x, ty: t.y,
-          delay: 0.7 + idx * 0.1, age: 0, life: 3.5, r: 14, big: false, falling: false, vy: 0
-        });
-      });
-      // Extra meteor shower rain
-      for (var ms = 0; ms < 10; ms++) {
-        var sx = (typeof W !== "undefined" ? W : 400) * (0.15 + Math.random() * 0.7);
-        var sy = (typeof H !== "undefined" ? H : 600) * (0.15 + Math.random() * 0.6);
-        window.__airborneMeteors.push({
-          x: sx + (Math.random() - 0.5) * 40, y: -30 - Math.random() * 120,
-          tx: sx, ty: sy, delay: 0.3 + Math.random() * 1.2,
-          age: 0, life: 3.2, r: 8 + Math.random() * 5, big: false, falling: false, vy: 0
-        });
-      }
-      var fx = (typeof W !== "undefined" ? W : 400) * 0.55;
-      var fy = (typeof H !== "undefined" ? H : 600) * 0.45;
-      window.__airborneMeteorMarks.push({ x: fx, y: fy, age: 0, life: 1.15, big: true });
-      window.__airborneMeteors.push({
-        x: fx, y: -90, tx: fx, ty: fy, delay: 1.1, age: 0, life: 4, r: 24, big: true, falling: false, vy: 0
-      });
       try { if (window.PowerFX) window.PowerFX.activate("meteors", player.x, player.y); } catch (e) {}
       updateStormMeterDisplay();
       return;
     }
+
 
     if (powerMode === "rockets" || powerMode === "sunblade") {
       if (typeof sfxShoot === "function") sfxShoot();
@@ -1337,46 +1331,85 @@
         stormActive = false; stormMode = "storm";
       }
     }
-    // Meteors
-    if (window.__airborneMeteorMarks) {
-      for (var mmi = window.__airborneMeteorMarks.length - 1; mmi >= 0; mmi--) {
-        var mk = window.__airborneMeteorMarks[mmi];
-        mk.age += dt;
-        if (mk.age >= mk.life) window.__airborneMeteorMarks.splice(mmi, 1);
-      }
+    // Meteor shower — continuous sky rain of fire
+    if (window.__airborneMeteorSkyDark) {
+      var sd = window.__airborneMeteorSkyDark;
+      sd.age += dt;
+      var st = Math.min(1, sd.age / 0.4);
+      var fadeOut = sd.age > sd.life - 0.8 ? Math.max(0, (sd.life - sd.age) / 0.8) : 1;
+      sd.alpha = 0.55 * st * fadeOut;
+      if (sd.age >= sd.life) window.__airborneMeteorSkyDark = null;
     }
-    if (window.__airborneMeteors && window.__airborneMeteors.length) {
+    if (stormMode === "meteors" || (window.__airborneMeteors && window.__airborneMeteors.length)) {
+      var untilM = window.__airborneMeteorUntil || 0;
+      // Continuous spawn from top
+      if (untilM && performance.now() < untilM) {
+        window.__airborneMeteorSpawnT = (window.__airborneMeteorSpawnT || 0) - dt;
+        if (window.__airborneMeteorSpawnT <= 0) {
+          window.__airborneMeteorSpawnT = 0.08 + Math.random() * 0.1;
+          if (typeof window.__airborneMakeMeteor === "function") {
+            window.__airborneMeteors = window.__airborneMeteors || [];
+            window.__airborneMeteors.push(window.__airborneMakeMeteor());
+            if (Math.random() < 0.5) window.__airborneMeteors.push(window.__airborneMakeMeteor());
+          }
+        }
+      }
+      if (!window.__airborneMeteors) window.__airborneMeteors = [];
       for (var mti = window.__airborneMeteors.length - 1; mti >= 0; mti--) {
         var mt = window.__airborneMeteors[mti];
         mt.age += dt;
-        if (mt.age < mt.delay) continue;
-        if (!mt.falling) { mt.falling = true; mt.vy = 280 + (mt.big ? 80 : 0); }
-        mt.vy += 320 * dt;
+        mt.x += mt.vx * dt + Math.sin(mt.age * 3 + mt.wobble) * mt.wobble * dt;
         mt.y += mt.vy * dt;
-        mt.x += (mt.tx - mt.x) * 2 * dt;
-        if (mt.y >= mt.ty) {
-          try { if (typeof triggerScreenShake === "function") triggerScreenShake(mt.big ? 10 : 5, mt.big ? 400 : 200); } catch (e) {}
-          try { spawnRealisticBombExplosion(mt.tx, mt.ty); } catch (e) {}
-          if (typeof obstacles !== "undefined") {
-            var rad = mt.big ? 110 : 70;
-            for (var moi = obstacles.length - 1; moi >= 0; moi--) {
-              var mo = obstacles[moi];
-              if (!mo || mo.isRing) continue;
-              var mx = mo.x + mo.w * 0.5, my = mo.y + mo.h * 0.5;
-              if (Math.hypot(mx - mt.tx, my - mt.ty) < rad) {
-                mo.vx = (mx - mt.tx) * 2; mo.vy = 80;
-                try { score += 30; } catch (e) {}
-                obstacles.splice(moi, 1);
-              }
+        mt.vy += 40 * dt; // slight accel
+        // sparks breaking away
+        if (!mt.sparks) mt.sparks = [];
+        if (Math.random() < mt.sparkRate) {
+          mt.sparks.push({
+            x: mt.x, y: mt.y,
+            vx: -mt.vx * 0.2 + (Math.random() - 0.5) * 60,
+            vy: -mt.vy * 0.1 + (Math.random() - 0.5) * 40,
+            life: 0.25 + Math.random() * 0.35, age: 0,
+            r: 1.5 + Math.random() * 2.5
+          });
+        }
+        for (var si = mt.sparks.length - 1; si >= 0; si--) {
+          var sp = mt.sparks[si];
+          sp.age += dt; sp.x += sp.vx * dt; sp.y += sp.vy * dt;
+          if (sp.age >= sp.life) mt.sparks.splice(si, 1);
+        }
+        var hitGround = mt.y > (typeof H !== "undefined" ? H : 700) - 4;
+        var hitObs = false;
+        if (typeof obstacles !== "undefined") {
+          for (var moi = obstacles.length - 1; moi >= 0; moi--) {
+            var mo = obstacles[moi];
+            if (!mo || mo.isRing) continue;
+            var mx = mo.x + mo.w * 0.5, my = mo.y + mo.h * 0.5;
+            if (Math.hypot(mx - mt.x, my - mt.y) < mt.r + Math.max(mo.w, mo.h) * 0.35) {
+              hitObs = true;
+              try { score += mt.big ? 45 : 25; } catch (e) {}
+              obstacles.splice(moi, 1);
+              break;
             }
           }
-          window.__airborneMeteors.splice(mti, 1);
-        } else if (mt.age >= mt.life) {
+        }
+        if (hitGround || hitObs || mt.age >= mt.life) {
+          var ix = mt.x, iy = Math.min(mt.y, (typeof H !== "undefined" ? H : 700) - 10);
+          try { if (typeof triggerScreenShake === "function") triggerScreenShake(mt.big ? 9 : 3, mt.big ? 350 : 120); } catch (e) {}
+          try { spawnRealisticBombExplosion(ix, iy); } catch (e) {}
+          try {
+            if (window.PowerFX) window.PowerFX.burst(ix, iy, {
+              count: mt.big ? 22 : 12,
+              colors: ["#fff7ed", "#fde68a", "#f97316", "#dc2626", "#78716c"],
+              speed: mt.big ? 160 : 100, glow: true
+            });
+          } catch (e) {}
+          window.__airborneMeteorFlash = { age: 0, life: 0.12, big: !!mt.big };
           window.__airborneMeteors.splice(mti, 1);
         }
       }
-      if (!window.__airborneMeteors.length && stormMode === "meteors") {
+      if (untilM && performance.now() > untilM && !window.__airborneMeteors.length) {
         stormActive = false; stormMode = "storm";
+        window.__airborneMeteorSkyDark = null;
       }
     }
 
@@ -1773,7 +1806,7 @@
       window.__airborneHeatseekSpawnT -= dt;
       var canSpawnHs = window.__airborneHeatseekUntil && performance.now() < window.__airborneHeatseekUntil;
       if (canSpawnHs && window.__airborneHeatseekSpawnT <= 0 && typeof player !== "undefined" && player) {
-        window.__airborneHeatseekSpawnT = (stormMode === "warshark") ? 0.39 : 0.45; // warshark +15% rate
+        window.__airborneHeatseekSpawnT = (stormMode === "warshark") ? 0.39 : (stormMode === "barrelbomb") ? 99 : 0.45;
         var ang = -0.25 + Math.random() * 0.5;
         var sp = 200 + Math.random() * 60;
         window.__airborneHeatseekers.push({
@@ -2618,39 +2651,78 @@
   }
   function drawMeteorMarks() {
     if (typeof ctx === "undefined") return;
+    // Sky darken overlay
+    if (window.__airborneMeteorSkyDark && window.__airborneMeteorSkyDark.alpha > 0) {
+      ctx.save();
+      ctx.fillStyle = "rgba(10,5,20," + window.__airborneMeteorSkyDark.alpha + ")";
+      ctx.fillRect(0, 0, typeof W !== "undefined" ? W : 800, typeof H !== "undefined" ? H : 600);
+      ctx.restore();
+    }
+    // Screen flash on impact
+    if (window.__airborneMeteorFlash) {
+      var fl = window.__airborneMeteorFlash;
+      fl.age += 0.016;
+      var ft = Math.max(0, 1 - fl.age / fl.life);
+      if (ft > 0) {
+        ctx.save();
+        ctx.globalAlpha = ft * (fl.big ? 0.45 : 0.25);
+        ctx.fillStyle = "#fff5e6";
+        ctx.fillRect(0, 0, typeof W !== "undefined" ? W : 800, typeof H !== "undefined" ? H : 600);
+        ctx.restore();
+      } else {
+        window.__airborneMeteorFlash = null;
+      }
+    }
+    if (!window.__airborneMeteors) return;
     ctx.save();
-    if (window.__airborneMeteorMarks) {
-      window.__airborneMeteorMarks.forEach(function(mk) {
-        var t = Math.max(0, 1 - mk.age / mk.life);
-        ctx.strokeStyle = "rgba(255," + (mk.big ? 80 : 120) + ",40," + (0.4 + t * 0.5) + ")";
-        ctx.lineWidth = mk.big ? 3 : 2;
+    window.__airborneMeteors.forEach(function(mt) {
+      var ang = Math.atan2(mt.vy, mt.vx);
+      // Long glowing tail
+      ctx.globalCompositeOperation = "lighter";
+      var tail = mt.tailLen || 40;
+      var g = ctx.createLinearGradient(
+        mt.x - Math.cos(ang) * tail, mt.y - Math.sin(ang) * tail,
+        mt.x, mt.y
+      );
+      g.addColorStop(0, "rgba(255,80,0,0)");
+      g.addColorStop(0.5, "rgba(255,140,30,0.45)");
+      g.addColorStop(1, "rgba(255,230,150,0.9)");
+      ctx.strokeStyle = g;
+      ctx.lineWidth = mt.r * 0.85;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(mt.x - Math.cos(ang) * tail, mt.y - Math.sin(ang) * tail);
+      ctx.lineTo(mt.x, mt.y);
+      ctx.stroke();
+      // Orange/yellow flame body
+      var fg = ctx.createRadialGradient(mt.x, mt.y, 0, mt.x, mt.y, mt.r * 2.2);
+      fg.addColorStop(0, "rgba(255,250,220,1)");
+      fg.addColorStop(0.25, "rgba(255,200,60,0.95)");
+      fg.addColorStop(0.55, "rgba(255,100,20,0.7)");
+      fg.addColorStop(1, "rgba(180,30,0,0)");
+      ctx.fillStyle = fg;
+      ctx.beginPath();
+      ctx.arc(mt.x, mt.y, mt.r * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+      // Bright fiery core
+      ctx.fillStyle = "rgba(255,255,240,0.95)";
+      ctx.beginPath();
+      ctx.arc(mt.x, mt.y, mt.r * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+      // Sparks
+      (mt.sparks || []).forEach(function(sp) {
+        var t = 1 - sp.age / sp.life;
+        ctx.globalAlpha = t;
+        ctx.fillStyle = "rgba(255," + (180 + Math.floor(Math.random() * 40)) + ",40,1)";
         ctx.beginPath();
-        ctx.arc(mk.x, mk.y, 20 + (1 - t) * 15, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(mk.x - 12, mk.y); ctx.lineTo(mk.x + 12, mk.y);
-        ctx.moveTo(mk.x, mk.y - 12); ctx.lineTo(mk.x, mk.y + 12);
-        ctx.stroke();
+        ctx.arc(sp.x, sp.y, sp.r * t, 0, Math.PI * 2);
+        ctx.fill();
       });
-    }
-    if (window.__airborneMeteors) {
-      window.__airborneMeteors.forEach(function(mt) {
-        if (mt.age < mt.delay) return;
-        ctx.globalCompositeOperation = "lighter";
-        var g = ctx.createRadialGradient(mt.x, mt.y, 0, mt.x, mt.y, mt.r * 2);
-        g.addColorStop(0, "rgba(255,250,200,0.95)");
-        g.addColorStop(0.4, "rgba(255,120,20,0.8)");
-        g.addColorStop(1, "rgba(200,40,0,0)");
-        ctx.fillStyle = g;
-        ctx.beginPath(); ctx.arc(mt.x, mt.y, mt.r * 2, 0, Math.PI * 2); ctx.fill();
-        // trail
-        ctx.strokeStyle = "rgba(255,100,30,0.6)";
-        ctx.lineWidth = mt.r * 0.6;
-        ctx.beginPath(); ctx.moveTo(mt.x, mt.y - 40); ctx.lineTo(mt.x, mt.y); ctx.stroke();
-      });
-    }
+      ctx.globalAlpha = 1;
+    });
     ctx.restore();
   }
+
 
   function drawShockFX() {
     var list = window.__airborneShockFX;
