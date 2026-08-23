@@ -1604,13 +1604,14 @@
       }
 
       if (sh.age >= life) {
-        // Final shockwave
         if (!window.__airbornePurpleBursts) window.__airbornePurpleBursts = [];
         window.__airbornePurpleBursts.push({
-          kind: "shock", x: px, y: py, age: 0, life: 0.5, r: 20, maxR: sh.maxR
+          kind: "shock", x: px, y: py, age: 0, life: 0.45, r: 20, maxR: Math.min(sh.maxR, 280)
         });
         try { if (typeof triggerScreenShake === "function") triggerScreenShake(12, 400); } catch (e) {}
         window.__airborneSpyShield = null;
+        window.__airborneActivePowerVisual = null;
+        window.__airborneActivePowerUntil = 0;
         stormActive = false;
         stormMode = "storm";
         stormCloud = null;
@@ -3001,6 +3002,237 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
     ctx.restore();
   }
   function drawSpyShield() {
+    if (typeof ctx === "undefined") return;
+    var W0 = typeof W !== "undefined" ? W : 800;
+    var H0 = typeof H !== "undefined" ? H : 600;
+
+    // Suction trails
+    if (window.__airborneSuctionTrails && window.__airborneSuctionTrails.length) {
+      ctx.save();
+      window.__airborneSuctionTrails.forEach(function(tr) {
+        var t = 1 - tr.age / tr.life;
+        ctx.globalAlpha = t * 0.4;
+        ctx.strokeStyle = "rgba(170,110,255,1)";
+        ctx.lineWidth = 1.5 * t;
+        ctx.beginPath();
+        ctx.moveTo(tr.x1, tr.y1);
+        var mx = (tr.x1 + tr.x2) * 0.5 + (tr.y2 - tr.y1) * 0.15;
+        var my = (tr.y1 + tr.y2) * 0.5 - (tr.x2 - tr.x1) * 0.15;
+        ctx.quadraticCurveTo(mx, my, tr.x2, tr.y2);
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+
+    // Bursts / implosions / shock (no solid white fill)
+    if (window.__airbornePurpleBursts && window.__airbornePurpleBursts.length) {
+      ctx.save();
+      window.__airbornePurpleBursts.forEach(function(pb) {
+        var t = Math.max(0, 1 - pb.age / pb.life);
+        if (t <= 0) return;
+        if (pb.kind === "spark") {
+          ctx.globalCompositeOperation = "lighter";
+          ctx.globalAlpha = t;
+          ctx.fillStyle = "rgba(210,170,255,1)";
+          ctx.beginPath();
+          ctx.arc(pb.x, pb.y, Math.max(1, pb.r * t), 0, Math.PI * 2);
+          ctx.fill();
+        } else if (pb.kind === "shock") {
+          var rr = (pb.r || 20) + ((pb.maxR || 280) - (pb.r || 20)) * (1 - t);
+          ctx.globalCompositeOperation = "lighter";
+          ctx.globalAlpha = t * 0.55;
+          ctx.strokeStyle = "rgba(180,120,255,1)";
+          ctx.lineWidth = Math.max(1, 5 * t);
+          ctx.beginPath();
+          ctx.arc(pb.x, pb.y, rr, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.strokeStyle = "rgba(220,180,255,0.5)";
+          ctx.lineWidth = Math.max(1, 2 * t);
+          ctx.beginPath();
+          ctx.arc(pb.x, pb.y, rr * 0.9, 0, Math.PI * 2);
+          ctx.stroke();
+        } else {
+          ctx.globalCompositeOperation = "lighter";
+          var rad = (pb.r || 24) * (0.35 + t * 0.65);
+          var g = ctx.createRadialGradient(pb.x, pb.y, 0, pb.x, pb.y, rad);
+          g.addColorStop(0, "rgba(230,200,255," + (t * 0.75) + ")");
+          g.addColorStop(0.35, "rgba(150,70,230," + (t * 0.5) + ")");
+          g.addColorStop(1, "rgba(40,0,80,0)");
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(pb.x, pb.y, rad, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+      ctx.restore();
+    }
+
+    var sh = window.__airborneSpyShield;
+    if (!sh) return;
+    var px = sh.x, py = sh.y;
+    var rad = Math.max(8, sh.r);
+    var phaseFade = sh.phase === "collapse" ? Math.max(0.15, 1 - (sh.collapseFlash || 0)) : 1;
+
+    // Soft purple flash only (no solid white full-screen circle)
+    if ((sh.flash || 0) > 0.05) {
+      ctx.save();
+      ctx.globalAlpha = sh.flash * 0.22;
+      ctx.fillStyle = "rgba(140,60,220,1)";
+      ctx.fillRect(0, 0, W0, H0);
+      ctx.restore();
+    }
+    if ((sh.collapseFlash || 0) > 0.05) {
+      ctx.save();
+      ctx.globalAlpha = sh.collapseFlash * 0.2;
+      ctx.fillStyle = "rgba(160,80,230,1)";
+      ctx.fillRect(0, 0, W0, H0);
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.globalAlpha = phaseFade;
+    ctx.globalCompositeOperation = "lighter";
+
+    // Depth rings
+    for (var dr = 3; dr >= 1; dr--) {
+      var dRad = rad * (0.22 * dr);
+      ctx.strokeStyle = "rgba(150,90,255," + (0.1 + 0.06 * dr) + ")";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, dRad, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Outer rippling edge
+    ctx.strokeStyle = "rgba(180,120,255," + (0.4 + 0.2 * Math.sin((sh.age || 0) * 9)) + ")";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    for (var ei = 0; ei <= 48; ei++) {
+      var ea = (ei / 48) * Math.PI * 2;
+      var ripple = 1 + 0.035 * Math.sin(ea * 6 + (sh.age || 0) * 10);
+      var ex = Math.cos(ea) * rad * ripple;
+      var ey = Math.sin(ea) * rad * ripple * 0.92;
+      if (ei === 0) ctx.moveTo(ex, ey);
+      else ctx.lineTo(ex, ey);
+    }
+    ctx.closePath();
+    ctx.stroke();
+
+    // Vortex arms + purple electricity along them
+    var arms = 5;
+    for (var arm = 0; arm < arms; arm++) {
+      var armOff = arm * (Math.PI * 2 / arms) + (sh.spin || 0);
+      var pulse = 0.3 + 0.25 * Math.sin((sh.age || 0) * 6 + arm);
+      // Arm path points
+      var pts = [];
+      for (var s = 0; s < 36; s++) {
+        var frac = s / 36;
+        var aa = armOff + frac * Math.PI * 2.4;
+        var rr = rad * (0.08 + frac * 0.92);
+        pts.push({ x: Math.cos(aa) * rr, y: Math.sin(aa) * rr * 0.88, frac: frac });
+      }
+      ctx.strokeStyle = "rgba(140,60,240," + pulse + ")";
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      for (var s = 0; s < pts.length; s++) {
+        if (s === 0) ctx.moveTo(pts[s].x, pts[s].y);
+        else ctx.lineTo(pts[s].x, pts[s].y);
+      }
+      ctx.stroke();
+      // Purple electricity bolts along arm
+      ctx.strokeStyle = "rgba(220,180,255," + (0.5 + 0.4 * Math.sin((sh.age || 0) * 14 + arm * 2)) + ")";
+      ctx.lineWidth = 1.4;
+      for (var bolt = 0; bolt < 4; bolt++) {
+        var b0 = Math.floor(Math.random() * (pts.length - 6));
+        ctx.beginPath();
+        for (var bs = 0; bs < 5; bs++) {
+          var p = pts[Math.min(pts.length - 1, b0 + bs)];
+          var jx = p.x + (Math.random() - 0.5) * 10 * (1 - p.frac);
+          var jy = p.y + (Math.random() - 0.5) * 10 * (1 - p.frac);
+          if (bs === 0) ctx.moveTo(jx, jy);
+          else ctx.lineTo(jx, jy);
+        }
+        ctx.stroke();
+      }
+      // Occasional bright arc jump between points on arm
+      if (Math.random() < 0.4) {
+        var i1 = 4 + Math.floor(Math.random() * 12);
+        var i2 = i1 + 3 + Math.floor(Math.random() * 6);
+        if (i2 < pts.length) {
+          ctx.strokeStyle = "rgba(255,230,255,0.85)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(pts[i1].x, pts[i1].y);
+          var midX = (pts[i1].x + pts[i2].x) * 0.5 + (Math.random() - 0.5) * 18;
+          var midY = (pts[i1].y + pts[i2].y) * 0.5 + (Math.random() - 0.5) * 18;
+          ctx.quadraticCurveTo(midX, midY, pts[i2].x, pts[i2].y);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Ribbons
+    (sh.ribbons || []).forEach(function(rb) {
+      ctx.strokeStyle = "rgba(170,100,255," + (rb.bright * 0.4) + ")";
+      ctx.lineWidth = rb.width * 0.3;
+      ctx.beginPath();
+      for (var s = 0; s < 24; s++) {
+        var frac = s / 24;
+        var aa = rb.offset + (sh.spin || 0) * rb.speed * 0.3 + frac * Math.PI * 1.8;
+        var rr = rad * (0.2 + frac * 0.75);
+        var x = Math.cos(aa) * rr;
+        var y = Math.sin(aa) * rr * 0.9;
+        if (s === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    });
+
+    // Purple arcs
+    (sh.arcs || []).forEach(function(arc) {
+      var at = 1 - arc.age / arc.life;
+      ctx.globalAlpha = at * 0.75 * phaseFade;
+      ctx.strokeStyle = "rgba(210,170,255,1)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (var s = 0; s <= 6; s++) {
+        var f = s / 6;
+        var aa = arc.a1 + (arc.a2 - arc.a1) * f + (Math.random() - 0.5) * 0.12;
+        var rr = arc.r1 + (arc.r2 - arc.r1) * f;
+        var x = Math.cos(aa + (sh.spin || 0) * 0.2) * rr;
+        var y = Math.sin(aa + (sh.spin || 0) * 0.2) * rr;
+        if (s === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = phaseFade;
+    });
+
+    // Soft purple core (no solid white disk)
+    var coreR = Math.min(28, Math.max(10, rad * 0.08));
+    var cg = ctx.createRadialGradient(0, 0, 0, 0, 0, coreR);
+    cg.addColorStop(0, "rgba(230,200,255,0.55)");
+    cg.addColorStop(0.45, "rgba(150,80,230,0.35)");
+    cg.addColorStop(1, "rgba(80,20,160,0)");
+    ctx.fillStyle = cg;
+    ctx.beginPath();
+    ctx.arc(0, 0, coreR, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Field particles
+    (sh.particles || []).forEach(function(p) {
+      var pt = 1 - p.age / p.life;
+      ctx.globalAlpha = pt * 0.8 * phaseFade;
+      ctx.fillStyle = "rgba(210,170,255,1)";
+      ctx.beginPath();
+      ctx.arc(p.x - px, p.y - py, p.r * pt, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+function drawSpyShield() {
     if (typeof ctx === "undefined") return;
     var W0 = typeof W !== "undefined" ? W : 800;
     var H0 = typeof H !== "undefined" ? H : 600;
