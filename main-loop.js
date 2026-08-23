@@ -188,7 +188,7 @@
       updateHealPickup(dt);
       updateShieldPickup(dt);
       updateWindParticles(dt);
-      updateStorm(dt);
+      updateStorm(dt); try { if (window.tickUnifiedProgress) window.tickUnifiedProgress(dt); } catch(e) {};
       try { if (window.PowerFX) window.PowerFX.update(dt); } catch (e) {}
       updateBonusRound(dt);
       updateLevelEnd(dt);
@@ -246,7 +246,7 @@
     drawHitParticles(); try { if (window.PowerFX) window.PowerFX.draw(ctx); } catch (e) {}
       try { if (window.__airborneDrawFireballs) window.__airborneDrawFireballs(); } catch (e) {}
       try { if (window.__airborneDrawHeatseekers) window.__airborneDrawHeatseekers(); } catch (e) {}
-      try { if (window.__airborneDrawWarSharkExtras) window.__airborneDrawWarSharkExtras(); } catch (e) {};
+      try { if (window.__airborneDrawWarSharkExtras) window.__airborneDrawWarSharkExtras(); try { if (window.__airborneDrawBombBlasts) window.__airborneDrawBombBlasts(); } catch(e) {}; } catch (e) {};
     drawPowerup();
     drawBonusRound();
     drawLevelEnd();

@@ -1032,15 +1032,28 @@
   })();
 
 
+window.__udProgressTarget = 0;
+window.__udProgressShown = 0;
 window.updateUnifiedProgress = function (pct) {
   try {
-    var p = Math.max(0, Math.min(100, pct || 0));
+    window.__udProgressTarget = Math.max(0, Math.min(100, pct || 0));
     var val = document.getElementById("udProgressVal");
-    if (val) val.textContent = Math.round(p) + "%";
+    if (val) val.style.display = "none";
+  } catch (e) {}
+};
+window.tickUnifiedProgress = function (dt) {
+  try {
+    var target = window.__udProgressTarget || 0;
+    var shown = window.__udProgressShown || 0;
+    // Smooth grow toward target (no jump)
+    var speed = 45; // % per second
+    if (shown < target) shown = Math.min(target, shown + speed * (dt || 0.016));
+    else if (shown > target) shown = Math.max(target, shown - speed * (dt || 0.016));
+    window.__udProgressShown = shown;
     var ring = document.getElementById("udProgressRing");
     var circle = document.querySelector("#unifiedDock .udCircle") || document.getElementById("stormMeter");
-    if (ring) ring.style.setProperty("--ud-progress", p + "%");
-    if (circle) circle.style.setProperty("--ud-progress", p + "%");
+    if (ring) ring.style.setProperty("--ud-progress", shown.toFixed(2) + "%");
+    if (circle) circle.style.setProperty("--ud-progress", shown.toFixed(2) + "%");
   } catch (e) {}
 };
 

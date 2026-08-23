@@ -16,7 +16,7 @@
     // Normalize on-screen size so every vessel reads about the same scale.
     // Little Spy (blimp6) stays intentionally smaller.
     const sel = (typeof selectedBlimp !== "undefined" && selectedBlimp) ? selectedBlimp : "blimp1";
-    const scale = (sel === "blimp6") ? 0.68 : 1.0;
+    const scale = (sel === "blimp6") ? 0.72 : 1.0; // Little Spy smaller; all others match Zeppelin scale
     const firstFrame = currentPlayerImage();
     const aspect = (firstFrame && firstFrame.naturalWidth && firstFrame.naturalHeight / firstFrame.naturalWidth) || 0.55;
     // Fit inside a shared bounding box (width-capped) so large/tall sprites don't dominate
@@ -599,7 +599,7 @@
       if (window.__airborneFirePowerActive && typeof player !== "undefined" && player) {
         for (let i = 0; i < 2; i++) {
           const ang = Math.random() * Math.PI * 2;
-          const rad = player.w * (0.3 + Math.random() * 0.35);
+          const rad = player.w * (0.3 + Math.random() * 0.35) * 1.05;
           window.__airborneFireAura.push({
             x: player.x + Math.cos(ang) * rad,
             y: player.y + Math.sin(ang) * rad * 0.65,
@@ -1018,8 +1018,13 @@
 
       const dx = Math.abs(player.x - (o.x + o.w / 2));
       const dy = Math.abs(player.y - (drawY + o.h / 2));
-      const collideX = (player.w / 2) * 0.75 + (o.w / 2) * 0.75;
-      const collideY = (player.h / 2) * 0.75 + (o.h / 2) * 0.75;
+      let collideX = (player.w / 2) * 0.75 + (o.w / 2) * 0.75;
+      let collideY = (player.h / 2) * 0.75 + (o.h / 2) * 0.75;
+      // Zeppelin fire aura +5% reach
+      if (window.__airborneFirePowerActive) {
+        collideX *= 1.05;
+        collideY *= 1.05;
+      }
 
       // track the closest non-colliding vertical gap while horizontally
       // in range, so a dodge can be recognized as a "close call" (graze)

@@ -311,7 +311,7 @@
       blimp7: "chain",
       blimp8: "fireball",
       blimp9: "jollybomb",
-      blimp10: "storm",
+      blimp10: "ivorybolt",
       blimp11: "warshark",
       blimp12: "heatseek",
       blimp13: "swarm",
@@ -611,13 +611,28 @@
     }
 
     // Chain lightning — zap several obstacles in sequence
+    if (powerMode === "ivorybolt") {
+      if (typeof sfxThunder === "function") sfxThunder();
+      try { if (typeof triggerScreenShake === "function") triggerScreenShake(5, 300); } catch (e) {}
+      stormActive = true;
+      stormMode = "ivorybolt";
+      stormTimer = 5.5;
+      window.__airborneActivePowerVisual = "ivorybolt";
+      window.__airborneActivePowerUntil = performance.now() + 5500;
+      window.__airborneIvoryBolts = [];
+      window.__airborneIvoryUntil = performance.now() + 5500;
+      try { if (window.PowerFX) window.PowerFX.activate("chain", player.x, player.y); } catch (e) {}
+      updateStormMeterDisplay();
+      return;
+    }
+
     if (powerMode === "chain") {
       if (typeof sfxThunder === "function") sfxThunder();
       try { if (typeof triggerScreenShake === "function") triggerScreenShake(7, 350); } catch (e) {}
       const targets = (typeof obstacles !== "undefined" && obstacles)
         ? obstacles.filter(function(o){ return o && !o.isRing; }).slice().sort(function (a, b) {
             return Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y);
-          }).slice(0, 5)
+          }).slice(0, 8)
         : [];
       targets.forEach(function (o, idx) {
         setTimeout(function () {
@@ -663,18 +678,53 @@
     }
 
     // Rockets / meteors / vortex / sunblade — use swarm projectiles with unique motion
-    if (powerMode === "vortex") {
+    if (powerMode === "swarm") {
       if (typeof sfxShoot === "function") sfxShoot();
       stormActive = true;
-      stormMode = "vortex";
-      stormTimer = 4.5;
-      window.__airborneActivePowerVisual = "vortex";
-      window.__airborneActivePowerUntil = performance.now() + 4500;
-      window.__airborneVortex = { x: player.x + 70, y: player.y, age: 0, life: 4.2, r: 28, maxR: 90 };
-      try { if (window.PowerFX) window.PowerFX.activate("vortex", player.x + 70, player.y); } catch (e) {}
+      stormMode = "swarm";
+      stormTimer = 3.5;
+      window.__airborneActivePowerVisual = "swarm";
+      window.__airborneActivePowerUntil = performance.now() + 3500;
+      stormSwarm = [];
+      for (var si = 0; si < 18; si++) {
+        var ang = (si / 18) * Math.PI * 2;
+        stormSwarm.push({
+          x: player.x, y: player.y,
+          vx: Math.cos(ang) * (180 + Math.random() * 60),
+          vy: Math.sin(ang) * (180 + Math.random() * 60),
+          spin: ang, spinVel: 10 + Math.random() * 6,
+          size: 16 + Math.random() * 8,
+          life: 1.6, age: 0,
+          iconKey: null, hit: false, style: "metal", delay: 0,
+          pierce: 2
+        });
+      }
+      try { if (window.PowerFX) window.PowerFX.activate("swarm", player.x, player.y); } catch (e) {}
       updateStormMeterDisplay();
       return;
     }
+
+    if (powerMode === "vortex") {
+      if (typeof sfxShoot === "function") sfxShoot();
+      try { if (typeof triggerScreenShake === "function") triggerScreenShake(6, 400); } catch (e) {}
+      stormActive = true;
+      stormMode = "vortex";
+      stormTimer = 3.2;
+      window.__airborneActivePowerVisual = "vortex";
+      window.__airborneActivePowerUntil = performance.now() + 3200;
+      // Expand full-screen shield then retract, capturing obstacles
+      window.__airborneSpyShield = {
+        age: 0, life: 2.8,
+        phase: "expand", // expand -> hold -> retract
+        r: 20,
+        maxR: Math.max(W || 400, H || 600) * 0.72,
+        captured: []
+      };
+      try { if (window.PowerFX) window.PowerFX.activate("vortex", player.x, player.y); } catch (e) {}
+      updateStormMeterDisplay();
+      return;
+    }
+
 
     if (powerMode === "meteors") {
       if (typeof sfxShoot === "function") sfxShoot();
@@ -706,6 +756,16 @@
           delay: 0.7 + idx * 0.1, age: 0, life: 3.5, r: 14, big: false, falling: false, vy: 0
         });
       });
+      // Extra meteor shower rain
+      for (var ms = 0; ms < 10; ms++) {
+        var sx = (typeof W !== "undefined" ? W : 400) * (0.15 + Math.random() * 0.7);
+        var sy = (typeof H !== "undefined" ? H : 600) * (0.15 + Math.random() * 0.6);
+        window.__airborneMeteors.push({
+          x: sx + (Math.random() - 0.5) * 40, y: -30 - Math.random() * 120,
+          tx: sx, ty: sy, delay: 0.3 + Math.random() * 1.2,
+          age: 0, life: 3.2, r: 8 + Math.random() * 5, big: false, falling: false, vy: 0
+        });
+      }
       var fx = (typeof W !== "undefined" ? W : 400) * 0.55;
       var fy = (typeof H !== "undefined" ? H : 600) * 0.45;
       window.__airborneMeteorMarks.push({ x: fx, y: fy, age: 0, life: 1.15, big: true });
@@ -1029,36 +1089,89 @@
   function updateStorm(dt) {
     try { updateBombBlasts(dt); } catch (e) {}
 
-    // Vortex pull field
-    if (window.__airborneVortex && stormMode === "vortex") {
-      var v = window.__airborneVortex;
-      v.age += dt;
-      v.x = (typeof player !== "undefined" && player) ? player.x + 75 : v.x;
-      v.y = (typeof player !== "undefined" && player) ? player.y : v.y;
-      v.r = Math.min(v.maxR, 28 + v.age * 40);
+    if (stormMode === "ivorybolt" || (window.__airborneIvoryBolts && window.__airborneIvoryBolts.length)) {
+      var untilIv = window.__airborneIvoryUntil || 0;
+      if (untilIv && performance.now() > untilIv && !(window.__airborneIvoryBolts && window.__airborneIvoryBolts.length)) {
+        stormActive = false; stormMode = "storm";
+      }
+      if (!window.__airborneIvoryBolts) window.__airborneIvoryBolts = [];
+      // Continuous main bolt from blimp to farthest cluster + branches
+      if (untilIv && performance.now() < untilIv && typeof player !== "undefined" && player) {
+        if (Math.random() < 0.35) {
+          var targets = [];
+          if (typeof obstacles !== "undefined") {
+            obstacles.forEach(function(o) {
+              if (!o || o.isRing) return;
+              targets.push(o);
+            });
+          }
+          if (targets.length) {
+            var main = targets[Math.floor(Math.random() * Math.min(3, targets.length))];
+            var mx = main.x + main.w * 0.5, my = main.y + main.h * 0.5;
+            var bolt = {
+              x0: player.x + player.w * 0.3, y0: player.y,
+              x1: mx, y1: my, age: 0, life: 0.18,
+              branches: []
+            };
+            targets.forEach(function(o) {
+              if (o === main) return;
+              var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
+              if (Math.hypot(ox - mx, oy - my) < 160) {
+                bolt.branches.push({ x0: mx, y0: my, x1: ox, y1: oy });
+                o.onFire = true; o.vy = 70; o.scored = true;
+                try { score += 20; } catch (e) {}
+              }
+            });
+            main.onFire = true; main.vy = 90; main.scored = true;
+            try { score += 25; } catch (e) {}
+            window.__airborneIvoryBolts.push(bolt);
+          }
+        }
+      }
+      for (var ii = window.__airborneIvoryBolts.length - 1; ii >= 0; ii--) {
+        window.__airborneIvoryBolts[ii].age += dt;
+        if (window.__airborneIvoryBolts[ii].age >= window.__airborneIvoryBolts[ii].life)
+          window.__airborneIvoryBolts.splice(ii, 1);
+      }
+    }
+
+
+    // Little Spy expanding shield capture
+    if (window.__airborneSpyShield && stormMode === "vortex") {
+      var sh = window.__airborneSpyShield;
+      sh.age += dt;
+      var px = (typeof player !== "undefined" && player) ? player.x : W * 0.3;
+      var py = (typeof player !== "undefined" && player) ? player.y : H * 0.4;
+      sh.x = px; sh.y = py;
+      var t = sh.age / sh.life;
+      if (t < 0.35) {
+        sh.phase = "expand";
+        sh.r = 20 + (sh.maxR - 20) * (t / 0.35);
+      } else if (t < 0.55) {
+        sh.phase = "hold";
+        sh.r = sh.maxR;
+      } else {
+        sh.phase = "retract";
+        var rt = (t - 0.55) / 0.45;
+        sh.r = sh.maxR * (1 - rt);
+      }
       if (typeof obstacles !== "undefined") {
         for (var vi = obstacles.length - 1; vi >= 0; vi--) {
           var vo = obstacles[vi];
           if (!vo || vo.isRing) continue;
           var vox = vo.x + vo.w * 0.5, voy = vo.y + vo.h * 0.5;
-          var dx = v.x - vox, dy = v.y - voy;
-          var dist = Math.hypot(dx, dy) || 1;
-          if (dist < v.r * 1.4) {
-            var pull = 180 * (1 - dist / (v.r * 1.4));
-            vo.x += (dx / dist) * pull * dt;
-            vo.y += (dy / dist) * pull * dt;
-            vo.vortexSpin = (vo.vortexSpin || 0) + 8 * dt;
-            if (dist < v.r * 0.35) {
+          if (Math.hypot(vox - px, voy - py) < sh.r) {
+            if (sh.phase === "retract" || sh.phase === "hold") {
               try { if (typeof spawnHitParticles === "function") spawnHitParticles(vox, voy); } catch (e) {}
-              try { if (typeof spawnFeathers === "function" && (vo.isBird || vo.type === "bird")) spawnFeathers(vox, voy); } catch (e) {}
-              try { score += 25; if (scoreVal) scoreVal.textContent = String(score); } catch (e) {}
+              try { if (window.PowerFX) window.PowerFX.burst(vox, voy, { count: 10, colors: ["#a78bfa", "#c4b5fd", "#fff"], speed: 90, glow: true }); } catch (e) {}
+              try { score += 30; if (scoreVal) scoreVal.textContent = String(score); } catch (e) {}
               obstacles.splice(vi, 1);
             }
           }
         }
       }
-      if (v.age >= v.life) {
-        window.__airborneVortex = null;
+      if (sh.age >= sh.life) {
+        window.__airborneSpyShield = null;
         stormActive = false; stormMode = "storm";
       }
     }
@@ -1490,7 +1603,7 @@
       window.__airborneHeatseekSpawnT -= dt;
       var canSpawnHs = window.__airborneHeatseekUntil && performance.now() < window.__airborneHeatseekUntil;
       if (canSpawnHs && window.__airborneHeatseekSpawnT <= 0 && typeof player !== "undefined" && player) {
-        window.__airborneHeatseekSpawnT = 0.45;
+        window.__airborneHeatseekSpawnT = (stormMode === "warshark") ? 0.39 : 0.45; // warshark +15% rate
         var ang = -0.25 + Math.random() * 0.5;
         var sp = 200 + Math.random() * 60;
         window.__airborneHeatseekers.push({
@@ -1571,7 +1684,7 @@
         }
         // Mid-air fuse for War Shark barrel bombs (~0.55s then AOE)
         var fuseBoom = false;
-        if ((rk.kind === "barrelbomb" || rk.kind === "jollybomb") && rk.age >= 1.05 && !rk.fused) {
+        if ((rk.kind === "barrelbomb" || rk.kind === "jollybomb") && rk.age >= (rk.kind === "jollybomb" ? 0.85 : 1.05) && !rk.fused) {
           rk.fused = true;
           fuseBoom = true;
         }
@@ -2210,6 +2323,50 @@
     ctx.restore();
   }
   
+  
+  function drawIvoryBolts() {
+    var list = window.__airborneIvoryBolts;
+    if (!list || !list.length || typeof ctx === "undefined") return;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    list.forEach(function(bolt) {
+      var t = Math.max(0, 1 - bolt.age / bolt.life);
+      // Blue flame glow around bolt
+      ctx.strokeStyle = "rgba(100,180,255," + (t * 0.35) + ")";
+      ctx.lineWidth = 10;
+      ctx.beginPath(); ctx.moveTo(bolt.x0, bolt.y0); ctx.lineTo(bolt.x1, bolt.y1); ctx.stroke();
+      ctx.strokeStyle = "rgba(200,230,255," + (t * 0.95) + ")";
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(bolt.x0, bolt.y0); ctx.lineTo(bolt.x1, bolt.y1); ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255," + (t * 0.8) + ")";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(bolt.x0, bolt.y0); ctx.lineTo(bolt.x1, bolt.y1); ctx.stroke();
+      (bolt.branches || []).forEach(function(br) {
+        ctx.strokeStyle = "rgba(150,200,255," + (t * 0.7) + ")";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(br.x0, br.y0); ctx.lineTo(br.x1, br.y1); ctx.stroke();
+      });
+    });
+    ctx.restore();
+  }
+  function drawSpyShield() {
+    var sh = window.__airborneSpyShield;
+    if (!sh || typeof ctx === "undefined") return;
+    ctx.save();
+    var t = Math.min(1, sh.age / sh.life);
+    ctx.globalCompositeOperation = "lighter";
+    ctx.strokeStyle = "rgba(180,140,255," + (0.55 + 0.3 * Math.sin(sh.age * 8)) + ")";
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(sh.x, sh.y, Math.max(8, sh.r), 0, Math.PI * 2); ctx.stroke();
+    var g = ctx.createRadialGradient(sh.x, sh.y, sh.r * 0.4, sh.x, sh.y, sh.r);
+    g.addColorStop(0, "rgba(160,100,255,0.08)");
+    g.addColorStop(0.7, "rgba(120,80,220,0.18)");
+    g.addColorStop(1, "rgba(80,40,180,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(sh.x, sh.y, sh.r, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
   function drawVortexField() {
     var v = window.__airborneVortex;
     if (!v || typeof ctx === "undefined") return;
@@ -2334,7 +2491,7 @@
       var rw = 48, rh = 22;
       if (img && img.complete && img.naturalWidth) {
         var aspect = img.naturalHeight / img.naturalWidth;
-        rw = (rk.kind === "barrelbomb") ? 47 : 52; // pirate barrels 10% smaller
+        rw = (rk.kind === "barrelbomb") ? 47 : (rk.kind === "warshark") ? 39 : 52; // warshark -25%
         rh = rw * aspect;
         ctx.drawImage(img, -rw * 0.35, -rh / 2, rw, rh);
       } else if (rk.kind === "jollybomb") {

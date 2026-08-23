@@ -3911,8 +3911,8 @@ html, body {
 #unifiedDock .udCircle,
 #stormMeter.udCircle {
   position: relative;
-  width: 88px;
-  height: 88px;
+  width: 97px; /* +10% */
+  height: 97px;
   flex: none;
   pointer-events: auto;
   cursor: pointer;
@@ -3995,7 +3995,8 @@ html, body {
   pointer-events: none;
   white-space: nowrap;
 }
-.udProgressReadout {
+.udProgressReadout { display: none !important; }
+.udProgressReadout_unused {
   font-family: 'Rockwell', Georgia, serif;
   font-size: 10px;
   letter-spacing: 0.08em;
@@ -4192,3 +4193,18 @@ body:not(.game-playing) #startOverlay {
 #pauseHangarBtn.pauseHangarBtn:hover {
   filter: brightness(1.12);
 }
+
+#unifiedDock .udTime,
+#udTimerVal {
+  position: absolute !important;
+  left: 50% !important;
+  top: 100% !important;
+  bottom: auto !important;
+  transform: translateX(-50%) !important;
+  margin-top: 6px !important;
+  font-size: 0.85rem !important;
+  white-space: nowrap;
+  pointer-events: none;
+}
+#unifiedDock .udCircle { overflow: visible !important; }
+#unifiedDock { bottom: calc(env(safe-area-inset-bottom, 0px) + 28px) !important; }
