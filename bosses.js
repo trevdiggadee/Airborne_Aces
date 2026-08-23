@@ -678,6 +678,54 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
     }
 
     if (powerMode === "shockwave") {
+      if (typeof sfxThunder === "function") sfxThunder();
+      if (typeof sfxExplosion === "function") sfxExplosion(0.55);
+      try { if (typeof triggerScreenShake === "function") triggerScreenShake(12, 380); } catch (e) {}
+      stormActive = true;
+      stormMode = "shockwave";
+      stormTimer = 5.2;
+      stormCloud = null;
+      window.__airborneActivePowerVisual = "shockwave";
+      window.__airborneActivePowerUntil = performance.now() + 5200;
+      window.__airborneShockPulseT = 0.5; // fire first pulse immediately
+      window.__airborneShockPulseCount = 0;
+      window.__airborneShockEndAt = performance.now() + 5200;
+      window.__airborneShockFinalDone = false;
+      window.__airborneShockFlash = 1.0;
+      if (!window.__airborneShockFX) window.__airborneShockFX = [];
+      // Initial big rings + sparks
+      var radius0 = Math.min(typeof W !== "undefined" ? W : 400, typeof H !== "undefined" ? H : 600) * 0.62;
+      for (var si = 0; si < 3; si++) {
+        window.__airborneShockFX.push({
+          kind: "ring",
+          x: player.x, y: player.y,
+          r: 14 + si * 10,
+          maxR: radius0 * (0.7 + si * 0.18),
+          life: 0.5 + si * 0.1, age: 0,
+          width: 6 - si,
+          gold: si === 0
+        });
+      }
+      for (var sp = 0; sp < 28; sp++) {
+        var sa = Math.random() * Math.PI * 2;
+        var ss = 120 + Math.random() * 220;
+        window.__airborneShockFX.push({
+          kind: "spark",
+          x: player.x, y: player.y,
+          vx: Math.cos(sa) * ss, vy: Math.sin(sa) * ss,
+          life: 0.35 + Math.random() * 0.3, age: 0,
+          r: 2 + Math.random() * 3.5
+        });
+      }
+      // Immediate knockback on nearby
+      if (typeof window.__airborneSonicBlast === "function") {
+        window.__airborneSonicBlast(player.x, player.y, radius0, 1.0);
+      }
+      try { if (window.PowerFX) window.PowerFX.activate("shockwave", player.x, player.y); } catch (e) {}
+      updateStormMeterDisplay();
+      return;
+    }
+if (powerMode === "shockwave") {
       window.__airborneOneShotUsed = window.__airborneOneShotUsed || {};
       
       if (typeof sfxThunder === "function") sfxThunder();
@@ -1354,36 +1402,136 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
 
     // Deco continuous pulsing shockwave
     if (stormMode === "shockwave" && stormActive) {
+      if (window.__airborneShockFlash > 0) {
+        window.__airborneShockFlash = Math.max(0, window.__airborneShockFlash - dt * 2.5);
+      }
+      // Age shock FX
+      if (window.__airborneShockFX) {
+        for (var fi = window.__airborneShockFX.length - 1; fi >= 0; fi--) {
+          var fx = window.__airborneShockFX[fi];
+          fx.age += dt;
+          if (fx.kind === "spark" || fx.kind === "debris") {
+            fx.x += (fx.vx || 0) * dt;
+            fx.y += (fx.vy || 0) * dt;
+          } else if (fx.kind === "ring" || !fx.kind) {
+            var ft = Math.min(1, fx.age / fx.life);
+            fx.r = fx.r + (fx.maxR - (fx.r0 || fx.r)) * dt / Math.max(0.05, fx.life - fx.age + dt);
+            // smoother expand
+            fx.r = (fx.r0 || 12) + (fx.maxR - (fx.r0 || 12)) * Math.min(1, fx.age / fx.life);
+          }
+          if (fx.age >= fx.life) window.__airborneShockFX.splice(fi, 1);
+        }
+      }
+      // Obstacle sonic debris / tumble
+      if (typeof obstacles !== "undefined") {
+        for (var oi = obstacles.length - 1; oi >= 0; oi--) {
+          var o = obstacles[oi];
+          if (!o) continue;
+          if (o.shockShake > 0) {
+            o.shockShake -= dt;
+            o.x += (Math.random() - 0.5) * 6 * o.shockShake;
+            o.y += (Math.random() - 0.5) * 4 * o.shockShake;
+          }
+          if (o.spinVel) {
+            o.rot = (o.rot || 0) + o.spinVel * dt;
+            o.spinVel *= (1 - 1.2 * dt);
+          }
+          if (o.shockFall) {
+            o.x += (o.vx || 0) * dt;
+            o.y += (o.vy || 0) * dt;
+            o.vy = (o.vy || 0) + 120 * dt;
+            if (o.sonicDebris && Math.random() < 0.4) {
+              if (!window.__airborneShockFX) window.__airborneShockFX = [];
+              window.__airborneShockFX.push({
+                kind: "debris",
+                x: o.x + o.w * 0.5, y: o.y + o.h * 0.5,
+                vx: (Math.random() - 0.5) * 80, vy: -20 - Math.random() * 40,
+                life: 0.3, age: 0, r: 2 + Math.random() * 3
+              });
+            }
+            var W0 = typeof W !== "undefined" ? W : 800;
+            var H0 = typeof H !== "undefined" ? H : 600;
+            if (o.x + o.w < -40 || o.x > W0 + 40 || o.y > H0 + 60) {
+              obstacles.splice(oi, 1);
+            }
+          }
+        }
+      }
+      var nowS = performance.now();
+      var endAt = window.__airborneShockEndAt || 0;
+      var timeLeft = endAt - nowS;
+      // Final blast in last 0.6s
+      if (!window.__airborneShockFinalDone && timeLeft < 600 && timeLeft > 0) {
+        window.__airborneShockFinalDone = true;
+        window.__airborneShockFlash = 1.0;
+        try { if (typeof triggerScreenShake === "function") triggerScreenShake(16, 500); } catch (e) {}
+        try { if (typeof sfxExplosion === "function") sfxExplosion(0.7); } catch (e) {}
+        var bigR = Math.hypot(typeof W !== "undefined" ? W : 400, typeof H !== "undefined" ? H : 600) * 1.1;
+        if (!window.__airborneShockFX) window.__airborneShockFX = [];
+        window.__airborneShockFX.push({
+          kind: "ring", x: player.x, y: player.y,
+          r: 20, r0: 20, maxR: bigR, life: 0.7, age: 0, width: 8, gold: true, final: true
+        });
+        window.__airborneShockFX.push({
+          kind: "ring", x: player.x, y: player.y,
+          r: 30, r0: 30, maxR: bigR * 0.9, life: 0.65, age: 0, width: 5, gold: false, final: true
+        });
+        for (var sp = 0; sp < 40; sp++) {
+          var sa = Math.random() * Math.PI * 2;
+          var ss = 160 + Math.random() * 280;
+          window.__airborneShockFX.push({
+            kind: "spark", x: player.x, y: player.y,
+            vx: Math.cos(sa) * ss, vy: Math.sin(sa) * ss,
+            life: 0.45 + Math.random() * 0.25, age: 0, r: 2.5 + Math.random() * 4
+          });
+        }
+        if (typeof window.__airborneSonicBlast === "function") {
+          window.__airborneSonicBlast(player.x, player.y, bigR * 0.85, 1.6);
+        }
+      }
+      // Repeating pulses
       window.__airborneShockPulseT = (window.__airborneShockPulseT || 0) + dt;
-      if (window.__airborneShockPulseT >= 0.55) {
+      var pulseEvery = 0.48 + Math.random() * 0.08;
+      if (window.__airborneShockPulseT >= pulseEvery && timeLeft > 700) {
         window.__airborneShockPulseT = 0;
         window.__airborneShockPulseCount = (window.__airborneShockPulseCount || 0) + 1;
-        var radius = Math.min(W || 400, H || 600) * 0.5;
+        var intensity = 0.75 + Math.random() * 0.45;
+        var radius = Math.min(typeof W !== "undefined" ? W : 400, typeof H !== "undefined" ? H : 600) * (0.42 + Math.random() * 0.22);
+        window.__airborneShockFlash = 0.45 + intensity * 0.25;
+        try { if (typeof triggerScreenShake === "function") triggerScreenShake(5 + intensity * 4, 120); } catch (e) {}
         if (!window.__airborneShockFX) window.__airborneShockFX = [];
-        for (var si = 0; si < 2; si++) {
+        var rings = 2 + (Math.random() < 0.4 ? 1 : 0);
+        for (var si = 0; si < rings; si++) {
           window.__airborneShockFX.push({
-            x: player.x, y: player.y, r: 10 + si * 6, maxR: radius * (0.65 + si * 0.2),
-            life: 0.5, age: 0, width: 4 - si
+            kind: "ring",
+            x: player.x, y: player.y,
+            r: 10 + si * 8, r0: 10 + si * 8,
+            maxR: radius * (0.7 + si * 0.2) * intensity,
+            life: 0.4 + Math.random() * 0.15, age: 0,
+            width: 5 - si, gold: si === 0 && Math.random() < 0.5
           });
         }
-        if (typeof obstacles !== "undefined" && player) {
-          obstacles.forEach(function(o) {
-            if (!o || o.isRing) return;
-            var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
-            if (Math.hypot(ox - player.x, oy - player.y) < radius) {
-              o.shockShake = 0.3;
-              o.shockFall = true;
-              o.vy = 70 + Math.random() * 50;
-              o.vx = (Math.random() - 0.5) * 60;
-            }
+        for (var sp = 0; sp < 14; sp++) {
+          var sa = Math.random() * Math.PI * 2;
+          var ss = 90 + Math.random() * 180;
+          window.__airborneShockFX.push({
+            kind: "spark", x: player.x, y: player.y,
+            vx: Math.cos(sa) * ss, vy: Math.sin(sa) * ss,
+            life: 0.28 + Math.random() * 0.2, age: 0, r: 1.5 + Math.random() * 3
           });
         }
-        try { if (typeof triggerScreenShake === "function") triggerScreenShake(4, 150); } catch (e) {}
+        if (typeof window.__airborneSonicBlast === "function") {
+          window.__airborneSonicBlast(player.x, player.y, radius, intensity);
+        }
       }
-      if (stormUntil && performance.now() > stormUntil) {
-        stormActive = false; stormMode = "storm";
+      if (endAt && nowS >= endAt) {
+        stormActive = false;
+        stormMode = "storm";
+        window.__airborneActivePowerVisual = null;
+        window.__airborneActivePowerUntil = 0;
       }
     }
+
 
     if (window.__airborneIvoryFireballs && window.__airborneIvoryFireballs.length) {
       var untilIv2 = window.__airborneIvoryUntil || 0;
@@ -3437,36 +3585,64 @@ function drawMeteorMarks() {
 
 
   function drawShockFX() {
+    if (typeof ctx === "undefined") return;
+    var W0 = typeof W !== "undefined" ? W : 800;
+    var H0 = typeof H !== "undefined" ? H : 600;
+    // Soft white/gold flash (not a solid leftover circle)
+    if (window.__airborneShockFlash > 0.02) {
+      ctx.save();
+      ctx.globalAlpha = window.__airborneShockFlash * 0.22;
+      ctx.fillStyle = "rgba(255, 240, 200, 1)";
+      ctx.fillRect(0, 0, W0, H0);
+      ctx.restore();
+    }
     var list = window.__airborneShockFX;
-    if (!list || !list.length || typeof ctx === "undefined") return;
+    if (!list || !list.length) return;
     ctx.save();
     for (var i = 0; i < list.length; i++) {
       var p = list[i];
       var t = Math.max(0, 1 - p.age / p.life);
-      if (p.kind === "spark") {
+      if (t <= 0) continue;
+      if (p.kind === "spark" || p.kind === "debris") {
+        ctx.globalCompositeOperation = "lighter";
         ctx.globalAlpha = t;
-        ctx.globalCompositeOperation = "lighter";
-        ctx.fillStyle = "rgba(200,240,255," + t + ")";
+        ctx.fillStyle = p.kind === "debris" ? "rgba(180,180,190,1)" : "rgba(255,240,200,1)";
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r * t, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, Math.max(1, p.r * t), 0, Math.PI * 2);
         ctx.fill();
-      } else {
-        ctx.globalAlpha = t * 0.85;
-        ctx.globalCompositeOperation = "lighter";
-        ctx.strokeStyle = "rgba(180,230,255," + (t * 0.9) + ")";
-        ctx.lineWidth = Math.max(1, (p.width || 4) * t);
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.strokeStyle = "rgba(255,255,255," + (t * 0.5) + ")";
-        ctx.lineWidth = Math.max(1, (p.width || 4) * 0.4 * t);
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r * 0.92, 0, Math.PI * 2);
-        ctx.stroke();
+        continue;
       }
+      // Expanding sonic ring + air ripple
+      var rr = p.r || 20;
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = t * (p.final ? 0.9 : 0.75);
+      // Outer glow ring
+      ctx.strokeStyle = p.gold ? "rgba(255,220,140,0.9)" : "rgba(200,230,255,0.85)";
+      ctx.lineWidth = Math.max(1.5, (p.width || 4) * t);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, rr, 0, Math.PI * 2);
+      ctx.stroke();
+      // Inner tight ring
+      ctx.strokeStyle = "rgba(255,255,255," + (0.5 * t) + ")";
+      ctx.lineWidth = Math.max(1, (p.width || 4) * 0.4 * t);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, rr * 0.92, 0, Math.PI * 2);
+      ctx.stroke();
+      // Soft air-ripple fill just behind the ring edge
+      var rg = ctx.createRadialGradient(p.x, p.y, Math.max(0, rr - 14), p.x, p.y, rr + 8);
+      rg.addColorStop(0, "rgba(255,255,255,0)");
+      rg.addColorStop(0.7, p.gold ? "rgba(255,210,120,0.12)" : "rgba(180,220,255,0.12)");
+      rg.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.globalAlpha = t * 0.5;
+      ctx.fillStyle = rg;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, rr + 8, 0, Math.PI * 2);
+      ctx.fill();
     }
     ctx.restore();
   }
+
+
   window.__airborneDrawShockFX = drawShockFX;
 
   function drawHeatseekers() {
