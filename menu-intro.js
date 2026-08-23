@@ -171,21 +171,21 @@ function updateProfile(key) {
   const powerIcon = document.getElementById('bpPowerIcon');
   if (powerIcon) {
     const POWER_ICON_BY_SHIP = {
-      blimp1: "fire_power_icon.png",
-      blimp2: "storm_cloud_unique_00.png",
-      blimp3: "power_icon_blimp3.webp",
-      blimp4: "power_icon_blimp4.webp",
-      blimp5: "power_icon_blimp5.webp",
-      blimp6: "power_icon_blimp5.webp",
-      blimp7: "power_icon_blimp7.webp",
-      blimp8: "power_icon_blimp8.webp",
-      blimp9: "power_icon_blimp9.webp",
-      blimp10: "power_icon_blimp5.webp",
-      blimp11: "power_icon_blimp3.webp",
-      blimp12: "power_icon_blimp7.webp",
-      blimp13: "power_icon_blimp4.webp",
-      blimp14: "pirate_bomb.webp",
-      blimp15: "power_icon_blimp8.webp"
+      blimp1: "01_flame_ring.webp",
+      blimp2: "02_spike_burst.webp",
+      blimp3: "03_frost_trail.webp",
+      blimp4: "04_steam_engine.webp",
+      blimp5: "05_solar_flare.webp",
+      blimp6: "06_void_vortex.webp",
+      blimp7: "07_storm_lightning.webp",
+      blimp8: "08_meteor_trail.webp",
+      blimp9: "09_bomb_skull.webp",
+      blimp10: "10_storm_cloud.webp",
+      blimp11: "11_shark_torpedo.webp",
+      blimp12: "12_rocket_missile.webp",
+      blimp13: "13_bomb_cluster.webp",
+      blimp14: "14_powder_keg.webp",
+      blimp15: "15_meteor_shower.webp"
     };
     const iconSrc = (s.powerIcon) || POWER_ICON_BY_SHIP[key] || "storm_icon_5.webp";
     if (powerIcon.getAttribute("src") !== iconSrc) {
