@@ -276,29 +276,41 @@
   
   window.__airborneMakeMeteor = function () {
     var W0 = (typeof W !== "undefined") ? W : 400;
-    var H0 = (typeof H !== "undefined") ? H : 600;
-    var big = Math.random() < 0.12;
-    var r = big ? (20 + Math.random() * 12) : (10 + Math.random() * 12);
-    // Mix of vertical and dramatic diagonal angles
-    var vertical = Math.random() < 0.35;
+    var big = Math.random() < 0.14;
+    var r = big ? (22 + Math.random() * 14) : (12 + Math.random() * 14);
+    // Mostly vertical fall; some dramatic diagonals
+    var vertical = Math.random() < 0.55;
     var ang = vertical
-      ? (Math.PI / 2 + (Math.random() - 0.5) * 0.25)
-      : (0.6 + Math.random() * 1.0); // diagonal down-right or vary
-    if (!vertical && Math.random() < 0.5) ang = Math.PI - ang; // down-left
-    var speed = (vertical ? 220 : 180) + Math.random() * 200 + (big ? 40 : 0);
-    var x = Math.random() * W0 * 1.2 - W0 * 0.1;
+      ? (Math.PI / 2 + (Math.random() - 0.5) * 0.2)
+      : (0.55 + Math.random() * 1.0);
+    if (!vertical && Math.random() < 0.5) ang = Math.PI - ang;
+    var speed = (vertical ? 240 : 190) + Math.random() * 180 + (big ? 50 : 0);
+    var x = Math.random() * W0 * 1.15 - W0 * 0.075;
+    // Preload rock images
+    if (!window.__airborneMeteorRocks) {
+      window.__airborneMeteorRocks = [];
+      for (var ri = 1; ri <= 6; ri++) {
+        var im = new Image();
+        im.crossOrigin = "anonymous";
+        im.src = "meteor_rock_" + ri + ".png?v=ruff217";
+        window.__airborneMeteorRocks.push(im);
+      }
+    }
+    var rockIdx = Math.floor(Math.random() * 6);
     return {
-      x: x, y: -20 - Math.random() * 120,
-      vx: Math.cos(ang) * speed * 0.55,
+      x: x, y: -30 - Math.random() * 100,
+      vx: Math.cos(ang) * speed * 0.5,
       vy: Math.sin(ang) * speed,
       r: r, big: big,
       age: 0, life: 4 + Math.random() * 2,
-      // visual variation
       coreHue: 25 + Math.random() * 25,
-      tailLen: 30 + Math.random() * 50 + (big ? 30 : 0),
-      sparkRate: 0.4 + Math.random() * 0.5,
-      wobble: Math.random() * 6,
-      sparks: []
+      tailLen: 40 + Math.random() * 55 + (big ? 35 : 0),
+      sparkRate: 0.5 + Math.random() * 0.45,
+      wobble: Math.random() * 5,
+      sparks: [],
+      rockIdx: rockIdx,
+      spin: (Math.random() - 0.5) * 4,
+      spinVel: (Math.random() - 0.5) * 3
     };
   };
 
@@ -774,7 +786,10 @@
           vx: Math.cos(ang) * (220 + Math.random() * 40),
           vy: Math.sin(ang) * 80,
           life: 2.8, age: 0, rot: ang,
-          w: 78, h: 54
+          w: 39, h: 27,
+          waveAmp: 18 + Math.random() * 14,
+          waveFreq: 4 + Math.random() * 3,
+          wavePhase: Math.random() * Math.PI * 2
         });
       }
       try { if (window.PowerFX) window.PowerFX.activate("swarm", player.x, player.y); } catch (e) {}
@@ -1132,7 +1147,7 @@
             y: player.y + (Math.random() - 0.5) * (player.h || 30),
             vx: Math.cos(ang) * (230 + Math.random() * 50),
             vy: Math.sin(ang) * 70,
-            life: 2.6, age: 0, rot: ang, w: 78, h: 54
+            life: 2.6, age: 0, rot: ang, w: 39, h: 27
           });
         }
       }
@@ -1140,9 +1155,23 @@
       for (var lti = window.__airborneLatticeTorps.length - 1; lti >= 0; lti--) {
         var lt = window.__airborneLatticeTorps[lti];
         lt.age += dt;
-        lt.x += lt.vx * dt;
-        lt.y += lt.vy * dt;
-        lt.rot = Math.atan2(lt.vy, lt.vx);
+        var wave = Math.sin(lt.age * (lt.waveFreq || 5) + (lt.wavePhase || 0)) * (lt.waveAmp || 16);
+        // perpendicular to velocity for snake/wave path
+        var spd = Math.hypot(lt.vx, lt.vy) || 1;
+        var px = -lt.vy / spd, py = lt.vx / spd;
+        lt.x += lt.vx * dt + px * wave * dt * 8;
+        lt.y += lt.vy * dt + py * wave * dt * 8;
+        lt.rot = Math.atan2(lt.vy + py * wave * 0.3, lt.vx + px * wave * 0.3);
+        // denser brass sparks
+        if (Math.random() < 0.55) {
+          if (!lt.trail) lt.trail = [];
+          lt.trail.push({
+            x: lt.x - Math.cos(lt.rot) * 12,
+            y: lt.y - Math.sin(lt.rot) * 8,
+            life: 0.35, age: 0, r: 2 + Math.random() * 4,
+            kind: Math.random() < 0.6 ? "spark" : "smoke"
+          });
+        }
         // brass exhaust trail
         if (!lt.trail) lt.trail = [];
         if (Math.random() < 0.8) {
@@ -1164,11 +1193,21 @@
             var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
             if (Math.hypot(lt.x - ox, lt.y - oy) < 36) {
               try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
-              try { if (typeof sfxExplosion === "function") sfxExplosion(0.5); } catch (e) {}
-              try { if (window.PowerFX) window.PowerFX.burst(ox, oy, {
-                count: 16, colors: ["#fbbf24", "#d97706", "#78716c", "#fff"], speed: 130, glow: true
-              }); } catch (e) {}
-              try { score += 35; } catch (e) {}
+              try { if (typeof sfxExplosion === "function") sfxExplosion(0.65); } catch (e) {}
+              try { if (typeof triggerScreenShake === "function") triggerScreenShake(7, 280); } catch (e) {}
+              try { if (typeof spawnRealisticBombExplosion === "function") spawnRealisticBombExplosion(ox, oy); } catch (e) {}
+              try { if (window.PowerFX) {
+                window.PowerFX.burst(ox, oy, {
+                  count: 28, colors: ["#fbbf24", "#f59e0b", "#d97706", "#78716c", "#fff", "#ff6b3d"],
+                  speed: 180, glow: true
+                });
+              } } catch (e) {}
+              // secondary shock ring
+              if (!window.__airborneShockFX) window.__airborneShockFX = [];
+              window.__airborneShockFX.push({
+                x: ox, y: oy, r: 8, maxR: 70, life: 0.4, age: 0, width: 4
+              });
+              try { score += 40; } catch (e) {}
               obstacles.splice(oi, 1);
               lt.age = lt.life;
               break;
@@ -2562,8 +2601,8 @@
       ctx.save();
       ctx.translate(lt.x, lt.y);
       ctx.rotate(lt.rot || 0);
-      var dw = lt.w || 72;
-      var dh = lt.h || 48;
+      var dw = lt.w || 40;
+      var dh = lt.h || 28;
       if (img && img.complete && img.naturalWidth > 0) {
         ctx.drawImage(img, -dw * 0.5, -dh * 0.5, dw, dh);
       } else {
@@ -2667,6 +2706,106 @@
     ctx.restore();
   }
   function drawMeteorMarks() {
+    if (typeof ctx === "undefined") return;
+    if (window.__airborneMeteorSkyDark && window.__airborneMeteorSkyDark.alpha > 0) {
+      ctx.save();
+      ctx.fillStyle = "rgba(10,5,20," + window.__airborneMeteorSkyDark.alpha + ")";
+      ctx.fillRect(0, 0, typeof W !== "undefined" ? W : 800, typeof H !== "undefined" ? H : 600);
+      ctx.restore();
+    }
+    if (window.__airborneMeteorFlash) {
+      var fl = window.__airborneMeteorFlash;
+      fl.age += 0.016;
+      var ft = Math.max(0, 1 - fl.age / fl.life);
+      if (ft > 0) {
+        ctx.save();
+        ctx.globalAlpha = ft * (fl.big ? 0.5 : 0.28);
+        ctx.fillStyle = "#fff5e6";
+        ctx.fillRect(0, 0, typeof W !== "undefined" ? W : 800, typeof H !== "undefined" ? H : 600);
+        ctx.restore();
+      } else window.__airborneMeteorFlash = null;
+    }
+    if (!window.__airborneMeteors) return;
+    if (!window.__airborneMeteorRocks) {
+      window.__airborneMeteorRocks = [];
+      for (var ri = 1; ri <= 6; ri++) {
+        var im = new Image();
+        im.crossOrigin = "anonymous";
+        im.src = "meteor_rock_" + ri + ".png?v=ruff217";
+        window.__airborneMeteorRocks.push(im);
+      }
+    }
+    ctx.save();
+    window.__airborneMeteors.forEach(function(mt) {
+      var ang = Math.atan2(mt.vy, mt.vx);
+      mt.spin = (mt.spin || 0) + (mt.spinVel || 0) * 0.016;
+      // Long fiery tail behind rock
+      ctx.globalCompositeOperation = "lighter";
+      var tail = mt.tailLen || 45;
+      var g = ctx.createLinearGradient(
+        mt.x - Math.cos(ang) * tail, mt.y - Math.sin(ang) * tail,
+        mt.x, mt.y
+      );
+      g.addColorStop(0, "rgba(255,40,0,0)");
+      g.addColorStop(0.4, "rgba(255,100,20,0.5)");
+      g.addColorStop(0.8, "rgba(255,200,80,0.85)");
+      g.addColorStop(1, "rgba(255,255,200,0.95)");
+      ctx.strokeStyle = g;
+      ctx.lineWidth = Math.max(6, mt.r * 0.9);
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(mt.x - Math.cos(ang) * tail, mt.y - Math.sin(ang) * tail);
+      ctx.lineTo(mt.x, mt.y);
+      ctx.stroke();
+      // Outer flame halo around rock
+      var bodyR = Math.max(14, mt.r * 2.4);
+      var fg = ctx.createRadialGradient(mt.x, mt.y, mt.r * 0.3, mt.x, mt.y, bodyR);
+      fg.addColorStop(0, "rgba(255,240,180,0.9)");
+      fg.addColorStop(0.4, "rgba(255,120,30,0.55)");
+      fg.addColorStop(1, "rgba(200,40,0,0)");
+      ctx.fillStyle = fg;
+      ctx.beginPath();
+      ctx.arc(mt.x, mt.y, bodyR, 0, Math.PI * 2);
+      ctx.fill();
+      // Rock sprite — oriented vertical (nose down along velocity)
+      var rocks = window.__airborneMeteorRocks;
+      var img = rocks && rocks[mt.rockIdx % 6];
+      var rw = mt.r * 2.4, rh = mt.r * 2.8;
+      ctx.globalCompositeOperation = "source-over";
+      ctx.save();
+      ctx.translate(mt.x, mt.y);
+      // vertical: point rock along fall direction (angle + 90° if art is upright)
+      ctx.rotate(ang + Math.PI / 2);
+      ctx.rotate(mt.spin || 0);
+      if (img && img.complete && img.naturalWidth > 0) {
+        ctx.drawImage(img, -rw * 0.5, -rh * 0.5, rw, rh);
+      } else {
+        ctx.fillStyle = "#555";
+        ctx.beginPath();
+        ctx.ellipse(0, 0, rw * 0.4, rh * 0.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+      // Bright core highlight in front
+      ctx.globalCompositeOperation = "lighter";
+      ctx.fillStyle = "rgba(255,255,220,0.55)";
+      ctx.beginPath();
+      ctx.arc(mt.x, mt.y, Math.max(4, mt.r * 0.35), 0, Math.PI * 2);
+      ctx.fill();
+      // Sparks
+      (mt.sparks || []).forEach(function(sp) {
+        var t = 1 - sp.age / sp.life;
+        ctx.globalAlpha = t;
+        ctx.fillStyle = "rgba(255,200,60,1)";
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, sp.r * t, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+    });
+    ctx.restore();
+  }
+function drawMeteorMarks() {
     if (typeof ctx === "undefined") return;
     // Sky darken overlay
     if (window.__airborneMeteorSkyDark && window.__airborneMeteorSkyDark.alpha > 0) {
