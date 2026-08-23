@@ -276,13 +276,8 @@
   function activateStorm() {
     if (window.__airborneAirfield && !window.__airborneAirfieldAllowPowerup) return;
     if (state !== "playing" || stormActive || stormCharge < STORM_MAX) return;
-    // One-shot powers: Steampunk, Deco, Storm Chaser
-    var selPre = (typeof selectedBlimp !== "undefined") ? selectedBlimp : "";
-    var oneShot = { blimp2: 1, blimp4: 1, blimp7: 1 };
-    if (!window.__airborneOneShotUsed) window.__airborneOneShotUsed = {};
-    if (oneShot[selPre] && window.__airborneOneShotUsed[selPre]) {
-      return; // already used this run
-    }
+    // one-shot restrictions removed — powers can fire whenever charged
+
 
     stormActive = true;
     stormCharge = 0;
@@ -527,7 +522,7 @@
 // Shockwave / Steam — clear nearby obstacles in expanding ring
     if (powerMode === "steam") {
       window.__airborneOneShotUsed = window.__airborneOneShotUsed || {};
-      window.__airborneOneShotUsed["blimp4"] = true;
+      
       if (typeof sfxThunder === "function") sfxThunder();
       try { if (typeof triggerScreenShake === "function") triggerScreenShake(5, 280); } catch (e) {}
       stormActive = true;
@@ -568,7 +563,7 @@
 
     if (powerMode === "shockwave") {
       window.__airborneOneShotUsed = window.__airborneOneShotUsed || {};
-      window.__airborneOneShotUsed["blimp2"] = true;
+      
       if (typeof sfxThunder === "function") sfxThunder();
       if (typeof sfxExplosion === "function") sfxExplosion(0.45);
       try { if (typeof triggerScreenShake === "function") triggerScreenShake(9, 420); } catch (e) {}
@@ -652,7 +647,7 @@
 
     if (powerMode === "chain") {
       window.__airborneOneShotUsed = window.__airborneOneShotUsed || {};
-      window.__airborneOneShotUsed["blimp7"] = true;
+      
       if (typeof sfxThunder === "function") sfxThunder();
       try { if (typeof triggerScreenShake === "function") triggerScreenShake(7, 350); } catch (e) {}
       const targets = (typeof obstacles !== "undefined" && obstacles)

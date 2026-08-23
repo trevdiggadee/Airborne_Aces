@@ -17,10 +17,11 @@
     // Little Spy (blimp6) stays intentionally smaller.
     const sel = (typeof selectedBlimp !== "undefined" && selectedBlimp) ? selectedBlimp : "blimp1";
     let scale = 1.0;
-    if (sel === "blimp6") scale = 0.72 * 1.10;       // Little Spy +10% from prior small
-    else if (sel === "blimp4") scale = 1.20;          // Steampunk +20%
-    else if (sel === "blimp8") scale = 1.10;          // Ironworks +10%
-    else if (sel === "blimp12") scale = 1.15;         // Sky Rocket +15%
+    if (sel === "blimp6") scale = 0.72 * 1.10;       // Little Spy smaller +10%
+    else if (sel === "blimp4") scale = 1.20 * 1.05;  // Steampunk +20% then +5%
+    else if (sel === "blimp8") scale = 1.15;         // Ironworks +15%
+    else if (sel === "blimp9") scale = 1.10;         // Jolly Rogers +10%
+    else if (sel === "blimp12") scale = 1.15;        // Sky Rocket +15%
 
     const firstFrame = currentPlayerImage();
     const aspect = (firstFrame && firstFrame.naturalWidth && firstFrame.naturalHeight / firstFrame.naturalWidth) || 0.55;
@@ -492,7 +493,7 @@
       }
     };
 
-    window.__airborneEmitFireTrail = function (x, y) {
+    window.__airborneEmitFireTrail = function (x, y, tint) {
       if (Math.random() > 0.65) return;
       window.__airborneFireTrail.push({
         x: x + (Math.random() - 0.5) * 12,
@@ -502,7 +503,8 @@
         life: 0.3 + Math.random() * 0.25,
         age: 0,
         r: 3 + Math.random() * 5,
-        smoke: Math.random() < 0.4
+        smoke: Math.random() < 0.4,
+        tint: tint || "orange"
       });
     };
 
@@ -763,9 +765,19 @@
         } else {
           ctx.globalAlpha = u * 0.9;
           const gr = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-          gr.addColorStop(0, "rgba(255,240,160,1)");
-          gr.addColorStop(0.4, "rgba(255,120,30,0.9)");
-          gr.addColorStop(1, "rgba(180,30,0,0)");
+          if (p.tint === "blue") {
+            gr.addColorStop(0, "rgba(230,250,255,1)");
+            gr.addColorStop(0.4, "rgba(56,189,248,0.9)");
+            gr.addColorStop(1, "rgba(2,80,180,0)");
+          } else if (p.tint === "green") {
+            gr.addColorStop(0, "rgba(230,255,240,1)");
+            gr.addColorStop(0.4, "rgba(52,211,153,0.9)");
+            gr.addColorStop(1, "rgba(4,100,60,0)");
+          } else {
+            gr.addColorStop(0, "rgba(255,240,160,1)");
+            gr.addColorStop(0.4, "rgba(255,120,30,0.9)");
+            gr.addColorStop(1, "rgba(180,30,0,0)");
+          }
           ctx.fillStyle = gr;
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
@@ -804,7 +816,7 @@
         o.rot = (o.rot || 0) + dt * 3.5;
         try {
           if (typeof window.__airborneEmitFireTrail === "function") {
-            window.__airborneEmitFireTrail(o.x + o.w * 0.5, o.y + o.h * 0.3);
+            window.__airborneEmitFireTrail(o.x + o.w * 0.5, o.y + o.h * 0.3, o.blueFire ? "blue" : (o.greenFire ? "green" : "orange"));
           }
         } catch (e) {}
       } else {
@@ -1193,16 +1205,39 @@
         ctx.translate(o.x + o.w / 2, drawY + o.h / 2);
         ctx.rotate(o.rot || 0);
         ctx.drawImage(img, -o.w / 2, -o.h / 2, o.w, o.h);
-        // orange glow only (no source-atop — was blanking sprites)
         ctx.globalCompositeOperation = "lighter";
         const fg = ctx.createRadialGradient(0, -o.h * 0.15, 2, 0, 0, o.w * 0.7);
-        fg.addColorStop(0, "rgba(255,230,100,0.55)");
-        fg.addColorStop(0.45, "rgba(255,90,15,0.3)");
-        fg.addColorStop(1, "rgba(255,40,0,0)");
+        if (o.blueFire) {
+          // Aero Slicer — blue flames
+          fg.addColorStop(0, "rgba(220,245,255,0.65)");
+          fg.addColorStop(0.4, "rgba(56,189,248,0.4)");
+          fg.addColorStop(1, "rgba(2,100,200,0)");
+        } else if (o.greenFire) {
+          fg.addColorStop(0, "rgba(220,255,230,0.6)");
+          fg.addColorStop(0.45, "rgba(16,185,129,0.35)");
+          fg.addColorStop(1, "rgba(4,120,80,0)");
+        } else {
+          fg.addColorStop(0, "rgba(255,230,100,0.55)");
+          fg.addColorStop(0.45, "rgba(255,90,15,0.3)");
+          fg.addColorStop(1, "rgba(255,40,0,0)");
+        }
         ctx.fillStyle = fg;
         ctx.beginPath();
         ctx.arc(0, -o.h * 0.1, o.w * 0.6, 0, Math.PI * 2);
         ctx.fill();
+        // Blue flame tongues for Aero Slicer burns
+        if (o.blueFire) {
+          for (var fi = 0; fi < 5; fi++) {
+            var fang = -Math.PI / 2 + (fi - 2) * 0.35 + Math.sin(performance.now() * 0.01 + fi) * 0.15;
+            var fl = o.h * (0.25 + 0.15 * Math.sin(performance.now() * 0.012 + fi));
+            ctx.strokeStyle = "rgba(120,210,255,0.7)";
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo((fi - 2) * 4, -o.h * 0.15);
+            ctx.lineTo((fi - 2) * 4 + Math.cos(fang) * fl * 0.3, -o.h * 0.15 + Math.sin(fang) * fl);
+            ctx.stroke();
+          }
+        }
         ctx.restore();
       } else {
         ctx.drawImage(img, o.x, drawY, o.w, o.h);
