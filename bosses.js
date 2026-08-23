@@ -3006,7 +3006,6 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
     var W0 = typeof W !== "undefined" ? W : 800;
     var H0 = typeof H !== "undefined" ? H : 600;
 
-    // Suction trails
     if (window.__airborneSuctionTrails && window.__airborneSuctionTrails.length) {
       ctx.save();
       window.__airborneSuctionTrails.forEach(function(tr) {
@@ -3024,7 +3023,6 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
       ctx.restore();
     }
 
-    // Bursts / implosions / shock (no solid white fill)
     if (window.__airbornePurpleBursts && window.__airbornePurpleBursts.length) {
       ctx.save();
       window.__airbornePurpleBursts.forEach(function(pb) {
@@ -3046,21 +3044,16 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
           ctx.beginPath();
           ctx.arc(pb.x, pb.y, rr, 0, Math.PI * 2);
           ctx.stroke();
-          ctx.strokeStyle = "rgba(220,180,255,0.5)";
-          ctx.lineWidth = Math.max(1, 2 * t);
-          ctx.beginPath();
-          ctx.arc(pb.x, pb.y, rr * 0.9, 0, Math.PI * 2);
-          ctx.stroke();
         } else {
           ctx.globalCompositeOperation = "lighter";
-          var rad = (pb.r || 24) * (0.35 + t * 0.65);
-          var g = ctx.createRadialGradient(pb.x, pb.y, 0, pb.x, pb.y, rad);
+          var radB = (pb.r || 24) * (0.35 + t * 0.65);
+          var g = ctx.createRadialGradient(pb.x, pb.y, 0, pb.x, pb.y, radB);
           g.addColorStop(0, "rgba(230,200,255," + (t * 0.75) + ")");
           g.addColorStop(0.35, "rgba(150,70,230," + (t * 0.5) + ")");
           g.addColorStop(1, "rgba(40,0,80,0)");
           ctx.fillStyle = g;
           ctx.beginPath();
-          ctx.arc(pb.x, pb.y, rad, 0, Math.PI * 2);
+          ctx.arc(pb.x, pb.y, radB, 0, Math.PI * 2);
           ctx.fill();
         }
       });
@@ -3073,18 +3066,18 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
     var rad = Math.max(8, sh.r);
     var phaseFade = sh.phase === "collapse" ? Math.max(0.15, 1 - (sh.collapseFlash || 0)) : 1;
 
-    // Soft purple flash only (no solid white full-screen circle)
+    // Soft purple flash only — never solid white
     if ((sh.flash || 0) > 0.05) {
       ctx.save();
-      ctx.globalAlpha = sh.flash * 0.22;
-      ctx.fillStyle = "rgba(140,60,220,1)";
+      ctx.globalAlpha = sh.flash * 0.2;
+      ctx.fillStyle = "rgba(120,50,200,1)";
       ctx.fillRect(0, 0, W0, H0);
       ctx.restore();
     }
     if ((sh.collapseFlash || 0) > 0.05) {
       ctx.save();
-      ctx.globalAlpha = sh.collapseFlash * 0.2;
-      ctx.fillStyle = "rgba(160,80,230,1)";
+      ctx.globalAlpha = sh.collapseFlash * 0.18;
+      ctx.fillStyle = "rgba(140,60,210,1)";
       ctx.fillRect(0, 0, W0, H0);
       ctx.restore();
     }
@@ -3094,17 +3087,14 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
     ctx.globalAlpha = phaseFade;
     ctx.globalCompositeOperation = "lighter";
 
-    // Depth rings
     for (var dr = 3; dr >= 1; dr--) {
-      var dRad = rad * (0.22 * dr);
       ctx.strokeStyle = "rgba(150,90,255," + (0.1 + 0.06 * dr) + ")";
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.arc(0, 0, dRad, 0, Math.PI * 2);
+      ctx.arc(0, 0, rad * (0.22 * dr), 0, Math.PI * 2);
       ctx.stroke();
     }
 
-    // Outer rippling edge
     ctx.strokeStyle = "rgba(180,120,255," + (0.4 + 0.2 * Math.sin((sh.age || 0) * 9)) + ")";
     ctx.lineWidth = 4;
     ctx.beginPath();
@@ -3113,18 +3103,17 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
       var ripple = 1 + 0.035 * Math.sin(ea * 6 + (sh.age || 0) * 10);
       var ex = Math.cos(ea) * rad * ripple;
       var ey = Math.sin(ea) * rad * ripple * 0.92;
-      if (ei === 0) ctx.moveTo(ex, ey);
-      else ctx.lineTo(ex, ey);
+      if (ei === 0) ctx.moveTo(ex, ey); else ctx.lineTo(ex, ey);
     }
     ctx.closePath();
     ctx.stroke();
 
-    // Vortex arms + purple electricity along them
+    // Spiral arms + purple electricity
     var arms = 5;
+    var tAge = sh.age || 0;
     for (var arm = 0; arm < arms; arm++) {
       var armOff = arm * (Math.PI * 2 / arms) + (sh.spin || 0);
-      var pulse = 0.3 + 0.25 * Math.sin((sh.age || 0) * 6 + arm);
-      // Arm path points
+      var pulse = 0.3 + 0.25 * Math.sin(tAge * 6 + arm);
       var pts = [];
       for (var s = 0; s < 36; s++) {
         var frac = s / 36;
@@ -3140,39 +3129,38 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
         else ctx.lineTo(pts[s].x, pts[s].y);
       }
       ctx.stroke();
-      // Purple electricity bolts along arm
-      ctx.strokeStyle = "rgba(220,180,255," + (0.5 + 0.4 * Math.sin((sh.age || 0) * 14 + arm * 2)) + ")";
-      ctx.lineWidth = 1.4;
-      for (var bolt = 0; bolt < 4; bolt++) {
-        var b0 = Math.floor(Math.random() * (pts.length - 6));
+
+      // Purple electricity along spiral (deterministic from time so it crackles)
+      ctx.lineWidth = 1.5;
+      for (var bolt = 0; bolt < 5; bolt++) {
+        var b0 = (Math.floor(tAge * 17 + arm * 7 + bolt * 11) % Math.max(1, pts.length - 7));
+        var flicker = 0.45 + 0.55 * Math.abs(Math.sin(tAge * 20 + bolt * 3 + arm));
+        ctx.strokeStyle = "rgba(230,200,255," + (flicker * 0.9) + ")";
         ctx.beginPath();
-        for (var bs = 0; bs < 5; bs++) {
+        for (var bs = 0; bs < 6; bs++) {
           var p = pts[Math.min(pts.length - 1, b0 + bs)];
-          var jx = p.x + (Math.random() - 0.5) * 10 * (1 - p.frac);
-          var jy = p.y + (Math.random() - 0.5) * 10 * (1 - p.frac);
+          var jx = p.x + Math.sin(tAge * 30 + bs * 2 + bolt) * 8 * (1 - p.frac);
+          var jy = p.y + Math.cos(tAge * 28 + bs * 2 + bolt) * 8 * (1 - p.frac);
           if (bs === 0) ctx.moveTo(jx, jy);
           else ctx.lineTo(jx, jy);
         }
         ctx.stroke();
       }
-      // Occasional bright arc jump between points on arm
-      if (Math.random() < 0.4) {
-        var i1 = 4 + Math.floor(Math.random() * 12);
-        var i2 = i1 + 3 + Math.floor(Math.random() * 6);
-        if (i2 < pts.length) {
-          ctx.strokeStyle = "rgba(255,230,255,0.85)";
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.moveTo(pts[i1].x, pts[i1].y);
-          var midX = (pts[i1].x + pts[i2].x) * 0.5 + (Math.random() - 0.5) * 18;
-          var midY = (pts[i1].y + pts[i2].y) * 0.5 + (Math.random() - 0.5) * 18;
-          ctx.quadraticCurveTo(midX, midY, pts[i2].x, pts[i2].y);
-          ctx.stroke();
-        }
+      // Arc jump
+      var i1 = 5 + (Math.floor(tAge * 9 + arm * 3) % 10);
+      var i2 = Math.min(pts.length - 1, i1 + 4 + (arm % 3));
+      if (i1 < pts.length && i2 < pts.length) {
+        ctx.strokeStyle = "rgba(255,230,255," + (0.5 + 0.4 * Math.sin(tAge * 16 + arm)) + ")";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(pts[i1].x, pts[i1].y);
+        var midX = (pts[i1].x + pts[i2].x) * 0.5 + Math.sin(tAge * 12 + arm) * 14;
+        var midY = (pts[i1].y + pts[i2].y) * 0.5 + Math.cos(tAge * 12 + arm) * 14;
+        ctx.quadraticCurveTo(midX, midY, pts[i2].x, pts[i2].y);
+        ctx.stroke();
       }
     }
 
-    // Ribbons
     (sh.ribbons || []).forEach(function(rb) {
       ctx.strokeStyle = "rgba(170,100,255," + (rb.bright * 0.4) + ")";
       ctx.lineWidth = rb.width * 0.3;
@@ -3183,13 +3171,11 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
         var rr = rad * (0.2 + frac * 0.75);
         var x = Math.cos(aa) * rr;
         var y = Math.sin(aa) * rr * 0.9;
-        if (s === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+        if (s === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       }
       ctx.stroke();
     });
 
-    // Purple arcs
     (sh.arcs || []).forEach(function(arc) {
       var at = 1 - arc.age / arc.life;
       ctx.globalAlpha = at * 0.75 * phaseFade;
@@ -3198,29 +3184,27 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
       ctx.beginPath();
       for (var s = 0; s <= 6; s++) {
         var f = s / 6;
-        var aa = arc.a1 + (arc.a2 - arc.a1) * f + (Math.random() - 0.5) * 0.12;
+        var aa = arc.a1 + (arc.a2 - arc.a1) * f;
         var rr = arc.r1 + (arc.r2 - arc.r1) * f;
         var x = Math.cos(aa + (sh.spin || 0) * 0.2) * rr;
         var y = Math.sin(aa + (sh.spin || 0) * 0.2) * rr;
-        if (s === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+        if (s === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       }
       ctx.stroke();
       ctx.globalAlpha = phaseFade;
     });
 
-    // Soft purple core (no solid white disk)
-    var coreR = Math.min(28, Math.max(10, rad * 0.08));
+    // Soft purple core only (no white disk)
+    var coreR = Math.min(26, Math.max(8, rad * 0.07));
     var cg = ctx.createRadialGradient(0, 0, 0, 0, 0, coreR);
-    cg.addColorStop(0, "rgba(230,200,255,0.55)");
-    cg.addColorStop(0.45, "rgba(150,80,230,0.35)");
-    cg.addColorStop(1, "rgba(80,20,160,0)");
+    cg.addColorStop(0, "rgba(220,190,255,0.5)");
+    cg.addColorStop(0.5, "rgba(140,70,220,0.3)");
+    cg.addColorStop(1, "rgba(60,10,120,0)");
     ctx.fillStyle = cg;
     ctx.beginPath();
     ctx.arc(0, 0, coreR, 0, Math.PI * 2);
     ctx.fill();
 
-    // Field particles
     (sh.particles || []).forEach(function(p) {
       var pt = 1 - p.age / p.life;
       ctx.globalAlpha = pt * 0.8 * phaseFade;
@@ -3232,299 +3216,12 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
     ctx.globalAlpha = 1;
     ctx.restore();
   }
-function drawSpyShield() {
-    if (typeof ctx === "undefined") return;
-    var W0 = typeof W !== "undefined" ? W : 800;
-    var H0 = typeof H !== "undefined" ? H : 600;
 
-    // Suction trails (curved feel via quadratic toward center)
-    if (window.__airborneSuctionTrails && window.__airborneSuctionTrails.length) {
-      ctx.save();
-      window.__airborneSuctionTrails.forEach(function(tr) {
-        var t = 1 - tr.age / tr.life;
-        ctx.globalAlpha = t * 0.45;
-        ctx.strokeStyle = "rgba(180,120,255,1)";
-        ctx.lineWidth = 1.5 * t;
-        ctx.beginPath();
-        ctx.moveTo(tr.x1, tr.y1);
-        var mx = (tr.x1 + tr.x2) * 0.5 + (tr.y2 - tr.y1) * 0.15;
-        var my = (tr.y1 + tr.y2) * 0.5 - (tr.x2 - tr.x1) * 0.15;
-        ctx.quadraticCurveTo(mx, my, tr.x2, tr.y2);
-        ctx.stroke();
-      });
-      ctx.restore();
-    }
 
-    // Purple bursts / implosions / final shock
-    if (window.__airbornePurpleBursts && window.__airbornePurpleBursts.length) {
-      ctx.save();
-      window.__airbornePurpleBursts.forEach(function(pb) {
-        var t = Math.max(0, 1 - pb.age / pb.life);
-        if (pb.kind === "spark") {
-          ctx.globalCompositeOperation = "lighter";
-          ctx.globalAlpha = t;
-          ctx.fillStyle = "rgba(230,200,255,1)";
-          ctx.beginPath();
-          ctx.arc(pb.x, pb.y, Math.max(1, pb.r * t), 0, Math.PI * 2);
-          ctx.fill();
-        } else if (pb.kind === "shock") {
-          var rr = (pb.r || 20) + ((pb.maxR || 300) - (pb.r || 20)) * (1 - t);
-          ctx.globalCompositeOperation = "lighter";
-          ctx.globalAlpha = t * 0.7;
-          ctx.strokeStyle = "rgba(220,180,255,1)";
-          ctx.lineWidth = 6 * t;
-          ctx.beginPath();
-          ctx.arc(pb.x, pb.y, rr, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.strokeStyle = "rgba(255,255,255,0.8)";
-          ctx.lineWidth = 2 * t;
-          ctx.beginPath();
-          ctx.arc(pb.x, pb.y, rr * 0.92, 0, Math.PI * 2);
-          ctx.stroke();
-        } else {
-          // implode
-          ctx.globalCompositeOperation = "lighter";
-          var rad = (pb.r || 24) * (0.4 + t);
-          var g = ctx.createRadialGradient(pb.x, pb.y, 0, pb.x, pb.y, rad);
-          g.addColorStop(0, "rgba(255,255,255," + (t * 0.95) + ")");
-          g.addColorStop(0.25, "rgba(220,180,255," + (t * 0.8) + ")");
-          g.addColorStop(0.6, "rgba(140,50,220," + (t * 0.45) + ")");
-          g.addColorStop(1, "rgba(40,0,80,0)");
-          ctx.fillStyle = g;
-          ctx.beginPath();
-          ctx.arc(pb.x, pb.y, rad, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      });
-      ctx.restore();
-    }
 
-    var sh = window.__airborneSpyShield;
-    if (!sh) return;
-    var px = sh.x, py = sh.y;
-    var rad = Math.max(8, sh.r);
 
-    // Activation / collapse screen flash
-    if (sh.flash > 0.05 || sh.collapseFlash > 0.05) {
-      ctx.save();
-      ctx.globalAlpha = Math.max(sh.flash || 0, sh.collapseFlash || 0) * 0.45;
-      ctx.fillStyle = "#e9d5ff";
-      ctx.fillRect(0, 0, W0, H0);
-      ctx.restore();
-    }
 
-    ctx.save();
-    ctx.translate(px, py);
 
-    // Depth rings (3D tunnel)
-    ctx.globalCompositeOperation = "lighter";
-    for (var dr = 3; dr >= 1; dr--) {
-      var dRad = rad * (0.25 * dr);
-      var dA = 0.12 + 0.08 * dr;
-      ctx.strokeStyle = "rgba(160,100,255," + dA + ")";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(0, 0, dRad, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
-    // Outer rippling edge
-    ctx.strokeStyle = "rgba(190,140,255," + (0.45 + 0.25 * Math.sin((sh.age || 0) * 9)) + ")";
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    for (var ei = 0; ei <= 48; ei++) {
-      var ea = (ei / 48) * Math.PI * 2;
-      var ripple = 1 + 0.04 * Math.sin(ea * 6 + (sh.age || 0) * 10);
-      var ex = Math.cos(ea) * rad * ripple;
-      var ey = Math.sin(ea) * rad * ripple * 0.92;
-      if (ei === 0) ctx.moveTo(ex, ey);
-      else ctx.lineTo(ex, ey);
-    }
-    ctx.closePath();
-    ctx.stroke();
-
-    // Secondary shield ring
-    ctx.strokeStyle = "rgba(240,220,255,0.4)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(0, 0, rad * 0.94, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Vortex arms (4–5 large spirals)
-    var arms = 5;
-    for (var arm = 0; arm < arms; arm++) {
-      var armOff = arm * (Math.PI * 2 / arms) + (sh.spin || 0);
-      var pulse = 0.35 + 0.25 * Math.sin((sh.age || 0) * 6 + arm);
-      ctx.strokeStyle = "rgba(150,70,255," + pulse + ")";
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      for (var s = 0; s < 36; s++) {
-        var frac = s / 36;
-        var aa = armOff + frac * Math.PI * 2.4;
-        var rr = rad * (0.08 + frac * 0.92);
-        var x = Math.cos(aa) * rr;
-        var y = Math.sin(aa) * rr * 0.88;
-        if (s === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-      // bright leading edge
-      ctx.strokeStyle = "rgba(255,230,255," + (pulse * 0.6) + ")";
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-    }
-
-    // Energy ribbons
-    (sh.ribbons || []).forEach(function(rb, ri) {
-      ctx.strokeStyle = "rgba(180,120,255," + (rb.bright * 0.5) + ")";
-      ctx.lineWidth = rb.width * 0.35;
-      ctx.beginPath();
-      for (var s = 0; s < 24; s++) {
-        var frac = s / 24;
-        var aa = rb.offset + (sh.spin || 0) * rb.speed * 0.3 + frac * Math.PI * 1.8;
-        var rr = rad * (0.2 + frac * 0.75);
-        var x = Math.cos(aa) * rr;
-        var y = Math.sin(aa) * rr * 0.9;
-        if (s === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    });
-
-    // Lightning-like purple arcs
-    (sh.arcs || []).forEach(function(arc) {
-      var at = 1 - arc.age / arc.life;
-      ctx.globalAlpha = at * 0.8;
-      ctx.strokeStyle = "rgba(220,180,255,1)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      var steps = 6;
-      for (var s = 0; s <= steps; s++) {
-        var f = s / steps;
-        var aa = arc.a1 + (arc.a2 - arc.a1) * f + (Math.random() - 0.5) * 0.15;
-        var rr = arc.r1 + (arc.r2 - arc.r1) * f;
-        var x = Math.cos(aa + (sh.spin || 0) * 0.2) * rr;
-        var y = Math.sin(aa + (sh.spin || 0) * 0.2) * rr;
-        if (s === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-    });
-
-    // Inner gravitational fill
-    var ig = ctx.createRadialGradient(0, 0, 2, 0, 0, rad);
-    ig.addColorStop(0, "rgba(255,255,255,0.35)");
-    ig.addColorStop(0.08, "rgba(200,150,255,0.3)");
-    ig.addColorStop(0.35, "rgba(100,30,180,0.12)");
-    ig.addColorStop(1, "rgba(20,0,40,0)");
-    ctx.fillStyle = ig;
-    ctx.beginPath();
-    ctx.arc(0, 0, rad, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Bright core around blimp
-    var cg = ctx.createRadialGradient(0, 0, 0, 0, 0, 36);
-    cg.addColorStop(0, "rgba(255,255,255,0.9)");
-    cg.addColorStop(0.4, "rgba(220,180,255,0.6)");
-    cg.addColorStop(1, "rgba(120,40,200,0)");
-    ctx.fillStyle = cg;
-    ctx.beginPath();
-    ctx.arc(0, 0, 36, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Orbiting field particles
-    (sh.particles || []).forEach(function(p) {
-      var pt = 1 - p.age / p.life;
-      ctx.globalAlpha = pt * 0.85;
-      ctx.fillStyle = p.kind === "fragment" ? "rgba(200,160,255,1)" : "rgba(255,230,255,1)";
-      ctx.beginPath();
-      ctx.arc(p.x - px, p.y - py, p.r * pt, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.globalAlpha = 1;
-    ctx.restore();
-  }
-function drawSpyShield() {
-    if (typeof ctx === "undefined") return;
-    // Purple explosions
-    if (window.__airbornePurpleBursts && window.__airbornePurpleBursts.length) {
-      ctx.save();
-      window.__airbornePurpleBursts.forEach(function(pb) {
-        var t = Math.max(0, 1 - pb.age / pb.life);
-        if (pb.kind === "spark") {
-          ctx.globalCompositeOperation = "lighter";
-          ctx.globalAlpha = t;
-          ctx.fillStyle = "rgba(220,180,255,1)";
-          ctx.beginPath();
-          ctx.arc(pb.x, pb.y, pb.r * t, 0, Math.PI * 2);
-          ctx.fill();
-        } else {
-          ctx.globalCompositeOperation = "lighter";
-          var g = ctx.createRadialGradient(pb.x, pb.y, 0, pb.x, pb.y, (pb.r || 24) * (0.5 + t));
-          g.addColorStop(0, "rgba(255,255,255," + (t * 0.9) + ")");
-          g.addColorStop(0.3, "rgba(200,150,255," + (t * 0.7) + ")");
-          g.addColorStop(0.65, "rgba(120,40,220," + (t * 0.4) + ")");
-          g.addColorStop(1, "rgba(60,0,100,0)");
-          ctx.fillStyle = g;
-          ctx.beginPath();
-          ctx.arc(pb.x, pb.y, (pb.r || 24) * (0.6 + (1 - t)), 0, Math.PI * 2);
-          ctx.fill();
-        }
-      });
-      ctx.restore();
-    }
-    var sh = window.__airborneSpyShield;
-    if (!sh) return;
-    ctx.save();
-    ctx.translate(sh.x, sh.y);
-    ctx.rotate(sh.spin || 0);
-    var rad = Math.max(10, sh.r);
-    // Outer purple shield ring (like shield power, purple)
-    ctx.globalCompositeOperation = "lighter";
-    ctx.strokeStyle = "rgba(180,120,255," + (0.5 + 0.35 * Math.sin((sh.age || 0) * 10)) + ")";
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.arc(0, 0, rad, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.strokeStyle = "rgba(230,200,255,0.45)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(0, 0, rad * 0.92, 0, Math.PI * 2);
-    ctx.stroke();
-    // Vortex spiral arms
-    for (var arm = 0; arm < 4; arm++) {
-      ctx.strokeStyle = "rgba(160,80,255," + (0.25 + arm * 0.05) + ")";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      for (var s = 0; s < 28; s++) {
-        var frac = s / 28;
-        var a = arm * (Math.PI / 2) + frac * Math.PI * 2.2;
-        var rr = rad * (0.15 + frac * 0.85);
-        var x = Math.cos(a) * rr;
-        var y = Math.sin(a) * rr * 0.85;
-        if (s === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    }
-    // Inner purple fill
-    var ig = ctx.createRadialGradient(0, 0, rad * 0.05, 0, 0, rad);
-    ig.addColorStop(0, "rgba(120,40,200,0.25)");
-    ig.addColorStop(0.5, "rgba(90,30,180,0.12)");
-    ig.addColorStop(1, "rgba(40,0,80,0)");
-    ctx.fillStyle = ig;
-    ctx.beginPath();
-    ctx.arc(0, 0, rad, 0, Math.PI * 2);
-    ctx.fill();
-    // Core swirl
-    ctx.strokeStyle = "rgba(255,220,255,0.55)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(0, 0, Math.min(28, rad * 0.12), 0, Math.PI * 1.6);
-    ctx.stroke();
-    ctx.restore();
-  }
 
 
   function drawVortexField() {
