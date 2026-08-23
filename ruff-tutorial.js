@@ -1771,7 +1771,7 @@
         if (images && images[k2] && images[k2].naturalWidth) { img = images[k2]; break; }
       }
     }
-    const size = Math.max(90, (typeof player !== "undefined" && player ? player.h * 1.55 : 98));
+    const size = Math.max(68, (typeof player !== "undefined" && player ? player.h * 1.55 : 98) * 0.75); // 25% smaller
     const sc = size * (ruffScalePulse || 1);
 
     // Jetpack particles (world space, behind body)
