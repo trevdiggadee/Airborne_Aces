@@ -18,10 +18,12 @@
     const sel = (typeof selectedBlimp !== "undefined" && selectedBlimp) ? selectedBlimp : "blimp1";
     let scale = 1.0;
     if (sel === "blimp6") scale = 0.72 * 1.10;       // Little Spy smaller +10%
-    else if (sel === "blimp4") scale = 1.20 * 1.05;  // Steampunk +20% then +5%
+    else if (sel === "blimp4") scale = 1.20 * 1.05;  // Steampunk
     else if (sel === "blimp8") scale = 1.15;         // Ironworks +15%
     else if (sel === "blimp9") scale = 1.10;         // Jolly Rogers +10%
-    else if (sel === "blimp12") scale = 1.15;        // Sky Rocket +15%
+    else if (sel === "blimp11") scale = 1.05;        // War Shark +5%
+    else if (sel === "blimp12") scale = 1.15 * 1.05; // Sky Rocket +15% then +5%
+    else if (sel === "blimp13") scale = 1.05;        // Iron Lattice +5%
 
     const firstFrame = currentPlayerImage();
     const aspect = (firstFrame && firstFrame.naturalWidth && firstFrame.naturalHeight / firstFrame.naturalWidth) || 0.55;

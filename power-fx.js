@@ -339,19 +339,13 @@
       ctx.beginPath();
       ctx.arc(cx + 16, dropY, 11.4, 0, Math.PI * 2);
       ctx.fill();
-    } else if (kind === "rockets" || kind === "meteors" || kind === "swarm" || kind === "storm") {
-      for (i = 0; i < 8; i++) {
-        ang = t * 2 + i * 0.8;
-        ox = cx + Math.cos(ang) * 30;
-        oy = cy + Math.sin(ang) * 22;
-        g = ctx.createRadialGradient(ox, oy, 0, ox, oy, 10);
-        g.addColorStop(0, "rgba(255,220,150," + (0.7 * fade) + ")");
-        g.addColorStop(1, "rgba(255,100,0,0)");
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(ox, oy, 10, 0, Math.PI * 2);
-        ctx.fill();
-      }
+    } else if (kind === "rockets" || kind === "meteors" || kind === "swarm" || kind === "lattice" || kind === "storm") {
+      // Soft glow only — no rotating orbs
+      g = ctx.createRadialGradient(cx, cy, 2, cx, cy, 32);
+      g.addColorStop(0, "rgba(251,191,36," + (0.4 * fade) + ")");
+      g.addColorStop(1, "rgba(120,80,20,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(cx, cy, 32, 0, Math.PI * 2); ctx.fill();
     }
     ctx.restore();
   }

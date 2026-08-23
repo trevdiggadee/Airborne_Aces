@@ -398,6 +398,8 @@
         return { color: "230,240,250", size: 3.2, alpha: 0.45, life: 0.7, rise: 28, drag: 35, mode: "steam" };
       case "blackSmoke":
         return { color: "35,32,28", size: 5.5, alpha: 0.55, life: 1.1, rise: 6, drag: 45, mode: "smoke" };
+      case "brassSparks":
+        return { color: "180,120,40", size: 3.2, alpha: 0.7, life: 0.6, rise: 4, drag: 90, mode: "flame", jets: 1 };
       case "smoke":
         // Deco Liner — grayish exhaust with longer trails
         return { color: "110,108,105", size: 5.2, alpha: 0.52, life: 1.2, rise: 7, drag: 32, mode: "smoke" };
@@ -416,8 +418,14 @@
     // Rotated by player.rotation so flame stays locked to the engine when climbing/diving
     var rot = (typeof player.rotation === "number") ? player.rotation : 0;
     var cosR = Math.cos(rot), sinR = Math.sin(rot);
-    var localX = -player.w * 0.48 + player.w * 0.14; // +1% more right
+    var localX = -player.w * 0.48 + player.w * 0.14; // base right bias
     var localY = player.h * 0.06 - player.h * 0.04; // +1% more up
+    // Sky Rocket — shift exhaust 3% further right
+    try {
+      if (typeof selectedBlimp !== "undefined" && selectedBlimp === "blimp12") {
+        localX += player.w * 0.03;
+      }
+    } catch (e) {}
     var exhaustX = player.x + localX * cosR - localY * sinR;
     var exhaustY = player.y + localX * sinR + localY * cosR;
     // Stream direction = opposite of nose (local -X in world space)
@@ -598,7 +606,7 @@
        afPhase === "land" || afPhase === "rollout"));
     var emitRate = 0.16 - diveFactor * 0.03 + climbFactor * 0.03;
     if (effect === "blackSmoke") emitRate *= 0.65;
-    if (effect === "flame" || effect === "dualFlame") emitRate = 0.030; // fixed cadence → constant trail density/length
+    if (effect === "flame" || effect === "dualFlame" || effect === "brassSparks") emitRate = 0.030; // fixed cadence → constant trail density/length
     if (effect === "steam") emitRate *= 0.8;
     if (effect === "smoke") emitRate *= 1.35; // Deco denser gray trails
     if (onRunway && effect !== "flame") emitRate *= 0.7; // visible exhaust while driving

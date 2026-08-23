@@ -15,7 +15,7 @@ const BLIMP_DATA = {
   blimp10: { url: "ship_ivory_01.webp", key: "ship_ivory_01", name: "Ivory Anchor", effect: null },
   blimp11: { url: "blimp11_flight_01.webp", key: "blimp11_flight_01", name: "War Shark", effect: "propeller" },
   blimp12: { url: "blimp12_flight_01.webp", key: "blimp12_flight_01", name: "Sky Rocket", effect: "dualFlame" },
-  blimp13: { url: "blimp13_flight_01.webp", key: "blimp13_flight_01", name: "Iron Lattice", effect: "steam" },
+  blimp13: { url: "blimp13_flight_01.webp", key: "blimp13_flight_01", name: "Iron Lattice", effect: "brassSparks" },
   blimp14: { url: "blimp14_flight_01.webp", key: "blimp14_flight_01", name: "Pirate Rocket", effect: "dualFlame" },
   blimp15: { url: "blimp15_flight_01.webp", key: "blimp15_flight_01", name: "Royal Stripe", effect: "flame" }
 };
@@ -1470,7 +1470,7 @@ function powerPreviewKindFor(key) {
       blimp10: "ivorybolt",
       blimp11: "warshark",
       blimp12: "heatseek",
-      blimp13: "swarm",
+      blimp13: "lattice",
       blimp14: "barrelbomb",
       blimp15: "meteors"
     };

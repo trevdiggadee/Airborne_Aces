@@ -706,30 +706,33 @@
 
     // Rockets / meteors / vortex / sunblade — use swarm projectiles with unique motion
     if (powerMode === "swarm") {
+      // Iron Lattice — steampunk torpedo barrage (no rotating orbs)
       if (typeof sfxShoot === "function") sfxShoot();
       stormActive = true;
-      stormMode = "swarm";
-      stormTimer = 3.5;
-      window.__airborneActivePowerVisual = "swarm";
-      window.__airborneActivePowerUntil = performance.now() + 3500;
-      stormSwarm = [];
-      for (var si = 0; si < 18; si++) {
-        var ang = (si / 18) * Math.PI * 2;
-        stormSwarm.push({
-          x: player.x, y: player.y,
-          vx: Math.cos(ang) * (180 + Math.random() * 60),
-          vy: Math.sin(ang) * (180 + Math.random() * 60),
-          spin: ang, spinVel: 10 + Math.random() * 6,
-          size: 16 + Math.random() * 8,
-          life: 1.6, age: 0,
-          iconKey: null, hit: false, style: "metal", delay: 0,
-          pierce: 2
+      stormMode = "lattice";
+      stormTimer = 4.0;
+      window.__airborneActivePowerVisual = "lattice";
+      window.__airborneActivePowerUntil = performance.now() + 4000;
+      window.__airborneLatticeUntil = performance.now() + 4000;
+      window.__airborneLatticeTorps = [];
+      window.__airborneLatticeSpawnT = 0;
+      // Initial volley forward
+      for (var li = 0; li < 5; li++) {
+        var ang = -0.35 + (li / 4) * 0.7;
+        window.__airborneLatticeTorps.push({
+          x: player.x + (player.w || 40) * 0.3,
+          y: player.y + (li - 2) * 12,
+          vx: Math.cos(ang) * (220 + Math.random() * 40),
+          vy: Math.sin(ang) * 80,
+          life: 2.8, age: 0, rot: ang,
+          w: 56, h: 32
         });
       }
       try { if (window.PowerFX) window.PowerFX.activate("swarm", player.x, player.y); } catch (e) {}
       updateStormMeterDisplay();
       return;
     }
+
 
     if (powerMode === "vortex") {
       if (typeof sfxShoot === "function") sfxShoot();
@@ -1115,6 +1118,72 @@
 
   function updateStorm(dt) {
     try { updateBombBlasts(dt); } catch (e) {}
+
+    // Iron Lattice torpedoes
+    if (stormMode === "lattice" || (window.__airborneLatticeTorps && window.__airborneLatticeTorps.length)) {
+      var untilL = window.__airborneLatticeUntil || 0;
+      if (untilL && performance.now() < untilL && typeof player !== "undefined" && player) {
+        window.__airborneLatticeSpawnT = (window.__airborneLatticeSpawnT || 0) - dt;
+        if (window.__airborneLatticeSpawnT <= 0) {
+          window.__airborneLatticeSpawnT = 0.32;
+          var ang = -0.25 + Math.random() * 0.5;
+          window.__airborneLatticeTorps = window.__airborneLatticeTorps || [];
+          window.__airborneLatticeTorps.push({
+            x: player.x + (player.w || 40) * 0.3,
+            y: player.y + (Math.random() - 0.5) * (player.h || 30),
+            vx: Math.cos(ang) * (230 + Math.random() * 50),
+            vy: Math.sin(ang) * 70,
+            life: 2.6, age: 0, rot: ang, w: 56, h: 32
+          });
+        }
+      }
+      if (!window.__airborneLatticeTorps) window.__airborneLatticeTorps = [];
+      for (var lti = window.__airborneLatticeTorps.length - 1; lti >= 0; lti--) {
+        var lt = window.__airborneLatticeTorps[lti];
+        lt.age += dt;
+        lt.x += lt.vx * dt;
+        lt.y += lt.vy * dt;
+        lt.rot = Math.atan2(lt.vy, lt.vx);
+        // brass exhaust trail
+        if (!lt.trail) lt.trail = [];
+        if (Math.random() < 0.8) {
+          lt.trail.push({
+            x: lt.x - Math.cos(lt.rot) * 20,
+            y: lt.y - Math.sin(lt.rot) * 10,
+            life: 0.4, age: 0, r: 4 + Math.random() * 5,
+            kind: Math.random() < 0.5 ? "spark" : "smoke"
+          });
+        }
+        for (var tr = (lt.trail||[]).length - 1; tr >= 0; tr--) {
+          lt.trail[tr].age += dt;
+          if (lt.trail[tr].age >= lt.trail[tr].life) lt.trail.splice(tr, 1);
+        }
+        if (typeof obstacles !== "undefined") {
+          for (var oi = obstacles.length - 1; oi >= 0; oi--) {
+            var o = obstacles[oi];
+            if (!o || o.isRing) continue;
+            var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
+            if (Math.hypot(lt.x - ox, lt.y - oy) < 36) {
+              try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
+              try { if (typeof sfxExplosion === "function") sfxExplosion(0.5); } catch (e) {}
+              try { if (window.PowerFX) window.PowerFX.burst(ox, oy, {
+                count: 16, colors: ["#fbbf24", "#d97706", "#78716c", "#fff"], speed: 130, glow: true
+              }); } catch (e) {}
+              try { score += 35; } catch (e) {}
+              obstacles.splice(oi, 1);
+              lt.age = lt.life;
+              break;
+            }
+          }
+        }
+        if (lt.age >= lt.life || lt.x > (typeof W !== "undefined" ? W : 800) + 40)
+          window.__airborneLatticeTorps.splice(lti, 1);
+      }
+      if (untilL && performance.now() > untilL && !window.__airborneLatticeTorps.length) {
+        stormActive = false; stormMode = "storm";
+      }
+    }
+
     // Deco continuous pulsing shockwave
     if (stormMode === "shockwave" && stormActive) {
       window.__airborneShockPulseT = (window.__airborneShockPulseT || 0) + dt;
@@ -2162,7 +2231,7 @@
         var cosR = Math.cos(rot), sinR = Math.sin(rot);
         // Local offset: front of blimp
         var localX = (player.w || 40) * 0.42;
-        var localY = (player.h || 30) * 0.21; // lower on War Shark nose
+        var localY = (player.h || 30) * 0.22; // lower 1% more on War Shark nose
         var hx = player.x + localX * cosR - localY * sinR;
         var hy = player.y + localX * sinR + localY * cosR;
         ctx.save();
@@ -2425,6 +2494,49 @@
   }
   
   
+  
+  function drawLatticeTorps() {
+    var list = window.__airborneLatticeTorps;
+    if (!list || !list.length || typeof ctx === "undefined") return;
+    if (!window.__airborneLatticeImg) {
+      window.__airborneLatticeImg = new Image();
+      window.__airborneLatticeImg.src = "iron_lattice_torpedo.png";
+    }
+    var img = window.__airborneLatticeImg;
+    ctx.save();
+    list.forEach(function(lt) {
+      // trail first
+      (lt.trail || []).forEach(function(p) {
+        var t = 1 - p.age / p.life;
+        ctx.globalAlpha = t * 0.6;
+        if (p.kind === "spark") {
+          ctx.globalCompositeOperation = "lighter";
+          ctx.fillStyle = "rgba(255,180,60," + t + ")";
+        } else {
+          ctx.globalCompositeOperation = "source-over";
+          ctx.fillStyle = "rgba(80,70,60," + (t * 0.5) + ")";
+        }
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r * t, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+      ctx.translate(lt.x, lt.y);
+      ctx.rotate(lt.rot || 0);
+      if (img.complete && img.naturalWidth) {
+        ctx.drawImage(img, -lt.w * 0.5, -lt.h * 0.5, lt.w, lt.h);
+      } else {
+        ctx.fillStyle = "#b45309";
+        ctx.beginPath(); ctx.ellipse(0, 0, lt.w * 0.45, lt.h * 0.35, 0, 0, Math.PI * 2); ctx.fill();
+      }
+      // nose glow
+      ctx.globalCompositeOperation = "lighter";
+      ctx.fillStyle = "rgba(255,200,100,0.35)";
+      ctx.beginPath(); ctx.arc(lt.w * 0.35, 0, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+    });
+    ctx.restore();
+  }
+
   function drawIvoryFireballs() {
     var list = window.__airborneIvoryFireballs;
     if (!list || !list.length || typeof ctx === "undefined") return;
