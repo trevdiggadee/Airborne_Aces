@@ -812,7 +812,9 @@
 
     const frameDuration = 1 / OBSTACLE_ANIM_FPS;
     obstacles.forEach(o => {
-      if (o.onFire) {
+      if (o.shockFall) {
+        // handled in bosses.js sonic fall update — skip normal scroll
+      } else if (o.onFire) {
         o.vy = (typeof o.vy === "number" ? o.vy : 60) + 480 * dt;
         if (o.vy > 560) o.vy = 560;
         o.y += o.vy * dt;
@@ -1031,7 +1033,7 @@
       }
     });
 
-    obstacles = obstacles.filter(o => o.x + o.w > -20 && (!o.onFire || o.y < H + 80));
+    obstacles = obstacles.filter(o => (o.shockFall || o.electrified) ? (o.y < H + 100 && o.x > -80 && o.x < W + 80) : (o.x + o.w > -20 && (!o.onFire || o.y < H + 80)));
 
     // scoring + collision
     obstacles.forEach(o => {
@@ -1058,6 +1060,8 @@
 
       if (!o.scored && o.x + o.w < player.x - player.w / 2) {
         o.scored = true;
+        // Rings / power-killed targets do not count as obstacle-pass streak
+        const isObstaclePass = !o.isRing && o.type !== "gold_ring" && o.type !== "ring" && !o.shockFall && !o.onFire && !o.electrified;
         score++;
         gameplayScore++; // only counts normal dodge-scoring — bonus round points don't affect boss pacing
         document.getElementById("scoreVal").textContent = score;
@@ -1077,23 +1081,29 @@
         // storm meter: one gas-tank notch every 25 points, until it's full
         addStormChargeForScore(score);
 
-        // dodge streak + graze bonus
-        dodgeStreak++;
-        if (o.minGap !== undefined) {
-          score += GRAZE_BONUS;
-          document.getElementById("scoreVal").textContent = score;
-          bumpScorePop();
-          sfxStreak();
-        }
-        if (dodgeStreak > 0 && dodgeStreak % STREAK_MILESTONE === 0) {
-          score += STREAK_BONUS;
-          document.getElementById("scoreVal").textContent = score;
-          bumpScorePop();
-          spawnComboPopup(player.x, player.y - player.h * 0.9, String(dodgeStreak), "#6b1c2a");
-          sfxStreak();
+        // Streak only counts obstacles cleanly passed by (not rings / power kills)
+        if (isObstaclePass) {
+          dodgeStreak++;
+          if (o.minGap !== undefined) {
+            score += GRAZE_BONUS;
+            document.getElementById("scoreVal").textContent = score;
+            bumpScorePop();
+            sfxStreak();
+          }
+          if (dodgeStreak > 0 && dodgeStreak % STREAK_MILESTONE === 0) {
+            score += STREAK_BONUS;
+            document.getElementById("scoreVal").textContent = score;
+            bumpScorePop();
+            spawnComboPopup(player.x, player.y - player.h * 0.9, String(dodgeStreak), "#6b1c2a");
+            sfxStreak();
+          }
         }
       }
 
+      if ((o.shockFall || o.electrified) && !o.onFire) {
+        // already knocked out by sonic blast — no player damage
+        return;
+      }
       if (dx < collideX && dy < collideY) {
         const isBird = (o.type === "bird_a" || o.type === "bird_b");
         if ((isBird || shieldActive) && !o.hitDeflected) {
@@ -1204,7 +1214,38 @@
       const drawY = o.y + Math.sin(o.bobPhase) * o.bobAmount;
       const speed = obstacleSpeed * (o.speedMult || 1);
       drawMotionBlur(img, o.x + o.w / 2, drawY + o.h / 2, o.w, o.h, 0, speed, 0);
-      if (o.onFire) {
+      if (o.electrified || o.shockFall) {
+        ctx.save();
+        ctx.translate(o.x + o.w / 2, drawY + o.h / 2);
+        ctx.rotate(o.rot || 0);
+        ctx.drawImage(img, -o.w / 2, -o.h / 2, o.w, o.h);
+        // Electric arcs / cyan-white crackle
+        ctx.globalCompositeOperation = "lighter";
+        var t = performance.now() * 0.012;
+        for (var ei = 0; ei < 5; ei++) {
+          var a0 = t + ei * 1.3;
+          var r0 = o.w * (0.15 + 0.2 * Math.sin(t * 2 + ei));
+          ctx.strokeStyle = ei % 2 === 0 ? "rgba(180,230,255,0.85)" : "rgba(120,180,255,0.7)";
+          ctx.lineWidth = 1.5 + (ei % 2);
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(a0) * r0 * 0.3, Math.sin(a0) * r0 * 0.3);
+          for (var es = 1; es <= 4; es++) {
+            var aa = a0 + es * 0.45 + Math.sin(t * 3 + es) * 0.4;
+            var rr = r0 * (0.4 + es * 0.18);
+            ctx.lineTo(Math.cos(aa) * rr + (Math.random() - 0.5) * 3, Math.sin(aa) * rr + (Math.random() - 0.5) * 3);
+          }
+          ctx.stroke();
+        }
+        var eg = ctx.createRadialGradient(0, 0, 2, 0, 0, o.w * 0.55);
+        eg.addColorStop(0, "rgba(220,245,255,0.35)");
+        eg.addColorStop(0.5, "rgba(80,160,255,0.2)");
+        eg.addColorStop(1, "rgba(40,80,200,0)");
+        ctx.fillStyle = eg;
+        ctx.beginPath();
+        ctx.arc(0, 0, o.w * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      } else if (o.onFire) {
         ctx.save();
         ctx.translate(o.x + o.w / 2, drawY + o.h / 2);
         ctx.rotate(o.rot || 0);

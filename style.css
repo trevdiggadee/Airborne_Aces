@@ -4246,29 +4246,39 @@ body:not(.game-playing) #startOverlay {
   0%, 100% { filter: drop-shadow(0 0 5px var(--power-icon-glow, rgba(255,210,90,0.9))) drop-shadow(0 0 12px var(--power-icon-glow, rgba(255,170,40,0.5))); transform: scale(1); }
   50% { filter: drop-shadow(0 0 8px var(--power-icon-glow, rgba(255,220,120,1))) drop-shadow(0 0 18px var(--power-icon-glow, rgba(255,180,50,0.75))); transform: scale(1.06); }
 }
+/* Split-flap style timer — 20% longer, 5% taller, lowered 2% */
 #unifiedDock .udTime,
 #udTimerVal {
   position: absolute !important;
   left: 50% !important;
-  bottom: -22px !important;
+  bottom: -26px !important; /* lowered ~2% further under the dock */
   transform: translateX(-50%) !important;
-  min-width: 64px !important;
-  padding: 3px 10px 4px !important;
-  border-radius: 10px !important;
-  background: linear-gradient(180deg, rgba(40, 28, 14, 0.92), rgba(18, 12, 8, 0.96)) !important;
-  border: 1px solid rgba(220, 180, 100, 0.55) !important;
+  min-width: 77px !important; /* ~20% longer than 64px */
+  height: auto !important;
+  padding: 5px 12px 6px !important; /* ~5% taller */
+  border-radius: 6px !important;
+  background:
+    linear-gradient(180deg, #3a2a18 0%, #2a1c0e 48%, #1a1008 52%, #241808 100%) !important;
+  border: 1px solid rgba(200, 160, 90, 0.65) !important;
   box-shadow:
-    0 0 10px rgba(255, 190, 60, 0.25),
-    inset 0 1px 0 rgba(255, 230, 180, 0.15),
-    0 3px 8px rgba(0,0,0,0.4) !important;
-  font-family: "Segoe UI", system-ui, sans-serif !important;
-  font-size: 13px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.08em !important;
+    0 0 12px rgba(255, 190, 60, 0.28),
+    inset 0 1px 0 rgba(255, 230, 180, 0.18),
+    inset 0 -1px 0 rgba(0,0,0,0.35),
+    0 4px 10px rgba(0,0,0,0.45) !important;
+  font-family: "Courier New", "Lucida Console", monospace !important;
+  font-size: 14px !important; /* ~5%+ taller digits */
+  font-weight: 800 !important;
+  letter-spacing: 0.14em !important;
   color: #ffe9a8 !important;
-  text-shadow: 0 0 8px rgba(255, 200, 80, 0.55), 0 1px 2px rgba(0,0,0,0.6) !important;
+  text-shadow:
+    0 0 6px rgba(255, 200, 80, 0.5),
+    0 1px 2px rgba(0,0,0,0.7) !important;
   text-align: center !important;
-  line-height: 1.2 !important;
+  line-height: 1.25 !important;
   z-index: 3 !important;
   pointer-events: none !important;
+  /* split-flap card look */
+  background-image:
+    linear-gradient(180deg, rgba(255,230,180,0.08) 0%, transparent 45%),
+    linear-gradient(180deg, #3a2a18 0%, #2a1c0e 47%, #14100a 49%, #14100a 51%, #241808 100%) !important;
 }

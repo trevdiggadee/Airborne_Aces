@@ -683,13 +683,13 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       try { if (typeof triggerScreenShake === "function") triggerScreenShake(12, 380); } catch (e) {}
       stormActive = true;
       stormMode = "shockwave";
-      stormTimer = 5.2;
+      stormTimer = 3.2; // shortened Deco Liner power duration
       stormCloud = null;
       window.__airborneActivePowerVisual = "shockwave";
-      window.__airborneActivePowerUntil = performance.now() + 5200;
+      window.__airborneActivePowerUntil = performance.now() + 3200;
       window.__airborneShockPulseT = 0.5; // fire first pulse immediately
       window.__airborneShockPulseCount = 0;
-      window.__airborneShockEndAt = performance.now() + 5200;
+      window.__airborneShockEndAt = performance.now() + 3200;
       window.__airborneShockFinalDone = false;
       window.__airborneShockFlash = 1.0;
       if (!window.__airborneShockFX) window.__airborneShockFX = [];
@@ -717,67 +717,11 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
           r: 2 + Math.random() * 3.5
         });
       }
-      // Immediate knockback on nearby
+      // Immediate knockback + electrify nearby targets
       if (typeof window.__airborneSonicBlast === "function") {
         window.__airborneSonicBlast(player.x, player.y, radius0, 1.0);
       }
       try { if (window.PowerFX) window.PowerFX.activate("shockwave", player.x, player.y); } catch (e) {}
-      updateStormMeterDisplay();
-      return;
-    }
-if (powerMode === "shockwave") {
-      window.__airborneOneShotUsed = window.__airborneOneShotUsed || {};
-      
-      if (typeof sfxThunder === "function") sfxThunder();
-      if (typeof sfxExplosion === "function") sfxExplosion(0.45);
-      try { if (typeof triggerScreenShake === "function") triggerScreenShake(9, 420); } catch (e) {}
-      const radius = Math.min(W, H) * 0.58;
-      // Obstacles: shake then fall off screen (no swarm orbs)
-      if (typeof obstacles !== "undefined" && obstacles) {
-        obstacles.forEach(function (o) {
-          if (!o) return;
-          if (o.isRing || o.type === "gold_ring" || o.type === "ring") return;
-          const dx = (o.x + o.w * 0.5) - player.x;
-          const dy = (o.y + o.h * 0.5) - player.y;
-          if (Math.hypot(dx, dy) < radius) {
-            o.shockShake = 0.55 + Math.random() * 0.25;
-            o.shockFall = true;
-            o.vy = 90 + Math.random() * 70;
-            o.vx = (Math.random() - 0.5) * 80;
-            o.scored = true;
-            try { score += 3; } catch (e) {}
-          }
-        });
-      }
-      // Sonic ring particles (not orbs)
-      if (!window.__airborneShockFX) window.__airborneShockFX = [];
-      for (var si = 0; si < 3; si++) {
-        window.__airborneShockFX.push({
-          x: player.x, y: player.y, r: 12 + si * 8, maxR: radius * (0.7 + si * 0.15),
-          life: 0.55 + si * 0.12, age: 0, width: 5 - si
-        });
-      }
-      for (var pi = 0; pi < 36; pi++) {
-        var a = (pi / 36) * Math.PI * 2;
-        var sp = 140 + Math.random() * 100;
-        window.__airborneShockFX.push({
-          kind: "spark",
-          x: player.x, y: player.y,
-          vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
-          life: 0.4 + Math.random() * 0.3, age: 0, r: 2 + Math.random() * 2
-        });
-      }
-      stormActive = true;
-      stormMode = "shockwave";
-      stormTimer = 4.5;
-      stormUntil = performance.now() + 4500;
-      window.__airborneActivePowerVisual = "shockwave";
-      window.__airborneActivePowerUntil = performance.now() + 4500;
-      window.__airborneShockPulseT = 0;
-      window.__airborneShockPulseCount = 0;
-      try {
-        if (window.PowerFX && player) window.PowerFX.activate(powerMode === "steam" ? "steam" : "shockwave", player.x, player.y);
-      } catch (e) {}
       updateStormMeterDisplay();
       return;
     }
@@ -3578,6 +3522,50 @@ function drawMeteorMarks() {
     }
   }
   window.__airborneDrawMeteors = drawMeteorMarks;
+
+  // Sonic cannon blast: knockback + electrify targets so they fall from the sky
+  window.__airborneSonicBlast = function (cx, cy, radius, intensity) {
+    intensity = intensity || 1;
+    if (typeof obstacles === "undefined" || !obstacles) return;
+    for (var i = 0; i < obstacles.length; i++) {
+      var o = obstacles[i];
+      if (!o || o.isRing || o.type === "gold_ring" || o.type === "ring") continue;
+      if (o.shockFall || o.onFire) continue;
+      var ox = o.x + (o.w || 0) * 0.5;
+      var oy = o.y + (o.h || 0) * 0.5;
+      var dx = ox - cx;
+      var dy = oy - cy;
+      var dist = Math.hypot(dx, dy);
+      if (dist > radius || dist < 0.1) continue;
+      var force = (1 - dist / radius) * intensity;
+      o.shockShake = 0.4 + force * 0.45;
+      o.shockFall = true;
+      o.electrified = true;
+      o.sonicDebris = true;
+      o.scored = true;
+      var ang = Math.atan2(dy, dx);
+      o.vx = Math.cos(ang) * (80 + force * 140) + (Math.random() - 0.5) * 40;
+      o.vy = Math.sin(ang) * (40 + force * 60) + 70 + Math.random() * 50;
+      o.spinVel = (Math.random() - 0.5) * 8 * force;
+      try { score += 3; } catch (e) {}
+      if (!window.__airborneShockFX) window.__airborneShockFX = [];
+      for (var k = 0; k < 6; k++) {
+        var ea = Math.random() * Math.PI * 2;
+        var es = 60 + Math.random() * 120;
+        window.__airborneShockFX.push({
+          kind: "spark",
+          x: ox, y: oy,
+          vx: Math.cos(ea) * es, vy: Math.sin(ea) * es,
+          life: 0.25 + Math.random() * 0.2, age: 0,
+          r: 1.5 + Math.random() * 2.5
+        });
+      }
+    }
+    try {
+      if (document.getElementById("scoreVal")) document.getElementById("scoreVal").textContent = score;
+    } catch (e) {}
+  };
+
 
 
 
