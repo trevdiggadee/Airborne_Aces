@@ -436,7 +436,10 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       try {
         window.__airborneFirePowerActive = true;
         window.__airborneFirePowerUntil = performance.now() + 9000;
+        window.__airborneFireOrbiters = []; // rebuild on next update
+        window.__airborneFireActivateT = 0;
         if (typeof sfxExplosion === "function") sfxExplosion(0.5);
+        try { if (typeof triggerScreenShake === "function") triggerScreenShake(6, 280); } catch (e2) {}
       } catch (e) {}
       stormActive = false; // fire system handles itself
       stormCharge = 0;

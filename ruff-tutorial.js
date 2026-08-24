@@ -1245,17 +1245,17 @@
     ruffBgBalloons = [];
     var W0 = (typeof W !== "undefined") ? W : 400;
     var H0 = (typeof H !== "undefined") ? H : 600;
-    var n = 10; // capped for smoother lessons
+    var n = 5; // fewer far-sky balloons
     for (var i = 0; i < n; i++) {
       ruffBgBalloons.push({
-        x: (i / n) * (W0 + 200) + Math.random() * 40,
-        y: H0 * (0.08 + Math.random() * 0.55),
-        s: 0.35 + Math.random() * 0.45,
-        speed: 12 + Math.random() * 22,
+        x: (i / n) * (W0 + 220) + Math.random() * 50,
+        y: H0 * (0.06 + Math.random() * 0.48),
+        s: 0.28 + Math.random() * 0.32,
+        speed: 5 + Math.random() * 8, // slower drift
         frame: (Math.random() * 36) | 0,
         frameT: Math.random(),
         bob: Math.random() * Math.PI * 2,
-        alpha: 0.28 + Math.random() * 0.35
+        alpha: 0.22 + Math.random() * 0.22
       });
     }
   }
@@ -1280,6 +1280,8 @@
     }
   }
 
+  window.__airborneDrawTrainingBgBalloons = drawTrainingBgBalloons;
+  window.__airborneUpdateTrainingBgBalloons = updateTrainingBgBalloons;
   function drawTrainingBgBalloons() {
     if (!ruffBgBalloons || !ruffBgBalloons.length || typeof ctx === "undefined") return;
     for (var i = 0; i < ruffBgBalloons.length; i++) {
@@ -1302,6 +1304,9 @@
       ctx.restore();
     }
   }
+
+  window.__airborneDrawTrainingBgBalloons = drawTrainingBgBalloons;
+  window.__airborneUpdateTrainingBgBalloons = updateTrainingBgBalloons;
 
   function updateTrainingBossDark(dt, target) {
     ruffBossDark = 0; // never darken training stages
@@ -2747,7 +2752,7 @@ function finishToMap() {
     try { drawMarkers(); } catch (e) {}
     try { drawCrystals(); } catch (e) {}
     try { drawTrainingCoins(); } catch (e) {}
-    try { drawTrainingBgBalloons(); } catch (e) {}
+    // bg balloons drawn before cloud layer in main-loop
     try { drawTrainingAirship(); } catch (e) {}
     try { drawScreenDust(); } catch (e) {}
     if (ruffStage !== "boss1" && window.__airborneRuffStage !== "boss1") {

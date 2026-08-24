@@ -364,24 +364,29 @@
   function spawnHitCoinBurst() {
     try {
       if (typeof player === "undefined" || !player) return;
+      var now = performance.now();
+      if (window.__airborneLastCoinBurst && now - window.__airborneLastCoinBurst < 180) return;
+      window.__airborneLastCoinBurst = now;
       var cx = player.x;
       var cy = player.y;
+      if (!window.__airborneHitCoins) window.__airborneHitCoins = [];
       var list = window.__airborneHitCoins;
-      if (!list) { list = []; window.__airborneHitCoins = list; }
       for (var i = 0; i < 5; i++) {
-        // Even angles around the blimp (every 72°) with a tiny random jitter
-        var ang = (i / 5) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
-        var spd = 180 + Math.random() * 100;
+        // Even angles around the blimp (every 72°)
+        var ang = (i / 5) * Math.PI * 2 + (Math.random() - 0.5) * 0.15;
+        var spd = 200 + Math.random() * 120;
+        var startR = 18 + Math.random() * 10; // start slightly away so not auto-collected
         list.push({
-          x: cx,
-          y: cy,
-          r: 13 + Math.random() * 2,
+          x: cx + Math.cos(ang) * startR,
+          y: cy + Math.sin(ang) * startR,
+          r: 14 + Math.random() * 3,
           vx: Math.cos(ang) * spd,
           vy: Math.sin(ang) * spd,
           spin: Math.random() * Math.PI * 2,
           bob: Math.random() * Math.PI * 2,
-          life: 3.2 + Math.random() * 0.6,
+          life: 3.5 + Math.random() * 0.8,
           age: 0,
+          grace: 0.45, // cannot collect until this expires
           collected: false
         });
       }
@@ -404,15 +409,15 @@
       c.age += dt;
       c.x += c.vx * dt;
       c.y += c.vy * dt;
-      // ease outward then slow
-      c.vx *= (1 - 0.55 * dt);
-      c.vy *= (1 - 0.55 * dt);
+      // ease outward then slow (keep momentum longer)
+      c.vx *= (1 - 0.28 * dt);
+      c.vy *= (1 - 0.28 * dt);
       // slight gravity so they arc
-      c.vy += 40 * dt;
+      c.vy += 55 * dt;
       c.spin += dt * 5.5;
       c.bob += dt * 3.0;
-      // collect if player touches
-      if (Math.abs(c.x - px) < pw + c.r && Math.abs(c.y - py) < ph + c.r) {
+      // collect if player touches (after grace so burst is visible)
+      if (c.age >= (c.grace || 0) && Math.abs(c.x - px) < pw + c.r && Math.abs(c.y - py) < ph + c.r) {
         c.collected = true;
         window.__airborneCollectCoins = (window.__airborneCollectCoins || 0) + 1;
         try {
@@ -703,6 +708,8 @@
             pickup.collectY = pickup.y + Math.sin(pickup.bob) * 10;
             window.__airborneFirePowerActive = true;
             window.__airborneFirePowerUntil = performance.now() + 9000;
+            window.__airborneFireOrbiters = [];
+            window.__airborneFireActivateT = 0;
             try {
               if (typeof sfxPowerup === "function") sfxPowerup();
             } catch (e) {}
@@ -745,21 +752,76 @@
       if (window.__airborneFirePowerActive && performance.now() > window.__airborneFirePowerUntil) {
         window.__airborneFirePowerActive = false;
       }
-      // Aura particles
+      // Dense core + orbiting fireball system (Zeppelin Ace)
       if (window.__airborneFirePowerActive && typeof player !== "undefined" && player) {
-        for (let i = 0; i < 2; i++) {
+        // Ensure orbiters exist
+        if (!window.__airborneFireOrbiters || !window.__airborneFireOrbiters.length) {
+          window.__airborneFireOrbiters = [];
+          var nOrb = 6;
+          for (var oi = 0; oi < nOrb; oi++) {
+            window.__airborneFireOrbiters.push({
+              phase: (oi / nOrb) * Math.PI * 2,
+              speed: 2.4 + Math.random() * 0.9,
+              radius: 0.52 + Math.random() * 0.18,
+              tilt: 0.55 + Math.random() * 0.35,
+              wobble: 0.15 + Math.random() * 0.2,
+              wobbleSpd: 1.5 + Math.random() * 2,
+              size: 9 + Math.random() * 5,
+              trail: []
+            });
+          }
+          window.__airborneFireActivateT = 0;
+        }
+        window.__airborneFireActivateT = (window.__airborneFireActivateT || 0) + dt;
+        // Core heat embers
+        for (let i = 0; i < 3; i++) {
           const ang = Math.random() * Math.PI * 2;
-          const rad = player.w * (0.3 + Math.random() * 0.35) * 1.05;
+          const rad = player.w * (0.15 + Math.random() * 0.28);
           window.__airborneFireAura.push({
             x: player.x + Math.cos(ang) * rad,
-            y: player.y + Math.sin(ang) * rad * 0.65,
-            vx: (Math.random() - 0.5) * 35,
-            vy: -35 - Math.random() * 50,
-            life: 0.3 + Math.random() * 0.25,
+            y: player.y + Math.sin(ang) * rad * 0.7,
+            vx: (Math.random() - 0.5) * 40,
+            vy: -40 - Math.random() * 55,
+            life: 0.25 + Math.random() * 0.3,
             age: 0,
-            r: 3 + Math.random() * 5
+            r: 4 + Math.random() * 6
           });
         }
+        // Update orbiters + trails
+        var orbs = window.__airborneFireOrbiters;
+        for (var oi = 0; oi < orbs.length; oi++) {
+          var orb = orbs[oi];
+          orb.phase += orb.speed * dt;
+          var act = Math.min(1, (window.__airborneFireActivateT || 0) / 0.45);
+          var radMul = act * (orb.radius + Math.sin(orb.phase * orb.wobbleSpd) * orb.wobble * 0.12);
+          var ox = player.x + Math.cos(orb.phase) * player.w * radMul * 1.15;
+          var oy = player.y + Math.sin(orb.phase) * player.h * radMul * orb.tilt;
+          orb.x = ox; orb.y = oy;
+          orb.z = Math.sin(orb.phase); // front/back depth
+          // trail samples
+          if (!orb.trail) orb.trail = [];
+          orb.trail.push({ x: ox, y: oy, age: 0, life: 0.28 });
+          if (orb.trail.length > 10) orb.trail.shift();
+          for (var ti = orb.trail.length - 1; ti >= 0; ti--) {
+            orb.trail[ti].age += dt;
+            if (orb.trail[ti].age >= orb.trail[ti].life) orb.trail.splice(ti, 1);
+          }
+          // sparks off orbiter
+          if (Math.random() < 0.35) {
+            window.__airborneFireTrail.push({
+              x: ox, y: oy,
+              vx: (Math.random() - 0.5) * 60,
+              vy: -20 - Math.random() * 50,
+              life: 0.2 + Math.random() * 0.2,
+              age: 0,
+              r: 2 + Math.random() * 3,
+              smoke: false
+            });
+          }
+        }
+      } else {
+        window.__airborneFireOrbiters = [];
+        window.__airborneFireActivateT = 0;
       }
       const aura = window.__airborneFireAura;
       for (let i = aura.length - 1; i >= 0; i--) {
@@ -769,7 +831,7 @@
         p.y += p.vy * dt;
         if (p.age >= p.life) aura.splice(i, 1);
       }
-      if (aura.length > 60) aura.splice(0, aura.length - 60);
+      if (aura.length > 80) aura.splice(0, aura.length - 80);
       const trail = window.__airborneFireTrail;
       for (let i = trail.length - 1; i >= 0; i--) {
         const p = trail[i];
@@ -864,20 +926,77 @@
       }
       if (window.__airborneFirePowerActive && typeof player !== "undefined" && player) {
         ctx.save();
-        const tnow = performance.now() * 0.001;
-        for (let i = 0; i < 8; i++) {
-          const a = tnow * 3 + i * (Math.PI * 2 / 8);
-          const x = player.x + Math.cos(a) * player.w * 0.55;
-          const y = player.y + Math.sin(a * 1.3) * player.h * 0.48;
-          const gr = ctx.createRadialGradient(x, y, 0, x, y, 12);
-          gr.addColorStop(0, "rgba(255,240,120,0.65)");
-          gr.addColorStop(0.5, "rgba(255,100,20,0.3)");
-          gr.addColorStop(1, "rgba(255,40,0,0)");
-          ctx.fillStyle = gr;
+        var act = Math.min(1, (window.__airborneFireActivateT || 0) / 0.45);
+        var pulse = 0.85 + 0.15 * Math.sin(performance.now() * 0.012);
+        // Heat shimmer / dense core aura around blimp
+        var coreR = Math.max(player.w, player.h) * (0.55 + 0.25 * act) * pulse;
+        var cg = ctx.createRadialGradient(player.x, player.y, coreR * 0.15, player.x, player.y, coreR);
+        cg.addColorStop(0, "rgba(255,245,180," + (0.75 * act) + ")");
+        cg.addColorStop(0.35, "rgba(255,140,30," + (0.45 * act) + ")");
+        cg.addColorStop(0.7, "rgba(255,50,0," + (0.18 * act) + ")");
+        cg.addColorStop(1, "rgba(180,20,0,0)");
+        ctx.globalCompositeOperation = "lighter";
+        ctx.fillStyle = cg;
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, coreR, 0, Math.PI * 2);
+        ctx.fill();
+        // subtle outer heat ring shimmer
+        ctx.globalAlpha = 0.25 * act;
+        ctx.strokeStyle = "rgba(255,200,80,0.8)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, coreR * (0.92 + 0.04 * Math.sin(performance.now() * 0.02)), 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+
+        // Draw orbiters: behind first (z < 0), then front (z >= 0)
+        var orbs = window.__airborneFireOrbiters || [];
+        function drawOrb(orb, front) {
+          if (!orb || orb.x == null) return;
+          var isFront = (orb.z || 0) >= 0;
+          if (front !== isFront) return;
+          var sc = front ? 1.15 : 0.75;
+          var alpha = front ? 1 : 0.55;
+          // trail
+          if (orb.trail && orb.trail.length) {
+            for (var ti = 0; ti < orb.trail.length; ti++) {
+              var tp = orb.trail[ti];
+              var tu = 1 - tp.age / tp.life;
+              if (tu <= 0) continue;
+              ctx.globalAlpha = tu * 0.55 * alpha * act;
+              var tg = ctx.createRadialGradient(tp.x, tp.y, 0, tp.x, tp.y, orb.size * 0.9 * sc);
+              tg.addColorStop(0, "rgba(255,220,100,0.9)");
+              tg.addColorStop(0.5, "rgba(255,100,20,0.5)");
+              tg.addColorStop(1, "rgba(255,40,0,0)");
+              ctx.fillStyle = tg;
+              ctx.beginPath();
+              ctx.arc(tp.x, tp.y, orb.size * 0.7 * sc * tu, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+          // fireball body
+          ctx.globalAlpha = alpha * act;
+          var sz = orb.size * sc * (0.9 + 0.15 * Math.sin(performance.now() * 0.02 + orb.phase));
+          var fg = ctx.createRadialGradient(orb.x - sz * 0.25, orb.y - sz * 0.3, 1, orb.x, orb.y, sz);
+          fg.addColorStop(0, "rgba(255,250,220,1)");
+          fg.addColorStop(0.3, "rgba(255,200,60,0.95)");
+          fg.addColorStop(0.65, "rgba(255,90,15,0.85)");
+          fg.addColorStop(1, "rgba(180,20,0,0)");
+          ctx.fillStyle = fg;
           ctx.beginPath();
-          ctx.arc(x, y, 12, 0, Math.PI * 2);
+          ctx.arc(orb.x, orb.y, sz, 0, Math.PI * 2);
+          ctx.fill();
+          // bright core
+          ctx.globalAlpha = alpha * act * 0.9;
+          ctx.fillStyle = "rgba(255,255,230,0.95)";
+          ctx.beginPath();
+          ctx.arc(orb.x - sz * 0.15, orb.y - sz * 0.15, sz * 0.28, 0, Math.PI * 2);
           ctx.fill();
         }
+        for (var oi = 0; oi < orbs.length; oi++) drawOrb(orbs[oi], false);
+        for (var oi = 0; oi < orbs.length; oi++) drawOrb(orbs[oi], true);
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = "source-over";
         ctx.restore();
       }
       (window.__airborneFireAura || []).forEach(function (p) {

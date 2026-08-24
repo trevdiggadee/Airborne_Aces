@@ -257,7 +257,10 @@
     drawBlimpHeadlight();
     if (typeof drawAirfieldShadow === "function") drawAirfieldShadow();
     drawPlayer(); try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePowerVisual(); } catch(e) {};
+    try { if (window.drawHitCoins) window.drawHitCoins(); } catch (e) {}
     try { if (typeof drawRingFronts === "function") drawRingFronts(); else if (window.__airborneDrawRingFronts) window.__airborneDrawRingFronts(); } catch (e) {}
+    // Far training balloons BEHIND soft cloud layer
+    try { if (window.__airborneDrawTrainingBgBalloons) window.__airborneDrawTrainingBgBalloons(); } catch (e) {}
     // Soft clouds in FRONT of mountains + blimp (50% alpha) — fly-through like L3
     drawClouds();
     // R.U.F.F. on top of world (not under strip/mountains)

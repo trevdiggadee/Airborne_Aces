@@ -358,7 +358,10 @@
     try { sfxHit(); } catch (e) {}
     try { triggerScreenShake(3, 160); } catch (e) {}
     try { spawnHitParticles(player.x, player.y); } catch (e) {}
-    // Coin burst is spawned on collision contact (every hit), not here
+    // Coin burst on damage (collision path also spawns; safe if both fire)
+    try {
+      if (typeof window.spawnHitCoinBurst === "function") window.spawnHitCoinBurst();
+    } catch (e) {}
 
     // Training: never game-over — soft recover at 0, longer i-frames (less flicker)
     if (window.__airborneAirfield && window.__airborneAirfieldPhase === "lesson") {
