@@ -710,6 +710,12 @@
       if (typeof window.updateUnifiedProgress === "function") window.updateUnifiedProgress(((si + 1) / stages.length) * 100);
     } catch (e) {}
     syncStageFlags();
+    // Ensure far-sky balloons stay present for the whole training
+    try {
+      if (name !== "report" && name !== "idle" && (!ruffBgBalloons || !ruffBgBalloons.length)) {
+        spawnTrainingBgBalloons();
+      }
+    } catch (e) {}
 
     // Always surface first Ruff line for this stage (dialogue visibility fix)
     try {
@@ -747,7 +753,7 @@
       try { spawnTrainingBgBalloons(); } catch (e) {}
       // Boss spawned once from stage update only (avoids double spawn)
     } else if (name === "airship") {
-      ruffBgBalloons = []; // no bg balloons on airship lesson
+      // Keep background balloons during airship lesson
 
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = false;
@@ -761,7 +767,7 @@
     } else if (name === "combined") {
       window.__airborneTrainingBoss = false;
       window.__airborneTrainingBossTried = false;
-      ruffBgBalloons = [];
+      // Keep background balloons for entire training
       ruffBossDark = 0;
       window.__airborneAirfieldRings = true;
       window.__airborneAirfieldObstacles = true;
@@ -835,7 +841,7 @@
     } else if (name === "combined") {
       window.__airborneTrainingBoss = false;
       window.__airborneTrainingBossTried = false;
-      ruffBgBalloons = [];
+      // Keep background balloons for entire training
       ruffBossDark = 0;
       if (ruffLines.length) showRadio(ruffLines[0], 2.6);
       window.__airborneAirfieldRings = true;
@@ -2338,6 +2344,13 @@ function finishToMap() {
     ruffStageT += dt;
     ruffLineT += dt;
     try { tickLessonGate(dt); } catch (e) {}
+    // Background balloons drift for the entire training session
+    try {
+      if (window.__airborneAirfield && ruffStage && ruffStage !== "report" && ruffStage !== "idle") {
+        if (!ruffBgBalloons || !ruffBgBalloons.length) spawnTrainingBgBalloons();
+        updateTrainingBgBalloons(dt);
+      }
+    } catch (e) {}
     // Keep training power icon visible (center bottom)
     try {
       var __sm = document.getElementById("stormMeter");
@@ -2611,7 +2624,6 @@ function finishToMap() {
             (ruffStageT > 6 && window.__airborneTrainingBossTried &&
              typeof bossActive !== "undefined" && !bossActive && !bossSinking)) {
           window.__airborneTrainingBoss = false;
-          ruffBgBalloons = [];
           updateTrainingBossDark(dt, 0);
           requestNextStage();
         } else if (ruffStageT > 50) {
@@ -2622,7 +2634,6 @@ function finishToMap() {
           } catch (e) {}
           window.__airborneTrainingBoss = false;
           window.__airborneTrainingBossDone = true;
-          ruffBgBalloons = [];
           requestNextStage();
         }
       }

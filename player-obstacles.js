@@ -1293,6 +1293,14 @@
             }
           } catch (e) {}
         } else {
+          // Coins burst on every contact (even during i-frames)
+          if (!o._hitCoinBursted) {
+            o._hitCoinBursted = true;
+            try {
+              if (typeof window.spawnHitCoinBurst === "function") window.spawnHitCoinBurst();
+              else if (typeof window.spawnHitRingBurst === "function") window.spawnHitRingBurst();
+            } catch (e) {}
+          }
           takeHit();
         }
       }
@@ -1441,12 +1449,16 @@
       } else {
         ctx.drawImage(img, o.x, drawY, o.w, o.h);
       }
-      // Brief white flash on impact
-      if (o.hitFlash && o.hitFlash > 0) {
+      // Soft white impact flash — skip balloons (red sprites look "red flash" with additive blend)
+      if (o.hitFlash && o.hitFlash > 0 && img && img.naturalWidth && o.type !== "balloon_anim") {
         ctx.save();
-        ctx.globalAlpha = Math.min(0.85, o.hitFlash);
+        ctx.globalAlpha = Math.min(0.5, o.hitFlash * 0.65);
         ctx.globalCompositeOperation = "lighter";
-        ctx.drawImage(img, o.x, drawY, o.w, o.h);
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        // subtle bright rim rather than full-sprite tint
+        ctx.beginPath();
+        ctx.ellipse(o.x + o.w * 0.5, drawY + o.h * 0.45, o.w * 0.42, o.h * 0.42, 0, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
       }
 

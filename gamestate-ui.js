@@ -345,6 +345,8 @@
       return;
     }
     // Shared i-frames — prevents multi-hit / meter flicker same frame
+    // Still allow a coin burst marker so rapid contacts from collision path work;
+    // takeHit itself skips damage while invulnerable.
     if (performance.now() < invulnerableUntil) return;
 
     health--;
@@ -356,10 +358,7 @@
     try { sfxHit(); } catch (e) {}
     try { triggerScreenShake(3, 160); } catch (e) {}
     try { spawnHitParticles(player.x, player.y); } catch (e) {}
-    // 5 gold rings burst out of the blimp in all directions
-    try {
-      if (typeof window.spawnHitRingBurst === "function") window.spawnHitRingBurst();
-    } catch (e) {}
+    // Coin burst is spawned on collision contact (every hit), not here
 
     // Training: never game-over — soft recover at 0, longer i-frames (less flicker)
     if (window.__airborneAirfield && window.__airborneAirfieldPhase === "lesson") {
