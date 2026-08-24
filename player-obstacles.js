@@ -1189,10 +1189,17 @@
       if (o.hitFlash) o.hitFlash = Math.max(0, o.hitFlash - dt * 4);
 
       // birds bounce off with a little upward/downward kick when hit, instead of no reaction at all
-      if (o.deflectVy) {
-        o.y += o.deflectVy * dt;
-        o.deflectVy *= Math.max(0, 1 - 3.5 * dt);
-        if (Math.abs(o.deflectVy) < 4) o.deflectVy = 0;
+      if (o.deflectVx || o.deflectVy) {
+        o.x += (o.deflectVx || 0) * dt;
+        o.y += (o.deflectVy || 0) * dt;
+        if (o.spinVel) {
+          o.rot = (o.rot || 0) + o.spinVel * dt;
+          o.spinVel *= Math.max(0, 1 - 2.5 * dt);
+        }
+        o.deflectVx = (o.deflectVx || 0) * Math.max(0, 1 - 2.2 * dt);
+        o.deflectVy = (o.deflectVy || 0) * Math.max(0, 1 - 2.2 * dt);
+        if (Math.abs(o.deflectVx || 0) < 4) o.deflectVx = 0;
+        if (Math.abs(o.deflectVy || 0) < 4) o.deflectVy = 0;
       }
 
       // mini blimp jet engine flame + smoke trails
@@ -1373,9 +1380,27 @@
         const isBird = (o.type === "bird_a" || o.type === "bird_b");
         if ((isBird || shieldActive) && !o.hitDeflected) {
           o.hitDeflected = true;
-          o.deflectVy = (Math.random() < 0.5 ? -1 : 1) * (150 + Math.random() * 90);
+          if (shieldActive) {
+            // Strong shield reflection — knock obstacle hard away (coins flying out)
+            var awayX = (o.x + o.w * 0.5) - player.x;
+            var awayY = (drawY + o.h * 0.5) - player.y;
+            var alen = Math.hypot(awayX, awayY) || 1;
+            var knock = 320 + Math.random() * 180;
+            o.deflectVx = (awayX / alen) * knock + (Math.random() - 0.5) * 80;
+            o.deflectVy = (awayY / alen) * knock * 0.85 + (Math.random() < 0.5 ? -1 : 1) * (120 + Math.random() * 100);
+            o.spinVel = (Math.random() - 0.5) * 10;
+            o.hitFlash = 1.2;
+            try { if (typeof triggerScreenShake === "function") triggerScreenShake(5, 140); } catch (e) {}
+            try {
+              if (window.PowerFX) window.PowerFX.burst(o.x + o.w * 0.5, drawY + o.h * 0.5, {
+                count: 14, colors: ["#e0f2fe", "#fff", "#7dd3fc"], speed: 120, life: 0.4, glow: true
+              });
+            } catch (e) {}
+          } else {
+            o.deflectVy = (Math.random() < 0.5 ? -1 : 1) * (150 + Math.random() * 90);
+            o.hitFlash = 1;
+          }
           spawnHitParticles(o.x + o.w / 2, drawY + o.h / 2);
-          o.hitFlash = 1;
           if (isBird && typeof spawnFeathers === "function") {
             spawnFeathers(o.x + o.w / 2, drawY + o.h / 2);
           }

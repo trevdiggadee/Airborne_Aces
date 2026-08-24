@@ -3893,19 +3893,44 @@ function drawFireballs() {
       var rr = fb.r * (fb.finisher ? 2.8 : 2.2);
       var g = ctx.createRadialGradient(fb.x, fb.y, 0, fb.x, fb.y, rr);
       if (fb.kind === "bluefireball") {
-        g.addColorStop(0, "rgba(255,255,255,1)");
-        g.addColorStop(0.2, "rgba(186,230,253,0.95)");
-        g.addColorStop(0.5, "rgba(56,189,248,0.85)");
-        g.addColorStop(0.8, "rgba(14,120,220,0.35)");
-        g.addColorStop(1, "rgba(0,0,0,0)");
-        // elongated plasma blade shape
+        // Blue fire shell + black core on tip of each projectile
         ctx.save();
         ctx.translate(fb.x, fb.y);
         var bang = Math.atan2(fb.vy || 0, fb.vx || 1);
         ctx.rotate(bang);
-        ctx.fillStyle = g;
+        // elongated blue fire body
+        ctx.globalCompositeOperation = "lighter";
+        var gFire = ctx.createRadialGradient(0, 0, rr * 0.15, 0, 0, rr * 1.2);
+        gFire.addColorStop(0, "rgba(186,230,253,0.35)");
+        gFire.addColorStop(0.35, "rgba(56,189,248,0.9)");
+        gFire.addColorStop(0.7, "rgba(14,120,220,0.55)");
+        gFire.addColorStop(1, "rgba(2,60,140,0)");
+        ctx.fillStyle = gFire;
         ctx.beginPath();
-        ctx.ellipse(0, 0, rr * 1.15, rr * 0.55, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, rr * 1.2, rr * 0.58, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // black center orb at the tip (front of projectile)
+        ctx.globalCompositeOperation = "source-over";
+        var coreR = Math.max(3, fb.r * 0.45);
+        ctx.fillStyle = "rgba(6,8,14,0.96)";
+        ctx.beginPath();
+        ctx.arc(rr * 0.35, 0, coreR, 0, Math.PI * 2);
+        ctx.fill();
+        // cyan rim on black core
+        ctx.strokeStyle = "rgba(125,211,252,0.95)";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(rr * 0.35, 0, coreR, 0, Math.PI * 2);
+        ctx.stroke();
+        // small blue fire halo around black core
+        ctx.globalCompositeOperation = "lighter";
+        var hg = ctx.createRadialGradient(rr * 0.35, 0, coreR * 0.6, rr * 0.35, 0, coreR * 2.2);
+        hg.addColorStop(0, "rgba(56,189,248,0.0)");
+        hg.addColorStop(0.45, "rgba(56,189,248,0.55)");
+        hg.addColorStop(1, "rgba(14,100,200,0)");
+        ctx.fillStyle = hg;
+        ctx.beginPath();
+        ctx.arc(rr * 0.35, 0, coreR * 2.2, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       } else if (fb.kind === "greenfireball") {
@@ -3929,33 +3954,49 @@ function drawFireballs() {
       }
       ctx.globalCompositeOperation = "source-over";
     }
-    // Tip plasma orbs on Aero Slicer nose
+    // Tip plasma orbs on Aero Slicer nose — black centers, blue fire rim
     if (window.__airborneAzureTipOrbs && typeof player !== "undefined" && player) {
       ctx.save();
-      ctx.globalCompositeOperation = "lighter";
       var tips = window.__airborneAzureTipOrbs;
-      // core glow at tip
       var tipX = player.x + (player.w || 40) * 0.55;
       var tipY = player.y;
-      var cg = ctx.createRadialGradient(tipX, tipY, 1, tipX, tipY, 22);
-      cg.addColorStop(0, "rgba(255,255,255,0.85)");
-      cg.addColorStop(0.4, "rgba(125,211,252,0.55)");
+      // soft blue halo behind tip cluster
+      ctx.globalCompositeOperation = "lighter";
+      var cg = ctx.createRadialGradient(tipX, tipY, 2, tipX, tipY, 26);
+      cg.addColorStop(0, "rgba(56,189,248,0.35)");
+      cg.addColorStop(0.5, "rgba(14,165,233,0.2)");
       cg.addColorStop(1, "rgba(14,165,233,0)");
       ctx.fillStyle = cg;
       ctx.beginPath();
-      ctx.arc(tipX, tipY, 22, 0, Math.PI * 2);
+      ctx.arc(tipX, tipY, 26, 0, Math.PI * 2);
       ctx.fill();
       for (var ti = 0; ti < tips.length; ti++) {
         var o = tips[ti];
         if (o.x == null) continue;
-        var og = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, o.size * 2.2);
-        og.addColorStop(0, "rgba(255,255,255,1)");
-        og.addColorStop(0.35, "rgba(56,189,248,0.9)");
-        og.addColorStop(1, "rgba(2,100,200,0)");
+        var sz = o.size * 2.4;
+        // blue fire outer
+        ctx.globalCompositeOperation = "lighter";
+        var og = ctx.createRadialGradient(o.x, o.y, sz * 0.25, o.x, o.y, sz);
+        og.addColorStop(0, "rgba(186,230,253,0.15)");
+        og.addColorStop(0.35, "rgba(56,189,248,0.85)");
+        og.addColorStop(0.7, "rgba(14,120,220,0.55)");
+        og.addColorStop(1, "rgba(2,60,140,0)");
         ctx.fillStyle = og;
         ctx.beginPath();
-        ctx.arc(o.x, o.y, o.size * 2.2, 0, Math.PI * 2);
+        ctx.arc(o.x, o.y, sz, 0, Math.PI * 2);
         ctx.fill();
+        // black center
+        ctx.globalCompositeOperation = "source-over";
+        ctx.fillStyle = "rgba(6,8,14,0.95)";
+        ctx.beginPath();
+        ctx.arc(o.x, o.y, Math.max(2.5, o.size * 0.55), 0, Math.PI * 2);
+        ctx.fill();
+        // thin bright rim on black core
+        ctx.strokeStyle = "rgba(125,211,252,0.9)";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(o.x, o.y, Math.max(2.5, o.size * 0.55), 0, Math.PI * 2);
+        ctx.stroke();
       }
       ctx.restore();
     }
