@@ -358,40 +358,149 @@
   }
 
 
-  // Burst 5 gold rings outward from the blimp when the player takes a hit
-  function spawnHitRingBurst() {
+  // Burst 5 gold coins outward from every angle around the blimp on hit
+  if (!window.__airborneHitCoins) window.__airborneHitCoins = [];
+
+  function spawnHitCoinBurst() {
     try {
       if (typeof player === "undefined" || !player) return;
-      if (typeof obstacles === "undefined" || !obstacles) return;
       var cx = player.x;
       var cy = player.y;
-      var r = Math.min(36, (typeof W !== "undefined" ? W : 400) * 0.08);
+      var list = window.__airborneHitCoins;
+      if (!list) { list = []; window.__airborneHitCoins = list; }
       for (var i = 0; i < 5; i++) {
-        var ang = (i / 5) * Math.PI * 2 + (Math.random() - 0.5) * 0.25;
-        var spd = 160 + Math.random() * 90;
-        obstacles.push({
-          type: "gold_ring",
-          x: cx - r,
-          y: cy - r,
-          w: r * 2,
-          h: r * 2,
-          r: r,
+        // Even angles around the blimp (every 72°) with a tiny random jitter
+        var ang = (i / 5) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+        var spd = 180 + Math.random() * 100;
+        list.push({
+          x: cx,
+          y: cy,
+          r: 13 + Math.random() * 2,
           vx: Math.cos(ang) * spd,
           vy: Math.sin(ang) * spd,
-          scored: false,
-          collected: false,
           spin: Math.random() * Math.PI * 2,
-          bobPhase: Math.random() * Math.PI * 2,
-          bobAmount: 4,
-          speedMult: 0,
-          isRing: true,
-          fromHitBurst: true,
-          burstLife: 2.8 + Math.random() * 0.6
+          bob: Math.random() * Math.PI * 2,
+          life: 3.2 + Math.random() * 0.6,
+          age: 0,
+          collected: false
         });
       }
     } catch (e) {}
   }
-  window.spawnHitRingBurst = spawnHitRingBurst;
+  // Back-compat aliases (older takeHit calls)
+  window.spawnHitCoinBurst = spawnHitCoinBurst;
+  window.spawnHitRingBurst = spawnHitCoinBurst;
+
+  function updateHitCoins(dt) {
+    var list = window.__airborneHitCoins;
+    if (!list || !list.length) return;
+    var px = (typeof player !== "undefined" && player) ? player.x : 0;
+    var py = (typeof player !== "undefined" && player) ? player.y : 0;
+    var pw = (typeof player !== "undefined" && player) ? player.w * 0.42 : 20;
+    var ph = (typeof player !== "undefined" && player) ? player.h * 0.42 : 16;
+    for (var i = list.length - 1; i >= 0; i--) {
+      var c = list[i];
+      if (c.collected) { list.splice(i, 1); continue; }
+      c.age += dt;
+      c.x += c.vx * dt;
+      c.y += c.vy * dt;
+      // ease outward then slow
+      c.vx *= (1 - 0.55 * dt);
+      c.vy *= (1 - 0.55 * dt);
+      // slight gravity so they arc
+      c.vy += 40 * dt;
+      c.spin += dt * 5.5;
+      c.bob += dt * 3.0;
+      // collect if player touches
+      if (Math.abs(c.x - px) < pw + c.r && Math.abs(c.y - py) < ph + c.r) {
+        c.collected = true;
+        window.__airborneCollectCoins = (window.__airborneCollectCoins || 0) + 1;
+        try {
+          if (typeof ruffStats !== "undefined" && ruffStats) {
+            ruffStats.coins = (ruffStats.coins || 0) + 1;
+          }
+        } catch (e) {}
+        try {
+          if (typeof window.addStormChargeForScore === "function") {
+            window.addStormChargeForScore(typeof score === "number" ? score : 0);
+          }
+        } catch (e) {}
+        try {
+          if (typeof updateCollectDock === "function") updateCollectDock();
+          else {
+            var coinEl = document.getElementById("collectPowerPct");
+            if (coinEl) coinEl.textContent = String(window.__airborneCollectCoins || 0);
+          }
+        } catch (e) {}
+        try {
+          if (typeof sfxTrainingCoin === "function") sfxTrainingCoin();
+          else if (typeof sfxPowerup === "function") sfxPowerup();
+        } catch (e) {}
+        try {
+          if (typeof spawnHitParticles === "function") spawnHitParticles(c.x, c.y);
+        } catch (e) {}
+        list.splice(i, 1);
+        continue;
+      }
+      if (c.age >= c.life) {
+        list.splice(i, 1);
+        continue;
+      }
+      // off-screen cull
+      var W0 = typeof W !== "undefined" ? W : 800;
+      var H0 = typeof H !== "undefined" ? H : 600;
+      if (c.x < -60 || c.x > W0 + 60 || c.y < -60 || c.y > H0 + 60) {
+        list.splice(i, 1);
+      }
+    }
+  }
+
+  function drawHitCoins() {
+    var list = window.__airborneHitCoins;
+    if (!list || !list.length || typeof ctx === "undefined") return;
+    for (var i = 0; i < list.length; i++) {
+      var c = list[i];
+      if (c.collected) continue;
+      var by = c.y + Math.sin(c.bob) * 3;
+      var squash = 0.55 + 0.45 * Math.abs(Math.cos(c.spin));
+      var fade = Math.max(0.25, 1 - Math.max(0, (c.age - (c.life - 0.5)) / 0.5));
+      ctx.save();
+      ctx.globalAlpha = fade;
+      ctx.translate(c.x, by);
+      ctx.scale(squash, 1);
+      // outer glow
+      ctx.globalAlpha = fade * 0.4;
+      ctx.fillStyle = "#ffd700";
+      ctx.beginPath();
+      ctx.arc(0, 0, c.r * 1.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = fade;
+      // coin face
+      var g = ctx.createRadialGradient(-c.r * 0.3, -c.r * 0.35, 1, 0, 0, c.r);
+      g.addColorStop(0, "#fff6c8");
+      g.addColorStop(0.35, "#ffd700");
+      g.addColorStop(0.75, "#d4a017");
+      g.addColorStop(1, "#8a6a0a");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, 0, c.r, 0, Math.PI * 2);
+      ctx.fill();
+      // rim
+      ctx.strokeStyle = "rgba(120, 80, 10, 0.85)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, c.r * 0.92, 0, Math.PI * 2);
+      ctx.stroke();
+      // center mark
+      ctx.fillStyle = "rgba(180, 120, 20, 0.55)";
+      ctx.beginPath();
+      ctx.arc(0, 0, c.r * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+  window.updateHitCoins = updateHitCoins;
+  window.drawHitCoins = drawHitCoins;
 
   function spawnGoldRing() {
     const r = Math.min(42, W * 0.10); // +25% from prior half-size
@@ -832,6 +941,7 @@
 
   function updateObstacles(dt) {
     try { updateFirePower(dt); } catch (e) {}
+    try { updateHitCoins(dt); } catch (e) {}
     if (!bossActive && !bonusActive && !bonusPending && !(typeof isLevelEndActive === "function" && isLevelEndActive())) {
       spawnTimer += dt;
       if (spawnTimer >= spawnInterval) {
@@ -1191,6 +1301,7 @@
 
   function drawObstacles() {
     try { drawFirePower(); } catch (e) {}
+    try { drawHitCoins(); } catch (e) {}
     obstacles.forEach(o => {
       if (o.isRing || o.type === "gold_ring") {
         // BACK half only — front half drawn later (drawRingFronts) so blimp flies THROUGH
