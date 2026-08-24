@@ -507,23 +507,16 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         try { if (typeof triggerScreenShake === "function") triggerScreenShake(4, 200); } catch (e) {}
       }
       if (powerMode === "bluefireball") {
-        window.__airborneBlueFlash = { x: player.x, y: player.y, age: 0, life: 0.28 };
-        // Initial volley 3-5
-        if (!window.__airborneFireballs) window.__airborneFireballs = [];
-        var n0 = 3 + Math.floor(Math.random() * 3);
-        for (var bi = 0; bi < n0; bi++) {
-          var ang0 = -0.4 + (bi / Math.max(1, n0 - 1)) * 0.8;
-          var sp0 = 150 + Math.random() * 40;
-          window.__airborneFireballs.push({
-            x: player.x + (player.w || 40) * 0.3,
-            y: player.y + (bi - n0 / 2) * 8,
-            vx: Math.cos(ang0) * sp0,
-            vy: Math.sin(ang0) * sp0 * 0.5,
-            life: 1.8, age: 0, r: 10, kind: "bluefireball",
-            colors: ["#e0f2fe", "#7dd3fc", "#38bdf8", "#0284c7"],
-            accel: 90, trails: []
-          });
-        }
+        // Engine azure flare then rapid barrage
+        window.__airborneBlueFlash = { x: player.x, y: player.y, age: 0, life: 0.55, phase: 1 };
+        window.__airborneAzureBarrage = {
+          shotsLeft: 4 + Math.floor(Math.random() * 2), // 4–5 total stream
+          nextT: 0.08,
+          fired: 0
+        };
+        window.__airborneFireballSpawnT = 0.05;
+        try { if (typeof triggerScreenShake === "function") triggerScreenShake(5, 220); } catch (e) {}
+        try { if (typeof sfxShoot === "function") sfxShoot(); } catch (e) {}
       }
       try {
         if (window.PowerFX && player) window.PowerFX.activate(powerMode, player.x, player.y);
@@ -2203,41 +2196,78 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
       if (!window.__airborneFireballSpawnT) window.__airborneFireballSpawnT = 0;
       window.__airborneFireballSpawnT -= dt;
       if (window.__airborneFireballSpawnT <= 0 && typeof player !== "undefined" && player) {
-        window.__airborneFireballSpawnT = (stormMode === "greenfireball") ? 0.14 : (stormMode === "bluefireball" ? 0.35 : 0.28);
-        var ang = -0.35 + Math.random() * 0.7;
-        var sp = 160 + Math.random() * 80;
         var fbColors = ["#ffd24a", "#ff8a1a", "#ff3b00"];
         var smokeCol = "rgba(60,55,50,1)";
+        var ang = -0.35 + Math.random() * 0.7;
+        var sp = 160 + Math.random() * 80;
+        var spawnX = player.x + (player.w || 40) * 0.3;
+        var spawnY = player.y;
+        var isFinisher = false;
+        var pierce = 1;
+        var rSize = 10 + Math.random() * 4;
+        var lifeT = 1.6;
+
         if (stormMode === "bluefireball") {
-          fbColors = ["#e0f2fe", "#7dd3fc", "#38bdf8", "#0284c7"];
-          smokeCol = "rgba(40,60,90,1)";
+          // Azure Barrage — rapid stream, vertical fan, piercing plasma blades
+          fbColors = ["#f0f9ff", "#bae6fd", "#38bdf8", "#0ea5e9", "#0284c7"];
+          smokeCol = "rgba(30,80,140,0.7)";
+          var barrage = window.__airborneAzureBarrage;
+          if (!barrage) {
+            barrage = { shotsLeft: 4, nextT: 0.1, fired: 0 };
+            window.__airborneAzureBarrage = barrage;
+          }
+          if (barrage.shotsLeft <= 0) {
+            // after initial volley, occasional extra shots
+            window.__airborneFireballSpawnT = 0.32;
+          } else {
+            window.__airborneFireballSpawnT = 0.09 + Math.random() * 0.04;
+            barrage.shotsLeft--;
+            barrage.fired++;
+          }
+          var totalFan = 5;
+          var slot = (barrage.fired - 1) % totalFan;
+          // vertical fan spread
+          ang = -0.42 + (slot / Math.max(1, totalFan - 1)) * 0.84 + (Math.random() - 0.5) * 0.08;
+          sp = 220 + Math.random() * 60;
+          spawnX = player.x + (player.w || 40) * 0.35;
+          spawnY = player.y + Math.sin(ang) * (player.h || 30) * 0.35;
+          pierce = 4; // burn through multiple obstacles
+          isFinisher = (barrage.shotsLeft === 0 && barrage.fired >= 3);
+          rSize = isFinisher ? 16 + Math.random() * 3 : 9 + Math.random() * 3;
+          lifeT = isFinisher ? 2.1 : 1.7;
+          try { if (typeof sfxShoot === "function") sfxShoot(); } catch (e) {}
         } else if (stormMode === "greenfireball") {
+          window.__airborneFireballSpawnT = 0.14;
           fbColors = ["#d1fae5", "#6ee7b7", "#10b981", "#047857"];
           smokeCol = "rgba(40,70,50,1)";
-          // Spiral release
           if (window.__airborneGreenSpiralAng == null) window.__airborneGreenSpiralAng = 0;
           window.__airborneGreenSpiralAng += 0.65;
           ang = window.__airborneGreenSpiralAng;
           sp = 130 + (window.__airborneGreenSpiralAng % 3) * 25;
-        }
-        var spawnX = player.x + (player.w || 40) * 0.25;
-        var spawnY = player.y + (Math.random() - 0.5) * (player.h || 30) * 0.4;
-        if (stormMode === "greenfireball") {
           spawnX = player.x + Math.cos(ang) * 12;
           spawnY = player.y + Math.sin(ang) * 10;
+          lifeT = 1.9;
+        } else {
+          window.__airborneFireballSpawnT = 0.28;
         }
+
         window.__airborneFireballs.push({
           x: spawnX,
           y: spawnY,
           vx: Math.cos(ang) * sp,
-          vy: Math.sin(ang) * sp * (stormMode === "greenfireball" ? 0.45 : 0.6) - (stormMode === "greenfireball" ? 35 : 20),
-          life: stormMode === "greenfireball" ? 1.9 : 1.6,
+          vy: Math.sin(ang) * sp * (stormMode === "greenfireball" ? 0.45 : (stormMode === "bluefireball" ? 0.85 : 0.6))
+            - (stormMode === "greenfireball" ? 35 : (stormMode === "bluefireball" ? 5 : 20)),
+          life: lifeT,
           age: 0,
-          r: 10 + Math.random() * 4,
+          r: rSize,
           trails: [],
           colors: fbColors,
           smokeCol: smokeCol,
-          kind: stormMode
+          kind: stormMode,
+          pierce: pierce,
+          finisher: isFinisher,
+          accel: stormMode === "bluefireball" ? 120 : 0,
+          hitIds: {}
         });
       }
       // Update fireballs
@@ -2253,9 +2283,26 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
         }
         fb.x += fb.vx * dt;
         fb.y += fb.vy * dt;
-        fb.vy += 90 * dt; // mild gravity
-        // Smoke trail
-        if (Math.random() < 0.7) {
+        if (fb.kind === "bluefireball") {
+          fb.vy += 18 * dt; // nearly straight plasma shot
+        } else {
+          fb.vy += 90 * dt; // mild gravity
+        }
+        // Trails — azure gets long twisting flame trail + sparks
+        if (fb.kind === "bluefireball") {
+          if (Math.random() < 0.95) {
+            fb.trails.push({
+              x: fb.x + (Math.random() - 0.5) * 4,
+              y: fb.y + (Math.random() - 0.5) * 4,
+              vx: -fb.vx * 0.08 + (Math.random() - 0.5) * 40,
+              vy: -fb.vy * 0.08 + (Math.random() - 0.5) * 50,
+              life: 0.35 + Math.random() * 0.25,
+              age: 0,
+              r: 3 + Math.random() * 5,
+              spark: Math.random() < 0.35
+            });
+          }
+        } else if (Math.random() < 0.7) {
           fb.trails.push({
             x: fb.x, y: fb.y,
             vx: -20 + Math.random() * 10,
@@ -2282,6 +2329,12 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
             var ox = o.x + o.w * 0.5;
             var oy = o.y + o.h * 0.5;
             if (Math.hypot(fb.x - ox, fb.y - oy) < fb.r + Math.max(o.w, o.h) * 0.35) {
+              // Avoid double-hitting same obstacle with one plasma shot
+              var oid = o._uid || (o._uid = "o" + Math.random().toString(36).slice(2));
+              if (fb.hitIds && fb.hitIds[oid]) continue;
+              if (!fb.hitIds) fb.hitIds = {};
+              fb.hitIds[oid] = true;
+
               o.onFire = true;
               o.vy = 40;
               if (fb.kind === "greenfireball") {
@@ -2290,18 +2343,53 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
               }
               if (fb.kind === "bluefireball") {
                 o.blueFire = true;
+                o.vy = 70 + Math.random() * 40;
+                o.vx = (Math.random() - 0.5) * 60;
+                o.rot = (o.rot || 0);
+                o.spinVel = (Math.random() - 0.5) * 6;
               }
               try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
               try {
                 var cols = fb.colors || ["#ff6b3d", "#ffd24a", "#ff1a00"];
                 if (fb.kind === "greenfireball") cols = ["#d1fae5", "#34d399", "#059669", "#fff"];
+                if (fb.kind === "bluefireball") cols = ["#e0f2fe", "#38bdf8", "#0ea5e9", "#fff"];
                 if (window.PowerFX) window.PowerFX.burst(ox, oy, {
-                  count: 12, colors: cols, speed: 80, gravity: -30, life: 0.5, glow: true
+                  count: fb.kind === "bluefireball" ? 18 : 12,
+                  colors: cols,
+                  speed: fb.kind === "bluefireball" ? 110 : 80,
+                  gravity: -30,
+                  life: 0.55,
+                  glow: true
                 });
               } catch (e) {}
               try { creditPowerKillScore(1); } catch (e) {}
-              fb.age = fb.life; // consume fireball
-              break;
+
+              if (fb.kind === "bluefireball") {
+                // Piercing plasma — keep going through targets
+                fb.pierce = (fb.pierce || 1) - 1;
+                if (fb.finisher) {
+                  // Finisher blue explosion
+                  try {
+                    if (window.PowerFX) window.PowerFX.burst(ox, oy, {
+                      count: 28, colors: ["#fff", "#bae6fd", "#38bdf8", "#0284c7"],
+                      speed: 140, gravity: -20, life: 0.65, glow: true, radial: true
+                    });
+                  } catch (e) {}
+                  try { if (typeof triggerScreenShake === "function") triggerScreenShake(7, 200); } catch (e) {}
+                  try { if (typeof sfxExplosion === "function") sfxExplosion(0.45); } catch (e) {}
+                  fb.age = fb.life;
+                  break;
+                }
+                if (fb.pierce <= 0) {
+                  fb.age = fb.life;
+                  break;
+                }
+                // shrink slightly after each pierce
+                fb.r = Math.max(6, fb.r * 0.92);
+              } else {
+                fb.age = fb.life; // consume fireball
+                break;
+              }
             }
           }
         }
@@ -3734,41 +3822,108 @@ function drawFireballs() {
     ctx.save();
     for (var i = 0; i < fbs.length; i++) {
       var fb = fbs[i];
-      // smoke trails
-      for (var ti = 0; ti < (fb.trails || []).length; ti++) {
-        var tr = fb.trails[ti];
-        var ta = 1 - tr.age / tr.life;
-        ctx.globalAlpha = ta * 0.45;
-        ctx.fillStyle = fb.smokeCol || "rgba(60,55,50,1)";
-        ctx.beginPath();
-        ctx.arc(tr.x, tr.y, tr.r, 0, Math.PI * 2);
-        ctx.fill();
+      // smoke trails (skip for azure — uses plasma trail below)
+      if (fb.kind !== "bluefireball") {
+        for (var ti = 0; ti < (fb.trails || []).length; ti++) {
+          var tr = fb.trails[ti];
+          var ta = 1 - tr.age / tr.life;
+          ctx.globalAlpha = ta * 0.45;
+          ctx.fillStyle = fb.smokeCol || "rgba(60,55,50,1)";
+          ctx.beginPath();
+          ctx.arc(tr.x, tr.y, tr.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
-      // fireball core
+      // trails (azure twisting plasma)
+      if (fb.kind === "bluefireball" && fb.trails) {
+        for (var ti = 0; ti < fb.trails.length; ti++) {
+          var tr = fb.trails[ti];
+          var ta = 1 - tr.age / tr.life;
+          if (ta <= 0) continue;
+          ctx.globalCompositeOperation = "lighter";
+          if (tr.spark) {
+            ctx.globalAlpha = ta;
+            ctx.strokeStyle = "rgba(186,230,253," + ta + ")";
+            ctx.lineWidth = 1.4;
+            ctx.beginPath();
+            ctx.moveTo(tr.x, tr.y);
+            ctx.lineTo(tr.x - tr.vx * 0.04, tr.y - tr.vy * 0.04);
+            ctx.stroke();
+          } else {
+            ctx.globalAlpha = ta * 0.7;
+            var tg = ctx.createRadialGradient(tr.x, tr.y, 0, tr.x, tr.y, tr.r * 1.4);
+            tg.addColorStop(0, "rgba(224,242,254,0.95)");
+            tg.addColorStop(0.4, "rgba(56,189,248,0.7)");
+            tg.addColorStop(1, "rgba(2,100,200,0)");
+            ctx.fillStyle = tg;
+            ctx.beginPath();
+            ctx.arc(tr.x, tr.y, tr.r * 1.2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+      // fireball / plasma blade core
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "lighter";
-      var g = ctx.createRadialGradient(fb.x, fb.y, 0, fb.x, fb.y, fb.r * 2.2);
+      var rr = fb.r * (fb.finisher ? 2.8 : 2.2);
+      var g = ctx.createRadialGradient(fb.x, fb.y, 0, fb.x, fb.y, rr);
       if (fb.kind === "bluefireball") {
-        g.addColorStop(0, "rgba(220,245,255,0.95)");
-        g.addColorStop(0.35, "rgba(56,189,248,0.85)");
-        g.addColorStop(0.7, "rgba(14,100,200,0.4)");
+        g.addColorStop(0, "rgba(255,255,255,1)");
+        g.addColorStop(0.2, "rgba(186,230,253,0.95)");
+        g.addColorStop(0.5, "rgba(56,189,248,0.85)");
+        g.addColorStop(0.8, "rgba(14,120,220,0.35)");
         g.addColorStop(1, "rgba(0,0,0,0)");
+        // elongated plasma blade shape
+        ctx.save();
+        ctx.translate(fb.x, fb.y);
+        var bang = Math.atan2(fb.vy || 0, fb.vx || 1);
+        ctx.rotate(bang);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, rr * 1.15, rr * 0.55, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       } else if (fb.kind === "greenfireball") {
         g.addColorStop(0, "rgba(220,255,230,0.95)");
         g.addColorStop(0.35, "rgba(52,211,153,0.85)");
         g.addColorStop(0.7, "rgba(4,120,87,0.4)");
         g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(fb.x, fb.y, rr, 0, Math.PI * 2);
+        ctx.fill();
       } else {
         g.addColorStop(0, "rgba(255,250,200,0.95)");
         g.addColorStop(0.35, "rgba(255,140,20,0.8)");
         g.addColorStop(0.7, "rgba(200,40,0,0.4)");
         g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(fb.x, fb.y, rr, 0, Math.PI * 2);
+        ctx.fill();
       }
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(fb.x, fb.y, fb.r * 2.2, 0, Math.PI * 2);
-      ctx.fill();
       ctx.globalCompositeOperation = "source-over";
+    }
+    // Azure engine flare on activation
+    if (window.__airborneBlueFlash) {
+      var bf = window.__airborneBlueFlash;
+      var bt = Math.max(0, 1 - bf.age / bf.life);
+      if (bt > 0 && typeof player !== "undefined" && player) {
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = bt * 0.85;
+        var br = (player.w || 40) * (0.6 + (1 - bt) * 0.8);
+        var bg = ctx.createRadialGradient(player.x, player.y, 2, player.x, player.y, br);
+        bg.addColorStop(0, "rgba(255,255,255,0.95)");
+        bg.addColorStop(0.35, "rgba(125,211,252,0.7)");
+        bg.addColorStop(0.7, "rgba(14,165,233,0.3)");
+        bg.addColorStop(1, "rgba(0,80,180,0)");
+        ctx.fillStyle = bg;
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, br, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     }
     ctx.restore();
   }
