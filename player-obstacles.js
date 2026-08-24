@@ -372,26 +372,30 @@
     } catch (e) {}
   }
 
-  function spawnHitCoinBurst() {
+  function spawnHitCoinBurst(opts) {
     try {
       if (typeof player === "undefined" || !player) return;
       var now = performance.now();
       if (window.__airborneLastCoinBurst && now - window.__airborneLastCoinBurst < 180) return;
+      opts = opts || {};
+      var free = !!opts.free; // shield block: visual only, no spend
 
       var have = window.__airborneCollectCoins || 0;
-      if (have < HIT_COIN_COST) {
+      if (!free && have < HIT_COIN_COST) {
         // Not enough coins — nothing comes out
         return;
       }
 
-      // Subtract from collection
-      window.__airborneCollectCoins = have - HIT_COIN_COST;
-      try {
-        if (typeof ruffStats !== "undefined" && ruffStats) {
-          ruffStats.coins = Math.max(0, (ruffStats.coins || 0) - HIT_COIN_COST);
-        }
-      } catch (e) {}
-      refreshCoinCounter();
+      // Subtract from collection (skip for free shield-block pop)
+      if (!free) {
+        window.__airborneCollectCoins = have - HIT_COIN_COST;
+        try {
+          if (typeof ruffStats !== "undefined" && ruffStats) {
+            ruffStats.coins = Math.max(0, (ruffStats.coins || 0) - HIT_COIN_COST);
+          }
+        } catch (e) {}
+        refreshCoinCounter();
+      }
 
       window.__airborneLastCoinBurst = now;
       var cx = player.x;
@@ -1374,6 +1378,15 @@
           o.hitFlash = 1;
           if (isBird && typeof spawnFeathers === "function") {
             spawnFeathers(o.x + o.w / 2, drawY + o.h / 2);
+          }
+          // Shield block — coins pop out (free visual, no spend)
+          if (shieldActive && !o._hitCoinBursted) {
+            o._hitCoinBursted = true;
+            try {
+              if (typeof window.spawnHitCoinBurst === "function") {
+                window.spawnHitCoinBurst({ free: true });
+              }
+            } catch (e) {}
           }
         }
         if (o.isRing || o.type === "gold_ring") {

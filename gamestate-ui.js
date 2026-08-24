@@ -342,6 +342,11 @@
       spawnHitParticles(player.x, player.y);
       sfxDeflect();
       shieldImpactTime = performance.now();
+      try {
+        if (typeof window.spawnHitCoinBurst === "function") {
+          window.spawnHitCoinBurst({ free: true });
+        }
+      } catch (e) {}
       return;
     }
     // Shared i-frames — prevents multi-hit / meter flicker same frame

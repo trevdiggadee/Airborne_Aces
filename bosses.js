@@ -2192,6 +2192,30 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
       window.__airborneActivePowerVisual = "fireball";
       window.__airborneActivePowerUntil = untilFb;
       if (!window.__airborneFireballs) window.__airborneFireballs = [];
+      // Aero Slicer tip plasma orbs (stay on the nose while power is active)
+      if (stormMode === "bluefireball" && typeof player !== "undefined" && player) {
+        if (!window.__airborneAzureTipOrbs) {
+          window.__airborneAzureTipOrbs = [];
+          for (var ti = 0; ti < 3; ti++) {
+            window.__airborneAzureTipOrbs.push({
+              phase: ti * (Math.PI * 2 / 3),
+              size: 5 + ti * 1.5,
+              orbit: 6 + ti * 3
+            });
+          }
+        }
+        var tips = window.__airborneAzureTipOrbs;
+        var tipX = player.x + (player.w || 40) * 0.55;
+        var tipY = player.y;
+        for (var ti = 0; ti < tips.length; ti++) {
+          tips[ti].phase += dt * (4.5 + ti * 0.8);
+          tips[ti].x = tipX + Math.cos(tips[ti].phase) * tips[ti].orbit * 0.35;
+          tips[ti].y = tipY + Math.sin(tips[ti].phase * 1.3) * tips[ti].orbit * 0.55;
+        }
+      } else {
+        window.__airborneAzureTipOrbs = null;
+      }
+
       // Spawn fireballs periodically from hull
       if (!window.__airborneFireballSpawnT) window.__airborneFireballSpawnT = 0;
       window.__airborneFireballSpawnT -= dt;
@@ -2229,9 +2253,9 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
           // vertical fan spread
           ang = -0.42 + (slot / Math.max(1, totalFan - 1)) * 0.84 + (Math.random() - 0.5) * 0.08;
           sp = 220 + Math.random() * 60;
-          // Spawn at front/nose of the blimp
-          spawnX = player.x + (player.w || 40) * 0.52;
-          spawnY = player.y + Math.sin(ang) * (player.h || 30) * 0.22;
+          // Spawn at tip/nose of Aero Slicer
+          spawnX = player.x + (player.w || 40) * 0.58;
+          spawnY = player.y + Math.sin(ang) * (player.h || 30) * 0.18;
           pierce = 4; // burn through multiple obstacles
           isFinisher = (barrage.shotsLeft === 0 && barrage.fired >= 3);
           rSize = isFinisher ? 16 + Math.random() * 3 : 9 + Math.random() * 3;
@@ -3904,6 +3928,36 @@ function drawFireballs() {
         ctx.fill();
       }
       ctx.globalCompositeOperation = "source-over";
+    }
+    // Tip plasma orbs on Aero Slicer nose
+    if (window.__airborneAzureTipOrbs && typeof player !== "undefined" && player) {
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      var tips = window.__airborneAzureTipOrbs;
+      // core glow at tip
+      var tipX = player.x + (player.w || 40) * 0.55;
+      var tipY = player.y;
+      var cg = ctx.createRadialGradient(tipX, tipY, 1, tipX, tipY, 22);
+      cg.addColorStop(0, "rgba(255,255,255,0.85)");
+      cg.addColorStop(0.4, "rgba(125,211,252,0.55)");
+      cg.addColorStop(1, "rgba(14,165,233,0)");
+      ctx.fillStyle = cg;
+      ctx.beginPath();
+      ctx.arc(tipX, tipY, 22, 0, Math.PI * 2);
+      ctx.fill();
+      for (var ti = 0; ti < tips.length; ti++) {
+        var o = tips[ti];
+        if (o.x == null) continue;
+        var og = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, o.size * 2.2);
+        og.addColorStop(0, "rgba(255,255,255,1)");
+        og.addColorStop(0.35, "rgba(56,189,248,0.9)");
+        og.addColorStop(1, "rgba(2,100,200,0)");
+        ctx.fillStyle = og;
+        ctx.beginPath();
+        ctx.arc(o.x, o.y, o.size * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
     }
     // Azure engine flare on activation
     if (window.__airborneBlueFlash) {
