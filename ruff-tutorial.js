@@ -1398,7 +1398,8 @@
         ruffStats.crystals++; playCrystalCollectSfx();
         window.__airborneCollectCrystals = (window.__airborneCollectCrystals || 0) + 1;
         if (typeof updateCollectDock === "function") updateCollectDock();
-        if (typeof score === "number") score += CRYSTAL_SCORE;
+        // Crystals counted separately — do not add to main dodge score
+        // if (typeof score === "number") score += CRYSTAL_SCORE;
         if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
         if (ruffWaitingCollect > 0) ruffWaitingCollect--;
         // Sparkle burst
@@ -1502,7 +1503,8 @@
             if (coinEl) coinEl.textContent = String(window.__airborneCollectCoins);
           }
         } catch (e) {}
-        if (typeof score === "number") score += COIN_SCORE;
+        // Coins counted separately — do not add to main dodge score
+        // if (typeof score === "number") score += COIN_SCORE;
         if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
         try { sfxTrainingCoin(); } catch (e) {}
         for (let s = 0; s < 12; s++) {

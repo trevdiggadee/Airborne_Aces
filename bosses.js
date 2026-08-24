@@ -669,7 +669,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
           o.vx = 120 + Math.random() * 60;
           o.vy = (Math.random() - 0.5) * 40;
           o.steamPush = 0.35; o.steamHeat = 0.5; o.scored = true;
-          try { score += 3; } catch (e) {}
+          /* power kill: no main score */
         });
       }
       try { if (window.PowerFX) window.PowerFX.activate("steam", player.x, player.y); } catch (e) {}
@@ -775,7 +775,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
               count: 8, colors: ["#fff", "#7dd3fc", "#ff8a1a", "#ff3b00"], speed: 90, glow: true
             });
           } catch (e) {}
-          try { score += 4; } catch (e) {}
+          /* power kill: no main score */
           try { if (typeof sfxHit === "function") sfxHit(); } catch (e) {}
         }, idx * 120);
       });
@@ -796,7 +796,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
             o.vx = 120;
             o.vy = (Math.random() - 0.5) * 40;
             o.scored = true;
-            try { score += 3; } catch (e) {}
+            /* power kill: no main score */
           }
         });
       }
@@ -1183,7 +1183,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
     obstacles.forEach(o => {
       const drawY = o.y + Math.sin(o.bobPhase) * o.bobAmount;
       triggerBigExplosion(o.x + o.w / 2, drawY + o.h / 2, o.w, o.h);
-      score += 2;
+      /* power kill: no main score */
     });
     obstacles = [];
     bombs.forEach(b => triggerBigExplosion(b.x, b.y, 40, 40));
@@ -1329,7 +1329,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
               window.__airborneShockFX.push({
                 x: ox, y: oy, r: 8, maxR: 70, life: 0.4, age: 0, width: 4
               });
-              try { score += 40; } catch (e) {}
+              /* power kill: no main score */
               obstacles.splice(oi, 1);
               lt.age = lt.life;
               break;
@@ -1497,7 +1497,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
             if (Math.hypot(ifb.x - ox, ifb.y - oy) < ifb.r + Math.max(o.w, o.h) * 0.3) {
               try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
               try { if (window.PowerFX) window.PowerFX.burst(ox, oy, { count: 10, colors: ["#fff","#ffd24a","#ff8a1a"], speed: 100, glow: true }); } catch (e) {}
-              try { score += 30; } catch (e) {}
+              /* power kill: no main score */
               obstacles.splice(oi, 1);
               ifb.age = ifb.life;
               break;
@@ -1541,11 +1541,11 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
               if (Math.hypot(ox - mx, oy - my) < 160) {
                 bolt.branches.push({ x0: mx, y0: my, x1: ox, y1: oy });
                 o.onFire = true; o.vy = 70; o.scored = true;
-                try { score += 20; } catch (e) {}
+                /* power kill: no main score */
               }
             });
             main.onFire = true; main.vy = 90; main.scored = true;
-            try { score += 25; } catch (e) {}
+            /* power kill: no main score */
             window.__airborneIvoryBolts.push(bolt);
           }
         }
@@ -1713,7 +1713,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
             }); } catch (e) {}
             try { if (typeof triggerScreenShake === "function") triggerScreenShake(5 + (sh.chainBoost || 1), 100); } catch (e) {}
             try { if (typeof sfxExplosion === "function") sfxExplosion(0.45); } catch (e) {}
-            try { score += 40; } catch (e) {}
+            /* power kill: no main score */
             // Chain reaction intensifies pull
             sh.chainBoost = Math.min(2.2, (sh.chainBoost || 1) + 0.15);
             obstacles.splice(vi, 1);
@@ -1826,7 +1826,7 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
                 count: 16, colors: ["#e9d5ff", "#c084fc", "#7c3aed", "#4c1d95", "#fff"],
                 speed: 150, glow: true
               }); } catch (e) {}
-              try { score += 35; } catch (e) {}
+              /* power kill: no main score */
               try { if (typeof sfxExplosion === "function") sfxExplosion(0.4); } catch (e) {}
               obstacles.splice(vi, 1);
             }
@@ -1912,7 +1912,7 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
             var mx = mo.x + mo.w * 0.5, my = mo.y + mo.h * 0.5;
             if (Math.hypot(mx - mt.x, my - mt.y) < mt.r + Math.max(mo.w, mo.h) * 0.35) {
               hitObs = true;
-              try { score += mt.big ? 45 : 25; } catch (e) {}
+              /* power kill: no main score */
               obstacles.splice(moi, 1);
               break;
             }
@@ -2134,8 +2134,7 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
               }
             } catch (e) {}
             try {
-              if (typeof score === "number") score += 25;
-              if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
+              /* power kill: no main score */
             } catch (e) {}
           }
         }
@@ -2280,10 +2279,7 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
                   count: 12, colors: cols, speed: 80, gravity: -30, life: 0.5, glow: true
                 });
               } catch (e) {}
-              try {
-                if (typeof score === "number") score += 25;
-                if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
-              } catch (e) {}
+              /* power kill: no main score */
               fb.age = fb.life; // consume fireball
               break;
             }
@@ -2436,10 +2432,7 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
                 var isBird = o.isBird || o.type === "bird" || (o.key && /bird/i.test(String(o.key)));
                 if (isBird && typeof spawnFeathers === "function") spawnFeathers(ox, oy);
               } catch (e) {}
-              try {
-                if (typeof score === "number") score += 30;
-                if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
-              } catch (e) {}
+              /* power kill: no main score */
               obstacles.splice(oi, 1);
             }
           }
@@ -2485,8 +2478,7 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
                   });
                 } catch (e) {}
                 try {
-                  if (typeof score === "number") score += 40;
-                  if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
+                  /* power kill: no main score */
                 } catch (e) {}
                 obstacles.splice(oi, 1);
               }
@@ -2526,10 +2518,7 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
               hitB = true;
               try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
               try {
-                if (typeof score === "number") {
-                  score += 15;
-                  if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
-                }
+                /* power kill: no main score */
               } catch (e) {}
               obstacles.splice(oi, 1);
               break;
@@ -2600,10 +2589,7 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
               if (typeof triggerBigExplosion === "function") triggerBigExplosion(ox, oy, o.w, o.h);
               obstacles.splice(i, 1);
               p.hit = true;
-              if (typeof score !== "undefined") {
-                score += 1;
-                if (typeof scoreVal !== "undefined") scoreVal.textContent = score;
-              }
+              /* power kill: no main score */
               break;
             }
           }
@@ -2691,7 +2677,7 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
               triggerBigExplosion(o.x + o.w / 2, drawY + o.h / 2, o.w, o.h);
               spawnPirateBlast(o.x + o.w / 2, drawY + o.h / 2, 0.55);
               obstacles.splice(oi, 1);
-              score += 2;
+              /* power kill: no main score */
               if (typeof scoreVal !== "undefined") scoreVal.textContent = score;
               if (typeof bumpScorePop === "function") bumpScorePop();
             }
@@ -2750,7 +2736,7 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
           obstacles.forEach(o => {
             const drawY = o.y + Math.sin(o.bobPhase) * o.bobAmount;
             triggerBigExplosion(o.x + o.w / 2, drawY + o.h / 2, o.w, o.h);
-            score += 2;
+            /* power kill: no main score */
           });
           obstacles = [];
           if (typeof scoreVal !== "undefined") scoreVal.textContent = score;
@@ -3547,7 +3533,7 @@ function drawMeteorMarks() {
       o.vx = Math.cos(ang) * (80 + force * 140) + (Math.random() - 0.5) * 40;
       o.vy = Math.sin(ang) * (40 + force * 60) + 70 + Math.random() * 50;
       o.spinVel = (Math.random() - 0.5) * 8 * force;
-      try { score += 3; } catch (e) {}
+      /* power kill: no main score */
       if (!window.__airborneShockFX) window.__airborneShockFX = [];
       for (var k = 0; k < 6; k++) {
         var ea = Math.random() * Math.PI * 2;

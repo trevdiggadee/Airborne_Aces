@@ -357,6 +357,42 @@
     return Math.random() < 0.5 ? "bird_a" : "bird_b";
   }
 
+
+  // Burst 5 gold rings outward from the blimp when the player takes a hit
+  function spawnHitRingBurst() {
+    try {
+      if (typeof player === "undefined" || !player) return;
+      if (typeof obstacles === "undefined" || !obstacles) return;
+      var cx = player.x;
+      var cy = player.y;
+      var r = Math.min(36, (typeof W !== "undefined" ? W : 400) * 0.08);
+      for (var i = 0; i < 5; i++) {
+        var ang = (i / 5) * Math.PI * 2 + (Math.random() - 0.5) * 0.25;
+        var spd = 160 + Math.random() * 90;
+        obstacles.push({
+          type: "gold_ring",
+          x: cx - r,
+          y: cy - r,
+          w: r * 2,
+          h: r * 2,
+          r: r,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd,
+          scored: false,
+          collected: false,
+          spin: Math.random() * Math.PI * 2,
+          bobPhase: Math.random() * Math.PI * 2,
+          bobAmount: 4,
+          speedMult: 0,
+          isRing: true,
+          fromHitBurst: true,
+          burstLife: 2.8 + Math.random() * 0.6
+        });
+      }
+    } catch (e) {}
+  }
+  window.spawnHitRingBurst = spawnHitRingBurst;
+
   function spawnGoldRing() {
     const r = Math.min(42, W * 0.10); // +25% from prior half-size
     const groundY = groundLevelY();
@@ -559,12 +595,6 @@
             window.__airborneFirePowerActive = true;
             window.__airborneFirePowerUntil = performance.now() + 9000;
             try {
-              if (typeof score === "number") {
-                score += 25;
-                const el = document.getElementById("scoreVal");
-                if (el) el.textContent = String(score);
-                if (typeof bumpScorePop === "function") bumpScorePop();
-              }
               if (typeof sfxPowerup === "function") sfxPowerup();
             } catch (e) {}
           }
@@ -829,6 +859,17 @@
         o.x -= obstacleSpeed * (window.__airborneAirfield && window.__airborneAirfieldObstacles ? 1.18 : 1) * (o.speedMult || 1) * dt;
       }
       if (o.isRing || o.type === "gold_ring") {
+        // Hit-burst rings fly outward from the blimp
+        if (o.fromHitBurst) {
+          o.x += (o.vx || 0) * dt;
+          o.y += (o.vy || 0) * dt;
+          o.vx = (o.vx || 0) * (1 - 0.35 * dt);
+          o.vy = (o.vy || 0) * (1 - 0.35 * dt);
+          o.burstLife = (o.burstLife || 2.5) - dt;
+          if (o.burstLife <= 0) {
+            o.x = -9999; // drop off next filter
+          }
+        }
         o.spin = (o.spin || 0) + dt * 2.2;
         o.bobPhase = (o.bobPhase || 0) + dt * 1.6;
         // Expand pulse after blimp flies through
@@ -878,11 +919,9 @@
             o.ghosts = [];
             o.ghostSpawnT = 0;
             o.scored = true;
-            score += 5;
+            // Rings are counted separately — do not add to main dodge score
             window.__airborneCollectRings = (window.__airborneCollectRings || 0) + 1;
             if (typeof updateCollectDock === "function") updateCollectDock();
-            if (document.getElementById("scoreVal")) document.getElementById("scoreVal").textContent = score;
-            if (typeof bumpScorePop === "function") bumpScorePop();
             if (typeof sfxRingCollect === "function") sfxRingCollect();
             else if (typeof sfxPowerup === "function") sfxPowerup();
             if (typeof notifyRingCollect === "function") notifyRingCollect();
@@ -1033,7 +1072,15 @@
       }
     });
 
-    obstacles = obstacles.filter(o => (o.shockFall || o.electrified) ? (o.y < H + 100 && o.x > -80 && o.x < W + 80) : (o.x + o.w > -20 && (!o.onFire || o.y < H + 80)));
+    obstacles = obstacles.filter(o => {
+      if (o.fromHitBurst) {
+        return o.burstLife > 0 && o.x > -120 && o.x < W + 120 && o.y > -120 && o.y < H + 120;
+      }
+      if (o.shockFall || o.electrified) {
+        return o.y < H + 100 && o.x > -80 && o.x < W + 80;
+      }
+      return o.x + o.w > -20 && (!o.onFire || o.y < H + 80);
+    });
 
     // scoring + collision
     obstacles.forEach(o => {
@@ -1060,29 +1107,29 @@
 
       if (!o.scored && o.x + o.w < player.x - player.w / 2) {
         o.scored = true;
-        // Rings / power-killed targets do not count as obstacle-pass streak
-        const isObstaclePass = !o.isRing && o.type !== "gold_ring" && o.type !== "ring" && !o.shockFall && !o.onFire && !o.electrified;
-        score++;
-        gameplayScore++; // only counts normal dodge-scoring — bonus round points don't affect boss pacing
-        document.getElementById("scoreVal").textContent = score;
-        bumpScorePop();
-        // ramp difficulty gently
-        obstacleSpeed = 220 + Math.min(160, score * 6);
-        spawnInterval = Math.max(0.95, 1.7 - score * 0.03);
-        if (!bossActive) {
-          const next = nextBossConfig();
-          if (window.__airborneAirfieldBlockBoss) {
-            // Airfield training — never start a boss or bonus chain
-          } else if (next && gameplayScore >= next.threshold) {
-            triggerBossWarning(next.num);
-          setTimeout(function() { if (state === 'playing' && !bossActive) startBossDialogue(next.num); }, BOSS_WARNING_DURATION);
-          }
-        }
-        // storm meter: one gas-tank notch every 25 points, until it's full
-        addStormChargeForScore(score);
-
-        // Streak only counts obstacles cleanly passed by (not rings / power kills)
+        // Main score + streak: only clean obstacle passes (not rings, power-kills, collectibles)
+        const isObstaclePass = !o.isRing && o.type !== "gold_ring" && o.type !== "ring"
+          && !o.shockFall && !o.onFire && !o.electrified && !o.fromHitBurst;
         if (isObstaclePass) {
+          score++;
+          gameplayScore++; // boss pacing uses dodge-only score
+          document.getElementById("scoreVal").textContent = score;
+          bumpScorePop();
+          // ramp difficulty gently
+          obstacleSpeed = 220 + Math.min(160, score * 6);
+          spawnInterval = Math.max(0.95, 1.7 - score * 0.03);
+          if (!bossActive) {
+            const next = nextBossConfig();
+            if (window.__airborneAirfieldBlockBoss) {
+              // Airfield training — never start a boss or bonus chain
+            } else if (next && gameplayScore >= next.threshold) {
+              triggerBossWarning(next.num);
+              setTimeout(function() { if (state === 'playing' && !bossActive) startBossDialogue(next.num); }, BOSS_WARNING_DURATION);
+            }
+          }
+          // storm meter: one gas-tank notch every 25 points, until it's full
+          addStormChargeForScore(score);
+
           dodgeStreak++;
           if (o.minGap !== undefined) {
             score += GRAZE_BONUS;
@@ -1124,11 +1171,7 @@
           o.onFire = true;
           o.vy = 80 + Math.random() * 40;
           o.scored = true;
-          score += 3;
-          try {
-            document.getElementById("scoreVal").textContent = score;
-            if (typeof bumpScorePop === "function") bumpScorePop();
-          } catch (e) {}
+          // Power kills do not add to main dodge score
           try {
             if (typeof sfxExplosion === "function") sfxExplosion();
             else if (typeof sfxCrash === "function") sfxCrash();

@@ -356,6 +356,10 @@
     try { sfxHit(); } catch (e) {}
     try { triggerScreenShake(3, 160); } catch (e) {}
     try { spawnHitParticles(player.x, player.y); } catch (e) {}
+    // 5 gold rings burst out of the blimp in all directions
+    try {
+      if (typeof window.spawnHitRingBurst === "function") window.spawnHitRingBurst();
+    } catch (e) {}
 
     // Training: never game-over — soft recover at 0, longer i-frames (less flicker)
     if (window.__airborneAirfield && window.__airborneAirfieldPhase === "lesson") {
