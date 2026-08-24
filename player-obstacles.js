@@ -358,103 +358,91 @@
   }
 
 
-  // Burst 5 gold coins outward from every angle around the blimp on hit
+  // Spend 5 collected coins on hit — they burst out, arc, and fall off-screen
   if (!window.__airborneHitCoins) window.__airborneHitCoins = [];
+  const HIT_COIN_COST = 5;
+
+  function refreshCoinCounter() {
+    try {
+      if (typeof updateCollectDock === "function") updateCollectDock();
+      else {
+        var coinEl = document.getElementById("collectPowerPct");
+        if (coinEl) coinEl.textContent = String(window.__airborneCollectCoins || 0);
+      }
+    } catch (e) {}
+  }
 
   function spawnHitCoinBurst() {
     try {
       if (typeof player === "undefined" || !player) return;
       var now = performance.now();
       if (window.__airborneLastCoinBurst && now - window.__airborneLastCoinBurst < 180) return;
+
+      var have = window.__airborneCollectCoins || 0;
+      if (have < HIT_COIN_COST) {
+        // Not enough coins — nothing comes out
+        return;
+      }
+
+      // Subtract from collection
+      window.__airborneCollectCoins = have - HIT_COIN_COST;
+      try {
+        if (typeof ruffStats !== "undefined" && ruffStats) {
+          ruffStats.coins = Math.max(0, (ruffStats.coins || 0) - HIT_COIN_COST);
+        }
+      } catch (e) {}
+      refreshCoinCounter();
+
       window.__airborneLastCoinBurst = now;
       var cx = player.x;
       var cy = player.y;
       if (!window.__airborneHitCoins) window.__airborneHitCoins = [];
       var list = window.__airborneHitCoins;
-      for (var i = 0; i < 5; i++) {
-        // Even angles around the blimp (every 72°)
-        var ang = (i / 5) * Math.PI * 2 + (Math.random() - 0.5) * 0.15;
-        var spd = 200 + Math.random() * 120;
-        var startR = 18 + Math.random() * 10; // start slightly away so not auto-collected
+      for (var i = 0; i < HIT_COIN_COST; i++) {
+        var ang = (i / HIT_COIN_COST) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+        // outward burst then gravity arcs them down off-screen
+        var spd = 140 + Math.random() * 100;
+        var startR = 14 + Math.random() * 8;
         list.push({
           x: cx + Math.cos(ang) * startR,
-          y: cy + Math.sin(ang) * startR,
-          r: 14 + Math.random() * 3,
+          y: cy + Math.sin(ang) * startR * 0.7,
+          r: 13 + Math.random() * 3,
           vx: Math.cos(ang) * spd,
-          vy: Math.sin(ang) * spd,
+          vy: Math.sin(ang) * spd * 0.55 - (40 + Math.random() * 50), // initial lift then fall
           spin: Math.random() * Math.PI * 2,
           bob: Math.random() * Math.PI * 2,
-          life: 3.5 + Math.random() * 0.8,
+          life: 4.0,
           age: 0,
-          grace: 0.45, // cannot collect until this expires
+          falling: true,
           collected: false
         });
       }
+      try {
+        if (typeof sfxTrainingCoin === "function") sfxTrainingCoin();
+      } catch (e) {}
     } catch (e) {}
   }
-  // Back-compat aliases (older takeHit calls)
   window.spawnHitCoinBurst = spawnHitCoinBurst;
   window.spawnHitRingBurst = spawnHitCoinBurst;
 
   function updateHitCoins(dt) {
     var list = window.__airborneHitCoins;
     if (!list || !list.length) return;
-    var px = (typeof player !== "undefined" && player) ? player.x : 0;
-    var py = (typeof player !== "undefined" && player) ? player.y : 0;
-    var pw = (typeof player !== "undefined" && player) ? player.w * 0.42 : 20;
-    var ph = (typeof player !== "undefined" && player) ? player.h * 0.42 : 16;
+    var H0 = typeof H !== "undefined" ? H : 600;
+    var W0 = typeof W !== "undefined" ? W : 800;
     for (var i = list.length - 1; i >= 0; i--) {
       var c = list[i];
-      if (c.collected) { list.splice(i, 1); continue; }
       c.age += dt;
       c.x += c.vx * dt;
       c.y += c.vy * dt;
-      // ease outward then slow (keep momentum longer)
-      c.vx *= (1 - 0.28 * dt);
-      c.vy *= (1 - 0.28 * dt);
-      // slight gravity so they arc
-      c.vy += 55 * dt;
-      c.spin += dt * 5.5;
-      c.bob += dt * 3.0;
-      // collect if player touches (after grace so burst is visible)
-      if (c.age >= (c.grace || 0) && Math.abs(c.x - px) < pw + c.r && Math.abs(c.y - py) < ph + c.r) {
-        c.collected = true;
-        window.__airborneCollectCoins = (window.__airborneCollectCoins || 0) + 1;
-        try {
-          if (typeof ruffStats !== "undefined" && ruffStats) {
-            ruffStats.coins = (ruffStats.coins || 0) + 1;
-          }
-        } catch (e) {}
-        try {
-          if (typeof window.addStormChargeForScore === "function") {
-            window.addStormChargeForScore(typeof score === "number" ? score : 0);
-          }
-        } catch (e) {}
-        try {
-          if (typeof updateCollectDock === "function") updateCollectDock();
-          else {
-            var coinEl = document.getElementById("collectPowerPct");
-            if (coinEl) coinEl.textContent = String(window.__airborneCollectCoins || 0);
-          }
-        } catch (e) {}
-        try {
-          if (typeof sfxTrainingCoin === "function") sfxTrainingCoin();
-          else if (typeof sfxPowerup === "function") sfxPowerup();
-        } catch (e) {}
-        try {
-          if (typeof spawnHitParticles === "function") spawnHitParticles(c.x, c.y);
-        } catch (e) {}
-        list.splice(i, 1);
-        continue;
-      }
-      if (c.age >= c.life) {
-        list.splice(i, 1);
-        continue;
-      }
-      // off-screen cull
-      var W0 = typeof W !== "undefined" ? W : 800;
-      var H0 = typeof H !== "undefined" ? H : 600;
-      if (c.x < -60 || c.x > W0 + 60 || c.y < -60 || c.y > H0 + 60) {
+      // air drag then strong gravity — arch down and fall off screen
+      c.vx *= (1 - 0.35 * dt);
+      c.vy += 420 * dt; // fall hard
+      if (c.vy > 520) c.vy = 520;
+      c.spin += dt * 6.5;
+      c.bob += dt * 2.5;
+      // No player re-collection — spent coins leave the run
+      if (c.y > H0 + 40 || c.x < -80 || c.x > W0 + 80 || c.age >= c.life) {
         list.splice(i, 1);
       }
     }
@@ -465,22 +453,21 @@
     if (!list || !list.length || typeof ctx === "undefined") return;
     for (var i = 0; i < list.length; i++) {
       var c = list[i];
-      if (c.collected) continue;
-      var by = c.y + Math.sin(c.bob) * 3;
+      var by = c.y + Math.sin(c.bob) * 2;
       var squash = 0.55 + 0.45 * Math.abs(Math.cos(c.spin));
-      var fade = Math.max(0.25, 1 - Math.max(0, (c.age - (c.life - 0.5)) / 0.5));
+      var fade = c.y > (typeof H !== "undefined" ? H : 600) - 40
+        ? Math.max(0.15, 1 - (c.y - ((typeof H !== "undefined" ? H : 600) - 40)) / 80)
+        : 1;
       ctx.save();
       ctx.globalAlpha = fade;
       ctx.translate(c.x, by);
       ctx.scale(squash, 1);
-      // outer glow
       ctx.globalAlpha = fade * 0.4;
       ctx.fillStyle = "#ffd700";
       ctx.beginPath();
-      ctx.arc(0, 0, c.r * 1.4, 0, Math.PI * 2);
+      ctx.arc(0, 0, c.r * 1.35, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = fade;
-      // coin face
       var g = ctx.createRadialGradient(-c.r * 0.3, -c.r * 0.35, 1, 0, 0, c.r);
       g.addColorStop(0, "#fff6c8");
       g.addColorStop(0.35, "#ffd700");
@@ -490,13 +477,11 @@
       ctx.beginPath();
       ctx.arc(0, 0, c.r, 0, Math.PI * 2);
       ctx.fill();
-      // rim
       ctx.strokeStyle = "rgba(120, 80, 10, 0.85)";
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.arc(0, 0, c.r * 0.92, 0, Math.PI * 2);
       ctx.stroke();
-      // center mark
       ctx.fillStyle = "rgba(180, 120, 20, 0.55)";
       ctx.beginPath();
       ctx.arc(0, 0, c.r * 0.35, 0, Math.PI * 2);
@@ -1400,7 +1385,15 @@
           o.onFire = true;
           o.vy = 80 + Math.random() * 40;
           o.scored = true;
-          // Power kills do not add to main dodge score
+          // Power kills count toward main dodge score
+          try {
+            score += 1;
+            if (typeof gameplayScore === "number") gameplayScore += 1;
+            var el = document.getElementById("scoreVal");
+            if (el) el.textContent = String(score);
+            if (typeof bumpScorePop === "function") bumpScorePop();
+            if (typeof addStormChargeForScore === "function") addStormChargeForScore(score);
+          } catch (e) {}
           try {
             if (typeof sfxExplosion === "function") sfxExplosion();
             else if (typeof sfxCrash === "function") sfxCrash();
