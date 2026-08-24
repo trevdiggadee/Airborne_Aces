@@ -2229,8 +2229,9 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
           // vertical fan spread
           ang = -0.42 + (slot / Math.max(1, totalFan - 1)) * 0.84 + (Math.random() - 0.5) * 0.08;
           sp = 220 + Math.random() * 60;
-          spawnX = player.x + (player.w || 40) * 0.35;
-          spawnY = player.y + Math.sin(ang) * (player.h || 30) * 0.35;
+          // Spawn at front/nose of the blimp
+          spawnX = player.x + (player.w || 40) * 0.52;
+          spawnY = player.y + Math.sin(ang) * (player.h || 30) * 0.22;
           pierce = 4; // burn through multiple obstacles
           isFinisher = (barrage.shotsLeft === 0 && barrage.fired >= 3);
           rSize = isFinisher ? 16 + Math.random() * 3 : 9 + Math.random() * 3;
