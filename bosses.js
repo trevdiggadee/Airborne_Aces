@@ -507,23 +507,37 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         try { if (typeof triggerScreenShake === "function") triggerScreenShake(4, 200); } catch (e) {}
       }
       if (powerMode === "bluefireball") {
-        // Azure Barrage — engines flare bright blue, then rapid plasma stream
-        window.__airborneBlueFlash = { x: player.x, y: player.y, age: 0, life: 0.7, phase: 1 };
-        window.__airborneEngineFlare = { age: 0, life: 0.9 };
-        // 3–5 fireballs in quick succession
-        var nShots = 3 + Math.floor(Math.random() * 3); // 3–5
-        window.__airborneAzureBarrage = {
-          shotsLeft: nShots,
-          fired: 0,
-          total: nShots
-        };
-        // Short wind-up then first shot
-        window.__airborneFireballSpawnT = 0.18;
-        window.__airborneAzureTipOrbs = null;
-        window.__airborneAzureTipLive = null;
-        window.__airborneAzureTipCharge = null;
-        try { if (typeof triggerScreenShake === "function") triggerScreenShake(5, 220); } catch (e) {}
+        // Aero Slicer — Plasma Orbit + Azure Barrage
+        window.__airborneBlueFlash = { x: player.x, y: player.y, age: 0, life: 0.85, phase: 1 };
+        window.__airborneEngineFlare = { age: 0, life: 1.0 };
+        window.__airbornePlasmaIgnite = { age: 0, life: 0.55, shockR: 8 };
+        // 5–7 orbiting plasma fireballs (miniature blue solar system)
+        var nOrb = 5 + Math.floor(Math.random() * 3);
+        window.__airbornePlasmaOrbits = [];
+        for (var oi = 0; oi < nOrb; oi++) {
+          window.__airbornePlasmaOrbits.push({
+            ang: (oi / nOrb) * Math.PI * 2,
+            // elliptical 3D-style orbit — some pass in front, some behind
+            tilt: 0.35 + (oi % 3) * 0.12,
+            distX: 38 + (oi % 4) * 7,
+            distY: 22 + (oi % 3) * 6,
+            spin: 2.8 + (oi % 5) * 0.55 + Math.random() * 0.4,
+            r: 9 + (oi % 3) * 2.5,
+            pulse: Math.random() * Math.PI * 2,
+            trail: [],
+            z: 0, // depth for draw order
+            hitIds: {}
+          });
+        }
+        window.__airbornePlasmaArcs = [];
+        window.__airbornePlasmaSparks = [];
+        // Barrage stream still fires
+        var nShots = 3 + Math.floor(Math.random() * 3);
+        window.__airborneAzureBarrage = { shotsLeft: nShots, fired: 0, total: nShots };
+        window.__airborneFireballSpawnT = 0.22;
+        try { if (typeof triggerScreenShake === "function") triggerScreenShake(8, 320); } catch (e) {}
         try { if (typeof sfxShoot === "function") sfxShoot(); } catch (e) {}
+        try { if (typeof sfxExplosion === "function") sfxExplosion(0.35); } catch (e) {}
       }
 
       try {
@@ -2546,12 +2560,16 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         window.__airborneActivePowerUntil = 0;
         window.__airborneFireballUntil = 0;
         window.__airborneFireballs = [];
+        window.__airbornePlasmaOrbits = null;
+        window.__airbornePlasmaArcs = null;
+        window.__airbornePlasmaSparks = null;
+        window.__airbornePlasmaIgnite = null;
         return;
       }
       window.__airborneActivePowerVisual = "fireball";
       window.__airborneActivePowerUntil = untilFb;
       if (!window.__airborneFireballs) window.__airborneFireballs = [];
-      // Azure Barrage — engine flare timer
+      // Azure Barrage — engine flare + plasma orbit system
       if (stormMode === "bluefireball") {
         if (window.__airborneEngineFlare) {
           window.__airborneEngineFlare.age += dt;
@@ -2565,8 +2583,102 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
             window.__airborneBlueFlash = null;
           }
         }
+        if (window.__airbornePlasmaIgnite) {
+          window.__airbornePlasmaIgnite.age += dt;
+          window.__airbornePlasmaIgnite.shockR += 280 * dt;
+          if (window.__airbornePlasmaIgnite.age >= window.__airbornePlasmaIgnite.life) {
+            window.__airbornePlasmaIgnite = null;
+          }
+        }
+        // Orbit plasma fireballs around blimp
+        if (window.__airbornePlasmaOrbits && typeof player !== "undefined" && player) {
+          var orbs = window.__airbornePlasmaOrbits;
+          for (var oi = 0; oi < orbs.length; oi++) {
+            var orb = orbs[oi];
+            var accel = window.__airbornePlasmaIgnite ? 1.8 : 1.0;
+            orb.ang += orb.spin * accel * dt;
+            orb.pulse += dt * 10;
+            // 3D ellipse: z from sin for front/back
+            orb.z = Math.sin(orb.ang);
+            orb.x = player.x + Math.cos(orb.ang) * orb.distX;
+            orb.y = player.y + Math.sin(orb.ang) * orb.distY * orb.tilt;
+            // curved trail
+            if (!orb.trail) orb.trail = [];
+            orb.trail.push({ x: orb.x, y: orb.y, age: 0, life: 0.35 });
+            if (orb.trail.length > 18) orb.trail.shift();
+            for (var ti = orb.trail.length - 1; ti >= 0; ti--) {
+              orb.trail[ti].age += dt;
+              if (orb.trail[ti].age >= orb.trail[ti].life) orb.trail.splice(ti, 1);
+            }
+            // thin lightning arc to hull occasionally
+            if (Math.random() < 0.08) {
+              if (!window.__airbornePlasmaArcs) window.__airbornePlasmaArcs = [];
+              var pts = (typeof buildLightningPath === "function")
+                ? buildLightningPath(player.x, player.y, orb.x, orb.y, 10)
+                : [[player.x, player.y], [orb.x, orb.y]];
+              window.__airbornePlasmaArcs.push({ points: pts, age: 0, life: 0.1 });
+            }
+            // sparks
+            if (Math.random() < 0.25) {
+              if (!window.__airbornePlasmaSparks) window.__airbornePlasmaSparks = [];
+              window.__airbornePlasmaSparks.push({
+                x: orb.x, y: orb.y,
+                vx: (Math.random() - 0.5) * 60, vy: (Math.random() - 0.5) * 60,
+                age: 0, life: 0.25 + Math.random() * 0.2, r: 1.5 + Math.random() * 2
+              });
+            }
+            // Pierce/burn obstacles on contact
+            if (typeof obstacles !== "undefined") {
+              for (var hi = 0; hi < obstacles.length; hi++) {
+                var o = obstacles[hi];
+                if (!o || o.isRing || o.type === "gold_ring" || o.type === "ring") continue;
+                if (o.powerAffected && o.onFire) continue;
+                var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
+                if (Math.hypot(orb.x - ox, orb.y - oy) < orb.r + Math.max(o.w, o.h) * 0.32) {
+                  var oid = o._uid || (o._uid = "p" + Math.random().toString(36).slice(2));
+                  if (orb.hitIds[oid]) continue;
+                  orb.hitIds[oid] = true;
+                  o.onFire = true;
+                  o.blueFire = true;
+                  o.powerAffected = true;
+                  o.hitFlash = 0.8;
+                  o.vy = 80 + Math.random() * 50;
+                  o.vx = (Math.random() - 0.5) * 70;
+                  o.spinVel = (Math.random() - 0.5) * 9;
+                  o.scored = true;
+                  try { creditPowerKillScore(1); } catch (e) {}
+                  try {
+                    if (window.PowerFX) window.PowerFX.burst(ox, oy, {
+                      count: 20, colors: ["#fff", "#e0f2fe", "#67e8f9", "#38bdf8", "#1d4ed8"],
+                      speed: 140, life: 0.55, glow: true
+                    });
+                  } catch (e) {}
+                }
+              }
+            }
+          }
+          // age arcs / sparks
+          if (window.__airbornePlasmaArcs) {
+            for (var ai = window.__airbornePlasmaArcs.length - 1; ai >= 0; ai--) {
+              window.__airbornePlasmaArcs[ai].age += dt;
+              if (window.__airbornePlasmaArcs[ai].age >= window.__airbornePlasmaArcs[ai].life)
+                window.__airbornePlasmaArcs.splice(ai, 1);
+            }
+          }
+          if (window.__airbornePlasmaSparks) {
+            for (var si = window.__airbornePlasmaSparks.length - 1; si >= 0; si--) {
+              var sp = window.__airbornePlasmaSparks[si];
+              sp.age += dt; sp.x += sp.vx * dt; sp.y += sp.vy * dt;
+              if (sp.age >= sp.life) window.__airbornePlasmaSparks.splice(si, 1);
+            }
+          }
+        }
       } else {
         window.__airborneEngineFlare = null;
+        window.__airbornePlasmaOrbits = null;
+        window.__airbornePlasmaArcs = null;
+        window.__airbornePlasmaSparks = null;
+        window.__airbornePlasmaIgnite = null;
       }
 
       // Spawn fireballs periodically from hull
@@ -4527,6 +4639,122 @@ function drawFireballs() {
         ctx.fill();
       }
       ctx.globalCompositeOperation = "source-over";
+    }
+    // Plasma orbit system around Aero Slicer
+    if (window.__airbornePlasmaOrbits && typeof player !== "undefined" && player) {
+      var orbs = window.__airbornePlasmaOrbits.slice().sort(function(a, b) { return (a.z || 0) - (b.z || 0); });
+      // Ignition shockwave
+      if (window.__airbornePlasmaIgnite) {
+        var ig = window.__airbornePlasmaIgnite;
+        var it = Math.max(0, 1 - ig.age / ig.life);
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = it * 0.5;
+        ctx.strokeStyle = "rgba(180,230,255,1)";
+        ctx.lineWidth = 4 * it;
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, ig.shockR, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = it * 0.35;
+        var igg = ctx.createRadialGradient(player.x, player.y, 2, player.x, player.y, 50 + (1 - it) * 40);
+        igg.addColorStop(0, "rgba(255,255,255,0.95)");
+        igg.addColorStop(0.4, "rgba(125,211,252,0.6)");
+        igg.addColorStop(1, "rgba(14,100,200,0)");
+        ctx.fillStyle = igg;
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, 50 + (1 - it) * 40, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      // Trails behind first
+      orbs.forEach(function(orb) {
+        if (!orb.trail) return;
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        for (var ti = 0; ti < orb.trail.length; ti++) {
+          var tr = orb.trail[ti];
+          var ta = 1 - tr.age / tr.life;
+          if (ta <= 0) continue;
+          var trR = orb.r * 0.55 * ta;
+          var tg = ctx.createRadialGradient(tr.x, tr.y, 0, tr.x, tr.y, trR * 2);
+          tg.addColorStop(0, "rgba(165,243,252," + (ta * 0.7) + ")");
+          tg.addColorStop(0.5, "rgba(56,189,248," + (ta * 0.4) + ")");
+          tg.addColorStop(1, "rgba(14,100,200,0)");
+          ctx.fillStyle = tg;
+          ctx.beginPath();
+          ctx.arc(tr.x, tr.y, trR * 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      });
+      // Lightning arcs
+      if (window.__airbornePlasmaArcs) {
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        window.__airbornePlasmaArcs.forEach(function(a) {
+          var ta = 1 - a.age / a.life;
+          if (ta <= 0 || !a.points) return;
+          ctx.globalAlpha = ta * 0.9;
+          ctx.strokeStyle = "rgba(186,230,253,1)";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          a.points.forEach(function(pt, i) {
+            if (i === 0) ctx.moveTo(pt[0], pt[1]); else ctx.lineTo(pt[0], pt[1]);
+          });
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
+      // Fireballs — back (z<0) then front (z>0) already sorted
+      orbs.forEach(function(orb) {
+        if (orb.x == null) return;
+        var pulse = 0.9 + 0.12 * Math.sin(orb.pulse || 0);
+        var rr = orb.r * pulse * (orb.z > 0 ? 1.08 : 0.92);
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        // outer cyan flame
+        var og = ctx.createRadialGradient(orb.x, orb.y, 0, orb.x, orb.y, rr * 2.4);
+        og.addColorStop(0, "rgba(255,255,255,0.95)");
+        og.addColorStop(0.2, "rgba(165,243,252,0.9)");
+        og.addColorStop(0.45, "rgba(56,189,248,0.7)");
+        og.addColorStop(0.75, "rgba(14,120,220,0.35)");
+        og.addColorStop(1, "rgba(2,60,140,0)");
+        ctx.fillStyle = og;
+        ctx.beginPath();
+        ctx.arc(orb.x, orb.y, rr * 2.4, 0, Math.PI * 2);
+        ctx.fill();
+        // white-hot core
+        ctx.fillStyle = "rgba(255,255,255,0.95)";
+        ctx.beginPath();
+        ctx.arc(orb.x, orb.y, rr * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        // jagged energy tongues
+        ctx.globalAlpha = 0.7;
+        for (var jt = 0; jt < 4; jt++) {
+          var ja = orb.ang + jt * Math.PI * 0.5 + (orb.pulse || 0);
+          ctx.strokeStyle = "rgba(125,211,252,0.85)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(orb.x, orb.y);
+          ctx.lineTo(orb.x + Math.cos(ja) * rr * 1.6, orb.y + Math.sin(ja) * rr * 1.6);
+          ctx.stroke();
+        }
+        ctx.restore();
+      });
+      // sparks
+      if (window.__airbornePlasmaSparks) {
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        window.__airbornePlasmaSparks.forEach(function(s) {
+          var ta = 1 - s.age / s.life;
+          ctx.globalAlpha = ta;
+          ctx.fillStyle = "rgba(200,240,255,1)";
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.r * ta, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.restore();
+      }
     }
     // Azure engine flare (activation) drawn below; muzzle flash while firing
     if (stormMode === "bluefireball" && typeof player !== "undefined" && player
