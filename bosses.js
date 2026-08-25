@@ -1698,6 +1698,8 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
           if (sh.phase === "collapse") orbitForce *= 0.3;
           vo.x += (dx / dist) * pull * dt + ox * orbitForce * vo._vxDir * dt;
           vo.y += (dy / dist) * pull * dt + oy * orbitForce * vo._vxDir * dt;
+          // Power-up has this target — no player-collision coin pops
+          vo.powerAffected = true;
           // Shake + stretch feel
           vo.hitFlash = 0.3 + prox * 0.5;
           vo.vortexSpin = (vo.vortexSpin || 0) + (8 + prox * 20) * vo._vxDir * dt;
@@ -1735,6 +1737,12 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
             try { if (typeof triggerScreenShake === "function") triggerScreenShake(5 + (sh.chainBoost || 1), 100); } catch (e) {}
             try { if (typeof sfxExplosion === "function") sfxExplosion(0.45); } catch (e) {}
             try { creditPowerKillScore(1); } catch (e) {}
+            // Little Spy pull-in — coins pop out
+            try {
+              if (typeof window.spawnHitCoinBurst === "function") {
+                window.spawnHitCoinBurst({ free: true });
+              }
+            } catch (e) {}
             // Chain reaction intensifies pull
             sh.chainBoost = Math.min(2.2, (sh.chainBoost || 1) + 0.15);
             obstacles.splice(vi, 1);
@@ -1821,6 +1829,7 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
             var pull = (sh.phase === "retract" ? 420 : 160) * (0.4 + 0.6 * (1 - Math.min(1, dist / Math.max(40, sh.r))));
             vo.x += (dx / dist) * pull * dt;
             vo.y += (dy / dist) * pull * dt;
+            vo.powerAffected = true;
             // orbit swirl while pulling
             vo.x += (-dy / dist) * 40 * dt;
             vo.y += (dx / dist) * 40 * dt;
@@ -2401,6 +2410,7 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
               fb.hitIds[oid] = true;
 
               o.onFire = true;
+              o.powerAffected = true;
               o.vy = 40;
               if (fb.kind === "greenfireball") {
                 o.greenFire = true;
@@ -3719,8 +3729,8 @@ function drawMeteorMarks() {
       if (dist > radius || dist < 0.1) continue;
       var force = (1 - dist / radius) * intensity;
       o.shockShake = 0.4 + force * 0.45;
-      o.shockFall = true;
-      o.electrified = true;
+      o.shockFall = true; o.powerAffected = true;
+      o.electrified = true; o.powerAffected = true;
       o.sonicDebris = true;
       o.scored = true;
       var ang = Math.atan2(dy, dx);

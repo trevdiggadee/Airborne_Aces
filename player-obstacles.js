@@ -1404,8 +1404,8 @@
           if (isBird && typeof spawnFeathers === "function") {
             spawnFeathers(o.x + o.w / 2, drawY + o.h / 2);
           }
-          // Shield block — coins pop out (free visual, no spend)
-          if (shieldActive && !o._hitCoinBursted) {
+          // Shield block — coins pop out (free), but NOT if already hit by a power-up
+          if (shieldActive && !o._hitCoinBursted && !o.powerAffected && !o.onFire && !o.electrified && !o.shockFall && !o.blueFire && !o.greenFire) {
             o._hitCoinBursted = true;
             try {
               if (typeof window.spawnHitCoinBurst === "function") {
@@ -1421,6 +1421,7 @@
         } else if (window.__airborneFirePowerActive) {
           // Ignite obstacle — catches fire, falls off screen
           o.onFire = true;
+          o.powerAffected = true;
           o.vy = 80 + Math.random() * 40;
           o.scored = true;
           // Power kills count toward main dodge score
@@ -1443,8 +1444,8 @@
             }
           } catch (e) {}
         } else {
-          // Coins burst on every contact (even during i-frames)
-          if (!o._hitCoinBursted) {
+          // Coins on contact — skip if this obstacle was already hit by a power-up
+          if (!o._hitCoinBursted && !o.powerAffected && !o.onFire && !o.electrified && !o.shockFall && !o.blueFire && !o.greenFire) {
             o._hitCoinBursted = true;
             try {
               if (typeof window.spawnHitCoinBurst === "function") window.spawnHitCoinBurst();
