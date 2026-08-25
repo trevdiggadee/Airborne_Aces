@@ -400,11 +400,17 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
 
   function updatePowerFade(untilMs) {
     var fadeMs = (typeof POWER_FADE_MS === "number") ? POWER_FADE_MS : 750;
+    // Only fade while a power is actually active
+    if (typeof stormActive !== "undefined" && !stormActive) {
+      window.__airbornePowerFade = 1;
+      return 1;
+    }
     if (!untilMs) { window.__airbornePowerFade = 1; return 1; }
     var left = untilMs - performance.now();
-    if (left <= 0) { window.__airbornePowerFade = 0; return 0; }
+    // Power fully ended — full opacity for the world (effects are gone)
+    if (left <= 0) { window.__airbornePowerFade = 1; return 1; }
     if (left < fadeMs) {
-      window.__airbornePowerFade = Math.max(0, left / fadeMs);
+      window.__airbornePowerFade = Math.max(0.05, left / fadeMs);
     } else {
       window.__airbornePowerFade = 1;
     }
@@ -3836,6 +3842,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
     }
     ctx.restore();
     ctx.restore(); // power fade
+    try { ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; } catch (e) {}
   }
   
   
@@ -4509,18 +4516,20 @@ function drawMeteorMarks() {
   window.__airborneDrawHeatseekers = drawHeatseekers;
 
 function drawFireballs() {
-    var fbs = window.__airborneFireballs;
+    var fbs = window.__airborneFireballs || [];
     var hasPlasma = window.__airbornePlasmaOrbits && window.__airbornePlasmaOrbits.length;
-    if ((!fbs || !fbs.length) && !hasPlasma && !window.__airborneBlueFlash && !window.__airborneEngineFlare) return;
+    if ((!fbs.length) && !hasPlasma && !window.__airborneBlueFlash && !window.__airborneEngineFlare && !window.__airbornePlasmaIgnite) return;
     if (typeof ctx === "undefined") return;
     ctx.save();
     try {
-      if (typeof updatePowerFade === "function") updatePowerFade(window.__airborneActivePowerUntil || window.__airborneFireballUntil);
-    } catch (e) {}
-    var pf = (typeof window.__airbornePowerFade === "number") ? window.__airbornePowerFade : 1;
-    ctx.globalAlpha = Math.max(0.05, pf);
-    for (var i = 0; i < fbs.length; i++) {
-      var fb = fbs[i];
+      try {
+        if (typeof updatePowerFade === "function") updatePowerFade(window.__airborneActivePowerUntil || window.__airborneFireballUntil);
+      } catch (e) {}
+      var pf = (typeof window.__airbornePowerFade === "number") ? window.__airbornePowerFade : 1;
+      if (typeof stormActive !== "undefined" && !stormActive) pf = 1;
+      ctx.globalAlpha = Math.max(0.05, Math.min(1, pf));
+      for (var i = 0; i < fbs.length; i++) {
+        var fb = fbs[i];
       // smoke trails (skip for azure — uses plasma trail below)
       if (fb.kind !== "bluefireball") {
         for (var ti = 0; ti < (fb.trails || []).length; ti++) {
@@ -4864,7 +4873,11 @@ function drawFireballs() {
         ctx.restore();
       }
     }
-    ctx.restore();
+    } catch (e) { /* keep canvas state safe */ }
+    finally {
+      try { ctx.restore(); } catch (e2) {}
+      try { ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; } catch (e3) {}
+    }
   }
   window.__airborneDrawFireballs = drawFireballs;
 
