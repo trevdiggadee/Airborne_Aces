@@ -1250,7 +1250,7 @@
       ruffBgBalloons.push({
         x: (i / n) * (W0 + 220) + Math.random() * 50,
         y: H0 * (0.06 + Math.random() * 0.48),
-        s: 0.28 + Math.random() * 0.32,
+        s: 0.32 + Math.random() * 0.37, // ~15% larger scale range
         speed: 5 + Math.random() * 8, // slower drift
         frame: (Math.random() * 36) | 0,
         frameT: Math.random(),
@@ -1288,7 +1288,7 @@
       var b = ruffBgBalloons[i];
       var key = "balloon_anim_" + String((b.frame % 36) + 1).padStart(2, "0");
       var img = (typeof images !== "undefined" && images) ? images[key] : null;
-      var bw = ((typeof W !== "undefined") ? W : 400) * 0.09 * b.s;
+      var bw = ((typeof W !== "undefined") ? W : 400) * 0.1035 * b.s; // 15% larger
       var bh = bw * 1.35;
       var by = b.y + Math.sin(b.bob) * 5;
       ctx.save();

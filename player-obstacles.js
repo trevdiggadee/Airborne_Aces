@@ -1404,15 +1404,7 @@
           if (isBird && typeof spawnFeathers === "function") {
             spawnFeathers(o.x + o.w / 2, drawY + o.h / 2);
           }
-          // Shield block — coins pop out (free), but NOT if already hit by a power-up
-          if (shieldActive && !o._hitCoinBursted && !o.powerAffected && !o.onFire && !o.electrified && !o.shockFall && !o.blueFire && !o.greenFire) {
-            o._hitCoinBursted = true;
-            try {
-              if (typeof window.spawnHitCoinBurst === "function") {
-                window.spawnHitCoinBurst({ free: true });
-              }
-            } catch (e) {}
-          }
+          // Shield block — no coins (shield or power-hit targets never pop coins)
         }
         if (o.isRing || o.type === "gold_ring") {
           // never damage from rings
