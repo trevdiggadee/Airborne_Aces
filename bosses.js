@@ -2315,32 +2315,44 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
         } else {
           fb.vy += 90 * dt; // mild gravity
         }
-        // Trails — long sharp blue flame tongues trailing backward + glowing particles
+        // Trails — thin teardrop ribbons in crossing S-motions
         if (fb.kind === "bluefireball") {
-          // dense flame body trail
-          for (var tp = 0; tp < 2; tp++) {
+          var spd = Math.hypot(fb.vx, fb.vy) || 1;
+          var bx = fb.vx / spd, by = fb.vy / spd;
+          // perpendicular for S-weave
+          var px = -by, py = bx;
+          // more ribbon strands crossing each other
+          for (var tp = 0; tp < 5; tp++) {
+            var side = (tp % 2 === 0) ? 1 : -1;
+            var phase0 = tp * 1.1 + Math.random() * 0.4;
             fb.trails.push({
-              x: fb.x - fb.vx * 0.01 * tp + (Math.random() - 0.5) * 3,
-              y: fb.y - fb.vy * 0.01 * tp + (Math.random() - 0.5) * 3,
-              vx: -fb.vx * 0.15 + (Math.random() - 0.5) * 30,
-              vy: -fb.vy * 0.15 + (Math.random() - 0.5) * 35,
-              life: 0.4 + Math.random() * 0.3,
+              x: fb.x - bx * (4 + tp * 2) + px * side * 3,
+              y: fb.y - by * (4 + tp * 2) + py * side * 3,
+              vx: -fb.vx * 0.22 + px * side * (25 + Math.random() * 20),
+              vy: -fb.vy * 0.22 + py * side * (25 + Math.random() * 20),
+              life: 0.45 + Math.random() * 0.25,
               age: 0,
-              r: 4 + Math.random() * 6,
+              r: 2.2 + Math.random() * 1.8, // thinner
               spark: false,
-              layer: Math.random() < 0.4 ? 0 : 1 // 0=cyan inner, 1=deep blue outer
+              layer: tp % 2, // alternate cyan / deep blue so they cross visually
+              sPhase: phase0,
+              sAmp: 18 + Math.random() * 14,
+              sFreq: 9 + Math.random() * 5,
+              sSide: side,
+              px: px, py: py,
+              tear: true
             });
           }
-          // jagged feathered tips / embers
-          if (Math.random() < 0.7) {
+          // extra tiny embers at jagged tips
+          for (var es = 0; es < 2; es++) {
             fb.trails.push({
-              x: fb.x + (Math.random() - 0.5) * 6,
-              y: fb.y + (Math.random() - 0.5) * 6,
-              vx: -fb.vx * 0.2 + (Math.random() - 0.5) * 70,
-              vy: -fb.vy * 0.2 + (Math.random() - 0.5) * 80,
-              life: 0.25 + Math.random() * 0.2,
+              x: fb.x + (Math.random() - 0.5) * 5,
+              y: fb.y + (Math.random() - 0.5) * 5,
+              vx: -fb.vx * 0.25 + (Math.random() - 0.5) * 60,
+              vy: -fb.vy * 0.25 + (Math.random() - 0.5) * 70,
+              life: 0.22 + Math.random() * 0.18,
               age: 0,
-              r: 1.5 + Math.random() * 2.5,
+              r: 1.2 + Math.random() * 1.5,
               spark: true,
               layer: 0
             });
@@ -2358,9 +2370,19 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
         for (var ti = fb.trails.length - 1; ti >= 0; ti--) {
           var tr = fb.trails[ti];
           tr.age += dt;
-          tr.x += tr.vx * dt;
-          tr.y += tr.vy * dt;
-          tr.r += 8 * dt;
+          // S-curve weave so ribbons cross each other
+          if (tr.sAmp && tr.px != null) {
+            tr.sPhase = (tr.sPhase || 0) + (tr.sFreq || 10) * dt;
+            var sOff = Math.sin(tr.sPhase) * tr.sAmp * (tr.sSide || 1) * dt;
+            tr.x += tr.vx * dt + tr.px * sOff;
+            tr.y += tr.vy * dt + tr.py * sOff;
+          } else {
+            tr.x += tr.vx * dt;
+            tr.y += tr.vy * dt;
+          }
+          // teardrops stay thinner; only slight growth
+          if (tr.tear) tr.r += 2.5 * dt;
+          else tr.r += 8 * dt;
           if (tr.age >= tr.life) fb.trails.splice(ti, 1);
         }
         // Hit obstacles → catch fire
@@ -3898,7 +3920,7 @@ function drawFireballs() {
           ctx.fill();
         }
       }
-      // trails — deep royal outer wisps, cyan inner, jagged glowing particles
+      // trails — thin teardrops weaving in S-curves, crossing layers
       if (fb.kind === "bluefireball" && fb.trails) {
         for (var ti = 0; ti < fb.trails.length; ti++) {
           var tr = fb.trails[ti];
@@ -3909,38 +3931,41 @@ function drawFireballs() {
             ctx.globalAlpha = ta;
             ctx.fillStyle = "rgba(224,242,254," + (ta * 0.95) + ")";
             ctx.beginPath();
-            ctx.arc(tr.x, tr.y, tr.r * 0.9, 0, Math.PI * 2);
+            ctx.arc(tr.x, tr.y, tr.r * 0.85, 0, Math.PI * 2);
             ctx.fill();
-            ctx.strokeStyle = "rgba(125,211,252," + ta + ")";
-            ctx.lineWidth = 1.2;
-            ctx.beginPath();
-            ctx.moveTo(tr.x, tr.y);
-            ctx.lineTo(tr.x - tr.vx * 0.05, tr.y - tr.vy * 0.05);
-            ctx.stroke();
-          } else if (tr.layer === 1) {
-            // deep royal blue outer wisps
-            ctx.globalAlpha = ta * 0.55;
-            var tg = ctx.createRadialGradient(tr.x, tr.y, 0, tr.x, tr.y, tr.r * 1.6);
-            tg.addColorStop(0, "rgba(37,99,235,0.7)");
-            tg.addColorStop(0.5, "rgba(29,78,216,0.4)");
+            continue;
+          }
+          // thin teardrop oriented along motion (point toward fireball / opposite velocity)
+          var tang = Math.atan2(tr.vy || 0, tr.vx || -1);
+          var len = tr.r * (2.8 + ta * 1.2); // elongated tear
+          var wid = tr.r * 0.55; // thinner
+          ctx.save();
+          ctx.translate(tr.x, tr.y);
+          ctx.rotate(tang);
+          ctx.globalAlpha = ta * (tr.layer === 1 ? 0.55 : 0.8);
+          var tg;
+          if (tr.layer === 1) {
+            tg = ctx.createRadialGradient(len * 0.15, 0, 0, 0, 0, len);
+            tg.addColorStop(0, "rgba(59,130,246,0.75)");
+            tg.addColorStop(0.45, "rgba(37,99,235,0.45)");
             tg.addColorStop(1, "rgba(30,58,138,0)");
-            ctx.fillStyle = tg;
-            ctx.beginPath();
-            ctx.arc(tr.x, tr.y, tr.r * 1.5, 0, Math.PI * 2);
-            ctx.fill();
           } else {
-            // electric cyan inner flame
-            ctx.globalAlpha = ta * 0.8;
-            var tg = ctx.createRadialGradient(tr.x, tr.y, 0, tr.x, tr.y, tr.r * 1.3);
+            tg = ctx.createRadialGradient(len * 0.2, 0, 0, 0, 0, len);
             tg.addColorStop(0, "rgba(255,255,255,0.9)");
             tg.addColorStop(0.25, "rgba(165,243,252,0.85)");
-            tg.addColorStop(0.6, "rgba(34,211,238,0.55)");
+            tg.addColorStop(0.6, "rgba(34,211,238,0.5)");
             tg.addColorStop(1, "rgba(8,145,178,0)");
-            ctx.fillStyle = tg;
-            ctx.beginPath();
-            ctx.arc(tr.x, tr.y, tr.r * 1.2, 0, Math.PI * 2);
-            ctx.fill();
           }
+          ctx.fillStyle = tg;
+          // teardrop path: round head, tapering tail
+          ctx.beginPath();
+          ctx.moveTo(len * 0.55, 0);
+          ctx.quadraticCurveTo(len * 0.2, wid, -len * 0.65, wid * 0.15);
+          ctx.quadraticCurveTo(-len * 0.85, 0, -len * 0.65, -wid * 0.15);
+          ctx.quadraticCurveTo(len * 0.2, -wid, len * 0.55, 0);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
         }
       }
       // fireball / plasma blade core
