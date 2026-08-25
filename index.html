@@ -7,9 +7,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="format-detection" content="telephone=no" />
 <title>Airborne Aces</title>
-<link rel="stylesheet" href="style.css?v=ruff255">
-<link rel="stylesheet" href="blimp-profile.css?v=ruff255">
-<link rel="stylesheet" href="launch-screens.css?v=ruff255">
+<link rel="stylesheet" href="style.css?v=ruff256">
+<link rel="stylesheet" href="blimp-profile.css?v=ruff256">
+<link rel="stylesheet" href="launch-screens.css?v=ruff256">
 <style id="otg-legacy-splash-hide">#splashScreen{visibility:hidden!important;pointer-events:none!important;}</style>
 </head>
 <body>
@@ -38,7 +38,7 @@
   <div class="otg-enter-wrap">
     <button class="otg-enter-btn" id="otg-enter-btn" type="button" aria-label="Enter Hangar">
     <span class="enterHangarShine" aria-hidden="true"></span>
-  <img class="enterHangarImg" src="enter_hangar_btn.png?v=ruff255" alt="Enter Hangar" draggable="false" />
+  <img class="enterHangarImg" src="enter_hangar_btn.png?v=ruff256" alt="Enter Hangar" draggable="false" />
   </button>
   </div>
   
@@ -107,7 +107,7 @@
   </div>
   <button class="enterHangarBtn" id="splashEnterBtn" type="button" aria-label="Enter Hangar">
   <span class="enterHangarShine" aria-hidden="true"></span>
-  <img class="enterHangarImg" src="enter_hangar_btn.png?v=ruff255" alt="Enter Hangar" draggable="false" />
+  <img class="enterHangarImg" src="enter_hangar_btn.png?v=ruff256" alt="Enter Hangar" draggable="false" />
 </button>
 </div>
 
@@ -277,41 +277,70 @@
 
 
 <div id="pauseOverlay" class="hidden" aria-hidden="true">
-  <div class="pausePanel">
+  <div class="pauseBackdrop"></div>
+  <div class="pausePanel" role="dialog" aria-labelledby="pauseTitle">
     <div class="pausePanelGlow"></div>
+    <div class="pausePanelRing"></div>
     <div class="pausePanelInner">
-      <h2 class="pauseTitle">PAUSED</h2>
-      <p class="pauseSubtitle">Adjust volumes · game is paused</p>
-
-      <div class="pauseSliderRow">
-        <div class="pauseSliderLabel">
-          <span class="pauseIcon">🎵</span>
-          <span>Music</span>
-          <span class="pauseVal" id="pauseMusicVal">25%</span>
+      <div class="pauseHeader">
+        <div class="pauseEq" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span>
         </div>
-        <input type="range" id="pauseMusicSlider" class="pauseSlider" min="0" max="100" value="25" aria-label="Music volume" />
+        <h2 class="pauseTitle" id="pauseTitle">PAUSED</h2>
+        <p class="pauseSubtitle">Audio control · flight suspended</p>
+        <div class="pauseDivider">
+          <span class="pauseDividerLine"></span>
+          <span class="pauseDividerGem"></span>
+          <span class="pauseDividerLine"></span>
+        </div>
       </div>
 
-      <div class="pauseSliderRow">
+      <div class="pauseSliderRow pauseRowMusic">
         <div class="pauseSliderLabel">
-          <span class="pauseIcon">🔊</span>
-          <span>Sound FX</span>
+          <span class="pauseIconWrap" aria-hidden="true">
+            <svg class="pauseSvgIcon" viewBox="0 0 24 24" fill="none"><path d="M9 18V6l10-2v12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="18" r="2.2" fill="currentColor"/><circle cx="17" cy="16" r="2.2" fill="currentColor"/></svg>
+          </span>
+          <span class="pauseTrackName">Music</span>
+          <span class="pauseVal" id="pauseMusicVal">25%</span>
+        </div>
+        <div class="pauseSliderTrack">
+          <input type="range" id="pauseMusicSlider" class="pauseSlider" min="0" max="100" value="25" aria-label="Music volume" />
+        </div>
+      </div>
+
+      <div class="pauseSliderRow pauseRowSfx">
+        <div class="pauseSliderLabel">
+          <span class="pauseIconWrap" aria-hidden="true">
+            <svg class="pauseSvgIcon" viewBox="0 0 24 24" fill="none"><path d="M4 10v4h3l5 4V6L7 10H4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M16 9.5a4 4 0 010 5M18.5 7a7 7 0 010 10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </span>
+          <span class="pauseTrackName">Sound FX</span>
           <span class="pauseVal" id="pauseSfxVal">100%</span>
         </div>
-        <input type="range" id="pauseSfxSlider" class="pauseSlider" min="0" max="100" value="100" aria-label="Sound effects volume" />
+        <div class="pauseSliderTrack">
+          <input type="range" id="pauseSfxSlider" class="pauseSlider" min="0" max="100" value="100" aria-label="Sound effects volume" />
+        </div>
       </div>
 
       <div class="pauseActions">
-        <button type="button" id="pauseMuteToggle" class="pauseSecondaryBtn">Mute All</button>
-        <button type="button" id="pauseHangarBtn" class="pauseSecondaryBtn pauseHangarBtn">Return to Hangar</button>
-        <button type="button" id="pauseResumeBtn" class="pausePrimaryBtn">Resume</button>
+        <button type="button" id="pauseMuteToggle" class="pauseSecondaryBtn">
+          <span class="pauseBtnGlow"></span>
+          <span class="pauseBtnLabel">Mute All</span>
+        </button>
+        <button type="button" id="pauseHangarBtn" class="pauseSecondaryBtn pauseHangarBtn">
+          <span class="pauseBtnGlow"></span>
+          <span class="pauseBtnLabel">Return to Hangar</span>
+        </button>
+        <button type="button" id="pauseResumeBtn" class="pausePrimaryBtn">
+          <span class="pauseBtnGlow"></span>
+          <span class="pauseBtnLabel">Resume Flight</span>
+        </button>
       </div>
     </div>
   </div>
 </div>
 
 <div id="hudFrame">
-  <img id="hudFrameImg" crossorigin="anonymous" src="hudFrame.webp?v=ruff255" alt="" />
+  <img id="hudFrameImg" crossorigin="anonymous" src="hudFrame.webp?v=ruff256" alt="" />
 
   <div id="healthMeter">
     <img id="healthImg" crossorigin="anonymous" src="heartPickup.webp?cb=2" alt="Health" />
@@ -480,23 +509,23 @@
   </div>
 </div>
 
-<script src="assets-placeholders.js?v=ruff255"></script>
-<script src="blimp-profile.js?v=ruff255"></script>
-<script src="menu-intro.js?v=ruff255"></script>
-<script src="world-map.js?v=ruff255"></script>
-<script src="audio.js?v=ruff255"></script>
-<script src="asset-loading.js?v=ruff255"></script>
-<script src="ruff-tutorial.js?v=ruff255"></script>
-<script src="world-buildings.js?v=ruff255"></script>
-<script src="player-obstacles.js?v=ruff255"></script>
-<script src="power-fx.js?v=ruff255"></script>
-<script src="bosses.js?v=ruff255"></script>
-<script src="boss-dialogue.js?v=ruff255"></script>
-<script src="effects-combat.js?v=ruff255"></script>
-<script src="gamestate-ui.js?v=ruff255"></script>
-<script src="world-atmosphere.js?v=ruff255"></script>
-<script src="main-loop.js?v=ruff255"></script>
+<script src="assets-placeholders.js?v=ruff256"></script>
+<script src="blimp-profile.js?v=ruff256"></script>
+<script src="menu-intro.js?v=ruff256"></script>
+<script src="world-map.js?v=ruff256"></script>
+<script src="audio.js?v=ruff256"></script>
+<script src="asset-loading.js?v=ruff256"></script>
+<script src="ruff-tutorial.js?v=ruff256"></script>
+<script src="world-buildings.js?v=ruff256"></script>
+<script src="player-obstacles.js?v=ruff256"></script>
+<script src="power-fx.js?v=ruff256"></script>
+<script src="bosses.js?v=ruff256"></script>
+<script src="boss-dialogue.js?v=ruff256"></script>
+<script src="effects-combat.js?v=ruff256"></script>
+<script src="gamestate-ui.js?v=ruff256"></script>
+<script src="world-atmosphere.js?v=ruff256"></script>
+<script src="main-loop.js?v=ruff256"></script>
 
-<script src="launch-screens.js?v=ruff255"></script>
+<script src="launch-screens.js?v=ruff256"></script>
 </body>
 </html>

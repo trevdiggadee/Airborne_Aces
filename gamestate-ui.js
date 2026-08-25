@@ -752,7 +752,12 @@
     if (pauseMusicVal) pauseMusicVal.textContent = mv + "%";
     if (pauseSfxVal) pauseSfxVal.textContent = sv + "%";
     const isMuted = (typeof muted !== "undefined") ? muted : false;
-    if (pauseMuteToggle) pauseMuteToggle.textContent = isMuted ? "Unmute All" : "Mute All";
+    if (pauseMuteToggle) {
+      var lab = pauseMuteToggle.querySelector(".pauseBtnLabel");
+      if (lab) lab.textContent = isMuted ? "Unmute All" : "Mute All";
+      else pauseMuteToggle.textContent = isMuted ? "Unmute All" : "Mute All";
+      pauseMuteToggle.classList.toggle("is-muted", !!isMuted);
+    }
   }
 
   function setMusicVolFromUI(pct) {
