@@ -1372,16 +1372,21 @@
         }
       }
 
-      if ((o.shockFall || o.electrified) && !o.onFire) {
-        // already knocked out by sonic blast — no player damage
+      // Power-disabled targets never damage or pop coins
+      if (o.shockFall || o.electrified || o.powerAffected || o.onFire || o.blueFire || o.greenFire) {
         return;
       }
       if (dx < collideX && dy < collideY) {
         const isBird = (o.type === "bird_a" || o.type === "bird_b");
-        if ((isBird || shieldActive) && !o.hitDeflected) {
-          o.hitDeflected = true;
-          if (shieldActive) {
-            // Strong shield reflection — knock obstacle hard away (coins flying out)
+
+        // Rings never damage
+        if (o.isRing || o.type === "gold_ring") {
+          // no-op
+        }
+        // SHIELD UP — bounce only, NEVER coins, NEVER takeHit
+        else if (shieldActive) {
+          if (!o.hitDeflected) {
+            o.hitDeflected = true;
             var awayX = (o.x + o.w * 0.5) - player.x;
             var awayY = (drawY + o.h * 0.5) - player.y;
             var alen = Math.hypot(awayX, awayY) || 1;
@@ -1390,33 +1395,25 @@
             o.deflectVy = (awayY / alen) * knock * 0.85 + (Math.random() < 0.5 ? -1 : 1) * (120 + Math.random() * 100);
             o.spinVel = (Math.random() - 0.5) * 10;
             o.hitFlash = 1.2;
+            spawnHitParticles(o.x + o.w / 2, drawY + o.h / 2);
+            if (isBird && typeof spawnFeathers === "function") {
+              spawnFeathers(o.x + o.w / 2, drawY + o.h / 2);
+            }
             try { if (typeof triggerScreenShake === "function") triggerScreenShake(5, 140); } catch (e) {}
             try {
               if (window.PowerFX) window.PowerFX.burst(o.x + o.w * 0.5, drawY + o.h * 0.5, {
                 count: 14, colors: ["#e0f2fe", "#fff", "#7dd3fc"], speed: 120, life: 0.4, glow: true
               });
             } catch (e) {}
-          } else {
-            o.deflectVy = (Math.random() < 0.5 ? -1 : 1) * (150 + Math.random() * 90);
-            o.hitFlash = 1;
           }
-          spawnHitParticles(o.x + o.w / 2, drawY + o.h / 2);
-          if (isBird && typeof spawnFeathers === "function") {
-            spawnFeathers(o.x + o.w / 2, drawY + o.h / 2);
-          }
-          // Shield block — no coins (shield or power-hit targets never pop coins)
+          // intentionally no coins, no takeHit
         }
-        if (o.isRing || o.type === "gold_ring") {
-          // never damage from rings
-        } else if (o.onFire) {
-          // already burning — no damage
-        } else if (window.__airborneFirePowerActive) {
-          // Ignite obstacle — catches fire, falls off screen
+        // Zeppelin fire aura — ignite, no coins from this contact
+        else if (window.__airborneFirePowerActive) {
           o.onFire = true;
           o.powerAffected = true;
           o.vy = 80 + Math.random() * 40;
           o.scored = true;
-          // Power kills count toward main dodge score
           try {
             score += 1;
             if (typeof gameplayScore === "number") gameplayScore += 1;
@@ -1435,13 +1432,33 @@
               window.__airborneEmitFireBurst(o.x + o.w * 0.5, o.y + o.h * 0.4);
             }
           } catch (e) {}
-        } else {
-          // Coins on contact — skip if this obstacle was already hit by a power-up
-          if (!o._hitCoinBursted && !o.powerAffected && !o.onFire && !o.electrified && !o.shockFall && !o.blueFire && !o.greenFire) {
+        }
+        // Birds without shield — deflect, no damage/coins from bird bounce alone
+        else if (isBird) {
+          if (!o.hitDeflected) {
+            o.hitDeflected = true;
+            o.deflectVy = (Math.random() < 0.5 ? -1 : 1) * (150 + Math.random() * 90);
+            o.hitFlash = 1;
+            spawnHitParticles(o.x + o.w / 2, drawY + o.h / 2);
+            if (typeof spawnFeathers === "function") {
+              spawnFeathers(o.x + o.w / 2, drawY + o.h / 2);
+            }
+          }
+          // birds still hurt without shield
+          if (!o._hitCoinBursted) {
             o._hitCoinBursted = true;
             try {
               if (typeof window.spawnHitCoinBurst === "function") window.spawnHitCoinBurst();
-              else if (typeof window.spawnHitRingBurst === "function") window.spawnHitRingBurst();
+            } catch (e) {}
+          }
+          takeHit();
+        }
+        // Normal obstacle hit — coins + damage (only clean targets reach here)
+        else {
+          if (!o._hitCoinBursted) {
+            o._hitCoinBursted = true;
+            try {
+              if (typeof window.spawnHitCoinBurst === "function") window.spawnHitCoinBurst();
             } catch (e) {}
           }
           takeHit();
