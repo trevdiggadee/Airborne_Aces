@@ -507,43 +507,25 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         try { if (typeof triggerScreenShake === "function") triggerScreenShake(4, 200); } catch (e) {}
       }
       if (powerMode === "bluefireball") {
-        // Engine azure flare, tip charge, then rapid front barrage
-        window.__airborneBlueFlash = { x: player.x, y: player.y, age: 0, life: 0.65, phase: 1 };
+        // Azure Barrage — engines flare bright blue, then rapid plasma stream
+        window.__airborneBlueFlash = { x: player.x, y: player.y, age: 0, life: 0.7, phase: 1 };
+        window.__airborneEngineFlare = { age: 0, life: 0.9 };
+        // 3–5 fireballs in quick succession
+        var nShots = 3 + Math.floor(Math.random() * 3); // 3–5
         window.__airborneAzureBarrage = {
-          shotsLeft: 4 + Math.floor(Math.random() * 2), // 4–5 total stream
-          nextT: 0.06,
-          fired: 0
+          shotsLeft: nShots,
+          fired: 0,
+          total: nShots
         };
-        window.__airborneFireballSpawnT = 0.04;
-        // Visible charged fireball on the tip of the blimp
-        window.__airborneAzureTipCharge = {
-          age: 0, life: 0.55, r: 14
-        };
-        // Immediate first shot from the front tip
-        if (!window.__airborneFireballs) window.__airborneFireballs = [];
-        if (typeof player !== "undefined" && player) {
-          var tipX0 = player.x + (player.w || 40) * 0.68;
-          var tipY0 = player.y;
-          window.__airborneFireballs.push({
-            x: tipX0, y: tipY0,
-            vx: 240, vy: 0,
-            life: 1.8, age: 0, r: 11,
-            trails: [],
-            colors: ["#f0f9ff", "#bae6fd", "#38bdf8", "#0ea5e9"],
-            smokeCol: "rgba(30,80,140,0.7)",
-            kind: "bluefireball",
-            pierce: 4,
-            finisher: false,
-            accel: 140,
-            hitIds: {}
-          });
-          window.__airborneAzureBarrage.fired = 1;
-          window.__airborneAzureBarrage.shotsLeft = Math.max(0, window.__airborneAzureBarrage.shotsLeft - 1);
-        }
-        try { if (typeof triggerScreenShake === "function") triggerScreenShake(6, 240); } catch (e) {}
+        // Short wind-up then first shot
+        window.__airborneFireballSpawnT = 0.18;
+        window.__airborneAzureTipOrbs = null;
+        window.__airborneAzureTipLive = null;
+        window.__airborneAzureTipCharge = null;
+        try { if (typeof triggerScreenShake === "function") triggerScreenShake(5, 220); } catch (e) {}
         try { if (typeof sfxShoot === "function") sfxShoot(); } catch (e) {}
-        try { if (typeof sfxExplosion === "function") sfxExplosion(0.25); } catch (e) {}
       }
+
       try {
         if (window.PowerFX && player) window.PowerFX.activate(powerMode, player.x, player.y);
       } catch (e) {}
@@ -2218,45 +2200,22 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
       window.__airborneActivePowerVisual = "fireball";
       window.__airborneActivePowerUntil = untilFb;
       if (!window.__airborneFireballs) window.__airborneFireballs = [];
-      // Aero Slicer tip — charged fireball + black-core orbs on the front
-      if (stormMode === "bluefireball" && typeof player !== "undefined" && player) {
-        var tipX = player.x + (player.w || 40) * 0.68;
-        var tipY = player.y;
-        if (window.__airborneAzureTipCharge) {
-          window.__airborneAzureTipCharge.age += dt;
-          window.__airborneAzureTipCharge.x = tipX;
-          window.__airborneAzureTipCharge.y = tipY;
-          if (window.__airborneAzureTipCharge.age >= window.__airborneAzureTipCharge.life) {
-            window.__airborneAzureTipCharge = null;
+      // Azure Barrage — engine flare timer
+      if (stormMode === "bluefireball") {
+        if (window.__airborneEngineFlare) {
+          window.__airborneEngineFlare.age += dt;
+          if (window.__airborneEngineFlare.age >= window.__airborneEngineFlare.life) {
+            window.__airborneEngineFlare = null;
           }
         }
-        // Keep a smaller live tip fireball while barrage runs
-        if (!window.__airborneAzureTipLive) {
-          window.__airborneAzureTipLive = { pulse: 0, r: 10 };
-        }
-        window.__airborneAzureTipLive.pulse += dt * 8;
-        window.__airborneAzureTipLive.x = tipX;
-        window.__airborneAzureTipLive.y = tipY;
-        if (!window.__airborneAzureTipOrbs) {
-          window.__airborneAzureTipOrbs = [];
-          for (var ti = 0; ti < 3; ti++) {
-            window.__airborneAzureTipOrbs.push({
-              phase: ti * (Math.PI * 2 / 3),
-              size: 4.5 + ti * 1.2,
-              orbit: 5 + ti * 2.5
-            });
+        if (window.__airborneBlueFlash) {
+          window.__airborneBlueFlash.age += dt;
+          if (window.__airborneBlueFlash.age >= window.__airborneBlueFlash.life) {
+            window.__airborneBlueFlash = null;
           }
-        }
-        var tips = window.__airborneAzureTipOrbs;
-        for (var ti = 0; ti < tips.length; ti++) {
-          tips[ti].phase += dt * (4.5 + ti * 0.8);
-          tips[ti].x = tipX + Math.cos(tips[ti].phase) * tips[ti].orbit * 0.4;
-          tips[ti].y = tipY + Math.sin(tips[ti].phase * 1.3) * tips[ti].orbit * 0.5;
         }
       } else {
-        window.__airborneAzureTipOrbs = null;
-        window.__airborneAzureTipLive = null;
-        window.__airborneAzureTipCharge = null;
+        window.__airborneEngineFlare = null;
       }
 
       // Spawn fireballs periodically from hull
@@ -2275,34 +2234,34 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
         var lifeT = 1.6;
 
         if (stormMode === "bluefireball") {
-          // Azure Barrage — rapid stream, vertical fan, piercing plasma blades
+          // Azure Barrage — 3–5 plasma blades, vertical fan, from front
           fbColors = ["#f0f9ff", "#bae6fd", "#38bdf8", "#0ea5e9", "#0284c7"];
           smokeCol = "rgba(30,80,140,0.7)";
           var barrage = window.__airborneAzureBarrage;
           if (!barrage) {
-            barrage = { shotsLeft: 4, nextT: 0.1, fired: 0 };
+            barrage = { shotsLeft: 4, fired: 0, total: 4 };
             window.__airborneAzureBarrage = barrage;
           }
           if (barrage.shotsLeft <= 0) {
-            // after initial volley, occasional extra shots
-            window.__airborneFireballSpawnT = 0.32;
+            // volley complete — no more auto-fire
+            window.__airborneFireballSpawnT = 999;
           } else {
-            window.__airborneFireballSpawnT = 0.09 + Math.random() * 0.04;
+            window.__airborneFireballSpawnT = 0.10 + Math.random() * 0.04;
             barrage.shotsLeft--;
             barrage.fired++;
           }
-          var totalFan = 5;
-          var slot = (barrage.fired - 1) % totalFan;
-          // vertical fan spread
-          ang = -0.42 + (slot / Math.max(1, totalFan - 1)) * 0.84 + (Math.random() - 0.5) * 0.08;
-          sp = 220 + Math.random() * 60;
-          // Spawn from front tip of Aero Slicer
-          spawnX = player.x + (player.w || 40) * 0.68;
-          spawnY = player.y + Math.sin(ang) * (player.h || 30) * 0.16;
-          pierce = 4; // burn through multiple obstacles
-          isFinisher = (barrage.shotsLeft === 0 && barrage.fired >= 3);
-          rSize = isFinisher ? 16 + Math.random() * 3 : 9 + Math.random() * 3;
-          lifeT = isFinisher ? 2.1 : 1.7;
+          var total = Math.max(1, barrage.total || 4);
+          var slot = barrage.fired - 1;
+          // slight vertical fan across the stream
+          ang = -0.38 + (slot / Math.max(1, total - 1)) * 0.76 + (Math.random() - 0.5) * 0.06;
+          sp = 260 + Math.random() * 50;
+          // Launch from front of blimp
+          spawnX = player.x + (player.w || 40) * 0.55;
+          spawnY = player.y + Math.sin(ang) * (player.h || 30) * 0.22;
+          pierce = 5; // burn through multiple obstacles
+          isFinisher = (barrage.shotsLeft === 0);
+          rSize = isFinisher ? 15 + Math.random() * 3 : 9 + Math.random() * 3;
+          lifeT = isFinisher ? 2.0 : 1.55;
           try { if (typeof sfxShoot === "function") sfxShoot(); } catch (e) {}
         } else if (stormMode === "greenfireball") {
           window.__airborneFireballSpawnT = 0.14;
@@ -2410,11 +2369,23 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
                 o.vy = 55 + Math.random() * 30;
               }
               if (fb.kind === "bluefireball") {
+                // Glow blue, crack, burn apart
                 o.blueFire = true;
-                o.vy = 70 + Math.random() * 40;
-                o.vx = (Math.random() - 0.5) * 60;
-                o.rot = (o.rot || 0);
-                o.spinVel = (Math.random() - 0.5) * 6;
+                o.azureGlow = 1;
+                o.hitFlash = 1;
+                o.vy = 90 + Math.random() * 50;
+                o.vx = (Math.random() - 0.5) * 80;
+                o.spinVel = (Math.random() - 0.5) * 8;
+                if (fb.finisher) {
+                  o.vy += 40;
+                  try {
+                    if (window.PowerFX) window.PowerFX.burst(ox, oy, {
+                      count: 22, colors: ["#e0f2fe", "#38bdf8", "#0ea5e9", "#fff"],
+                      speed: 140, life: 0.5, glow: true
+                    });
+                  } catch (e) {}
+                  try { if (typeof triggerScreenShake === "function") triggerScreenShake(6, 180); } catch (e) {}
+                }
               }
               try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
               try {
@@ -3997,109 +3968,64 @@ function drawFireballs() {
       }
       ctx.globalCompositeOperation = "source-over";
     }
-    // Front-tip fireball + black-core orbs on Aero Slicer nose
-    if ((window.__airborneAzureTipOrbs || window.__airborneAzureTipLive || window.__airborneAzureTipCharge)
-        && typeof player !== "undefined" && player) {
+    // Azure engine flare (activation) drawn below; muzzle flash while firing
+    if (stormMode === "bluefireball" && typeof player !== "undefined" && player
+        && window.__airborneAzureBarrage && window.__airborneAzureBarrage.shotsLeft >= 0
+        && window.__airborneAzureBarrage.fired > 0) {
+      // brief blue muzzle at front while stream is active
+      var mx = player.x + (player.w || 40) * 0.52;
+      var my = player.y;
       ctx.save();
-      var tipX = player.x + (player.w || 40) * 0.68;
-      var tipY = player.y;
-      // Main tip fireball — large, on the front of the blimp
-      var live = window.__airborneAzureTipLive;
-      var pulse = live ? (0.9 + 0.12 * Math.sin(live.pulse || 0)) : 1;
-      var charge = window.__airborneAzureTipCharge;
-      var chargeBoost = charge ? (1 - charge.age / charge.life) * 0.7 : 0;
-      var baseR = Math.max(16, (player.w || 40) * 0.18);
-      var tipR = (baseR + chargeBoost * baseR * 0.6) * pulse;
-      // elongated blue flame body pointing forward
       ctx.globalCompositeOperation = "lighter";
-      var tg = ctx.createRadialGradient(tipX, tipY, 1, tipX, tipY, tipR * 2.6);
-      tg.addColorStop(0, "rgba(255,255,255,1)");
-      tg.addColorStop(0.2, "rgba(186,230,253,0.95)");
-      tg.addColorStop(0.45, "rgba(56,189,248,0.8)");
-      tg.addColorStop(0.75, "rgba(14,120,220,0.4)");
-      tg.addColorStop(1, "rgba(2,60,140,0)");
-      ctx.fillStyle = tg;
+      var mg = ctx.createRadialGradient(mx, my, 1, mx, my, 18);
+      mg.addColorStop(0, "rgba(255,255,255,0.85)");
+      mg.addColorStop(0.4, "rgba(56,189,248,0.55)");
+      mg.addColorStop(1, "rgba(14,100,200,0)");
+      ctx.fillStyle = mg;
       ctx.beginPath();
-      ctx.arc(tipX, tipY, tipR * 2.6, 0, Math.PI * 2);
+      ctx.arc(mx, my, 18, 0, Math.PI * 2);
       ctx.fill();
-      // forward flame tongue
-      var flame = ctx.createLinearGradient(tipX - tipR * 0.3, tipY, tipX + tipR * 2.2, tipY);
-      flame.addColorStop(0, "rgba(56,189,248,0.0)");
-      flame.addColorStop(0.3, "rgba(56,189,248,0.55)");
-      flame.addColorStop(0.7, "rgba(14,165,233,0.35)");
-      flame.addColorStop(1, "rgba(14,100,200,0)");
-      ctx.fillStyle = flame;
-      ctx.beginPath();
-      ctx.ellipse(tipX + tipR * 0.6, tipY, tipR * 1.8, tipR * 0.55, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // black center of tip fireball
-      ctx.globalCompositeOperation = "source-over";
-      var coreR = tipR * 0.42;
-      ctx.fillStyle = "rgba(6,8,14,0.97)";
-      ctx.beginPath();
-      ctx.arc(tipX, tipY, coreR, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = "rgba(125,211,252,1)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(tipX, tipY, coreR, 0, Math.PI * 2);
-      ctx.stroke();
-      // blue fire ring around black core
-      ctx.globalCompositeOperation = "lighter";
-      var ring = ctx.createRadialGradient(tipX, tipY, coreR * 0.7, tipX, tipY, coreR * 2.1);
-      ring.addColorStop(0, "rgba(56,189,248,0)");
-      ring.addColorStop(0.5, "rgba(56,189,248,0.7)");
-      ring.addColorStop(1, "rgba(14,100,200,0)");
-      ctx.fillStyle = ring;
-      ctx.beginPath();
-      ctx.arc(tipX, tipY, coreR * 2.1, 0, Math.PI * 2);
-      ctx.fill();
-      // Orbiting small black-core orbs around tip
-      var tips = window.__airborneAzureTipOrbs || [];
-      for (var ti = 0; ti < tips.length; ti++) {
-        var o = tips[ti];
-        if (o.x == null) continue;
-        var sz = o.size * 2.2;
-        ctx.globalCompositeOperation = "lighter";
-        var og = ctx.createRadialGradient(o.x, o.y, sz * 0.2, o.x, o.y, sz);
-        og.addColorStop(0, "rgba(186,230,253,0.2)");
-        og.addColorStop(0.4, "rgba(56,189,248,0.85)");
-        og.addColorStop(1, "rgba(2,60,140,0)");
-        ctx.fillStyle = og;
-        ctx.beginPath();
-        ctx.arc(o.x, o.y, sz, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalCompositeOperation = "source-over";
-        ctx.fillStyle = "rgba(6,8,14,0.95)";
-        ctx.beginPath();
-        ctx.arc(o.x, o.y, Math.max(2.2, o.size * 0.5), 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = "rgba(125,211,252,0.9)";
-        ctx.lineWidth = 1.1;
-        ctx.beginPath();
-        ctx.arc(o.x, o.y, Math.max(2.2, o.size * 0.5), 0, Math.PI * 2);
-        ctx.stroke();
-      }
       ctx.restore();
     }
     // Azure engine flare on activation
-    if (window.__airborneBlueFlash) {
+    // Azure engine flare on activation — bright blue engines then launch
+    if (window.__airborneBlueFlash || window.__airborneEngineFlare) {
       var bf = window.__airborneBlueFlash;
-      var bt = Math.max(0, 1 - bf.age / bf.life);
-      if (bt > 0 && typeof player !== "undefined" && player) {
+      var ef = window.__airborneEngineFlare;
+      var bt = bf ? Math.max(0, 1 - bf.age / bf.life) : 0;
+      var et = ef ? Math.max(0, 1 - ef.age / ef.life) : 0;
+      var t = Math.max(bt, et);
+      if (t > 0 && typeof player !== "undefined" && player) {
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = bt * 0.85;
-        var br = (player.w || 40) * (0.6 + (1 - bt) * 0.8);
+        // Main body flash
+        ctx.globalAlpha = t * 0.7;
+        var br = (player.w || 40) * (0.55 + (1 - t) * 0.7);
         var bg = ctx.createRadialGradient(player.x, player.y, 2, player.x, player.y, br);
-        bg.addColorStop(0, "rgba(255,255,255,0.95)");
-        bg.addColorStop(0.35, "rgba(125,211,252,0.7)");
-        bg.addColorStop(0.7, "rgba(14,165,233,0.3)");
+        bg.addColorStop(0, "rgba(255,255,255,0.9)");
+        bg.addColorStop(0.35, "rgba(125,211,252,0.65)");
+        bg.addColorStop(0.7, "rgba(14,165,233,0.25)");
         bg.addColorStop(1, "rgba(0,80,180,0)");
         ctx.fillStyle = bg;
         ctx.beginPath();
         ctx.arc(player.x, player.y, br, 0, Math.PI * 2);
         ctx.fill();
+        // Engine flares at rear (left side of blimp)
+        var engX = player.x - (player.w || 40) * 0.42;
+        var engY = player.y;
+        for (var ei = -1; ei <= 1; ei += 2) {
+          var ey = engY + ei * (player.h || 30) * 0.28;
+          var eg = ctx.createRadialGradient(engX, ey, 1, engX, ey, 22 + t * 10);
+          eg.addColorStop(0, "rgba(255,255,255,0.95)");
+          eg.addColorStop(0.3, "rgba(56,189,248,0.85)");
+          eg.addColorStop(0.7, "rgba(14,120,220,0.4)");
+          eg.addColorStop(1, "rgba(0,60,160,0)");
+          ctx.globalAlpha = t * 0.95;
+          ctx.fillStyle = eg;
+          ctx.beginPath();
+          ctx.arc(engX, ey, 22 + t * 10, 0, Math.PI * 2);
+          ctx.fill();
+        }
         ctx.restore();
       }
     }
