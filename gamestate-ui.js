@@ -789,6 +789,11 @@
       pauseOverlay.classList.remove("hidden");
       pauseOverlay.setAttribute("aria-hidden", "false");
     }
+    try {
+      document.body.classList.add("pause-open");
+      var dock = document.getElementById("unifiedDock");
+      if (dock) dock.classList.add("pauseHidden");
+    } catch (e) {}
     if (typeof sfxClick === "function") sfxClick();
   }
 
@@ -799,6 +804,11 @@
       pauseOverlay.classList.add("hidden");
       pauseOverlay.setAttribute("aria-hidden", "true");
     }
+    try {
+      document.body.classList.remove("pause-open");
+      var dock = document.getElementById("unifiedDock");
+      if (dock) dock.classList.remove("pauseHidden");
+    } catch (e) {}
     if (typeof sfxClick === "function") sfxClick();
   }
 

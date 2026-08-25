@@ -4226,7 +4226,8 @@ html, body {
   position: fixed !important;
   left: auto !important;
   right: calc(env(safe-area-inset-right, 0px) + 12px) !important;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px) !important;
+  /* Lowered ~10% further toward the bottom edge */
+  bottom: calc(env(safe-area-inset-bottom, 0px) + max(2px, 1vh)) !important;
   top: auto !important;
   transform: none !important;
   z-index: 50 !important;
@@ -4236,7 +4237,7 @@ html, body {
   flex-direction: column !important;
   align-items: center !important;
   justify-content: flex-end !important;
-  gap: 6px !important;
+  gap: 0 !important;
   pointer-events: none !important;
   margin: 0 !important;
   padding: 0 !important;
@@ -4246,11 +4247,20 @@ html, body {
   visibility: visible !important;
   opacity: 1 !important;
 }
-#unifiedDock.menuHidden {
+#unifiedDock.menuHidden,
+#unifiedDock.pauseHidden {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
   opacity: 0 !important;
+}
+/* Hide flight dock while pause menu is open */
+#pauseOverlay:not(.hidden) ~ #unifiedDock,
+body.pause-open #unifiedDock {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 #unifiedDock .udCircle,
@@ -4276,6 +4286,7 @@ html, body {
   opacity: 1 !important;
   visibility: visible !important;
   z-index: 2 !important;
+  overflow: visible !important;
 }
 
 .udRing {
@@ -4333,56 +4344,56 @@ html, body {
     drop-shadow(0 0 14px var(--power-icon-glow, rgba(255, 170, 40, 0.65))) !important;
 }
 
+/* Clock wrapped into the bottom of the circular UI */
 #unifiedDock .udTime,
 #udTimerVal {
   position: absolute !important;
   left: 50% !important;
   right: auto !important;
   top: auto !important;
-  bottom: -28px !important;
+  bottom: -2px !important;
   transform: translateX(-50%) !important;
-  min-width: 77px !important;
-  padding: 5px 12px 6px !important;
-  border-radius: 6px !important;
+  min-width: 72px !important;
+  width: 78px !important;
+  padding: 6px 10px 7px !important;
+  border-radius: 0 0 40px 40px !important;
   background:
-    linear-gradient(180deg, #3a2a18 0%, #2a1c0e 48%, #1a1008 52%, #241808 100%) !important;
-  border: 1px solid rgba(200, 160, 90, 0.65) !important;
+    linear-gradient(180deg, #4a3520 0%, #2a1c0e 40%, #14100a 100%) !important;
+  border: 1.5px solid rgba(200, 160, 90, 0.7) !important;
+  border-top: 1px solid rgba(255, 220, 150, 0.25) !important;
   box-shadow:
-    0 0 12px rgba(255, 190, 60, 0.28),
-    inset 0 1px 0 rgba(255, 230, 180, 0.18),
-    0 4px 10px rgba(0,0,0,0.45) !important;
+    0 4px 12px rgba(0,0,0,0.5),
+    0 0 14px rgba(255, 190, 60, 0.22),
+    inset 0 1px 0 rgba(255, 230, 180, 0.15),
+    inset 0 -2px 6px rgba(0,0,0,0.4) !important;
   font-family: "Courier New", "Lucida Console", monospace !important;
-  font-size: 14px !important;
+  font-size: 13px !important;
   font-weight: 800 !important;
-  letter-spacing: 0.14em !important;
+  letter-spacing: 0.12em !important;
   color: #ffe9a8 !important;
   text-align: center !important;
-  line-height: 1.25 !important;
-  z-index: 3 !important;
+  line-height: 1.2 !important;
+  z-index: 5 !important;
   pointer-events: none !important;
   display: block !important;
   opacity: 1 !important;
   visibility: visible !important;
+  clip-path: inset(0 0 0 0 round 0 0 40px 40px);
 }
 
+/* Percentage text removed */
 #unifiedDock .udProgressReadout,
 #udProgressVal {
-  position: relative !important;
-  left: auto !important;
-  right: auto !important;
-  margin-top: 34px !important;
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.08em !important;
-  color: rgba(180, 220, 255, 0.9) !important;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.7) !important;
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
   pointer-events: none !important;
-  display: block !important;
-  opacity: 1 !important;
-  visibility: visible !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 0 !important;
 }
 
-/* Never center the dock on the screen during flight */
 #stormMeter.trainingPos {
   left: auto !important;
   right: auto !important;
