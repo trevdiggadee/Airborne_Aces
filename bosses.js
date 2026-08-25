@@ -551,17 +551,17 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         window.__airborneEngineFlare = { age: 0, life: 1.0 };
         window.__airbornePlasmaIgnite = { age: 0, life: 0.55, shockR: 8 };
         // 5–7 orbiting plasma fireballs (miniature blue solar system)
-        var nOrb = 5 + Math.floor(Math.random() * 3);
+        var nOrb = 10 + Math.floor(Math.random() * 5); // 10–14 (2x)
         window.__airbornePlasmaOrbits = [];
         for (var oi = 0; oi < nOrb; oi++) {
           window.__airbornePlasmaOrbits.push({
             ang: (oi / nOrb) * Math.PI * 2,
             // elliptical 3D-style orbit — some pass in front, some behind
-            tilt: 0.35 + (oi % 3) * 0.12,
-            distX: 38 + (oi % 4) * 7,
-            distY: 22 + (oi % 3) * 6,
-            spin: 2.8 + (oi % 5) * 0.55 + Math.random() * 0.4,
-            r: 9 + (oi % 3) * 2.5,
+            tilt: 0.32 + (oi % 4) * 0.1,
+            distX: 32 + (oi % 5) * 8,
+            distY: 18 + (oi % 4) * 6,
+            spin: 2.4 + (oi % 6) * 0.5 + Math.random() * 0.5,
+            r: 8 + (oi % 4) * 2.2,
             pulse: Math.random() * Math.PI * 2,
             trail: [],
             z: 0, // depth for draw order
@@ -1328,7 +1328,10 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
   }
 
   function updateStorm(dt) {
+    try {
     try { updateBombBlasts(dt); } catch (e) {}
+    if (typeof W === "undefined") var W = 400;
+    if (typeof H === "undefined") var H = 700;
 
     // Iron Lattice torpedoes
     if (stormMode === "lattice" || (window.__airborneLatticeTorps && window.__airborneLatticeTorps.length)) {
@@ -1981,10 +1984,10 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
             tc.phaseT = 0;
           }
           // Process chain queue — each hit splits into 2–3 branches
-          var budget = 3; // zaps per frame max
+          var budget = 8; // more simultaneous chains
           while (tc.chainQueue.length && budget > 0) {
             var src = tc.chainQueue.shift();
-            var branches = 2 + Math.floor(Math.random() * 2); // 2–3
+            var branches = 3 + Math.floor(Math.random() * 3); // 3–5
             var cands = nearestTargets(src.x, src.y, branches, 220);
             if (!cands.length) continue;
             for (var bi = 0; bi < cands.length; bi++) {
@@ -2269,10 +2272,10 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
           for (var ri = 0; ri < 4; ri++) {
             sod.rings.push({ r: 10, maxR: maxR * (0.55 + ri * 0.15), age: 0, life: 0.7 + ri * 0.08, delay: ri * 0.07 });
           }
-          for (var pi = 0; pi < 55; pi++) {
+          for (var pi = 0; pi < 90; pi++) {
             var a = Math.random() * Math.PI * 2;
-            var kind = Math.random() < 0.15 ? "brass" : (Math.random() < 0.3 ? "spark" : "steam");
-            emitSteamPart(kind, a, 100 + Math.random() * 220, 0.6 + Math.random() * 0.5, 5 + Math.random() * 14);
+            var kind = Math.random() < 0.08 ? "brass" : (Math.random() < 0.15 ? "spark" : "steam");
+            emitSteamPart(kind, a, 140 + Math.random() * 280, 0.75 + Math.random() * 0.55, 12 + Math.random() * 22);
           }
         }
       } else if (sod.phase === "blast") {
@@ -2766,18 +2769,30 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
           lifeT = isFinisher ? 2.0 : 1.55;
           try { if (typeof sfxShoot === "function") sfxShoot(); } catch (e) {}
         } else if (stormMode === "greenfireball") {
-          window.__airborneFireballSpawnT = 0.14;
-          fbColors = ["#d1fae5", "#6ee7b7", "#10b981", "#047857"];
-          smokeCol = "rgba(40,70,50,1)";
+          window.__airborneFireballSpawnT = 0.10;
+          fbColors = ["#ecfdf5", "#6ee7b7", "#10b981", "#059669", "#047857"];
+          smokeCol = "rgba(30,80,50,0.85)";
           if (window.__airborneGreenSpiralAng == null) window.__airborneGreenSpiralAng = 0;
-          window.__airborneGreenSpiralAng += 0.65;
+          window.__airborneGreenSpiralAng += 0.55;
           ang = window.__airborneGreenSpiralAng;
-          sp = 130 + (window.__airborneGreenSpiralAng % 3) * 25;
-          spawnX = player.x + Math.cos(ang) * 12;
-          spawnY = player.y + Math.sin(ang) * 10;
-          lifeT = 1.9;
+          sp = 180 + Math.random() * 60;
+          spawnX = player.x + (player.w || 40) * 0.4 + Math.cos(ang) * 8;
+          spawnY = player.y + Math.sin(ang) * (player.h || 28) * 0.35;
+          rSize = 14 + Math.random() * 5;
+          lifeT = 2.2;
+          pierce = 2;
         } else {
-          window.__airborneFireballSpawnT = 0.28;
+          // Ironworks orange fireballs
+          window.__airborneFireballSpawnT = 0.14;
+          fbColors = ["#fff7ed", "#ffd24a", "#ff8a1a", "#ff3b00", "#dc2626"];
+          smokeCol = "rgba(50,40,30,0.85)";
+          ang = -0.4 + Math.random() * 0.8;
+          sp = 200 + Math.random() * 90;
+          spawnX = player.x + (player.w || 40) * 0.45;
+          spawnY = player.y + (Math.random() - 0.5) * (player.h || 30) * 0.4;
+          rSize = 13 + Math.random() * 5;
+          lifeT = 2.0;
+          pierce = 2;
         }
 
         window.__airborneFireballs.push({
@@ -3459,6 +3474,9 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       stormChainBolts.forEach(b => (b.age += dt));
       stormChainBolts = stormChainBolts.filter(b => b.age < b.life);
     }
+    } catch (errStorm) {
+      try { console.warn("updateStorm", errStorm); } catch (e) {}
+    }
   }
 
   
@@ -3785,9 +3803,9 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         var pulse = 0.85 + 0.15 * Math.sin(c.phase || 0);
         ctx.globalAlpha = 0.55 * pulse;
         var cg = ctx.createRadialGradient(c.x, c.y, 1, c.x, c.y, c.r * pulse);
-        cg.addColorStop(0, "rgba(110,115,125,0.85)");
-        cg.addColorStop(0.4, "rgba(70,74,84,0.55)");
-        cg.addColorStop(1, "rgba(30,32,40,0)");
+        cg.addColorStop(0, "rgba(70,74,82,0.95)");
+        cg.addColorStop(0.4, "rgba(40,42,48,0.75)");
+        cg.addColorStop(1, "rgba(15,16,20,0)");
         ctx.fillStyle = cg;
         ctx.beginPath();
         ctx.arc(c.x, c.y, c.r * pulse, 0, Math.PI * 2);
@@ -3829,13 +3847,14 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         ctx.fillStyle = "rgba(160,110,40," + t + ")";
         ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1.5, p.r * 0.35), 0, Math.PI * 2); ctx.fill();
       } else {
-        // Darker thick steam
+        // Thick dark industrial steam — highly visible
         ctx.globalCompositeOperation = "source-over";
-        ctx.globalAlpha = t * 0.65;
+        ctx.globalAlpha = Math.min(1, t * 0.9);
         var sg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        sg.addColorStop(0, "rgba(160,165,175," + (t * 0.75) + ")");
-        sg.addColorStop(0.4, "rgba(100,105,115," + (t * 0.5) + ")");
-        sg.addColorStop(1, "rgba(50,52,60,0)");
+        sg.addColorStop(0, "rgba(90,95,105," + (t * 0.95) + ")");
+        sg.addColorStop(0.35, "rgba(55,58,65," + (t * 0.75) + ")");
+        sg.addColorStop(0.7, "rgba(30,32,38," + (t * 0.4) + ")");
+        sg.addColorStop(1, "rgba(15,16,20,0)");
         ctx.fillStyle = sg;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
       }
@@ -4676,22 +4695,37 @@ function drawFireballs() {
         ctx.globalAlpha = 1;
         ctx.restore();
       } else if (fb.kind === "greenfireball") {
-        g.addColorStop(0, "rgba(220,255,230,0.95)");
-        g.addColorStop(0.35, "rgba(52,211,153,0.85)");
-        g.addColorStop(0.7, "rgba(4,120,87,0.4)");
-        g.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.fillStyle = g;
+        // Jade Voyager — bright emerald plasma
+        var gg = ctx.createRadialGradient(fb.x, fb.y, 0, fb.x, fb.y, rr * 1.3);
+        gg.addColorStop(0, "rgba(255,255,255,1)");
+        gg.addColorStop(0.2, "rgba(167,243,208,0.98)");
+        gg.addColorStop(0.45, "rgba(52,211,153,0.9)");
+        gg.addColorStop(0.75, "rgba(5,150,105,0.55)");
+        gg.addColorStop(1, "rgba(6,78,59,0)");
+        ctx.fillStyle = gg;
         ctx.beginPath();
-        ctx.arc(fb.x, fb.y, rr, 0, Math.PI * 2);
+        ctx.arc(fb.x, fb.y, rr * 1.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(236,253,245,0.95)";
+        ctx.beginPath();
+        ctx.arc(fb.x, fb.y, rr * 0.35, 0, Math.PI * 2);
         ctx.fill();
       } else {
-        g.addColorStop(0, "rgba(255,250,200,0.95)");
-        g.addColorStop(0.35, "rgba(255,140,20,0.8)");
-        g.addColorStop(0.7, "rgba(200,40,0,0.4)");
-        g.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.fillStyle = g;
+        // Ironworks — chunky orange fireball
+        var og = ctx.createRadialGradient(fb.x, fb.y, 0, fb.x, fb.y, rr * 1.35);
+        og.addColorStop(0, "rgba(255,255,240,1)");
+        og.addColorStop(0.2, "rgba(254,243,199,0.98)");
+        og.addColorStop(0.4, "rgba(251,191,36,0.95)");
+        og.addColorStop(0.65, "rgba(249,115,22,0.75)");
+        og.addColorStop(0.85, "rgba(220,38,38,0.45)");
+        og.addColorStop(1, "rgba(120,20,0,0)");
+        ctx.fillStyle = og;
         ctx.beginPath();
-        ctx.arc(fb.x, fb.y, rr, 0, Math.PI * 2);
+        ctx.arc(fb.x, fb.y, rr * 1.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,0.95)";
+        ctx.beginPath();
+        ctx.arc(fb.x - rr * 0.1, fb.y - rr * 0.1, rr * 0.32, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.globalCompositeOperation = "source-over";
