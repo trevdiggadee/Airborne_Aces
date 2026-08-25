@@ -496,6 +496,7 @@
     state = "playing";
     startOverlay.classList.add("hidden");
     gameOverOverlay.classList.add("hidden");
+    try { if (typeof window.__airborneShowUnifiedDock === "function") window.__airborneShowUnifiedDock(); } catch (e) {}
 
     if (mapLvl && mapLvl >= 2) {
       applyMapLevelProgress(mapLvl);
@@ -1074,7 +1075,18 @@ window.tickUnifiedProgress = function (dt) {
 (function ensureUnifiedDockVisible() {
   function show() {
     var d = document.getElementById("unifiedDock");
-    if (d) { d.style.display = "block"; d.style.opacity = "1"; d.style.visibility = "visible"; }
+    if (!d) return;
+    d.classList.remove("menuHidden");
+    d.classList.add("gameActive");
+    d.style.display = "flex";
+    d.style.opacity = "1";
+    d.style.visibility = "visible";
+    d.style.pointerEvents = "none";
+    d.style.left = "auto";
+    d.style.right = "calc(env(safe-area-inset-right, 0px) + 12px)";
+    d.style.bottom = "calc(env(safe-area-inset-bottom, 0px) + 16px)";
+    d.style.transform = "none";
+    d.style.zIndex = "50";
   }
   window.__airborneShowUnifiedDock = show;
 })();

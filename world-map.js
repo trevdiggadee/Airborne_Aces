@@ -147,6 +147,20 @@
       window.__airborneTrainingReportShown = false;
     }
 
+    // Reveal far-right power / progress / clock dock
+    try {
+      var dock = document.getElementById("unifiedDock");
+      if (dock) {
+        dock.classList.remove("menuHidden");
+        dock.classList.add("gameActive");
+        if (Number(levelId) === 1) dock.classList.add("trainingShow");
+        dock.style.display = "flex";
+        dock.style.opacity = "1";
+        dock.style.visibility = "visible";
+      }
+      if (typeof window.__airborneShowUnifiedDock === "function") window.__airborneShowUnifiedDock();
+    } catch (e) {}
+
     if (mapMode === "start") {
       if (typeof window.__airborneEnterGameplay === "function") {
         window.__airborneEnterGameplay();
