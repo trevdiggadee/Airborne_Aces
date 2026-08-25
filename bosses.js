@@ -658,41 +658,30 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
 
 // Shockwave / Steam — clear nearby obstacles in expanding ring
     if (powerMode === "steam") {
-      window.__airborneOneShotUsed = window.__airborneOneShotUsed || {};
-      
+      // Steampunk — Steam Overdrive (fires every full charge)
       if (typeof sfxThunder === "function") sfxThunder();
-      try { if (typeof triggerScreenShake === "function") triggerScreenShake(5, 280); } catch (e) {}
+      try { if (typeof sfxExplosion === "function") sfxExplosion(0.4); } catch (e) {}
+      try { if (typeof triggerScreenShake === "function") triggerScreenShake(6, 300); } catch (e) {}
       stormActive = true;
       stormMode = "steam";
-      stormTimer = 1.4;
+      stormTimer = 3.2;
+      stormCharge = 0;
       window.__airborneActivePowerVisual = "steam";
-      window.__airborneActivePowerUntil = performance.now() + 1400;
-      window.__airborneSteamCone = { age: 0, life: 1.1, reach: Math.min(W, H) * 0.42 };
-      if (!window.__airborneSteamParts) window.__airborneSteamParts = [];
-      for (var spi = 0; spi < 40; spi++) {
-        var sang = -0.55 + Math.random() * 1.1;
-        var ssp = 80 + Math.random() * 160;
-        window.__airborneSteamParts.push({
-          x: player.x + (player.w || 40) * 0.35, y: player.y,
-          vx: Math.cos(sang) * ssp, vy: Math.sin(sang) * ssp * 0.7,
-          life: 0.5 + Math.random() * 0.5, age: 0, r: 6 + Math.random() * 12
-        });
-      }
-      if (typeof obstacles !== "undefined") {
-        obstacles.forEach(function(o) {
-          if (!o || o.isRing || o.type === "ring") return;
-          var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
-          var dx = ox - player.x, dy = oy - player.y;
-          if (dx < 10) return;
-          var dist = Math.hypot(dx, dy);
-          if (dist > window.__airborneSteamCone.reach) return;
-          if (Math.abs(Math.atan2(dy, dx)) > 0.7) return;
-          o.vx = 120 + Math.random() * 60;
-          o.vy = (Math.random() - 0.5) * 40;
-          o.steamPush = 0.35; o.steamHeat = 0.5; o.scored = true;
-          try { creditPowerKillScore(1); } catch (e) {}
-        });
-      }
+      window.__airborneActivePowerUntil = performance.now() + 3200;
+      window.__airborneSteamUntil = performance.now() + 3200;
+      window.__airborneSteamOD = {
+        age: 0,
+        life: 3.0,
+        phase: "charge",
+        phaseT: 0,
+        rings: [],
+        parts: [],
+        gauges: 0,
+        finalDone: false,
+        blastDone: false
+      };
+      window.__airborneSteamParts = [];
+      window.__airborneSteamCone = null;
       try { if (window.PowerFX) window.PowerFX.activate("steam", player.x, player.y); } catch (e) {}
       updateStormMeterDisplay();
       return;
@@ -2121,6 +2110,18 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       }
     }
 
+    // Safety: if steam mode stuck without OD state, clear so power can re-fire
+    if (stormMode === "steam" && stormActive && !window.__airborneSteamOD) {
+      if (window.__airborneSteamUntil && performance.now() > window.__airborneSteamUntil) {
+        stormActive = false;
+        stormMode = "storm";
+        stormTimer = 0;
+        window.__airborneActivePowerVisual = null;
+      } else if (!window.__airborneSteamUntil) {
+        // legacy steam cone path — clear after short window
+        window.__airborneSteamUntil = performance.now() + 1500;
+      }
+    }
     // ---- Steampunk Steam Overdrive ----
     if (window.__airborneSteamOD) {
       var sod = window.__airborneSteamOD;
