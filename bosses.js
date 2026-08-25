@@ -494,6 +494,8 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         window.__airborneFirePowerUntil = performance.now() + POWER_DURATION_MS;
         window.__airborneFireOrbiters = []; // rebuild on next update
         window.__airborneFireActivateT = 0;
+        // Initial radial volley — same fireball style from all sides
+        window.__airborneFireLaunchBurst = true;
         if (typeof sfxExplosion === "function") sfxExplosion(0.5);
         try { if (typeof triggerScreenShake === "function") triggerScreenShake(6, 280); } catch (e2) {}
       } catch (e) {}
@@ -551,17 +553,18 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         window.__airborneEngineFlare = { age: 0, life: 1.0 };
         window.__airbornePlasmaIgnite = { age: 0, life: 0.55, shockR: 8 };
         // 5–7 orbiting plasma fireballs (miniature blue solar system)
-        var nOrb = 10 + Math.floor(Math.random() * 5); // 10–14 (2x)
+        var nOrb = 20 + Math.floor(Math.random() * 8); // 20–27 (doubled)
         window.__airbornePlasmaOrbits = [];
         for (var oi = 0; oi < nOrb; oi++) {
           window.__airbornePlasmaOrbits.push({
             ang: (oi / nOrb) * Math.PI * 2,
             // elliptical 3D-style orbit — some pass in front, some behind
             tilt: 0.32 + (oi % 4) * 0.1,
-            distX: 32 + (oi % 5) * 8,
-            distY: 18 + (oi % 4) * 6,
-            spin: 2.4 + (oi % 6) * 0.5 + Math.random() * 0.5,
-            r: 8 + (oi % 4) * 2.2,
+            distX: 34 + (oi % 5) * 8,
+            distY: 20 + (oi % 4) * 6,
+            spin: 2.6 + (oi % 6) * 0.55 + Math.random() * 0.5,
+            r: (8 + (oi % 4) * 2.2) * 0.85, // 15% smaller
+            hitIds: {},
             pulse: Math.random() * Math.PI * 2,
             trail: [],
             z: 0, // depth for draw order
@@ -746,13 +749,16 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       try { if (typeof triggerScreenShake === "function") triggerScreenShake(12, 380); } catch (e) {}
       stormActive = true;
       stormMode = "shockwave";
-      stormTimer = POWER_DURATION_SEC;
+      // Deco Liner — 2s shorter than shared power duration
+      var decoSec = Math.max(2.5, POWER_DURATION_SEC - 2);
+      var decoMs = Math.round(decoSec * 1000);
+      stormTimer = decoSec;
       stormCloud = null;
       window.__airborneActivePowerVisual = "shockwave";
-      window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
+      window.__airborneActivePowerUntil = performance.now() + decoMs;
       window.__airborneShockPulseT = 0.5; // fire first pulse immediately
       window.__airborneShockPulseCount = 0;
-      window.__airborneShockEndAt = performance.now() + POWER_DURATION_MS;
+      window.__airborneShockEndAt = performance.now() + decoMs;
       window.__airborneShockFinalDone = false;
       window.__airborneShockFlash = 1.0;
       if (!window.__airborneShockFX) window.__airborneShockFX = [];
@@ -2235,18 +2241,32 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         return hitCount;
       }
 
-      // Rotating dark steam cloud ring around blimp (all phases while active)
+      // Thick rotating steam cloud around blimp + pulsing pressure rings
       if (!sod.orbitClouds) {
         sod.orbitClouds = [];
-        for (var oi = 0; oi < 8; oi++) {
+        for (var oi = 0; oi < 14; oi++) {
           sod.orbitClouds.push({
-            ang: (oi / 8) * Math.PI * 2,
-            dist: 36 + (oi % 3) * 10,
-            r: 16 + (oi % 4) * 5,
-            spin: 1.2 + (oi % 2) * 0.6,
+            ang: (oi / 14) * Math.PI * 2,
+            dist: 28 + (oi % 4) * 14,
+            r: 20 + (oi % 5) * 8,
+            spin: 0.9 + (oi % 3) * 0.55,
             phase: Math.random() * Math.PI * 2
           });
         }
+      }
+      // Continuous pulsing steam rings around hull
+      sod.pulseT = (sod.pulseT || 0) + dt;
+      if (sod.pulseT >= 0.45) {
+        sod.pulseT = 0;
+        if (!sod.rings) sod.rings = [];
+        sod.rings.push({
+          r: 18,
+          maxR: 70 + Math.random() * 30,
+          age: 0,
+          life: 0.85,
+          delay: 0,
+          pulse: true
+        });
       }
       sod.orbitClouds.forEach(function(c) {
         c.ang += c.spin * dt;
@@ -2676,7 +2696,8 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
                 if (!o || o.isRing || o.type === "gold_ring" || o.type === "ring") continue;
                 if (o.powerAffected && o.onFire) continue;
                 var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
-                if (Math.hypot(orb.x - ox, orb.y - oy) < orb.r + Math.max(o.w, o.h) * 0.32) {
+                if (Math.hypot(orb.x - ox, orb.y - oy) < (orb.r || 8) * 1.8 + Math.max(o.w, o.h) * 0.4) {
+                  if (!orb.hitIds) orb.hitIds = {};
                   var oid = o._uid || (o._uid = "p" + Math.random().toString(36).slice(2));
                   if (orb.hitIds[oid]) continue;
                   orb.hitIds[oid] = true;

@@ -751,15 +751,42 @@
             window.__airborneFireOrbiters.push({
               phase: (oi / nOrb) * Math.PI * 2,
               speed: 2.4 + Math.random() * 0.9,
-              radius: 0.52 + Math.random() * 0.18,
+              radius: (0.52 + Math.random() * 0.18) * 1.15, // +15% orbit radius
               tilt: 0.55 + Math.random() * 0.35,
               wobble: 0.15 + Math.random() * 0.2,
               wobbleSpd: 1.5 + Math.random() * 2,
               size: 9 + Math.random() * 5,
-              trail: []
+              trail: [],
+              hitIds: {}
             });
           }
           window.__airborneFireActivateT = 0;
+        }
+        // One-shot radial fireball burst on activation
+        if (window.__airborneFireLaunchBurst) {
+          window.__airborneFireLaunchBurst = false;
+          if (!window.__airborneFireballs) window.__airborneFireballs = [];
+          var nShot = 10;
+          for (var si = 0; si < nShot; si++) {
+            var sang = (si / nShot) * Math.PI * 2 + Math.random() * 0.15;
+            var ssp = 180 + Math.random() * 70;
+            window.__airborneFireballs.push({
+              x: player.x + Math.cos(sang) * (player.w || 40) * 0.35,
+              y: player.y + Math.sin(sang) * (player.h || 30) * 0.35,
+              vx: Math.cos(sang) * ssp,
+              vy: Math.sin(sang) * ssp * 0.85 - 20,
+              life: 1.4,
+              age: 0,
+              r: 11 + Math.random() * 4,
+              trails: [],
+              colors: ["#fff7ed", "#ffd24a", "#ff8a1a", "#ff3b00"],
+              smokeCol: "rgba(50,40,30,0.85)",
+              kind: "fireball",
+              pierce: 2,
+              hitIds: {}
+            });
+          }
+          try { if (typeof sfxShoot === "function") sfxShoot(); } catch (e) {}
         }
         window.__airborneFireActivateT = (window.__airborneFireActivateT || 0) + dt;
         // Core heat embers
@@ -783,7 +810,7 @@
           orb.phase += orb.speed * dt;
           var act = Math.min(1, (window.__airborneFireActivateT || 0) / 0.45);
           var radMul = act * (orb.radius + Math.sin(orb.phase * orb.wobbleSpd) * orb.wobble * 0.12);
-          var ox = player.x + Math.cos(orb.phase) * player.w * radMul * 1.15;
+          var ox = player.x + Math.cos(orb.phase) * player.w * radMul * 1.32; // +15% effective radius
           var oy = player.y + Math.sin(orb.phase) * player.h * radMul * orb.tilt;
           orb.x = ox; orb.y = oy;
           orb.z = Math.sin(orb.phase); // front/back depth
@@ -806,6 +833,74 @@
               r: 2 + Math.random() * 3,
               smoke: false
             });
+          }
+        }
+        // Orbiting fireballs damage nearby obstacles (protective ring)
+        var orbsDmg = window.__airborneFireOrbiters || [];
+        if (typeof obstacles !== "undefined" && obstacles) {
+          for (var oi = 0; oi < orbsDmg.length; oi++) {
+            var orb = orbsDmg[oi];
+            if (!orb || orb.x == null) continue;
+            if (!orb.hitIds) orb.hitIds = {};
+            var hitR = (orb.size || 10) * 1.6;
+            for (var hi = 0; hi < obstacles.length; hi++) {
+              var o = obstacles[hi];
+              if (!o || o.isRing || o.type === "gold_ring" || o.type === "ring") continue;
+              if (o.powerAffected && o.onFire) continue;
+              var ox = o.x + (o.w || 0) * 0.5, oy = o.y + (o.h || 0) * 0.5;
+              if (Math.hypot(orb.x - ox, orb.y - oy) > hitR + Math.max(o.w || 20, o.h || 20) * 0.35) continue;
+              var oid = o._uid || (o._uid = "f" + Math.random().toString(36).slice(2));
+              if (orb.hitIds[oid]) continue;
+              orb.hitIds[oid] = true;
+              o.onFire = true;
+              o.powerAffected = true;
+              o.hitFlash = 0.7;
+              o.vy = 70 + Math.random() * 40;
+              o.vx = (Math.random() - 0.5) * 60;
+              o.scored = true;
+              try { if (typeof creditPowerKillScore === "function") creditPowerKillScore(1); } catch (e) {}
+            }
+          }
+        }
+        // Update launch-burst fireballs (same system as Ironworks projectiles)
+        if (window.__airborneFireballs && window.__airborneFireballs.length) {
+          var fbs = window.__airborneFireballs;
+          for (var fi = fbs.length - 1; fi >= 0; fi--) {
+            var fb = fbs[fi];
+            fb.age += dt;
+            fb.x += fb.vx * dt;
+            fb.y += fb.vy * dt;
+            fb.vy += 70 * dt;
+            if (!fb.trails) fb.trails = [];
+            fb.trails.push({ x: fb.x, y: fb.y, age: 0, life: 0.3, r: (fb.r || 10) * 0.5 });
+            if (fb.trails.length > 12) fb.trails.shift();
+            for (var ti = fb.trails.length - 1; ti >= 0; ti--) {
+              fb.trails[ti].age += dt;
+              if (fb.trails[ti].age >= fb.trails[ti].life) fb.trails.splice(ti, 1);
+            }
+            if (typeof obstacles !== "undefined" && obstacles) {
+              if (!fb.hitIds) fb.hitIds = {};
+              for (var hi = 0; hi < obstacles.length; hi++) {
+                var o = obstacles[hi];
+                if (!o || o.isRing || o.type === "gold_ring" || o.type === "ring") continue;
+                if (o.powerAffected && o.onFire) continue;
+                var ox = o.x + (o.w || 0) * 0.5, oy = o.y + (o.h || 0) * 0.5;
+                if (Math.hypot(fb.x - ox, fb.y - oy) > (fb.r || 10) + Math.max(o.w || 20, o.h || 20) * 0.35) continue;
+                var oid = o._uid || (o._uid = "fb" + Math.random().toString(36).slice(2));
+                if (fb.hitIds[oid]) continue;
+                fb.hitIds[oid] = true;
+                o.onFire = true;
+                o.powerAffected = true;
+                o.hitFlash = 0.75;
+                o.vy = 80 + Math.random() * 50;
+                o.vx = (Math.random() - 0.5) * 70;
+                o.scored = true;
+                try { if (typeof creditPowerKillScore === "function") creditPowerKillScore(1); } catch (e) {}
+                if (!fb.pierce || fb.pierce <= 1) { fb.age = fb.life; break; }
+                fb.pierce--;
+              }
+            }
+            if (fb.age >= fb.life) fbs.splice(fi, 1);
           }
         }
       } else {
