@@ -3122,3 +3122,1097 @@ html, body {
     linear-gradient(180deg, rgba(255,230,180,0.08) 0%, transparent 45%),
     linear-gradient(180deg, #3a2a18 0%, #2a1c0e 47%, #14100a 49%, #14100a 51%, #241808 100%) !important;
 }
+
+
+/* ========== WORLD MAP ========== */
+#worldMapScreen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: #0d0a08;
+  align-items: stretch;
+  justify-content: stretch;
+  flex-direction: column;
+}
+#worldMapScreen.wm-enter {
+  animation: wmFadeIn 0.55s ease-out;
+}
+@keyframes wmFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.wm-chrome {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 20;
+  pointer-events: none;
+  text-align: center;
+  padding: 10px 12px 0;
+}
+.wm-title {
+  font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  font-size: clamp(22px, 6.2vw, 34px);
+  color: #f0e0b8;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.75);
+}
+.wm-hint {
+  margin-top: 4px;
+  font-family: Georgia, serif;
+  font-size: clamp(11px, 3vw, 14px);
+  color: rgba(240, 224, 184, 0.8);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+}
+#worldMapContainer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  aspect-ratio: auto;
+  margin: 0;
+  overflow: hidden;
+  background: #0d0a08 url('airborne_aces_map.jpg') center center / cover no-repeat;
+}
+.wm-player-blimp {
+  position: absolute;
+  width: 78px;
+  height: 48px;
+  transform: translate(-50%, -50%);
+  z-index: 15;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.55));
+  pointer-events: none;
+}
+.wm-player-blimp img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.wm-level {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  z-index: 10;
+  border: none;
+  box-shadow: 0 0 0 3px #d4af37, 0 0 12px rgba(212,175,55,0.45);
+  background: rgba(212, 175, 55, 0.12);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.wm-level:hover, .wm-level:focus {
+  transform: translate(-50%, -50%) scale(1.12);
+  box-shadow: 0 0 0 4px #ffd700, 0 0 18px rgba(255,215,0,0.65);
+  outline: none;
+}
+.wm-level.completed {
+  box-shadow: 0 0 0 3px #4caf50, 0 0 10px rgba(76,175,80,0.45);
+  background: rgba(76, 175, 80, 0.15);
+}
+.wm-level.locked {
+  cursor: not-allowed;
+  opacity: 0.4;
+  box-shadow: 0 0 0 2px #666;
+  background: rgba(60,60,60,0.25);
+  pointer-events: none;
+}
+.wm-trail {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  background: #ffd700;
+  border-radius: 50%;
+  opacity: 0.65;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 5;
+  animation: wmTrail 0.7s forwards;
+}
+@keyframes wmTrail {
+  to { opacity: 0; transform: translate(-50%, -50%) scale(0.25); }
+}
+@media (max-width: 600px) {
+  .wm-player-blimp { width: 56px; height: 34px; }
+  .wm-level { width: 36px; height: 36px; }
+}
+
+
+.wm-level.current {
+  box-shadow: 0 0 0 4px #ffd700, 0 0 22px rgba(255, 215, 0, 0.75);
+  background: rgba(255, 215, 0, 0.22);
+  animation: wmPulse 1.4s ease-in-out infinite;
+  z-index: 12;
+}
+@keyframes wmPulse {
+  0%, 100% { box-shadow: 0 0 0 4px #ffd700, 0 0 18px rgba(255,215,0,0.6); }
+  50% { box-shadow: 0 0 0 8px #ffd700, 0 0 28px rgba(255,215,0,0.85); }
+}
+.wm-level-num {
+  font-family: 'Rockwell', Georgia, serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+  text-shadow: 0 1px 3px #000;
+  pointer-events: none;
+}
+.wm-level {
+  width: 56px;
+  height: 56px;
+}
+.wm-player-blimp {
+  pointer-events: auto !important;
+  cursor: pointer;
+}
+@media (max-width: 600px) {
+  .wm-level { width: 44px; height: 44px; }
+  .wm-level-num { font-size: 12px; }
+}
+
+
+/* R.U.F.F. Radio UI */
+#ruffRadio {
+  position: fixed;
+  right: 8px;
+  top: calc(env(safe-area-inset-top, 0px) + 20.39vw + 2vh + 8px);
+  left: auto;
+  bottom: auto;
+  width: min(168px, 42vw);
+  max-width: min(168px, 42vw);
+  z-index: 40;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+#ruffRadio.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+#ruffRadio .ruffCard {
+  background: linear-gradient(155deg, rgba(36, 28, 16, 0.42), rgba(14, 24, 38, 0.38));
+  border: 1.5px solid rgba(212, 175, 55, 0.55);
+  border-radius: 12px;
+  width: 100%;
+  min-height: min(84px, 21vw); /* 50% height */
+  max-height: min(84px, 21vw);
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  padding: 12px 14px 12px 14px;
+  box-shadow:
+    0 6px 24px rgba(0,0,0,0.4),
+    0 0 0 1px rgba(255,220,140,0.06) inset,
+    0 0 28px rgba(212,175,55,0.08);
+  backdrop-filter: blur(5px);
+}
+#ruffRadio .ruffName {
+  font-family: 'Rockwell', Georgia, serif;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: #e0c060;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+#ruffRadio .ruffLabel {
+  font-weight: bold;
+}
+/* Little sound-wave icon — active while Ruff is speaking */
+#ruffRadio .ruffWaveIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 18px;
+  border-radius: 6px;
+  background: rgba(212, 175, 55, 0.14);
+  border: 1px solid rgba(224, 192, 96, 0.45);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.15) inset;
+  opacity: 0.45;
+  transition: opacity 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+#ruffRadio.speaking .ruffWaveIcon {
+  opacity: 1;
+  background: rgba(212, 175, 55, 0.28);
+  border-color: rgba(255, 220, 120, 0.7);
+  box-shadow:
+    0 0 10px rgba(212, 175, 55, 0.35),
+    0 0 0 1px rgba(0,0,0,0.15) inset;
+}
+#ruffRadio .ruffWaves {
+  display: inline-flex;
+  gap: 2.5px;
+  height: 12px;
+  align-items: flex-end;
+}
+#ruffRadio .ruffWaves span {
+  width: 2.5px;
+  height: 4px;
+  background: linear-gradient(180deg, #ffe9a8, #c9a227);
+  border-radius: 1px;
+  transform-origin: bottom center;
+  opacity: 0.5;
+}
+#ruffRadio.speaking .ruffWaves span {
+  animation: ruffWave 0.45s ease-in-out infinite alternate;
+  opacity: 1;
+}
+#ruffRadio .ruffWaves span:nth-child(1) { height: 5px; animation-delay: 0s; }
+#ruffRadio .ruffWaves span:nth-child(2) { height: 9px; animation-delay: 0.08s; }
+#ruffRadio .ruffWaves span:nth-child(3) { height: 12px; animation-delay: 0.16s; }
+#ruffRadio .ruffWaves span:nth-child(4) { height: 8px; animation-delay: 0.12s; }
+#ruffRadio .ruffWaves span:nth-child(5) { height: 5px; animation-delay: 0.2s; }
+@keyframes ruffWave {
+  from { transform: scaleY(0.35); opacity: 0.55; }
+  to   { transform: scaleY(1); opacity: 1; }
+}
+#ruffRadio .ruffText {
+  font-family: 'Rockwell', Georgia, serif;
+  font-size: 10px;
+  line-height: 1.25;
+  color: #f8ecd4;
+  margin: 0;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+}
+#ruffRadio .ruffSkip {
+  display: none !important;
+}
+#ruffTitleBanner {
+  position: fixed;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 40;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  font-family: 'Rockwell', Georgia, serif;
+  font-size: 18px;
+  letter-spacing: 0.18em;
+  color: #f5e6c8;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.6);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  white-space: nowrap;
+}
+#ruffTitleBanner.visible { opacity: 1; }
+#ruffReport {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 10, 16, 0.72);
+  backdrop-filter: blur(3px);
+}
+#ruffReport.visible { display: flex; }
+#ruffReport .panel {
+  width: min(320px, 88vw);
+  background: linear-gradient(165deg, rgba(30,24,16,0.95), rgba(16,22,34,0.95));
+  border: 2px solid rgba(212,175,55,0.8);
+  border-radius: 14px;
+  padding: 18px 16px;
+  color: #f5e6c8;
+  font-family: 'Rockwell', Georgia, serif;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+}
+#ruffReport h2 {
+  margin: 0 0 12px;
+  text-align: center;
+  letter-spacing: 0.16em;
+  font-size: 16px;
+  color: #d4af37;
+}
+#ruffReport .row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(245,230,200,0.08);
+}
+#ruffReport .final {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: bold;
+  color: #f0d878;
+  letter-spacing: 0.08em;
+  opacity: 1;
+  text-shadow:
+    0 1px 0 rgba(0,0,0,0.55),
+    0 2px 6px rgba(0,0,0,0.45);
+  filter: none;
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+#ruffReport .final.fadeOut {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.96);
+  filter: none; /* no blur — was making score look soft */
+}
+#ruffReport .rank {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 14px;
+  letter-spacing: 0.2em;
+  color: #f5e6c8;
+}
+#ruffReport .rankBanner {
+  position: relative;
+  margin-top: 10px;
+  text-align: center;
+  opacity: 0;
+  transform: scale(0.5);
+  pointer-events: none;
+}
+#ruffReport .rankBanner.visible {
+  opacity: 1;
+}
+#ruffReport .rankBanner.bounceIn {
+  animation: ruffRankBounce 1.05s cubic-bezier(0.22, 1.55, 0.36, 1) both;
+}
+#ruffReport .rankBanner.bounceIn::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: 180%;
+  height: 180%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(255,220,120,0.35) 0%, rgba(212,175,55,0.12) 35%, transparent 70%);
+  animation: ruffRankFlash 1.1s ease-out both;
+  pointer-events: none;
+  z-index: -1;
+}
+@keyframes ruffRankBounce {
+  0%   { opacity: 0; transform: scale(0.28) translateY(28px) rotate(-4deg); filter: brightness(1.8) saturate(1.4); }
+  40%  { opacity: 1; transform: scale(1.28) translateY(-10px) rotate(2deg); filter: brightness(1.35) saturate(1.25); }
+  62%  { transform: scale(0.92) translateY(4px) rotate(-1deg); filter: brightness(1.1); }
+  82%  { transform: scale(1.06) translateY(-2px) rotate(0.5deg); }
+  100% { opacity: 1; transform: scale(1) translateY(0) rotate(0); filter: brightness(1) saturate(1); }
+}
+@keyframes ruffRankFlash {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  35%  { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.35); }
+}
+#ruffReport .rankBanner {
+  position: relative;
+}
+#ruffReport .rankMedal {
+  display: block;
+  width: min(180px, 52vw);
+  height: auto;
+  margin: 0 auto 8px;
+  filter: drop-shadow(0 8px 22px rgba(212,175,55,0.55));
+  animation: ruffMedalSpin 1.1s cubic-bezier(0.22, 1.4, 0.36, 1) both;
+}
+@keyframes ruffMedalSpin {
+  0%   { transform: scale(0.5) rotate(-12deg); filter: brightness(1.6) drop-shadow(0 0 20px rgba(255,220,120,0.8)); }
+  60%  { transform: scale(1.12) rotate(6deg); }
+  100% { transform: scale(1) rotate(0); filter: drop-shadow(0 8px 22px rgba(212,175,55,0.55)); }
+}
+#ruffReport .rankUp {
+  font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
+  font-weight: bold;
+  font-size: clamp(28px, 8vw, 40px);
+  letter-spacing: 0.26em;
+  color: #ffe9a8;
+  text-shadow:
+    0 2px 12px rgba(0,0,0,0.55),
+    0 0 28px rgba(212,175,55,0.65),
+    0 0 48px rgba(255,220,120,0.35);
+  margin-top: 4px;
+  animation: ruffRankPulse 1.6s ease-in-out 0.7s infinite alternate;
+}
+@keyframes ruffRankPulse {
+  from { text-shadow: 0 2px 12px rgba(0,0,0,0.55), 0 0 22px rgba(212,175,55,0.45); }
+  to   { text-shadow: 0 2px 14px rgba(0,0,0,0.55), 0 0 36px rgba(255,220,120,0.75), 0 0 60px rgba(212,175,55,0.4); }
+}
+#ruffReport .rankName {
+  font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
+  font-weight: bold;
+  font-size: clamp(22px, 6.2vw, 30px);
+  letter-spacing: 0.22em;
+  color: #d4af37;
+  margin-top: 6px;
+  text-shadow: 0 0 16px rgba(212,175,55,0.35);
+}
+#ruffReport .rankTitle {
+  font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
+  font-size: clamp(12px, 3.2vw, 14px);
+  letter-spacing: 0.08em;
+  color: rgba(245,230,200,0.85);
+  margin-top: 2px;
+  margin-bottom: 4px;
+}
+#ruffReport .continueBtn {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px;
+  background: linear-gradient(180deg, #c9a227, #8a6b18);
+  border: none;
+  border-radius: 8px;
+  color: #1a1208;
+  font-family: 'Rockwell', Georgia, serif;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+
+#ruffLessonPopup {
+  position: absolute;
+  right: 12px;
+  bottom: 78px;
+  z-index: 38;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 10px;
+  background: linear-gradient(160deg, rgba(30,24,14,0.75), rgba(12,20,32,0.7));
+  border: 1.5px solid rgba(212,175,55,0.7);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  pointer-events: none;
+  max-width: 88px;
+}
+#ruffLessonPopup.visible { display: flex; }
+#ruffLessonPopup img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+}
+#ruffLessonPopup span {
+  font-family: 'Rockwell', Georgia, serif;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: #e0c060;
+  text-align: center;
+}
+
+#stormMeter.trainingPos {
+    left: 50% !important;
+    right: auto !important;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 18px) !important;
+    transform: translateX(-50%);
+    width: 88px !important;
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto;
+    z-index: 40;
+  }
+  #stormMeter.trainingPos #stormIcon {
+    width: 100%;
+    opacity: 1;
+  }
+  #stormMeter {
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+
+
+/* Flight Trace — circular solid fill meter, bottom-right */
+#ruffFlightTrace {
+  position: fixed;
+  right: calc(10px + 0vw); /* +1% right */
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px - 1vh + 0.5vh); /* raise 0.5% */
+  z-index: 42;
+  width: 118px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(10px) scale(0.92);
+  transition: opacity 0.4s ease, transform 0.45s cubic-bezier(0.22, 1.3, 0.36, 1);
+  font-family: 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif;
+}
+#ruffFlightTrace.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+#ruffFlightTrace .ft-meter {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto;
+  --ft-progress: 0deg;
+  filter: drop-shadow(0 4px 14px rgba(0,0,0,0.45));
+}
+#ruffFlightTrace .ft-meter.ft-bounce {
+  animation: ftBounce 0.55s cubic-bezier(0.22, 1.5, 0.36, 1);
+}
+@keyframes ftBounce {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.14); }
+  60%  { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+/* Empty track ring */
+#ruffFlightTrace .ft-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(20, 24, 34, 0.7);
+  border: 2px solid rgba(212, 175, 55, 0.35);
+  box-shadow: inset 0 0 14px rgba(0,0,0,0.45);
+}
+/* Solid circular fill bar via conic-gradient */
+#ruffFlightTrace .ft-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from -90deg,
+    #d4af37 0deg,
+    #ffe9a8 calc(var(--ft-progress) * 0.55),
+    #7ec8ff var(--ft-progress),
+    rgba(40, 48, 64, 0.25) var(--ft-progress),
+    rgba(40, 48, 64, 0.25) 360deg
+  );
+  -webkit-mask-image: radial-gradient(circle, transparent 58%, #000 59%, #000 100%);
+  mask-image: radial-gradient(circle, transparent 58%, #000 59%, #000 100%);
+  box-shadow: 0 0 18px rgba(212, 175, 55, 0.35);
+  transition: background 0.55s ease;
+  animation: ftGlow 2.2s ease-in-out infinite alternate;
+}
+@keyframes ftGlow {
+  from { filter: brightness(1) drop-shadow(0 0 6px rgba(212,175,55,0.35)); }
+  to   { filter: brightness(1.12) drop-shadow(0 0 14px rgba(126,200,255,0.55)); }
+}
+#ruffFlightTrace .ft-hub {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 48px; height: 48px;
+  margin: -24px 0 0 -24px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 32%, #2a3040, #121820 70%);
+  border: 2px solid rgba(212, 175, 55, 0.55);
+  box-shadow:
+    0 0 12px rgba(212,175,55,0.35),
+    inset 0 1px 2px rgba(255,255,255,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+#ruffFlightTrace .ft-hub span {
+  font-size: 11.6px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #ffe9a8;
+  text-shadow: 0 0 8px rgba(212,175,55,0.5);
+  font-variant-numeric: tabular-nums;
+  font-family: 'Rockwell', Georgia, monospace;
+  position: relative;
+  top: 0.60%; /* lower 0.25% */
+}
+#ruffFlightTrace .ft-label {
+  display: none !important;
+  margin-top: 6px;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-align: center;
+  color: #f5e6c8;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.65);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 118px;
+}
+
+/* FLIGHT TRAINING — centered one-line banner with spinning gears */
+#ruffTitleBanner.ft-banner {
+  top: 48%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(16px, 4.5vw, 22px);
+  letter-spacing: 0.28em;
+  color: #ffe9a8;
+  text-shadow:
+    0 2px 8px rgba(0,0,0,0.7),
+    0 0 18px rgba(212,175,55,0.55);
+  padding: 12px 22px;
+  background: linear-gradient(180deg, rgba(55,36,22,0.88), rgba(28,18,10,0.92));
+  border: 2px solid rgba(212,175,55,0.75);
+  border-radius: 14px;
+  box-shadow:
+    0 8px 28px rgba(0,0,0,0.45),
+    0 0 24px rgba(212,175,55,0.18);
+  animation: ftBannerIn 0.6s cubic-bezier(0.22, 1.35, 0.36, 1) both;
+}
+#ruffTitleBanner.ft-banner.ft-out {
+  animation: ftBannerOut 0.5s ease forwards;
+}
+#ruffTitleBanner.ft-banner .ft-banner-text {
+  white-space: nowrap;
+  line-height: 1;
+  position: relative;
+  top: 3%;
+  opacity: 0.82;
+}
+#ruffTitleBanner.ft-banner .ft-gear {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  background:
+    radial-gradient(circle at center, #3a2410 28%, transparent 30%),
+    repeating-conic-gradient(from 0deg, #d4af37 0deg 18deg, #8a6a28 18deg 36deg);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(212,175,55,0.45);
+  animation: ftGearSpin 2.8s linear infinite;
+}
+#ruffTitleBanner.ft-banner .ft-gear-r {
+  animation-direction: reverse;
+  animation-duration: 3.4s;
+}
+@keyframes ftGearSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes ftBannerIn {
+  0%   { opacity: 0; transform: translate(-50%, -56%) scale(0.9); }
+  55%  { opacity: 1; transform: translate(-50%, -49%) scale(1.04); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes ftBannerOut {
+  0%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -44%) scale(0.94); }
+}
+
+  60%  { opacity: 1; transform: translateX(-50%) translateY(2px) scale(1.03); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+  60%  { opacity: 1; transform: translateX(-50%) translateY(2px) scale(1.04); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+
+
+/* ===== COLLECT DOCK — steampunk panels under HUD (center) ===== */
+#collectDock {
+  position: fixed !important;
+  left: 50% !important;
+  top: calc(20.39vw + 6px) !important; /* just under HUD frame */
+  bottom: auto !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
+  z-index: 14 !important; /* under HUD frame (z 15) */
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px;
+  padding: 0;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  max-width: 96vw;
+}
+
+#collectDock .cd-panel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px 5px 6px;
+  background: linear-gradient(180deg, #5c4030 0%, #3a281c 45%, #2a1c14 100%);
+  border: 2px solid #c9a66b;
+  border-radius: 8px;
+  box-shadow:
+    0 2px 0 #1a1008,
+    0 4px 10px rgba(0,0,0,0.35),
+    inset 0 1px 0 rgba(255,230,180,0.2),
+    inset 0 -1px 0 rgba(0,0,0,0.35);
+  min-height: 36px;
+}
+
+#collectDock .cd-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: block;
+}
+
+/* Gold ring */
+#collectDock .cd-ring-icon {
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 34%, #f0d060 36%, #d4a017 52%, #f5e6a0 58%, transparent 60%);
+  box-shadow: 0 0 6px rgba(255, 200, 80, 0.45);
+}
+
+/* Blue crystal */
+#collectDock .cd-crystal-icon {
+  background: linear-gradient(160deg, #d0f0ff 0%, #5ec8ff 30%, #2a7fd4 70%, #0d3a7a 100%);
+  clip-path: polygon(50% 0%, 90% 28%, 72% 100%, 28% 100%, 10% 28%);
+  box-shadow: 0 0 10px rgba(80, 180, 255, 0.55);
+}
+
+/* Power / coin medallion */
+#collectDock .cd-power-icon {
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, #fff0b0, #e8c040 40%, #a07810 75%, #5a4010);
+  border: 1.5px solid #f5d76e;
+  box-shadow: 0 0 8px rgba(230, 180, 40, 0.5);
+}
+
+/* Illuminated digit window (like flip-clock style) */
+#collectDock .cd-counter {
+  min-width: 28px;
+  height: 30px;
+  padding: 0 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #1a120c 0%, #0c0a08 100%);
+  border: 1px solid #6b4a2b;
+  border-radius: 4px;
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.7),
+    inset 0 -1px 0 rgba(255,200,100,0.08);
+}
+
+#collectDock .cd-digit {
+  font-family: 'Rockwell', 'Rockwell Nova', 'Courier New', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #ffb84a;
+  text-shadow:
+    0 0 4px rgba(255, 160, 40, 0.85),
+    0 0 10px rgba(255, 140, 20, 0.55),
+    0 1px 0 rgba(0,0,0,0.8);
+  line-height: 1;
+  transition: transform 0.2s ease, color 0.2s;
+}
+
+#collectDock .cd-digit.pop {
+  animation: cdDigitPop 0.4s cubic-bezier(0.22, 1.5, 0.36, 1);
+  color: #ffe9a8;
+  text-shadow:
+    0 0 6px rgba(255, 220, 120, 1),
+    0 0 14px rgba(255, 180, 40, 0.8);
+}
+@keyframes cdDigitPop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.28); }
+  100% { transform: scale(1); }
+}
+
+/* Mute sits at end of dock row under HUD */
+#muteBtn,
+#muteBtn.cd-mute,
+#collectDock #muteBtn {
+  position: relative !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: auto !important;
+  width: 34px !important;
+  height: 34px !important;
+  margin: 0 0 0 4px !important;
+  border-radius: 8px !important;
+  border: 2px solid #c9a66b !important;
+  background: linear-gradient(180deg, #5c4030, #2a1c14) !important;
+  color: #ffe9a8 !important;
+  font-size: 15px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 14 !important;
+  box-shadow: 0 2px 0 #1a1008, 0 3px 8px rgba(0,0,0,0.35) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  cursor: pointer !important;
+}
+#muteBtn .cd-mute-gear {
+  display: inline-block;
+  animation: cdGearIdle 10s linear infinite;
+}
+@keyframes cdGearIdle {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+#stormMeter.trainingPos {
+    left: 50% !important;
+    right: auto !important;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 18px) !important;
+    transform: translateX(-50%);
+    width: 88px !important;
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto;
+    z-index: 40;
+  }
+  #stormMeter.trainingPos #stormIcon {
+    width: 100%;
+    opacity: 1;
+  }
+  
+
+
+
+
+#collectDock { display: none !important; visibility: hidden !important; pointer-events: none !important; }
+
+/* No custom gear icon on mute — use HUD art only */
+#muteBtn .cd-mute-gear,
+.cd-mute-gear { display: none !important; }
+#muteBtn { font-size: 0 !important; color: transparent !important; background: transparent !important; }
+
+/* Force-remove any mute/gear chrome */
+#muteBtn,
+#muteBtn.cd-mute,
+#muteBtn.hudAudioBtn,
+.hudAudioBtn {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  text-shadow: none !important;
+}
+#muteBtn .cd-mute-gear,
+.cd-mute-gear,
+#muteBtn::before,
+#muteBtn::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Training: power meter always visible when trainingPos is set */
+#stormMeter.trainingPos,
+#stormMeter.trainingPos.trainingHidden {
+  left: 50% !important;
+  right: auto !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 18px) !important;
+  transform: translateX(-50%) !important;
+  width: 96px !important;
+  height: auto !important;
+  overflow: visible !important;
+  position: fixed !important;
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 50 !important;
+}
+#stormMeter.trainingPos #stormIcon {
+  width: 100% !important;
+  opacity: 1 !important;
+  display: block !important;
+}
+
+
+/* ===== Unified bottom dock: progress + power + timer ===== */
+
+/* World map — full-screen overlay (must win over earlier rules) */
+#worldMapScreen {
+  display: none;
+  position: fixed !important;
+  inset: 0 !important;
+  left: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 120 !important;
+  background: #0d0a08 !important;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: stretch;
+  margin: 0 !important;
+  padding: 0 !important;
+  opacity: 1 !important;
+  visibility: visible;
+  pointer-events: auto !important;
+}
+#worldMapScreen[style*="display: flex"],
+#worldMapScreen[style*="display:flex"] {
+  display: flex !important;
+}
+
+/* Hide map course title */
+#worldMapTitle, .wm-title {
+  display: none !important;
+  visibility: hidden !important;
+}
+/* Ensure Ruff radio can show when .visible */
+#ruffRadio.visible {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+  pointer-events: none;
+  z-index: 60 !important;
+  transform: none !important;
+}
+
+
+/* Map: hide dock while charting course */
+#worldMapScreen ~ #unifiedDock {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Unified dock visibility */
+#unifiedDock.menuHidden {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+#unifiedDock.gameActive,
+#unifiedDock.trainingShow {
+  display: flex !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+/* World map level posts — brass circular markers */
+#worldMapScreen {
+  display: none;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 120 !important;
+  background: #0d0a08 !important;
+  flex-direction: column;
+}
+#worldMapScreen[style*="display: flex"],
+#worldMapScreen[style*="display:flex"] {
+  display: flex !important;
+}
+#worldMapContainer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0d0a08 url('airborne_aces_map.jpg') center center / cover no-repeat;
+}
+.wm-level {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  z-index: 10;
+  border: none;
+  box-shadow: 0 0 0 3px #d4af37, 0 0 12px rgba(212,175,55,0.45);
+  background: radial-gradient(circle at 35% 30%, rgba(255,230,160,0.35), rgba(120,80,30,0.5));
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.wm-level:hover, .wm-level:focus {
+  transform: translate(-50%, -50%) scale(1.12);
+  box-shadow: 0 0 0 4px #ffd700, 0 0 18px rgba(255,215,0,0.65);
+  outline: none;
+}
+.wm-level.completed {
+  box-shadow: 0 0 0 3px #4caf50, 0 0 10px rgba(76,175,80,0.45);
+  background: radial-gradient(circle at 35% 30%, rgba(180,255,180,0.3), rgba(30,100,40,0.45));
+}
+.wm-level.locked {
+  cursor: not-allowed;
+  opacity: 0.4;
+  box-shadow: 0 0 0 2px #666;
+  background: rgba(60,60,60,0.35);
+  pointer-events: none;
+}
+.wm-level.current {
+  box-shadow: 0 0 0 4px #ffd700, 0 0 20px rgba(255,215,0,0.7);
+  animation: wmPulse 1.6s ease-in-out infinite;
+}
+@keyframes wmPulse {
+  0%, 100% { box-shadow: 0 0 0 4px #ffd700, 0 0 16px rgba(255,215,0,0.55); }
+  50% { box-shadow: 0 0 0 5px #ffe566, 0 0 26px rgba(255,215,0,0.85); }
+}
+.wm-level-num {
+  font-family: Georgia, serif;
+  font-weight: 800;
+  font-size: 15px;
+  color: #1a1208;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.35);
+  pointer-events: none;
+}
+.wm-level.locked .wm-level-num {
+  color: #888;
+  text-shadow: none;
+}
+.wm-player-blimp {
+  position: absolute;
+  width: 78px;
+  height: 48px;
+  transform: translate(-50%, -50%);
+  z-index: 15;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.55));
+  pointer-events: none;
+}
+.wm-player-blimp img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.wm-chrome {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 20;
+  pointer-events: none;
+  text-align: center;
+  padding: 10px 12px 0;
+}
+.wm-title {
+  font-family: Georgia, serif;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  font-size: clamp(22px, 6.2vw, 34px);
+  color: #f0e0b8;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.75);
+}
+.wm-hint {
+  margin-top: 4px;
+  font-family: Georgia, serif;
+  font-size: clamp(11px, 3vw, 14px);
+  color: rgba(240, 224, 184, 0.85);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+}
+/* Hide duplicate title if desired — keep hint visible */
+#worldMapTitle, .wm-title {
+  display: block !important;
+  visibility: visible !important;
+}
+
+/* Training power meter */
+#stormMeter.trainingPos {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 40 !important;
+}
