@@ -2241,7 +2241,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         return hitCount;
       }
 
-      // Thick rotating steam cloud around blimp + pulsing pressure rings
+      // Thick rotating steam cloud around blimp (no pulsing rings)
       if (!sod.orbitClouds) {
         sod.orbitClouds = [];
         for (var oi = 0; oi < 14; oi++) {
@@ -2254,20 +2254,9 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
           });
         }
       }
-      // Continuous pulsing steam rings around hull
-      sod.pulseT = (sod.pulseT || 0) + dt;
-      if (sod.pulseT >= 0.45) {
-        sod.pulseT = 0;
-        if (!sod.rings) sod.rings = [];
-        sod.rings.push({
-          r: 18,
-          maxR: 70 + Math.random() * 30,
-          age: 0,
-          life: 0.85,
-          delay: 0,
-          pulse: true
-        });
-      }
+      // Cloud shell damages obstacles that enter the steam around the blimp
+      var cloudR = 58 + Math.sin((sod.age || 0) * 3) * 6;
+      pushObstaclesInRadius(cloudR, 160);
       sod.orbitClouds.forEach(function(c) {
         c.ang += c.spin * dt;
         c.phase += dt * 2.5;
@@ -2760,48 +2749,36 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         var lifeT = 1.6;
 
         if (stormMode === "bluefireball") {
-          // Azure Barrage — 3–5 plasma blades, vertical fan, from front
+          // Azure Barrage — continuous plasma for full power duration
           fbColors = ["#f0f9ff", "#bae6fd", "#38bdf8", "#0ea5e9", "#0284c7"];
           smokeCol = "rgba(30,80,140,0.7)";
-          var barrage = window.__airborneAzureBarrage;
-          if (!barrage) {
-            barrage = { shotsLeft: 4, fired: 0, total: 4 };
-            window.__airborneAzureBarrage = barrage;
-          }
-          if (barrage.shotsLeft <= 0) {
-            // volley complete — no more auto-fire
-            window.__airborneFireballSpawnT = 999;
-          } else {
-            window.__airborneFireballSpawnT = 0.10 + Math.random() * 0.04;
-            barrage.shotsLeft--;
-            barrage.fired++;
-          }
-          var total = Math.max(1, barrage.total || 4);
-          var slot = barrage.fired - 1;
-          // slight vertical fan across the stream
-          ang = -0.38 + (slot / Math.max(1, total - 1)) * 0.76 + (Math.random() - 0.5) * 0.06;
-          sp = 260 + Math.random() * 50;
-          // Launch from front of blimp
+          window.__airborneAzureBarrage = window.__airborneAzureBarrage || { fired: 0 };
+          window.__airborneAzureBarrage.fired++;
+          window.__airborneFireballSpawnT = 0.11 + Math.random() * 0.05;
+          var slot = window.__airborneAzureBarrage.fired % 5;
+          ang = -0.42 + (slot / 4) * 0.84 + (Math.random() - 0.5) * 0.08;
+          sp = 270 + Math.random() * 55;
           spawnX = player.x + (player.w || 40) * 0.55;
           spawnY = player.y + Math.sin(ang) * (player.h || 30) * 0.22;
-          pierce = 5; // burn through multiple obstacles
-          isFinisher = (barrage.shotsLeft === 0);
-          rSize = isFinisher ? 15 + Math.random() * 3 : 9 + Math.random() * 3;
-          lifeT = isFinisher ? 2.0 : 1.55;
+          pierce = 5;
+          isFinisher = (slot === 4);
+          rSize = isFinisher ? 13 + Math.random() * 3 : 8 + Math.random() * 2.5;
+          lifeT = 1.7;
           try { if (typeof sfxShoot === "function") sfxShoot(); } catch (e) {}
         } else if (stormMode === "greenfireball") {
-          window.__airborneFireballSpawnT = 0.10;
+          // Jade Voyager — large green versions of Zeppelin Ace fireballs
+          window.__airborneFireballSpawnT = 0.16;
           fbColors = ["#ecfdf5", "#6ee7b7", "#10b981", "#059669", "#047857"];
           smokeCol = "rgba(30,80,50,0.85)";
           if (window.__airborneGreenSpiralAng == null) window.__airborneGreenSpiralAng = 0;
-          window.__airborneGreenSpiralAng += 0.55;
+          window.__airborneGreenSpiralAng += 0.72;
           ang = window.__airborneGreenSpiralAng;
-          sp = 180 + Math.random() * 60;
-          spawnX = player.x + (player.w || 40) * 0.4 + Math.cos(ang) * 8;
-          spawnY = player.y + Math.sin(ang) * (player.h || 28) * 0.35;
-          rSize = 14 + Math.random() * 5;
-          lifeT = 2.2;
-          pierce = 2;
+          sp = 200 + Math.random() * 80;
+          spawnX = player.x + Math.cos(ang) * (player.w || 40) * 0.45;
+          spawnY = player.y + Math.sin(ang) * (player.h || 28) * 0.45;
+          rSize = 18 + Math.random() * 6; // larger than Ace orbs
+          lifeT = 2.4;
+          pierce = 3;
         } else {
           // Ironworks orange fireballs
           window.__airborneFireballSpawnT = 0.14;
@@ -4722,50 +4699,60 @@ function drawFireballs() {
         }
         ctx.globalAlpha = 1;
         ctx.restore();
-      } else if (fb.kind === "greenfireball") {
-        // Jade Voyager — defined emerald fireball with realistic hot core
+      } else if (fb.kind === "aceOrb") {
+        // Zeppelin Ace radial shot — same look as rotating orbs
         ctx.save();
-        ctx.translate(fb.x, fb.y);
-        var gang = Math.atan2(fb.vy || 0, fb.vx || 1);
-        ctx.rotate(gang);
         ctx.globalCompositeOperation = "lighter";
-        // Soft outer glow
-        var gAura = ctx.createRadialGradient(0, 0, rr * 0.15, 0, 0, rr * 2.2);
-        gAura.addColorStop(0, "rgba(52,211,153,0.25)");
-        gAura.addColorStop(0.5, "rgba(16,185,129,0.12)");
+        var ar = rr * 1.05;
+        var aAura = ctx.createRadialGradient(fb.x, fb.y, ar * 0.12, fb.x, fb.y, ar * 2.2);
+        aAura.addColorStop(0, "rgba(255,180,60,0.55)");
+        aAura.addColorStop(0.45, "rgba(249,115,22,0.3)");
+        aAura.addColorStop(1, "rgba(120,30,0,0)");
+        ctx.fillStyle = aAura;
+        ctx.beginPath(); ctx.arc(fb.x, fb.y, ar * 2.2, 0, Math.PI * 2); ctx.fill();
+        var aMid = ctx.createRadialGradient(fb.x - ar * 0.1, fb.y - ar * 0.1, 0, fb.x, fb.y, ar);
+        aMid.addColorStop(0, "rgba(255,255,240,1)");
+        aMid.addColorStop(0.25, "rgba(254,243,199,0.98)");
+        aMid.addColorStop(0.5, "rgba(251,191,36,0.9)");
+        aMid.addColorStop(0.8, "rgba(249,115,22,0.55)");
+        aMid.addColorStop(1, "rgba(180,40,0,0)");
+        ctx.fillStyle = aMid;
+        ctx.beginPath(); ctx.arc(fb.x, fb.y, ar, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,0.95)";
+        ctx.beginPath(); ctx.arc(fb.x - ar * 0.18, fb.y - ar * 0.2, ar * 0.18, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      } else if (fb.kind === "greenfireball") {
+        // Jade Voyager — large green Ace-style fireball (spherical, bright)
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        var gr = rr * 1.15;
+        // Outer green flame aura
+        var gAura = ctx.createRadialGradient(fb.x, fb.y, gr * 0.15, fb.x, fb.y, gr * 2.4);
+        gAura.addColorStop(0, "rgba(52,211,153,0.55)");
+        gAura.addColorStop(0.4, "rgba(16,185,129,0.35)");
         gAura.addColorStop(1, "rgba(6,78,59,0)");
         ctx.fillStyle = gAura;
-        ctx.beginPath(); ctx.arc(0, 0, rr * 2.2, 0, Math.PI * 2); ctx.fill();
-        // Ember shell (slightly stretched back)
-        var gShell = ctx.createRadialGradient(rr * 0.08, 0, 0, -rr * 0.15, 0, rr * 1.35);
-        gShell.addColorStop(0, "rgba(110,231,183,0.55)");
-        gShell.addColorStop(0.45, "rgba(16,185,129,0.5)");
-        gShell.addColorStop(0.8, "rgba(4,120,87,0.28)");
-        gShell.addColorStop(1, "rgba(6,78,59,0)");
-        ctx.fillStyle = gShell;
-        ctx.beginPath();
-        ctx.ellipse(-rr * 0.15, 0, rr * 1.25, rr * 0.95, 0, 0, Math.PI * 2);
-        ctx.fill();
-        // Dense mid body
-        var gMid = ctx.createRadialGradient(rr * 0.05, 0, 0, 0, 0, rr * 0.85);
-        gMid.addColorStop(0, "rgba(167,243,208,0.95)");
-        gMid.addColorStop(0.4, "rgba(52,211,153,0.85)");
-        gMid.addColorStop(0.75, "rgba(5,150,105,0.45)");
-        gMid.addColorStop(1, "rgba(6,95,70,0)");
+        ctx.beginPath(); ctx.arc(fb.x, fb.y, gr * 2.4, 0, Math.PI * 2); ctx.fill();
+        // Mid body
+        var gMid = ctx.createRadialGradient(fb.x - gr * 0.1, fb.y - gr * 0.1, 0, fb.x, fb.y, gr * 1.1);
+        gMid.addColorStop(0, "rgba(236,253,245,1)");
+        gMid.addColorStop(0.25, "rgba(110,231,183,0.95)");
+        gMid.addColorStop(0.55, "rgba(16,185,129,0.85)");
+        gMid.addColorStop(0.85, "rgba(5,120,80,0.4)");
+        gMid.addColorStop(1, "rgba(6,78,59,0)");
         ctx.fillStyle = gMid;
-        ctx.beginPath(); ctx.arc(0, 0, rr * 0.85, 0, Math.PI * 2); ctx.fill();
-        // Realistic superheated core — white-hot center fading to lime
-        var gCore = ctx.createRadialGradient(rr * 0.08, -rr * 0.04, 0, rr * 0.05, 0, rr * 0.42);
+        ctx.beginPath(); ctx.arc(fb.x, fb.y, gr * 1.1, 0, Math.PI * 2); ctx.fill();
+        // White-hot core
+        var gCore = ctx.createRadialGradient(fb.x - gr * 0.12, fb.y - gr * 0.14, 0, fb.x, fb.y, gr * 0.5);
         gCore.addColorStop(0, "rgba(255,255,255,1)");
-        gCore.addColorStop(0.25, "rgba(236,253,245,0.98)");
-        gCore.addColorStop(0.5, "rgba(167,243,208,0.9)");
-        gCore.addColorStop(0.78, "rgba(52,211,153,0.55)");
+        gCore.addColorStop(0.35, "rgba(209,250,229,0.98)");
+        gCore.addColorStop(0.7, "rgba(52,211,153,0.7)");
         gCore.addColorStop(1, "rgba(16,185,129,0)");
         ctx.fillStyle = gCore;
-        ctx.beginPath(); ctx.arc(rr * 0.06, -rr * 0.02, rr * 0.42, 0, Math.PI * 2); ctx.fill();
-        // Specular highlight
-        ctx.fillStyle = "rgba(255,255,255,0.85)";
-        ctx.beginPath(); ctx.arc(rr * 0.14, -rr * 0.12, rr * 0.14, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(fb.x, fb.y, gr * 0.5, 0, Math.PI * 2); ctx.fill();
+        // Specular
+        ctx.fillStyle = "rgba(255,255,255,0.95)";
+        ctx.beginPath(); ctx.arc(fb.x - gr * 0.18, fb.y - gr * 0.2, gr * 0.16, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
       } else {
         // Ironworks — defined molten fireball with realistic furnace core

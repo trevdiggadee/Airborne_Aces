@@ -768,21 +768,21 @@
           if (!window.__airborneFireballs) window.__airborneFireballs = [];
           var nShot = 10;
           for (var si = 0; si < nShot; si++) {
-            var sang = (si / nShot) * Math.PI * 2 + Math.random() * 0.15;
-            var ssp = 180 + Math.random() * 70;
+            var sang = (si / nShot) * Math.PI * 2 + Math.random() * 0.12;
+            var ssp = 240 + Math.random() * 90; // fast enough to leave screen
             window.__airborneFireballs.push({
-              x: player.x + Math.cos(sang) * (player.w || 40) * 0.35,
-              y: player.y + Math.sin(sang) * (player.h || 30) * 0.35,
+              x: player.x + Math.cos(sang) * (player.w || 40) * 0.4,
+              y: player.y + Math.sin(sang) * (player.h || 30) * 0.4,
               vx: Math.cos(sang) * ssp,
-              vy: Math.sin(sang) * ssp * 0.85 - 20,
-              life: 1.4,
+              vy: Math.sin(sang) * ssp,
+              life: 3.2, // long life so they exit the screen
               age: 0,
-              r: 11 + Math.random() * 4,
+              r: 12 + Math.random() * 4,
               trails: [],
               colors: ["#fff7ed", "#ffd24a", "#ff8a1a", "#ff3b00"],
               smokeCol: "rgba(50,40,30,0.85)",
-              kind: "fireball",
-              pierce: 2,
+              kind: "aceOrb", // draw like rotating Ace fireballs
+              pierce: 3,
               hitIds: {}
             });
           }
@@ -870,7 +870,18 @@
             fb.age += dt;
             fb.x += fb.vx * dt;
             fb.y += fb.vy * dt;
-            fb.vy += 70 * dt;
+            if (fb.kind === "aceOrb") {
+              // keep radial flight so they leave the screen
+              fb.vy += 12 * dt;
+            } else {
+              fb.vy += 70 * dt;
+            }
+            // despawn once clearly off-screen
+            var W0 = (typeof W === "number") ? W : 400;
+            var H0 = (typeof H === "number") ? H : 700;
+            if (fb.x < -60 || fb.x > W0 + 60 || fb.y < -60 || fb.y > H0 + 60) {
+              fb.age = fb.life;
+            }
             if (!fb.trails) fb.trails = [];
             fb.trails.push({ x: fb.x, y: fb.y, age: 0, life: 0.3, r: (fb.r || 10) * 0.5 });
             if (fb.trails.length > 12) fb.trails.shift();
