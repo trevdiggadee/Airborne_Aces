@@ -2121,12 +2121,138 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       }
     }
 
-    // Steam cone particles + delayed destroy after push
+    // ---- Steampunk Steam Overdrive ----
+    if (window.__airborneSteamOD) {
+      var sod = window.__airborneSteamOD;
+      sod.age += dt;
+      sod.phaseT += dt;
+      var spx = (typeof player !== "undefined" && player) ? player.x : W * 0.3;
+      var spy = (typeof player !== "undefined" && player) ? player.y : H * 0.4;
+      var maxR = Math.min(W, H) * 0.55;
+
+      function emitSteamPart(kind, ang, spd, life, r0) {
+        if (!window.__airborneSteamParts) window.__airborneSteamParts = [];
+        window.__airborneSteamParts.push({
+          x: spx, y: spy,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd,
+          life: life, age: 0, r: r0,
+          kind: kind || "steam"
+        });
+      }
+
+      function pushObstaclesInRadius(radius, force) {
+        if (typeof obstacles === "undefined" || !obstacles) return;
+        for (var i = 0; i < obstacles.length; i++) {
+          var o = obstacles[i];
+          if (!o || o.isRing || o.type === "gold_ring" || o.type === "ring") continue;
+          if (o.steamPush != null) continue;
+          var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
+          var dx = ox - spx, dy = oy - spy;
+          var dist = Math.hypot(dx, dy) || 1;
+          if (dist > radius) continue;
+          var nx = dx / dist, ny = dy / dist;
+          // Overpressure: closer = more wobble then launch
+          var prox = 1 - dist / radius;
+          o.vx = nx * (force * (0.7 + prox * 1.4)) + (Math.random() - 0.5) * 40;
+          o.vy = ny * (force * (0.55 + prox)) + (Math.random() - 0.5) * 50 - 30;
+          o.steamPush = 0.55 + prox * 0.35;
+          o.steamHeat = 0.7;
+          o.powerAffected = true;
+          o.hitFlash = 1;
+          o.spinVel = (Math.random() - 0.5) * (8 + prox * 10);
+          o.wobble = 0.35 + prox * 0.4;
+          o.scored = true;
+          try { creditPowerKillScore(1); } catch (e) {}
+        }
+      }
+
+      if (sod.phase === "charge") {
+        // Pressure build — rattling particles, gauges spike
+        sod.gauges = Math.min(1, sod.phaseT / 0.45);
+        if (Math.random() < 0.5) {
+          emitSteamPart("vent", Math.random() * Math.PI * 2, 20 + Math.random() * 40, 0.35, 4 + Math.random() * 6);
+        }
+        if (sod.phaseT > 0.45) {
+          sod.phase = "blast";
+          sod.phaseT = 0;
+          sod.blastDone = true;
+          try { if (typeof sfxExplosion === "function") sfxExplosion(0.55); } catch (e) {}
+          try { if (typeof triggerScreenShake === "function") triggerScreenShake(12, 420); } catch (e) {}
+          // Main white-hot radial blast
+          pushObstaclesInRadius(maxR, 280);
+          for (var ri = 0; ri < 4; ri++) {
+            sod.rings.push({ r: 10, maxR: maxR * (0.55 + ri * 0.15), age: 0, life: 0.7 + ri * 0.08, delay: ri * 0.07 });
+          }
+          for (var pi = 0; pi < 55; pi++) {
+            var a = Math.random() * Math.PI * 2;
+            var kind = Math.random() < 0.15 ? "brass" : (Math.random() < 0.3 ? "spark" : "steam");
+            emitSteamPart(kind, a, 100 + Math.random() * 220, 0.6 + Math.random() * 0.5, 5 + Math.random() * 14);
+          }
+        }
+      } else if (sod.phase === "blast") {
+        if (sod.phaseT > 0.35) {
+          sod.phase = "rings";
+          sod.phaseT = 0;
+        }
+      } else if (sod.phase === "rings") {
+        // Keep expanding pressure on mid-range targets
+        if (sod.phaseT < 0.5 && Math.random() < 0.15) {
+          pushObstaclesInRadius(maxR * 0.85, 160);
+        }
+        if (sod.phaseT > 0.7 && !sod.finalDone) {
+          sod.phase = "final";
+          sod.phaseT = 0;
+        }
+      } else if (sod.phase === "final") {
+        if (!sod.finalDone) {
+          sod.finalDone = true;
+          // Second smaller exhaust blast — BOOM-HISS finish
+          try { if (typeof sfxExplosion === "function") sfxExplosion(0.3); } catch (e) {}
+          try { if (typeof triggerScreenShake === "function") triggerScreenShake(7, 220); } catch (e) {}
+          sod.rings.push({ r: 8, maxR: maxR * 0.4, age: 0, life: 0.5, delay: 0 });
+          sod.rings.push({ r: 8, maxR: maxR * 0.55, age: 0, life: 0.55, delay: 0.06 });
+          pushObstaclesInRadius(maxR * 0.5, 200);
+          // Exhaust pipes (rear of blimp)
+          for (var ei = 0; ei < 20; ei++) {
+            var ea = Math.PI + (Math.random() - 0.5) * 0.9;
+            emitSteamPart("steam", ea, 80 + Math.random() * 100, 0.5, 6 + Math.random() * 10);
+          }
+        }
+        if (sod.phaseT > 0.45) {
+          sod.phase = "fade";
+          sod.phaseT = 0;
+        }
+      }
+
+      // Age rings
+      for (var rgi = sod.rings.length - 1; rgi >= 0; rgi--) {
+        var rg = sod.rings[rgi];
+        if (rg.delay > 0) { rg.delay -= dt; continue; }
+        rg.age += dt;
+        var rt = Math.min(1, rg.age / rg.life);
+        rg.r = rg.maxR * rt;
+        if (rg.age >= rg.life) sod.rings.splice(rgi, 1);
+      }
+
+      // End — CRITICAL: clear stormActive so power can fire again
+      if (sod.age >= sod.life) {
+        window.__airborneSteamOD = null;
+        window.__airborneActivePowerVisual = null;
+        window.__airborneActivePowerUntil = 0;
+        window.__airborneSteamUntil = 0;
+        stormActive = false;
+        stormMode = "storm";
+        stormTimer = 0;
+      }
+    }
+
+    // Steam particles
     if (window.__airborneSteamParts && window.__airborneSteamParts.length) {
       for (var spi = window.__airborneSteamParts.length - 1; spi >= 0; spi--) {
         var sp = window.__airborneSteamParts[spi];
         sp.age += dt; sp.x += sp.vx * dt; sp.y += sp.vy * dt;
-        sp.r += 10 * dt; sp.vx *= (1 - 0.8 * dt);
+        sp.r += 12 * dt; sp.vx *= (1 - 0.6 * dt); sp.vy *= (1 - 0.4 * dt);
         if (sp.age >= sp.life) window.__airborneSteamParts.splice(spi, 1);
       }
     }
@@ -2134,6 +2260,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       window.__airborneSteamCone.age += dt;
       if (window.__airborneSteamCone.age >= window.__airborneSteamCone.life) window.__airborneSteamCone = null;
     }
+    // Steam-pushed obstacles
     if (typeof obstacles !== "undefined") {
       for (var soi = obstacles.length - 1; soi >= 0; soi--) {
         var so = obstacles[soi];
@@ -2142,8 +2269,14 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
           so.steamPush -= dt;
           so.x += (so.vx || 0) * dt;
           so.y += (so.vy || 0) * dt;
-          if (so.steamHeat) { so.steamHeat -= dt; so.hitFlash = 0.4; }
-          if (so.steamPush <= 0) {
+          if (so.spinVel) so.rot = (so.rot || 0) + so.spinVel * dt;
+          if (so.wobble) {
+            so.wobble -= dt;
+            so.hitFlash = Math.max(so.hitFlash || 0, 0.5);
+            if (so.wobble < 0) so.wobble = 0;
+          }
+          if (so.steamHeat) { so.steamHeat -= dt; so.hitFlash = Math.max(so.hitFlash || 0, 0.4); }
+          if (so.steamPush <= 0 || so.x > W + 120 || so.x < -120 || so.y > H + 100) {
             try { if (typeof spawnHitParticles === "function") spawnHitParticles(so.x + so.w * 0.5, so.y + so.h * 0.5); } catch (e) {}
             obstacles.splice(soi, 1);
           }
@@ -3381,15 +3514,77 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
   }
 
   function drawSteamParts() {
+    var sod = window.__airborneSteamOD;
     var list = window.__airborneSteamParts;
-    if (!list || !list.length || typeof ctx === "undefined") return;
+    if (typeof ctx === "undefined") return;
+    var spx = (typeof player !== "undefined" && player) ? player.x : 0;
+    var spy = (typeof player !== "undefined" && player) ? player.y : 0;
+
+    // Pressure rings
+    if (sod && sod.rings && sod.rings.length) {
+      ctx.save();
+      sod.rings.forEach(function(rg) {
+        if (rg.delay > 0) return;
+        var t = Math.max(0, 1 - rg.age / rg.life);
+        ctx.globalAlpha = t * 0.55;
+        ctx.strokeStyle = "rgba(220,230,240,0.9)";
+        ctx.lineWidth = 3 + 4 * t;
+        ctx.beginPath();
+        ctx.arc(spx, spy, Math.max(4, rg.r), 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = t * 0.25;
+        ctx.strokeStyle = "rgba(180,200,220,0.7)";
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.arc(spx, spy, Math.max(4, rg.r), 0, Math.PI * 2);
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+
+    // Charge gauges / brass glow on blimp
+    if (sod && sod.phase === "charge") {
+      var g = sod.gauges || 0;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = 0.3 + g * 0.5;
+      var gg = ctx.createRadialGradient(spx, spy, 4, spx, spy, 40 + g * 30);
+      gg.addColorStop(0, "rgba(255,220,150,0.8)");
+      gg.addColorStop(0.5, "rgba(200,160,80,0.35)");
+      gg.addColorStop(1, "rgba(120,80,20,0)");
+      ctx.fillStyle = gg;
+      ctx.beginPath();
+      ctx.arc(spx, spy, 40 + g * 30, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    if (!list || !list.length) return;
     ctx.save();
     for (var i = 0; i < list.length; i++) {
       var p = list[i];
       var t = Math.max(0, 1 - p.age / p.life);
-      ctx.globalAlpha = t * 0.5;
-      ctx.fillStyle = "rgba(230,240,250," + (t * 0.55) + ")";
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+      if (p.kind === "spark") {
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = t;
+        ctx.fillStyle = "rgba(255,200,100," + t + ")";
+        ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1, p.r * 0.4 * t), 0, Math.PI * 2); ctx.fill();
+      } else if (p.kind === "brass") {
+        ctx.globalCompositeOperation = "source-over";
+        ctx.globalAlpha = t * 0.9;
+        ctx.fillStyle = "rgba(180,120,40," + t + ")";
+        ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1.5, p.r * 0.35), 0, Math.PI * 2); ctx.fill();
+      } else {
+        // Thick cartoon steam cloud
+        ctx.globalCompositeOperation = "source-over";
+        ctx.globalAlpha = t * 0.55;
+        var sg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+        sg.addColorStop(0, "rgba(255,255,255," + (t * 0.85) + ")");
+        sg.addColorStop(0.45, "rgba(220,230,240," + (t * 0.45) + ")");
+        sg.addColorStop(1, "rgba(180,190,210,0)");
+        ctx.fillStyle = sg;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+      }
     }
     ctx.restore();
   }
