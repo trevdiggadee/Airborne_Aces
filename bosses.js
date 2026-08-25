@@ -1737,10 +1737,10 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
             try { if (typeof triggerScreenShake === "function") triggerScreenShake(5 + (sh.chainBoost || 1), 100); } catch (e) {}
             try { if (typeof sfxExplosion === "function") sfxExplosion(0.45); } catch (e) {}
             try { creditPowerKillScore(1); } catch (e) {}
-            // Little Spy pull-in — coins pop out
+            // Little Spy — always pop free coins from this target
             try {
               if (typeof window.spawnHitCoinBurst === "function") {
-                window.spawnHitCoinBurst({ free: true });
+                window.spawnHitCoinBurst({ free: true, force: true, atX: vox, atY: voy });
               }
             } catch (e) {}
             // Chain reaction intensifies pull
@@ -1784,106 +1784,24 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       }
 
       if (sh.age >= life) {
+        // Short final flash then clear everything — no lingering purple circle
         if (!window.__airbornePurpleBursts) window.__airbornePurpleBursts = [];
         window.__airbornePurpleBursts.push({
-          kind: "shock", x: px, y: py, age: 0, life: 0.45, r: 20, maxR: Math.min(sh.maxR, 280)
+          kind: "shock", x: px, y: py, age: 0, life: 0.28, r: 16, maxR: Math.min(sh.maxR * 0.55, 160)
         });
-        try { if (typeof triggerScreenShake === "function") triggerScreenShake(12, 400); } catch (e) {}
+        try { if (typeof triggerScreenShake === "function") triggerScreenShake(10, 320); } catch (e) {}
         window.__airborneSpyShield = null;
         window.__airborneActivePowerVisual = null;
         window.__airborneActivePowerUntil = 0;
+        window.__airborneSuctionTrails = [];
+        // Clear long-lived purple blobs (keep only the short end shock)
+        window.__airbornePurpleBursts = (window.__airbornePurpleBursts || []).filter(function(pb) {
+          return pb && pb.kind === "shock" && pb.age < 0.05;
+        });
         stormActive = false;
         stormMode = "storm";
         stormCloud = null;
-      }
-    }
-if (window.__airborneSpyShield && stormMode === "vortex") {
-      var sh = window.__airborneSpyShield;
-      sh.age += dt;
-      sh.spin = (sh.spin || 0) + dt * 6;
-      var px = (typeof player !== "undefined" && player) ? player.x : (typeof W !== "undefined" ? W : 400) * 0.3;
-      var py = (typeof player !== "undefined" && player) ? player.y : (typeof H !== "undefined" ? H : 600) * 0.4;
-      sh.x = px; sh.y = py;
-      var t = sh.age / sh.life;
-      if (t < 0.32) {
-        sh.phase = "expand";
-        sh.r = 16 + (sh.maxR - 16) * (t / 0.32);
-      } else if (t < 0.48) {
-        sh.phase = "hold";
-        sh.r = sh.maxR;
-      } else {
-        sh.phase = "retract";
-        var rt = (t - 0.48) / 0.52;
-        sh.r = sh.maxR * Math.max(0.05, 1 - rt);
-      }
-      // Suck obstacles toward blimp, then destroy with purple FX
-      if (typeof obstacles !== "undefined") {
-        for (var vi = obstacles.length - 1; vi >= 0; vi--) {
-          var vo = obstacles[vi];
-          if (!vo || vo.isRing || vo.type === "ring" || vo.type === "gold_ring") continue;
-          var vox = vo.x + vo.w * 0.5, voy = vo.y + vo.h * 0.5;
-          var dx = px - vox, dy = py - voy;
-          var dist = Math.hypot(dx, dy) || 1;
-          // Inside field radius — pull inward
-          if (dist < sh.r * 1.05 || sh.phase === "retract") {
-            var pull = (sh.phase === "retract" ? 420 : 160) * (0.4 + 0.6 * (1 - Math.min(1, dist / Math.max(40, sh.r))));
-            vo.x += (dx / dist) * pull * dt;
-            vo.y += (dy / dist) * pull * dt;
-            vo.powerAffected = true;
-            // orbit swirl while pulling
-            vo.x += (-dy / dist) * 40 * dt;
-            vo.y += (dx / dist) * 40 * dt;
-            vo.vortexSpin = (vo.vortexSpin || 0) + 10 * dt;
-            vo.hitFlash = 0.5;
-            // Close enough to blimp — destroy
-            if (dist < Math.max(28, (player.w || 40) * 0.55) || (sh.phase === "retract" && dist < 50 && t > 0.75)) {
-              try { if (typeof spawnHitParticles === "function") spawnHitParticles(vox, voy); } catch (e) {}
-              try { if (typeof triggerScreenShake === "function") triggerScreenShake(4, 120); } catch (e) {}
-              // Purple explosion + sparks
-              if (!window.__airbornePurpleBursts) window.__airbornePurpleBursts = [];
-              window.__airbornePurpleBursts.push({ x: vox, y: voy, age: 0, life: 0.45, r: 20 + Math.random() * 16 });
-              for (var sp = 0; sp < 14; sp++) {
-                var sa = Math.random() * Math.PI * 2;
-                var ss = 60 + Math.random() * 140;
-                window.__airbornePurpleBursts.push({
-                  kind: "spark",
-                  x: vox, y: voy,
-                  vx: Math.cos(sa) * ss, vy: Math.sin(sa) * ss,
-                  age: 0, life: 0.3 + Math.random() * 0.35, r: 2 + Math.random() * 3
-                });
-              }
-              try { if (window.PowerFX) window.PowerFX.burst(vox, voy, {
-                count: 16, colors: ["#e9d5ff", "#c084fc", "#7c3aed", "#4c1d95", "#fff"],
-                speed: 150, glow: true
-              }); } catch (e) {}
-              try { creditPowerKillScore(1); } catch (e) {}
-              try { if (typeof sfxExplosion === "function") sfxExplosion(0.4); } catch (e) {}
-              obstacles.splice(vi, 1);
-            }
-          }
-        }
-      }
-      // Purple burst particles age
-      if (window.__airbornePurpleBursts) {
-        for (var pi = window.__airbornePurpleBursts.length - 1; pi >= 0; pi--) {
-          var pb = window.__airbornePurpleBursts[pi];
-          pb.age += dt;
-          if (pb.kind === "spark") {
-            pb.x += pb.vx * dt; pb.y += pb.vy * dt;
-            pb.vx *= (1 - 1.5 * dt); pb.vy *= (1 - 1.5 * dt);
-          }
-          if (pb.age >= pb.life) window.__airbornePurpleBursts.splice(pi, 1);
-        }
-      }
-      // Screen vibration during retract
-      if (sh.phase === "retract" && Math.random() < 0.4) {
-        try { if (typeof triggerScreenShake === "function") triggerScreenShake(3, 50); } catch (e) {}
-      }
-      if (sh.age >= sh.life) {
-        window.__airborneSpyShield = null;
-        stormActive = false;
-        stormMode = "storm";
-        stormCloud = null;
+        stormTimer = 0;
       }
     }
 

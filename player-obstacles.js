@@ -375,18 +375,18 @@
   function spawnHitCoinBurst(opts) {
     try {
       if (typeof player === "undefined" || !player) return;
-      var now = performance.now();
-      if (window.__airborneLastCoinBurst && now - window.__airborneLastCoinBurst < 180) return;
       opts = opts || {};
-      var free = !!opts.free; // shield block: visual only, no spend
+      var free = !!opts.free;
+      var force = !!opts.force;
+      var now = performance.now();
+      // Throttle only non-forced bursts (power kills use force for reliability)
+      if (!force && window.__airborneLastCoinBurst && now - window.__airborneLastCoinBurst < 180) return;
 
       var have = window.__airborneCollectCoins || 0;
       if (!free && have < HIT_COIN_COST) {
-        // Not enough coins — nothing comes out
         return;
       }
 
-      // Subtract from collection (skip for free shield-block pop)
       if (!free) {
         window.__airborneCollectCoins = have - HIT_COIN_COST;
         try {
@@ -398,8 +398,8 @@
       }
 
       window.__airborneLastCoinBurst = now;
-      var cx = player.x;
-      var cy = player.y;
+      var cx = (opts.atX != null) ? opts.atX : player.x;
+      var cy = (opts.atY != null) ? opts.atY : player.y;
       if (!window.__airborneHitCoins) window.__airborneHitCoins = [];
       var list = window.__airborneHitCoins;
       for (var i = 0; i < HIT_COIN_COST; i++) {
