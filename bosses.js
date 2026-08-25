@@ -4664,15 +4664,22 @@ function drawFireballs() {
         ctx.ellipse(rr * 0.15, 0, rr * 0.85, rr * 0.55, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Nearly white / cyan-hot core (spherical front)
-        var core = ctx.createRadialGradient(rr * 0.25, 0, 0, rr * 0.25, 0, rr * 0.42);
+        // Defined superheated plasma core — white-hot with cyan rim
+        var core = ctx.createRadialGradient(rr * 0.22, -rr * 0.04, 0, rr * 0.2, 0, rr * 0.5);
         core.addColorStop(0, "rgba(255,255,255,1)");
-        core.addColorStop(0.35, "rgba(224,242,254,0.98)");
-        core.addColorStop(0.7, "rgba(103,232,249,0.85)");
-        core.addColorStop(1, "rgba(34,211,238,0)");
+        core.addColorStop(0.2, "rgba(240,249,255,1)");
+        core.addColorStop(0.4, "rgba(186,230,253,0.95)");
+        core.addColorStop(0.65, "rgba(56,189,248,0.75)");
+        core.addColorStop(0.85, "rgba(14,165,233,0.35)");
+        core.addColorStop(1, "rgba(2,132,199,0)");
         ctx.fillStyle = core;
         ctx.beginPath();
-        ctx.arc(rr * 0.25, 0, rr * 0.42, 0, Math.PI * 2);
+        ctx.arc(rr * 0.2, -rr * 0.02, rr * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        // Specular pin highlight
+        ctx.fillStyle = "rgba(255,255,255,0.95)";
+        ctx.beginPath();
+        ctx.arc(rr * 0.28, -rr * 0.14, rr * 0.14, 0, Math.PI * 2);
         ctx.fill();
 
         // Sharp flame tongues extending backward (jagged look)
@@ -4695,38 +4702,104 @@ function drawFireballs() {
         ctx.globalAlpha = 1;
         ctx.restore();
       } else if (fb.kind === "greenfireball") {
-        // Jade Voyager — bright emerald plasma
-        var gg = ctx.createRadialGradient(fb.x, fb.y, 0, fb.x, fb.y, rr * 1.3);
-        gg.addColorStop(0, "rgba(255,255,255,1)");
-        gg.addColorStop(0.2, "rgba(167,243,208,0.98)");
-        gg.addColorStop(0.45, "rgba(52,211,153,0.9)");
-        gg.addColorStop(0.75, "rgba(5,150,105,0.55)");
-        gg.addColorStop(1, "rgba(6,78,59,0)");
-        ctx.fillStyle = gg;
+        // Jade Voyager — defined emerald fireball with realistic hot core
+        ctx.save();
+        ctx.translate(fb.x, fb.y);
+        var gang = Math.atan2(fb.vy || 0, fb.vx || 1);
+        ctx.rotate(gang);
+        ctx.globalCompositeOperation = "lighter";
+        // Soft outer glow
+        var gAura = ctx.createRadialGradient(0, 0, rr * 0.15, 0, 0, rr * 2.2);
+        gAura.addColorStop(0, "rgba(52,211,153,0.25)");
+        gAura.addColorStop(0.5, "rgba(16,185,129,0.12)");
+        gAura.addColorStop(1, "rgba(6,78,59,0)");
+        ctx.fillStyle = gAura;
+        ctx.beginPath(); ctx.arc(0, 0, rr * 2.2, 0, Math.PI * 2); ctx.fill();
+        // Ember shell (slightly stretched back)
+        var gShell = ctx.createRadialGradient(rr * 0.08, 0, 0, -rr * 0.15, 0, rr * 1.35);
+        gShell.addColorStop(0, "rgba(110,231,183,0.55)");
+        gShell.addColorStop(0.45, "rgba(16,185,129,0.5)");
+        gShell.addColorStop(0.8, "rgba(4,120,87,0.28)");
+        gShell.addColorStop(1, "rgba(6,78,59,0)");
+        ctx.fillStyle = gShell;
         ctx.beginPath();
-        ctx.arc(fb.x, fb.y, rr * 1.3, 0, Math.PI * 2);
+        ctx.ellipse(-rr * 0.15, 0, rr * 1.25, rr * 0.95, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = "rgba(236,253,245,0.95)";
-        ctx.beginPath();
-        ctx.arc(fb.x, fb.y, rr * 0.35, 0, Math.PI * 2);
-        ctx.fill();
+        // Dense mid body
+        var gMid = ctx.createRadialGradient(rr * 0.05, 0, 0, 0, 0, rr * 0.85);
+        gMid.addColorStop(0, "rgba(167,243,208,0.95)");
+        gMid.addColorStop(0.4, "rgba(52,211,153,0.85)");
+        gMid.addColorStop(0.75, "rgba(5,150,105,0.45)");
+        gMid.addColorStop(1, "rgba(6,95,70,0)");
+        ctx.fillStyle = gMid;
+        ctx.beginPath(); ctx.arc(0, 0, rr * 0.85, 0, Math.PI * 2); ctx.fill();
+        // Realistic superheated core — white-hot center fading to lime
+        var gCore = ctx.createRadialGradient(rr * 0.08, -rr * 0.04, 0, rr * 0.05, 0, rr * 0.42);
+        gCore.addColorStop(0, "rgba(255,255,255,1)");
+        gCore.addColorStop(0.25, "rgba(236,253,245,0.98)");
+        gCore.addColorStop(0.5, "rgba(167,243,208,0.9)");
+        gCore.addColorStop(0.78, "rgba(52,211,153,0.55)");
+        gCore.addColorStop(1, "rgba(16,185,129,0)");
+        ctx.fillStyle = gCore;
+        ctx.beginPath(); ctx.arc(rr * 0.06, -rr * 0.02, rr * 0.42, 0, Math.PI * 2); ctx.fill();
+        // Specular highlight
+        ctx.fillStyle = "rgba(255,255,255,0.85)";
+        ctx.beginPath(); ctx.arc(rr * 0.14, -rr * 0.12, rr * 0.14, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
       } else {
-        // Ironworks — chunky orange fireball
-        var og = ctx.createRadialGradient(fb.x, fb.y, 0, fb.x, fb.y, rr * 1.35);
-        og.addColorStop(0, "rgba(255,255,240,1)");
-        og.addColorStop(0.2, "rgba(254,243,199,0.98)");
-        og.addColorStop(0.4, "rgba(251,191,36,0.95)");
-        og.addColorStop(0.65, "rgba(249,115,22,0.75)");
-        og.addColorStop(0.85, "rgba(220,38,38,0.45)");
-        og.addColorStop(1, "rgba(120,20,0,0)");
-        ctx.fillStyle = og;
+        // Ironworks — defined molten fireball with realistic furnace core
+        ctx.save();
+        ctx.translate(fb.x, fb.y);
+        var oang = Math.atan2(fb.vy || 0, fb.vx || 1);
+        ctx.rotate(oang);
+        ctx.globalCompositeOperation = "lighter";
+        // Heat shimmer / outer glow
+        var oAura = ctx.createRadialGradient(0, 0, rr * 0.2, 0, 0, rr * 2.4);
+        oAura.addColorStop(0, "rgba(251,146,60,0.3)");
+        oAura.addColorStop(0.45, "rgba(234,88,12,0.14)");
+        oAura.addColorStop(1, "rgba(120,20,0,0)");
+        ctx.fillStyle = oAura;
+        ctx.beginPath(); ctx.arc(0, 0, rr * 2.4, 0, Math.PI * 2); ctx.fill();
+        // Dark-red outer flame envelope (stretched behind)
+        var oShell = ctx.createRadialGradient(rr * 0.1, 0, 0, -rr * 0.25, 0, rr * 1.5);
+        oShell.addColorStop(0, "rgba(251,146,60,0.55)");
+        oShell.addColorStop(0.4, "rgba(234,88,12,0.55)");
+        oShell.addColorStop(0.7, "rgba(185,28,28,0.35)");
+        oShell.addColorStop(1, "rgba(80,10,0,0)");
+        ctx.fillStyle = oShell;
         ctx.beginPath();
-        ctx.arc(fb.x, fb.y, rr * 1.35, 0, Math.PI * 2);
+        ctx.ellipse(-rr * 0.2, 0, rr * 1.4, rr * 1.0, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = "rgba(255,255,255,0.95)";
-        ctx.beginPath();
-        ctx.arc(fb.x - rr * 0.1, fb.y - rr * 0.1, rr * 0.32, 0, Math.PI * 2);
-        ctx.fill();
+        // Orange mid body
+        var oMid = ctx.createRadialGradient(rr * 0.06, 0, 0, 0, 0, rr * 0.9);
+        oMid.addColorStop(0, "rgba(254,215,170,0.95)");
+        oMid.addColorStop(0.35, "rgba(251,191,36,0.9)");
+        oMid.addColorStop(0.65, "rgba(249,115,22,0.65)");
+        oMid.addColorStop(1, "rgba(194,65,12,0)");
+        ctx.fillStyle = oMid;
+        ctx.beginPath(); ctx.arc(0, 0, rr * 0.9, 0, Math.PI * 2); ctx.fill();
+        // Realistic molten core — near-white → yellow → orange
+        var oCore = ctx.createRadialGradient(rr * 0.1, -rr * 0.05, 0, rr * 0.05, 0, rr * 0.45);
+        oCore.addColorStop(0, "rgba(255,255,255,1)");
+        oCore.addColorStop(0.2, "rgba(255,251,235,1)");
+        oCore.addColorStop(0.4, "rgba(254,240,138,0.95)");
+        oCore.addColorStop(0.65, "rgba(251,191,36,0.8)");
+        oCore.addColorStop(0.85, "rgba(249,115,22,0.4)");
+        oCore.addColorStop(1, "rgba(234,88,12,0)");
+        ctx.fillStyle = oCore;
+        ctx.beginPath(); ctx.arc(rr * 0.08, -rr * 0.03, rr * 0.45, 0, Math.PI * 2); ctx.fill();
+        // Bright specular
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.beginPath(); ctx.arc(rr * 0.16, -rr * 0.14, rr * 0.15, 0, Math.PI * 2); ctx.fill();
+        // Tiny ember flecks
+        ctx.fillStyle = "rgba(254,215,170,0.7)";
+        for (var ef = 0; ef < 3; ef++) {
+          var ea = (ef / 3) * Math.PI * 2 + (fb.age || 0) * 4;
+          ctx.beginPath();
+          ctx.arc(Math.cos(ea) * rr * 0.7, Math.sin(ea) * rr * 0.55, rr * 0.08, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
       }
       ctx.globalCompositeOperation = "source-over";
     }
@@ -4813,10 +4886,20 @@ function drawFireballs() {
         ctx.beginPath();
         ctx.arc(orb.x, orb.y, rr * 2.4, 0, Math.PI * 2);
         ctx.fill();
-        // white-hot core
-        ctx.fillStyle = "rgba(255,255,255,0.95)";
+        // Defined plasma core with depth
+        var oc = ctx.createRadialGradient(orb.x - rr * 0.12, orb.y - rr * 0.12, 0, orb.x, orb.y, rr * 0.55);
+        oc.addColorStop(0, "rgba(255,255,255,1)");
+        oc.addColorStop(0.3, "rgba(224,242,254,0.98)");
+        oc.addColorStop(0.55, "rgba(125,211,252,0.85)");
+        oc.addColorStop(0.8, "rgba(56,189,248,0.4)");
+        oc.addColorStop(1, "rgba(14,165,233,0)");
+        ctx.fillStyle = oc;
         ctx.beginPath();
-        ctx.arc(orb.x, orb.y, rr * 0.35, 0, Math.PI * 2);
+        ctx.arc(orb.x, orb.y, rr * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.beginPath();
+        ctx.arc(orb.x - rr * 0.12, orb.y - rr * 0.14, rr * 0.16, 0, Math.PI * 2);
         ctx.fill();
         // jagged energy tongues
         ctx.globalAlpha = 0.7;
