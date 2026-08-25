@@ -1372,19 +1372,25 @@
         }
       }
 
-      // Power-disabled targets never damage or pop coins
-      if (o.shockFall || o.electrified || o.powerAffected || o.onFire || o.blueFire || o.greenFire) {
+      // ---- Collision decision tree ----
+      // Skip non-hazards and power-disabled targets (no damage, no coins)
+      if (
+        o.fromHitBurst ||
+        o.isRing || o.type === "gold_ring" || o.type === "ring" ||
+        o.isCollectible || o.collectible ||
+        o.type === "crystal" || o.type === "coin" || o.type === "diamond" ||
+        o.shockFall || o.electrified || o.powerAffected ||
+        o.onFire || o.blueFire || o.greenFire
+      ) {
         return;
       }
+
       if (dx < collideX && dy < collideY) {
         const isBird = (o.type === "bird_a" || o.type === "bird_b");
+        const shielded = !!(shieldActive || window.__airborneShieldActive);
 
-        // Rings never damage
-        if (o.isRing || o.type === "gold_ring") {
-          // no-op
-        }
-        // SHIELD UP — bounce only, NEVER coins, NEVER takeHit
-        else if (shieldActive) {
+        // 1) SHIELD — bounce only. No coins. No takeHit.
+        if (shielded) {
           if (!o.hitDeflected) {
             o.hitDeflected = true;
             var awayX = (o.x + o.w * 0.5) - player.x;
@@ -1405,11 +1411,13 @@
                 count: 14, colors: ["#e0f2fe", "#fff", "#7dd3fc"], speed: 120, life: 0.4, glow: true
               });
             } catch (e) {}
+            try { if (typeof sfxDeflect === "function") sfxDeflect(); } catch (e) {}
           }
-          // intentionally no coins, no takeHit
+          return; // critical: do not fall through to damage/coins
         }
-        // Zeppelin fire aura — ignite, no coins from this contact
-        else if (window.__airborneFirePowerActive) {
+
+        // 2) Fire aura power — ignite, no coins
+        if (window.__airborneFirePowerActive) {
           o.onFire = true;
           o.powerAffected = true;
           o.vy = 80 + Math.random() * 40;
@@ -1432,36 +1440,33 @@
               window.__airborneEmitFireBurst(o.x + o.w * 0.5, o.y + o.h * 0.4);
             }
           } catch (e) {}
+          return;
         }
-        // Birds without shield — deflect, no damage/coins from bird bounce alone
-        else if (isBird) {
-          if (!o.hitDeflected) {
-            o.hitDeflected = true;
-            o.deflectVy = (Math.random() < 0.5 ? -1 : 1) * (150 + Math.random() * 90);
-            o.hitFlash = 1;
-            spawnHitParticles(o.x + o.w / 2, drawY + o.h / 2);
-            if (typeof spawnFeathers === "function") {
-              spawnFeathers(o.x + o.w / 2, drawY + o.h / 2);
+
+        // 3) Real hit — coins once, then damage (takeHit will not spawn coins again)
+        if (isBird && !o.hitDeflected) {
+          o.hitDeflected = true;
+          o.deflectVy = (Math.random() < 0.5 ? -1 : 1) * (150 + Math.random() * 90);
+          o.hitFlash = 1;
+          spawnHitParticles(o.x + o.w / 2, drawY + o.h / 2);
+          if (typeof spawnFeathers === "function") {
+            spawnFeathers(o.x + o.w / 2, drawY + o.h / 2);
+          }
+        }
+
+        if (!o._hitCoinBursted) {
+          o._hitCoinBursted = true;
+          try {
+            if (typeof window.spawnHitCoinBurst === "function") {
+              window.spawnHitCoinBurst({ fromCollision: true });
             }
-          }
-          // birds still hurt without shield
-          if (!o._hitCoinBursted) {
-            o._hitCoinBursted = true;
-            try {
-              if (typeof window.spawnHitCoinBurst === "function") window.spawnHitCoinBurst();
-            } catch (e) {}
-          }
-          takeHit();
+          } catch (e) {}
         }
-        // Normal obstacle hit — coins + damage (only clean targets reach here)
-        else {
-          if (!o._hitCoinBursted) {
-            o._hitCoinBursted = true;
-            try {
-              if (typeof window.spawnHitCoinBurst === "function") window.spawnHitCoinBurst();
-            } catch (e) {}
-          }
+        try {
+          window.__airborneSkipTakeHitCoins = true;
           takeHit();
+        } finally {
+          window.__airborneSkipTakeHitCoins = false;
         }
       }
     });
@@ -1854,6 +1859,7 @@ function spawnHealPickup() {
   let shieldPickup = null;
   let shieldSpawnTimer = 25 + Math.random() * 15;
   let shieldActive = false;
+  window.__airborneShieldActive = false;
   let shieldImpactTime = -9999; // performance.now() timestamp of the last shield block, drives the impact flash
   let shieldUntil = 0;
   const SHIELD_DURATION_MS = 6000;
@@ -1883,6 +1889,7 @@ function spawnHealPickup() {
   function updateShieldPickup(dt) {
     if (shieldActive && performance.now() > shieldUntil) {
       shieldActive = false;
+      window.__airborneShieldActive = false;
     }
 
     if ((bossActive || bonusActive) && !window.__airborneAirfield) return;
@@ -1971,7 +1978,7 @@ function spawnHealPickup() {
     const dx = Math.abs(player.x - (shieldPickup.x + shieldPickup.w / 2));
     const dy = Math.abs(player.y - (drawY + shieldPickup.h / 2));
     if (dx < player.w * 0.5 + shieldPickup.w * 0.45 && dy < player.h * 0.5 + shieldPickup.h * 0.45) {
-      shieldActive = true;
+      shieldActive = true; window.__airborneShieldActive = true;
       shieldUntil = performance.now() + SHIELD_DURATION_MS;
       shieldPickup.collectAnim = 0.001;
       shieldPickup.collectX = shieldPickup.x + shieldPickup.w / 2;

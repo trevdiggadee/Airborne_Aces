@@ -338,9 +338,9 @@
           window.__airborneAirfieldPhase === "done"))) {
       return;
     }
-    if (shieldActive) {
+    if (shieldActive || window.__airborneShieldActive) {
       spawnHitParticles(player.x, player.y);
-      sfxDeflect();
+      try { if (typeof sfxDeflect === "function") sfxDeflect(); } catch (e) {}
       shieldImpactTime = performance.now();
       // No coins on shield collision
       return;
@@ -359,10 +359,12 @@
     try { sfxHit(); } catch (e) {}
     try { triggerScreenShake(3, 160); } catch (e) {}
     try { spawnHitParticles(player.x, player.y); } catch (e) {}
-    // Coin burst on damage (collision path also spawns; safe if both fire)
-    try {
-      if (typeof window.spawnHitCoinBurst === "function") window.spawnHitCoinBurst();
-    } catch (e) {}
+    // Coin burst on damage — skip if collision path already spawned
+    if (!window.__airborneSkipTakeHitCoins) {
+      try {
+        if (typeof window.spawnHitCoinBurst === "function") window.spawnHitCoinBurst();
+      } catch (e) {}
+    }
 
     // Training: never game-over — soft recover at 0, longer i-frames (less flicker)
     if (window.__airborneAirfield && window.__airborneAirfieldPhase === "lesson") {
