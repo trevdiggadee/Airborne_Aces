@@ -775,34 +775,46 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
 
 
     if (powerMode === "chain") {
-      window.__airborneOneShotUsed = window.__airborneOneShotUsed || {};
-      
+      // Storm Chaser — Thunder Chain
       if (typeof sfxThunder === "function") sfxThunder();
-      try { if (typeof triggerScreenShake === "function") triggerScreenShake(7, 350); } catch (e) {}
-      const targets = (typeof obstacles !== "undefined" && obstacles)
-        ? obstacles.filter(function(o){ return o && !o.isRing; }).slice().sort(function (a, b) {
-            return Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y);
-          }).slice(0, 10)
-        : [];
-      targets.forEach(function (o, idx) {
-        setTimeout(function () {
-          if (!o) return;
-          o.onFire = true;
-          o.lightningFire = true;
-          o.vy = 55 + Math.random() * 45;
-          o.scored = true;
-          try {
-            if (window.PowerFX) window.PowerFX.burst(o.x + o.w * 0.5, o.y + o.h * 0.5, {
-              count: 8, colors: ["#fff", "#7dd3fc", "#ff8a1a", "#ff3b00"], speed: 90, glow: true
-            });
-          } catch (e) {}
-          try { creditPowerKillScore(1); } catch (e) {}
-          try { if (typeof sfxHit === "function") sfxHit(); } catch (e) {}
-        }, idx * 120);
-      });
-      stormMode = "storm";
+      try { if (typeof triggerScreenShake === "function") triggerScreenShake(8, 400); } catch (e) {}
       stormActive = true;
-      stormUntil = performance.now() + 1000;
+      stormMode = "chain";
+      stormTimer = 5.5;
+      stormCharge = 0;
+      window.__airborneActivePowerVisual = "chain";
+      window.__airborneActivePowerUntil = performance.now() + 5500;
+      window.__airborneThunderUntil = performance.now() + 5500;
+      // Storm state machine
+      window.__airborneThunderChain = {
+        age: 0,
+        life: 5.2,
+        phase: "charge", // charge → primary → chain → final → fade
+        phaseT: 0,
+        bolts: [],       // active lightning segments {points, age, life, thick}
+        sparks: [],      // floating aftereffect
+        auraArcs: [],    // continuous arcs around blimp
+        flash: 0,        // screen flash 0–1
+        hitIds: {},
+        chainQueue: [],  // targets waiting to branch from
+        chainsDone: 0,
+        primaryDone: false,
+        finalDone: false
+      };
+      // Dark storm clouds around blimp
+      window.__airborneStormClouds = [];
+      for (var ci = 0; ci < 6; ci++) {
+        var ca = (ci / 6) * Math.PI * 2 + Math.random() * 0.3;
+        window.__airborneStormClouds.push({
+          ang: ca,
+          dist: 28 + Math.random() * 36,
+          r: 18 + Math.random() * 22,
+          spin: (Math.random() < 0.5 ? -1 : 1) * (0.4 + Math.random() * 0.8),
+          phase: Math.random() * Math.PI * 2
+        });
+      }
+      try { if (window.PowerFX) window.PowerFX.activate("storm", player.x, player.y); } catch (e) {}
+      updateStormMeterDisplay();
       return;
     }
 
@@ -1802,6 +1814,228 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         stormMode = "storm";
         stormCloud = null;
         stormTimer = 0;
+      }
+    }
+
+
+    // ---- Storm Chaser — Thunder Chain ----
+    if (stormMode === "chain" || window.__airborneThunderChain) {
+      var tc = window.__airborneThunderChain;
+      if (!tc) {
+        stormActive = false;
+        stormMode = "storm";
+      } else {
+        var dtC = dt;
+        tc.age += dtC;
+        tc.phaseT += dtC;
+        if (tc.flash > 0) tc.flash = Math.max(0, tc.flash - dtC * 3.5);
+
+        var px = (typeof player !== "undefined" && player) ? player.x : W * 0.3;
+        var py = (typeof player !== "undefined" && player) ? player.y : H * 0.4;
+
+        // Update storm clouds orbiting blimp
+        if (window.__airborneStormClouds) {
+          window.__airborneStormClouds.forEach(function(c) {
+            c.ang += c.spin * dtC;
+            c.phase += dtC * 3;
+            c.x = px + Math.cos(c.ang) * c.dist;
+            c.y = py + Math.sin(c.ang) * c.dist * 0.55 - 10;
+          });
+        }
+
+        // Continuous aura arcs around Storm Chaser
+        if (Math.random() < 0.55 && tc.phase !== "fade") {
+          var a1 = Math.random() * Math.PI * 2;
+          var a2 = a1 + (0.6 + Math.random() * 1.2) * (Math.random() < 0.5 ? 1 : -1);
+          var ar = 20 + Math.random() * 30;
+          tc.auraArcs.push({
+            points: (typeof buildLightningPath === "function")
+              ? buildLightningPath(
+                  px + Math.cos(a1) * ar * 0.3, py + Math.sin(a1) * ar * 0.25,
+                  px + Math.cos(a2) * ar, py + Math.sin(a2) * ar * 0.7,
+                  12)
+              : [[px, py], [px + 20, py - 10]],
+            age: 0, life: 0.12 + Math.random() * 0.12, thick: 1.5
+          });
+        }
+
+        function zapObstacle(o, fromX, fromY, thick) {
+          if (!o || o.isRing || o.type === "gold_ring" || o.type === "ring") return null;
+          var oid = o._uid || (o._uid = "z" + Math.random().toString(36).slice(2));
+          if (tc.hitIds[oid]) return null;
+          tc.hitIds[oid] = true;
+          var ox = o.x + o.w * 0.5;
+          var oy = o.y + o.h * 0.5;
+          var pts = (typeof buildLightningPath === "function")
+            ? buildLightningPath(fromX, fromY, ox, oy, 28 + Math.random() * 20)
+            : [[fromX, fromY], [ox, oy]];
+          tc.bolts.push({ points: pts, age: 0, life: 0.28 + Math.random() * 0.12, thick: thick || 4 });
+          // Electrify
+          o.electrified = true;
+          o.powerAffected = true;
+          o.shockFall = true;
+          o.lightningFire = true;
+          o.hitFlash = 1;
+          o.vy = 70 + Math.random() * 60;
+          o.vx = (Math.random() - 0.5) * 80;
+          o.spinVel = (Math.random() - 0.5) * 10;
+          o.scored = true;
+          o.onFire = true;
+          try {
+            if (window.PowerFX) window.PowerFX.burst(ox, oy, {
+              count: 16, colors: ["#fff", "#e0f2fe", "#7dd3fc", "#38bdf8", "#1e3a8a"],
+              speed: 130, life: 0.55, glow: true
+            });
+          } catch (e) {}
+          try { creditPowerKillScore(1); } catch (e) {}
+          try { if (typeof sfxHit === "function") sfxHit(); } catch (e) {}
+          // Branch queue
+          tc.chainQueue.push({ x: ox, y: oy, depth: 0 });
+          return { x: ox, y: oy };
+        }
+
+        function nearestTargets(fromX, fromY, limit, maxDist) {
+          if (typeof obstacles === "undefined" || !obstacles) return [];
+          var list = [];
+          for (var i = 0; i < obstacles.length; i++) {
+            var o = obstacles[i];
+            if (!o || o.isRing || o.type === "gold_ring" || o.type === "ring") continue;
+            var oid = o._uid || (o._uid = "z" + Math.random().toString(36).slice(2));
+            if (tc.hitIds[oid]) continue;
+            if (o.powerAffected && o.electrified) continue;
+            var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
+            var d = Math.hypot(ox - fromX, oy - fromY);
+            if (d < maxDist) list.push({ o: o, d: d, x: ox, y: oy });
+          }
+          list.sort(function(a, b) { return a.d - b.d; });
+          return list.slice(0, limit);
+        }
+
+        // Phases
+        if (tc.phase === "charge") {
+          // Dark clouds form, hull charges
+          if (tc.phaseT > 0.45) {
+            tc.phase = "primary";
+            tc.phaseT = 0;
+            tc.flash = 0.85;
+            try { if (typeof sfxThunder === "function") sfxThunder(); } catch (e) {}
+            try { if (typeof triggerScreenShake === "function") triggerScreenShake(10, 280); } catch (e) {}
+            // Primary strike to nearest
+            var near = nearestTargets(px, py, 1, 9999);
+            if (near.length) {
+              zapObstacle(near[0].o, px, py, 6);
+              tc.primaryDone = true;
+            } else {
+              // Strike forward anyway
+              var fx = px + 180, fy = py + (Math.random() - 0.5) * 40;
+              var pts0 = (typeof buildLightningPath === "function")
+                ? buildLightningPath(px, py, fx, fy, 35) : [[px, py], [fx, fy]];
+              tc.bolts.push({ points: pts0, age: 0, life: 0.3, thick: 6 });
+            }
+          }
+        } else if (tc.phase === "primary" || tc.phase === "chain") {
+          if (tc.phase === "primary" && tc.phaseT > 0.15) {
+            tc.phase = "chain";
+            tc.phaseT = 0;
+          }
+          // Process chain queue — each hit splits into 2–3 branches
+          var budget = 3; // zaps per frame max
+          while (tc.chainQueue.length && budget > 0) {
+            var src = tc.chainQueue.shift();
+            var branches = 2 + Math.floor(Math.random() * 2); // 2–3
+            var cands = nearestTargets(src.x, src.y, branches, 220);
+            if (!cands.length) continue;
+            for (var bi = 0; bi < cands.length; bi++) {
+              zapObstacle(cands[bi].o, src.x, src.y, 3.5 + Math.random() * 1.5);
+              budget--;
+              tc.chainsDone++;
+              if (budget <= 0) break;
+            }
+            if (cands.length) {
+              tc.flash = Math.max(tc.flash, 0.45);
+              if (Math.random() < 0.4) {
+                try { if (typeof sfxThunder === "function") sfxThunder(); } catch (e) {}
+                try { if (typeof triggerScreenShake === "function") triggerScreenShake(5, 100); } catch (e) {}
+              }
+            }
+          }
+          // Also keep seeking new primaries occasionally
+          if (tc.phaseT > 0.35 && Math.random() < 0.08) {
+            var n2 = nearestTargets(px, py, 1, 280);
+            if (n2.length) {
+              zapObstacle(n2[0].o, px, py, 5);
+              tc.flash = 0.55;
+            }
+            tc.phaseT = 0;
+          }
+          if (tc.age > 3.6 && !tc.finalDone) {
+            tc.phase = "final";
+            tc.phaseT = 0;
+          }
+        } else if (tc.phase === "final") {
+          if (!tc.finalDone) {
+            tc.finalDone = true;
+            tc.flash = 1;
+            try { if (typeof sfxThunder === "function") sfxThunder(); } catch (e) {}
+            try { if (typeof triggerScreenShake === "function") triggerScreenShake(14, 500); } catch (e) {}
+            // Gigantic vertical bolt from sky to ground center
+            var cx = W * 0.5 + (Math.random() - 0.5) * 40;
+            var ptsF = (typeof buildLightningPath === "function")
+              ? buildLightningPath(cx, -20, cx + (Math.random() - 0.5) * 30, H + 20, 50)
+              : [[cx, -20], [cx, H + 20]];
+            tc.bolts.push({ points: ptsF, age: 0, life: 0.55, thick: 10 });
+            // Wipe remaining hazards
+            if (typeof obstacles !== "undefined" && obstacles) {
+              for (var wi = 0; wi < obstacles.length; wi++) {
+                var wo = obstacles[wi];
+                if (!wo || wo.isRing || wo.type === "gold_ring") continue;
+                var woid = wo._uid || (wo._uid = "z" + Math.random().toString(36).slice(2));
+                if (tc.hitIds[woid]) continue;
+                zapObstacle(wo, cx, H * 0.4, 4);
+              }
+            }
+          }
+          if (tc.phaseT > 0.7) {
+            tc.phase = "fade";
+            tc.phaseT = 0;
+          }
+        } else if (tc.phase === "fade") {
+          // Floating residual sparks
+          if (Math.random() < 0.4) {
+            tc.sparks.push({
+              x: Math.random() * W, y: Math.random() * H * 0.7,
+              vx: (Math.random() - 0.5) * 30, vy: -20 - Math.random() * 40,
+              age: 0, life: 0.6 + Math.random() * 0.5, r: 1.5 + Math.random() * 2
+            });
+          }
+        }
+
+        // Age bolts / arcs / sparks
+        for (var bi2 = tc.bolts.length - 1; bi2 >= 0; bi2--) {
+          tc.bolts[bi2].age += dtC;
+          if (tc.bolts[bi2].age >= tc.bolts[bi2].life) tc.bolts.splice(bi2, 1);
+        }
+        for (var ai = tc.auraArcs.length - 1; ai >= 0; ai--) {
+          tc.auraArcs[ai].age += dtC;
+          if (tc.auraArcs[ai].age >= tc.auraArcs[ai].life) tc.auraArcs.splice(ai, 1);
+        }
+        for (var si = tc.sparks.length - 1; si >= 0; si--) {
+          var sp = tc.sparks[si];
+          sp.age += dtC;
+          sp.x += sp.vx * dtC;
+          sp.y += sp.vy * dtC;
+          if (sp.age >= sp.life) tc.sparks.splice(si, 1);
+        }
+
+        if (tc.age >= tc.life) {
+          window.__airborneThunderChain = null;
+          window.__airborneStormClouds = null;
+          window.__airborneActivePowerVisual = null;
+          window.__airborneActivePowerUntil = 0;
+          stormActive = false;
+          stormMode = "storm";
+          stormTimer = 0;
+        }
       }
     }
 
@@ -4068,9 +4302,111 @@ function drawFireballs() {
   window.__airborneDrawFireballs = drawFireballs;
 
   function drawStorm() {
-    if (!stormActive) return;
+    // Thunder Chain draws even mid-fade
+    var tcDraw = window.__airborneThunderChain;
+    if (!stormActive && !tcDraw) return;
     // Training: no screen-dim atmosphere
     const skipDim = !!(window.__airborneAirfield || window.__airborneRuffActive);
+
+    // ---- Storm Chaser Thunder Chain visuals ----
+    if (tcDraw) {
+      var W0 = typeof W !== "undefined" ? W : 800;
+      var H0 = typeof H !== "undefined" ? H : 600;
+      var pdx = (typeof player !== "undefined" && player) ? player.x : W0 * 0.3;
+      var pdy = (typeof player !== "undefined" && player) ? player.y : H0 * 0.4;
+
+      // Screen thunder flash
+      if (tcDraw.flash > 0.02) {
+        ctx.save();
+        ctx.globalAlpha = tcDraw.flash * 0.35;
+        ctx.fillStyle = "rgba(220,235,255,1)";
+        ctx.fillRect(0, 0, W0, H0);
+        ctx.restore();
+      }
+
+      // Dark storm clouds around blimp
+      if (window.__airborneStormClouds) {
+        ctx.save();
+        window.__airborneStormClouds.forEach(function(c) {
+          if (c.x == null) return;
+          var pulse = 0.85 + 0.15 * Math.sin(c.phase || 0);
+          ctx.globalAlpha = 0.55 * pulse;
+          var cg = ctx.createRadialGradient(c.x, c.y, 2, c.x, c.y, c.r * pulse);
+          cg.addColorStop(0, "rgba(60,70,100,0.85)");
+          cg.addColorStop(0.5, "rgba(30,35,55,0.55)");
+          cg.addColorStop(1, "rgba(10,12,20,0)");
+          ctx.fillStyle = cg;
+          ctx.beginPath();
+          ctx.arc(c.x, c.y, c.r * pulse, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.restore();
+      }
+
+      function strokeBolt(points, thick, alpha) {
+        if (!points || points.length < 2) return;
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        // Outer glow
+        ctx.globalAlpha = alpha * 0.45;
+        ctx.strokeStyle = "rgba(100,160,255,1)";
+        ctx.lineWidth = thick * 3.2;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        points.forEach(function(pt, i) {
+          if (i === 0) ctx.moveTo(pt[0], pt[1]); else ctx.lineTo(pt[0], pt[1]);
+        });
+        ctx.stroke();
+        // Mid cyan
+        ctx.globalAlpha = alpha * 0.75;
+        ctx.strokeStyle = "rgba(160,210,255,1)";
+        ctx.lineWidth = thick * 1.6;
+        ctx.beginPath();
+        points.forEach(function(pt, i) {
+          if (i === 0) ctx.moveTo(pt[0], pt[1]); else ctx.lineTo(pt[0], pt[1]);
+        });
+        ctx.stroke();
+        // Hot white core
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = "rgba(255,255,255,1)";
+        ctx.lineWidth = Math.max(1.2, thick * 0.55);
+        ctx.shadowColor = "rgba(180,220,255,0.95)";
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        points.forEach(function(pt, i) {
+          if (i === 0) ctx.moveTo(pt[0], pt[1]); else ctx.lineTo(pt[0], pt[1]);
+        });
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Main bolts
+      tcDraw.bolts.forEach(function(b) {
+        var t = 1 - b.age / b.life;
+        strokeBolt(b.points, b.thick || 4, Math.max(0, t));
+      });
+      // Aura arcs
+      tcDraw.auraArcs.forEach(function(a) {
+        var t = 1 - a.age / a.life;
+        strokeBolt(a.points, a.thick || 1.5, Math.max(0, t) * 0.85);
+      });
+      // Aftereffect sparks
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      tcDraw.sparks.forEach(function(s) {
+        var t = 1 - s.age / s.life;
+        ctx.globalAlpha = t;
+        ctx.fillStyle = "rgba(200,230,255,1)";
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r * t, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+
+      if (stormMode === "chain") return; // thunder chain owns the draw while active
+    }
+
 
     // ---- Swarm of spinning power icons ----
     if (stormMode === "swarm" || stormMode === "missile") {

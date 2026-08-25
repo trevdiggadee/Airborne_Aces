@@ -423,7 +423,7 @@
     // Sky Rocket — shift exhaust 3% further right
     try {
       if (typeof selectedBlimp !== "undefined" && selectedBlimp === "blimp12") {
-        localX += player.w * 0.16; // +10% further right for Sky Rocket
+        localX += player.w * 0.06; // modest base; per-jet offsets refine dual nozzles
       }
     } catch (e) {}
     var exhaustX = player.x + localX * cosR - localY * sinR;
@@ -447,8 +447,15 @@
         var xOff = 0;
         try {
           var selEx = (typeof selectedBlimp !== "undefined") ? selectedBlimp : "";
-          if (selEx === "blimp12" && jets > 1 && ji === 1) {
-            xOff = player.w * 0.02;
+          if (selEx === "blimp12" && jets > 1) {
+            if (ji === 0) {
+              // Top flame — move back left 10%
+              xOff = -player.w * 0.10;
+            } else {
+              // Bottom/right flame — left 2%, lower 1%
+              xOff = -player.w * 0.02;
+              yOff += player.h * 0.01;
+            }
           }
           if (selEx === "blimp14" && jets > 1 && ji === 1) {
             yOff = player.h * 0.09; // raised further
