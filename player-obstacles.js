@@ -1614,16 +1614,13 @@
       } else {
         ctx.drawImage(img, o.x, drawY, o.w, o.h);
       }
-      // Soft white impact flash — skip balloons (red sprites look "red flash" with additive blend)
+      // Brief sprite brighten only — no white circle halo
       if (o.hitFlash && o.hitFlash > 0 && img && img.naturalWidth && o.type !== "balloon_anim") {
         ctx.save();
-        ctx.globalAlpha = Math.min(0.5, o.hitFlash * 0.65);
-        ctx.globalCompositeOperation = "lighter";
-        ctx.fillStyle = "rgba(255,255,255,0.9)";
-        // subtle bright rim rather than full-sprite tint
-        ctx.beginPath();
-        ctx.ellipse(o.x + o.w * 0.5, drawY + o.h * 0.45, o.w * 0.42, o.h * 0.42, 0, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.globalAlpha = Math.min(0.35, o.hitFlash * 0.4);
+        ctx.globalCompositeOperation = "source-atop";
+        ctx.fillStyle = "rgba(255,255,255,0.5)";
+        ctx.fillRect(o.x, drawY, o.w, o.h);
         ctx.restore();
       }
 
