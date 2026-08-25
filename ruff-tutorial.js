@@ -283,6 +283,12 @@
       meter.style.opacity = "1";
       meter.style.pointerEvents = "auto";
       window.__airborneAirfieldAllowPowerup = true;
+    try {
+      if (typeof stormCharge !== "undefined" && typeof STORM_MAX === "number") {
+        stormCharge = STORM_MAX;
+        if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay(false);
+      }
+    } catch (e) {}
     } catch (e) {}
   }
   function clearTrainingPowerIcon() {
@@ -685,6 +691,12 @@
     if (!window.__airborneAirfieldAllowShield) { try { shieldPickup = null; } catch (e) {} };
     try { updateFlightTrace(name); } catch (e) {}
     window.__airborneAirfieldAllowPowerup = true;
+    try {
+      if (typeof stormCharge !== "undefined" && typeof STORM_MAX === "number") {
+        stormCharge = STORM_MAX;
+        if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay(false);
+      }
+    } catch (e) {}
     try { placeTrainingPowerIcon(); } catch (e) {}
     try {
       var ft = document.getElementById("ruffFlightTrace");
@@ -821,6 +833,12 @@
     } else if (name === "powerup") {
       if (ruffLines.length) showRadio(ruffLines[0], 3.2);
       window.__airborneAirfieldAllowPowerup = true;
+    try {
+      if (typeof stormCharge !== "undefined" && typeof STORM_MAX === "number") {
+        stormCharge = STORM_MAX;
+        if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay(false);
+      }
+    } catch (e) {}
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       if (typeof powerup !== "undefined") powerup = null;
       ruffPowerOrb = null;
@@ -2516,6 +2534,12 @@ function finishToMap() {
     } else if (ruffStage === "powerup") {
       ruffCrystals = [];
       window.__airborneAirfieldAllowPowerup = true;
+    try {
+      if (typeof stormCharge !== "undefined" && typeof STORM_MAX === "number") {
+        stormCharge = STORM_MAX;
+        if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay(false);
+      }
+    } catch (e) {}
       // NO floating fire pickup — meter is charged by coins only
       window.__airborneFirePickup = null;
       try { placeTrainingPowerIcon(); } catch (e) {}

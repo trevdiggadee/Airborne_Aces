@@ -134,6 +134,13 @@
   // ---------- Storm power-up (gas tank meter, fills every 25 points) ----------
   const STORM_MAX = 100;
   const STORM_CHARGE_PER_MILESTONE = 25; // one gas-tank "notch" every 25 score points
+  // Unified power duration for all ships (seconds / ms)
+  const POWER_DURATION_SEC = 6.5;
+  const POWER_DURATION_MS = 6500;
+  const POWER_FADE_SEC = 0.75;
+  const POWER_FADE_MS = 750;
+  window.__airbornePowerDurationMs = POWER_DURATION_MS;
+  window.__airbornePowerFadeMs = POWER_FADE_MS;
   let stormCharge = 0;
   let stormMilestoneCount = 0; // how many 25-point thresholds have been counted toward charge so far
   let stormWasReady = false;   // tracks ready-state transitions so the ready sound only fires once
@@ -390,6 +397,21 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
     };
   };
 
+
+  function updatePowerFade(untilMs) {
+    var fadeMs = (typeof POWER_FADE_MS === "number") ? POWER_FADE_MS : 750;
+    if (!untilMs) { window.__airbornePowerFade = 1; return 1; }
+    var left = untilMs - performance.now();
+    if (left <= 0) { window.__airbornePowerFade = 0; return 0; }
+    if (left < fadeMs) {
+      window.__airbornePowerFade = Math.max(0, left / fadeMs);
+    } else {
+      window.__airbornePowerFade = 1;
+    }
+    return window.__airbornePowerFade;
+  }
+  window.updatePowerFade = updatePowerFade;
+
   function activateStorm() {
     if (window.__airborneAirfield && !window.__airborneAirfieldAllowPowerup) return;
     if (state !== "playing" || stormActive || stormCharge < STORM_MAX) return;
@@ -398,7 +420,18 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
 
     stormActive = true;
     stormCharge = 0;
-    if (window.__airborneAirfield) window.__airborneTrainingPowerUsed = true;
+    if (window.__airborneAirfield) {
+      window.__airborneTrainingPowerUsed = true;
+      // Testing: refill meter after short delay so all blimps can re-test powers
+      setTimeout(function() {
+        try {
+          if (window.__airborneAirfield && typeof stormCharge !== "undefined" && typeof STORM_MAX === "number") {
+            stormCharge = STORM_MAX;
+            if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay(false);
+          }
+        } catch (e) {}
+      }, (typeof POWER_DURATION_MS === "number" ? POWER_DURATION_MS : 6500) + 400);
+    }
     if (window.__airborneAirfield) {
       // Spend 25 coins for activation
       window.__airborneCollectCoins = Math.max(0, (window.__airborneCollectCoins || 0) - 1); // TEST: 1 coin
@@ -441,7 +474,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
     const swarmKey = SHIP_POWER_ICON_KEYS[sel] || null;
     stormMode = powerMode;
     window.__airborneActivePowerVisual = powerMode;
-    window.__airborneActivePowerUntil = performance.now() + 5500;
+    window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
     try {
       if (window.PowerFX && typeof player !== "undefined" && player) {
         window.PowerFX.activate(powerMode, player.x, player.y);
@@ -452,7 +485,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
     if (powerMode === "fire") {
       try {
         window.__airborneFirePowerActive = true;
-        window.__airborneFirePowerUntil = performance.now() + 9000;
+        window.__airborneFirePowerUntil = performance.now() + POWER_DURATION_MS;
         window.__airborneFireOrbiters = []; // rebuild on next update
         window.__airborneFireActivateT = 0;
         if (typeof sfxExplosion === "function") sfxExplosion(0.5);
@@ -471,11 +504,11 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       if (typeof sfxShoot === "function") sfxShoot();
       stormActive = true;
       stormMode = powerMode; // flamethrower | blueflame
-      stormTimer = 5.0;
+      stormTimer = POWER_DURATION_SEC;
       stormCharge = 0;
-      window.__airborneFlamethrowerUntil = performance.now() + 5000;
+      window.__airborneFlamethrowerUntil = performance.now() + POWER_DURATION_MS;
       window.__airborneActivePowerVisual = powerMode;
-      window.__airborneActivePowerUntil = performance.now() + 5000;
+      window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
       try {
         if (window.PowerFX && typeof player !== "undefined" && player) {
           window.PowerFX.activate(powerMode, player.x + 20, player.y);
@@ -491,11 +524,11 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       if (typeof sfxExplosion === "function") sfxExplosion(0.4);
       stormActive = true;
       stormMode = powerMode; // fireball | bluefireball | greenfireball
-      stormTimer = 5.0;
+      stormTimer = POWER_DURATION_SEC;
       stormCharge = 0;
-      window.__airborneFireballUntil = performance.now() + 5000;
+      window.__airborneFireballUntil = performance.now() + POWER_DURATION_MS;
       window.__airborneActivePowerVisual = powerMode;
-      window.__airborneActivePowerUntil = performance.now() + 5000;
+      window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
       window.__airborneFireballs = [];
       window.__airborneFireballKind = powerMode;
       window.__airborneGreenSpiralAng = 0;
@@ -553,11 +586,11 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       if (typeof sfxExplosion === "function") sfxExplosion(0.35);
       stormActive = true;
       stormMode = "warshark";
-      stormTimer = 5.5;
+      stormTimer = POWER_DURATION_SEC;
       stormCharge = 0;
-      window.__airborneHeatseekUntil = performance.now() + 5500;
+      window.__airborneHeatseekUntil = performance.now() + POWER_DURATION_MS;
       window.__airborneActivePowerVisual = "warshark";
-      window.__airborneActivePowerUntil = performance.now() + 5500;
+      window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
       window.__airborneHeatseekers = [];
       window.__airborneWarBullets = [];
       window.__airborneWarSharkImg = null;
@@ -576,11 +609,11 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       if (typeof sfxExplosion === "function") sfxExplosion(0.3);
       stormActive = true;
       stormMode = "jollybomb";
-      stormTimer = 5.5;
+      stormTimer = POWER_DURATION_SEC;
       stormCharge = 0;
-      window.__airborneHeatseekUntil = performance.now() + 5500;
+      window.__airborneHeatseekUntil = performance.now() + POWER_DURATION_MS;
       window.__airborneActivePowerVisual = "jollybomb";
-      window.__airborneActivePowerUntil = performance.now() + 5500;
+      window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
       window.__airborneHeatseekers = [];
       // Pre-spawn arcing spinning bombs
       for (var ji = 0; ji < 5; ji++) {
@@ -613,12 +646,12 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       if (typeof sfxExplosion === "function") sfxExplosion(0.35);
       stormActive = true;
       stormMode = "barrelbomb";
-      stormTimer = 4.0;
+      stormTimer = POWER_DURATION_SEC;
       stormCharge = 0;
       // Short window — all 5 fire at once, no continuous spawn
-      window.__airborneHeatseekUntil = performance.now() + 200;
+      window.__airborneHeatseekUntil = performance.now() + POWER_DURATION_MS;
       window.__airborneActivePowerVisual = "barrelbomb";
-      window.__airborneActivePowerUntil = performance.now() + 4000;
+      window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
       window.__airborneHeatseekers = [];
       window.__airborneWarBullets = [];
       var bi = new Image();
@@ -651,11 +684,11 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       if (typeof sfxExplosion === "function") sfxExplosion(0.35);
       stormActive = true;
       stormMode = "heatseek";
-      stormTimer = 5.5;
+      stormTimer = POWER_DURATION_SEC;
       stormCharge = 0;
-      window.__airborneHeatseekUntil = performance.now() + 5500;
+      window.__airborneHeatseekUntil = performance.now() + POWER_DURATION_MS;
       window.__airborneActivePowerVisual = "heatseek";
-      window.__airborneActivePowerUntil = performance.now() + 5500;
+      window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
       window.__airborneHeatseekers = [];
       // Preload image
       if (!window.__airborneRocketImg) {
@@ -678,14 +711,14 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       try { if (typeof triggerScreenShake === "function") triggerScreenShake(6, 300); } catch (e) {}
       stormActive = true;
       stormMode = "steam";
-      stormTimer = 3.2;
+      stormTimer = POWER_DURATION_SEC;
       stormCharge = 0;
       window.__airborneActivePowerVisual = "steam";
-      window.__airborneActivePowerUntil = performance.now() + 3200;
-      window.__airborneSteamUntil = performance.now() + 3200;
+      window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
+      window.__airborneSteamUntil = performance.now() + POWER_DURATION_MS;
       window.__airborneSteamOD = {
         age: 0,
-        life: 3.0,
+        life: POWER_DURATION_SEC,
         phase: "charge",
         phaseT: 0,
         rings: [],
@@ -707,13 +740,13 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       try { if (typeof triggerScreenShake === "function") triggerScreenShake(12, 380); } catch (e) {}
       stormActive = true;
       stormMode = "shockwave";
-      stormTimer = 3.2; // shortened Deco Liner power duration
+      stormTimer = POWER_DURATION_SEC;
       stormCloud = null;
       window.__airborneActivePowerVisual = "shockwave";
-      window.__airborneActivePowerUntil = performance.now() + 3200;
+      window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
       window.__airborneShockPulseT = 0.5; // fire first pulse immediately
       window.__airborneShockPulseCount = 0;
-      window.__airborneShockEndAt = performance.now() + 3200;
+      window.__airborneShockEndAt = performance.now() + POWER_DURATION_MS;
       window.__airborneShockFinalDone = false;
       window.__airborneShockFlash = 1.0;
       if (!window.__airborneShockFX) window.__airborneShockFX = [];
@@ -755,10 +788,10 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       if (typeof sfxThunder === "function") sfxThunder();
       stormActive = true;
       stormMode = "ivorybolt";
-      stormTimer = 5.0;
+      stormTimer = POWER_DURATION_SEC;
       window.__airborneActivePowerVisual = "ivorybolt";
-      window.__airborneActivePowerUntil = performance.now() + 5000;
-      window.__airborneIvoryUntil = performance.now() + 5000;
+      window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
+      window.__airborneIvoryUntil = performance.now() + POWER_DURATION_MS;
       window.__airborneIvoryBolts = [];
       window.__airborneIvoryFireballs = [];
       // Initial sky fireballs
@@ -783,15 +816,15 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       try { if (typeof triggerScreenShake === "function") triggerScreenShake(8, 400); } catch (e) {}
       stormActive = true;
       stormMode = "chain";
-      stormTimer = 5.5;
+      stormTimer = POWER_DURATION_SEC;
       stormCharge = 0;
       window.__airborneActivePowerVisual = "chain";
-      window.__airborneActivePowerUntil = performance.now() + 5500;
-      window.__airborneThunderUntil = performance.now() + 5500;
+      window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
+      window.__airborneThunderUntil = performance.now() + POWER_DURATION_MS;
       // Storm state machine
       window.__airborneThunderChain = {
         age: 0,
-        life: 5.2,
+        life: POWER_DURATION_SEC,
         phase: "charge", // charge → primary → chain → final → fade
         phaseT: 0,
         bolts: [],       // active lightning segments {points, age, life, thick}
@@ -854,9 +887,9 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       if (typeof sfxShoot === "function") sfxShoot();
       stormActive = true;
       stormMode = "lattice";
-      stormTimer = 4.0;
+      stormTimer = POWER_DURATION_SEC;
       window.__airborneActivePowerVisual = "lattice";
-      window.__airborneActivePowerUntil = performance.now() + 4000;
+      window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
       window.__airborneLatticeUntil = performance.now() + 4000;
       window.__airborneLatticeTorps = [];
       window.__airborneLatticeSpawnT = 0;
@@ -890,7 +923,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       try { if (typeof triggerScreenShake === "function") triggerScreenShake(10, 350); } catch (e) {}
       stormActive = true;
       stormMode = "vortex";
-      stormTimer = 4.6;
+      stormTimer = POWER_DURATION_SEC;
       stormCloud = null;
       window.__airborneActivePowerVisual = "vortex";
       window.__airborneActivePowerUntil = performance.now() + 4600;
@@ -952,7 +985,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       try { if (typeof triggerScreenShake === "function") triggerScreenShake(6, 400); } catch (e) {}
       stormActive = true;
       stormMode = "meteors";
-      stormTimer = 6.0;
+      stormTimer = POWER_DURATION_SEC;
       window.__airborneActivePowerVisual = "meteors";
       window.__airborneActivePowerUntil = performance.now() + 6000;
       window.__airborneMeteorUntil = performance.now() + 6000;
@@ -983,7 +1016,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       if (typeof sfxShoot === "function") sfxShoot();
       stormActive = true;
       stormMode = "missile";
-      stormTimer = 2.5;
+      stormTimer = POWER_DURATION_SEC;
       for (var ri = 0; ri < 8; ri++) {
         var ang = (ri / 8) * Math.PI * 2;
         stormSwarm.push({
@@ -3686,6 +3719,12 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
     var sod = window.__airborneSteamOD;
     var list = window.__airborneSteamParts;
     if (typeof ctx === "undefined") return;
+    try {
+      if (typeof updatePowerFade === "function") updatePowerFade(window.__airborneActivePowerUntil || window.__airborneSteamUntil);
+    } catch (e) {}
+    var pf = (typeof window.__airbornePowerFade === "number") ? window.__airbornePowerFade : 1;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0.05, pf);
     var spx = (typeof player !== "undefined" && player) ? player.x : 0;
     var spy = (typeof player !== "undefined" && player) ? player.y : 0;
 
@@ -3796,6 +3835,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       }
     }
     ctx.restore();
+    ctx.restore(); // power fade
   }
   
   
@@ -4470,8 +4510,15 @@ function drawMeteorMarks() {
 
 function drawFireballs() {
     var fbs = window.__airborneFireballs;
-    if (!fbs || !fbs.length || typeof ctx === "undefined") return;
+    var hasPlasma = window.__airbornePlasmaOrbits && window.__airbornePlasmaOrbits.length;
+    if ((!fbs || !fbs.length) && !hasPlasma && !window.__airborneBlueFlash && !window.__airborneEngineFlare) return;
+    if (typeof ctx === "undefined") return;
     ctx.save();
+    try {
+      if (typeof updatePowerFade === "function") updatePowerFade(window.__airborneActivePowerUntil || window.__airborneFireballUntil);
+    } catch (e) {}
+    var pf = (typeof window.__airbornePowerFade === "number") ? window.__airbornePowerFade : 1;
+    ctx.globalAlpha = Math.max(0.05, pf);
     for (var i = 0; i < fbs.length; i++) {
       var fb = fbs[i];
       // smoke trails (skip for azure — uses plasma trail below)
@@ -4825,6 +4872,12 @@ function drawFireballs() {
     // Thunder Chain draws even mid-fade
     var tcDraw = window.__airborneThunderChain;
     if (!stormActive && !tcDraw) return;
+    // Unified fade-out near end of any power
+    try {
+      var u = window.__airborneActivePowerUntil || 0;
+      if (typeof updatePowerFade === "function") updatePowerFade(u);
+    } catch (e) {}
+    // powerFade available via window.__airbornePowerFade for child draws
     // Training: no screen-dim atmosphere
     const skipDim = !!(window.__airborneAirfield || window.__airborneRuffActive);
 
@@ -4834,6 +4887,9 @@ function drawFireballs() {
       var H0 = typeof H !== "undefined" ? H : 600;
       var pdx = (typeof player !== "undefined" && player) ? player.x : W0 * 0.3;
       var pdy = (typeof player !== "undefined" && player) ? player.y : H0 * 0.4;
+      var pf = (typeof window.__airbornePowerFade === "number") ? window.__airbornePowerFade : 1;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0.05, pf);
 
       // Screen thunder flash
       if (tcDraw.flash > 0.02) {
@@ -4924,6 +4980,7 @@ function drawFireballs() {
       });
       ctx.restore();
 
+      ctx.restore(); // power fade
       if (stormMode === "chain") return; // thunder chain owns the draw while active
     }
 
