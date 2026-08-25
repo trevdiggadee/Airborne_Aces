@@ -2315,18 +2315,34 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
         } else {
           fb.vy += 90 * dt; // mild gravity
         }
-        // Trails — azure gets long twisting flame trail + sparks
+        // Trails — long sharp blue flame tongues trailing backward + glowing particles
         if (fb.kind === "bluefireball") {
-          if (Math.random() < 0.95) {
+          // dense flame body trail
+          for (var tp = 0; tp < 2; tp++) {
             fb.trails.push({
-              x: fb.x + (Math.random() - 0.5) * 4,
-              y: fb.y + (Math.random() - 0.5) * 4,
-              vx: -fb.vx * 0.08 + (Math.random() - 0.5) * 40,
-              vy: -fb.vy * 0.08 + (Math.random() - 0.5) * 50,
-              life: 0.35 + Math.random() * 0.25,
+              x: fb.x - fb.vx * 0.01 * tp + (Math.random() - 0.5) * 3,
+              y: fb.y - fb.vy * 0.01 * tp + (Math.random() - 0.5) * 3,
+              vx: -fb.vx * 0.15 + (Math.random() - 0.5) * 30,
+              vy: -fb.vy * 0.15 + (Math.random() - 0.5) * 35,
+              life: 0.4 + Math.random() * 0.3,
               age: 0,
-              r: 3 + Math.random() * 5,
-              spark: Math.random() < 0.35
+              r: 4 + Math.random() * 6,
+              spark: false,
+              layer: Math.random() < 0.4 ? 0 : 1 // 0=cyan inner, 1=deep blue outer
+            });
+          }
+          // jagged feathered tips / embers
+          if (Math.random() < 0.7) {
+            fb.trails.push({
+              x: fb.x + (Math.random() - 0.5) * 6,
+              y: fb.y + (Math.random() - 0.5) * 6,
+              vx: -fb.vx * 0.2 + (Math.random() - 0.5) * 70,
+              vy: -fb.vy * 0.2 + (Math.random() - 0.5) * 80,
+              life: 0.25 + Math.random() * 0.2,
+              age: 0,
+              r: 1.5 + Math.random() * 2.5,
+              spark: true,
+              layer: 0
             });
           }
         } else if (Math.random() < 0.7) {
@@ -2391,15 +2407,24 @@ if (window.__airborneSpyShield && stormMode === "vortex") {
               try {
                 var cols = fb.colors || ["#ff6b3d", "#ffd24a", "#ff1a00"];
                 if (fb.kind === "greenfireball") cols = ["#d1fae5", "#34d399", "#059669", "#fff"];
-                if (fb.kind === "bluefireball") cols = ["#e0f2fe", "#38bdf8", "#0ea5e9", "#fff"];
+                if (fb.kind === "bluefireball") cols = ["#ffffff", "#e0f2fe", "#67e8f9", "#38bdf8", "#1d4ed8"];
+                else cols = cols;
                 if (window.PowerFX) window.PowerFX.burst(ox, oy, {
-                  count: fb.kind === "bluefireball" ? 18 : 12,
+                  count: fb.kind === "bluefireball" ? 26 : 12,
                   colors: cols,
-                  speed: fb.kind === "bluefireball" ? 110 : 80,
-                  gravity: -30,
-                  life: 0.55,
+                  speed: fb.kind === "bluefireball" ? 150 : 80,
+                  gravity: -25,
+                  life: fb.kind === "bluefireball" ? 0.7 : 0.55,
                   glow: true
                 });
+                // Quick blue-white flash on azure hit
+                if (fb.kind === "bluefireball") {
+                  try {
+                    if (window.PowerFX) window.PowerFX.burst(ox, oy, {
+                      count: 10, colors: ["#fff", "#a5f3fc"], speed: 40, life: 0.25, glow: true, radial: true
+                    });
+                  } catch (e2) {}
+                }
               } catch (e) {}
               try { creditPowerKillScore(1); } catch (e) {}
 
@@ -3873,7 +3898,7 @@ function drawFireballs() {
           ctx.fill();
         }
       }
-      // trails (azure twisting plasma)
+      // trails — deep royal outer wisps, cyan inner, jagged glowing particles
       if (fb.kind === "bluefireball" && fb.trails) {
         for (var ti = 0; ti < fb.trails.length; ti++) {
           var tr = fb.trails[ti];
@@ -3882,18 +3907,35 @@ function drawFireballs() {
           ctx.globalCompositeOperation = "lighter";
           if (tr.spark) {
             ctx.globalAlpha = ta;
-            ctx.strokeStyle = "rgba(186,230,253," + ta + ")";
-            ctx.lineWidth = 1.4;
+            ctx.fillStyle = "rgba(224,242,254," + (ta * 0.95) + ")";
+            ctx.beginPath();
+            ctx.arc(tr.x, tr.y, tr.r * 0.9, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "rgba(125,211,252," + ta + ")";
+            ctx.lineWidth = 1.2;
             ctx.beginPath();
             ctx.moveTo(tr.x, tr.y);
-            ctx.lineTo(tr.x - tr.vx * 0.04, tr.y - tr.vy * 0.04);
+            ctx.lineTo(tr.x - tr.vx * 0.05, tr.y - tr.vy * 0.05);
             ctx.stroke();
+          } else if (tr.layer === 1) {
+            // deep royal blue outer wisps
+            ctx.globalAlpha = ta * 0.55;
+            var tg = ctx.createRadialGradient(tr.x, tr.y, 0, tr.x, tr.y, tr.r * 1.6);
+            tg.addColorStop(0, "rgba(37,99,235,0.7)");
+            tg.addColorStop(0.5, "rgba(29,78,216,0.4)");
+            tg.addColorStop(1, "rgba(30,58,138,0)");
+            ctx.fillStyle = tg;
+            ctx.beginPath();
+            ctx.arc(tr.x, tr.y, tr.r * 1.5, 0, Math.PI * 2);
+            ctx.fill();
           } else {
-            ctx.globalAlpha = ta * 0.7;
-            var tg = ctx.createRadialGradient(tr.x, tr.y, 0, tr.x, tr.y, tr.r * 1.4);
-            tg.addColorStop(0, "rgba(224,242,254,0.95)");
-            tg.addColorStop(0.4, "rgba(56,189,248,0.7)");
-            tg.addColorStop(1, "rgba(2,100,200,0)");
+            // electric cyan inner flame
+            ctx.globalAlpha = ta * 0.8;
+            var tg = ctx.createRadialGradient(tr.x, tr.y, 0, tr.x, tr.y, tr.r * 1.3);
+            tg.addColorStop(0, "rgba(255,255,255,0.9)");
+            tg.addColorStop(0.25, "rgba(165,243,252,0.85)");
+            tg.addColorStop(0.6, "rgba(34,211,238,0.55)");
+            tg.addColorStop(1, "rgba(8,145,178,0)");
             ctx.fillStyle = tg;
             ctx.beginPath();
             ctx.arc(tr.x, tr.y, tr.r * 1.2, 0, Math.PI * 2);
@@ -3907,45 +3949,84 @@ function drawFireballs() {
       var rr = fb.r * (fb.finisher ? 2.8 : 2.2);
       var g = ctx.createRadialGradient(fb.x, fb.y, 0, fb.x, fb.y, rr);
       if (fb.kind === "bluefireball") {
-        // Blue fire shell + black core on tip of each projectile
+        // Superheated blue plasma comet — white/cyan core, layered blue flame, long tail
         ctx.save();
         ctx.translate(fb.x, fb.y);
         var bang = Math.atan2(fb.vy || 0, fb.vx || 1);
         ctx.rotate(bang);
-        // elongated blue fire body
         ctx.globalCompositeOperation = "lighter";
-        var gFire = ctx.createRadialGradient(0, 0, rr * 0.15, 0, 0, rr * 1.2);
-        gFire.addColorStop(0, "rgba(186,230,253,0.35)");
-        gFire.addColorStop(0.35, "rgba(56,189,248,0.9)");
-        gFire.addColorStop(0.7, "rgba(14,120,220,0.55)");
-        gFire.addColorStop(1, "rgba(2,60,140,0)");
-        ctx.fillStyle = gFire;
+
+        // Strong blue aura
+        var auraR = rr * 2.8;
+        var aura = ctx.createRadialGradient(0, 0, rr * 0.2, 0, 0, auraR);
+        aura.addColorStop(0, "rgba(56,189,248,0.35)");
+        aura.addColorStop(0.45, "rgba(37,99,235,0.2)");
+        aura.addColorStop(1, "rgba(30,64,175,0)");
+        ctx.fillStyle = aura;
         ctx.beginPath();
-        ctx.ellipse(0, 0, rr * 1.2, rr * 0.58, 0, 0, Math.PI * 2);
+        ctx.arc(0, 0, auraR, 0, Math.PI * 2);
         ctx.fill();
-        // black center orb at the tip (front of projectile)
-        ctx.globalCompositeOperation = "source-over";
-        var coreR = Math.max(3, fb.r * 0.45);
-        ctx.fillStyle = "rgba(6,8,14,0.96)";
+
+        // Outer deep royal blue wisps / comet body (stretched backward)
+        var outer = ctx.createRadialGradient(rr * 0.15, 0, 0, -rr * 0.4, 0, rr * 2.2);
+        outer.addColorStop(0, "rgba(59,130,246,0.55)");
+        outer.addColorStop(0.4, "rgba(37,99,235,0.45)");
+        outer.addColorStop(0.75, "rgba(30,64,175,0.25)");
+        outer.addColorStop(1, "rgba(15,23,42,0)");
+        ctx.fillStyle = outer;
         ctx.beginPath();
-        ctx.arc(rr * 0.35, 0, coreR, 0, Math.PI * 2);
+        ctx.ellipse(-rr * 0.35, 0, rr * 2.0, rr * 0.85, 0, 0, Math.PI * 2);
         ctx.fill();
-        // cyan rim on black core
-        ctx.strokeStyle = "rgba(125,211,252,0.95)";
-        ctx.lineWidth = 1.4;
+
+        // Medium blue layer
+        var mid = ctx.createRadialGradient(rr * 0.1, 0, 0, 0, 0, rr * 1.35);
+        mid.addColorStop(0, "rgba(34,211,238,0.7)");
+        mid.addColorStop(0.45, "rgba(14,165,233,0.55)");
+        mid.addColorStop(1, "rgba(2,132,199,0)");
+        ctx.fillStyle = mid;
         ctx.beginPath();
-        ctx.arc(rr * 0.35, 0, coreR, 0, Math.PI * 2);
-        ctx.stroke();
-        // small blue fire halo around black core
-        ctx.globalCompositeOperation = "lighter";
-        var hg = ctx.createRadialGradient(rr * 0.35, 0, coreR * 0.6, rr * 0.35, 0, coreR * 2.2);
-        hg.addColorStop(0, "rgba(56,189,248,0.0)");
-        hg.addColorStop(0.45, "rgba(56,189,248,0.55)");
-        hg.addColorStop(1, "rgba(14,100,200,0)");
-        ctx.fillStyle = hg;
-        ctx.beginPath();
-        ctx.arc(rr * 0.35, 0, coreR * 2.2, 0, Math.PI * 2);
+        ctx.ellipse(-rr * 0.1, 0, rr * 1.35, rr * 0.7, 0, 0, Math.PI * 2);
         ctx.fill();
+
+        // Electric cyan-blue tightly around core
+        var inner = ctx.createRadialGradient(rr * 0.2, 0, 0, rr * 0.15, 0, rr * 0.85);
+        inner.addColorStop(0, "rgba(165,243,252,0.95)");
+        inner.addColorStop(0.4, "rgba(34,211,238,0.8)");
+        inner.addColorStop(1, "rgba(6,182,212,0)");
+        ctx.fillStyle = inner;
+        ctx.beginPath();
+        ctx.ellipse(rr * 0.15, 0, rr * 0.85, rr * 0.55, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Nearly white / cyan-hot core (spherical front)
+        var core = ctx.createRadialGradient(rr * 0.25, 0, 0, rr * 0.25, 0, rr * 0.42);
+        core.addColorStop(0, "rgba(255,255,255,1)");
+        core.addColorStop(0.35, "rgba(224,242,254,0.98)");
+        core.addColorStop(0.7, "rgba(103,232,249,0.85)");
+        core.addColorStop(1, "rgba(34,211,238,0)");
+        ctx.fillStyle = core;
+        ctx.beginPath();
+        ctx.arc(rr * 0.25, 0, rr * 0.42, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Sharp flame tongues extending backward (jagged look)
+        ctx.globalAlpha = 0.55;
+        for (var ft = 0; ft < 3; ft++) {
+          var fy = (ft - 1) * rr * 0.28;
+          var fl = rr * (1.4 + ft * 0.15);
+          var tongue = ctx.createLinearGradient(0, fy, -fl, fy);
+          tongue.addColorStop(0, "rgba(125,211,252,0.7)");
+          tongue.addColorStop(0.5, "rgba(37,99,235,0.4)");
+          tongue.addColorStop(1, "rgba(30,64,175,0)");
+          ctx.fillStyle = tongue;
+          ctx.beginPath();
+          ctx.moveTo(rr * 0.1, fy - rr * 0.12);
+          ctx.quadraticCurveTo(-fl * 0.4, fy + (ft - 1) * 4, -fl, fy);
+          ctx.quadraticCurveTo(-fl * 0.4, fy - (ft - 1) * 4, rr * 0.1, fy + rr * 0.12);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
         ctx.restore();
       } else if (fb.kind === "greenfireball") {
         g.addColorStop(0, "rgba(220,255,230,0.95)");
