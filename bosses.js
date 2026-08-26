@@ -4610,7 +4610,10 @@ function drawFireballs() {
       // fireball / plasma blade core
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "lighter";
-      var rr = fb.r * (fb.finisher ? 2.8 : 2.2);
+      // aceOrb uses its own size (already 2× orbiters) — don't apply 2.2× again
+      var rr = (fb.kind === "aceOrb")
+        ? (fb.size || fb.r || 20)
+        : (fb.r * (fb.finisher ? 2.8 : 2.2));
       var g = ctx.createRadialGradient(fb.x, fb.y, 0, fb.x, fb.y, rr);
       if (fb.kind === "bluefireball") {
         // Superheated blue plasma comet — white/cyan core, layered blue flame, long tail
@@ -4700,26 +4703,45 @@ function drawFireballs() {
         ctx.globalAlpha = 1;
         ctx.restore();
       } else if (fb.kind === "aceOrb") {
-        // Zeppelin Ace radial shot — same look as rotating orbs
+        // Same look as Zeppelin Ace orbiting fireballs (drawOrb), 2× size
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
-        var ar = rr * 1.05;
-        var aAura = ctx.createRadialGradient(fb.x, fb.y, ar * 0.12, fb.x, fb.y, ar * 2.2);
-        aAura.addColorStop(0, "rgba(255,180,60,0.55)");
-        aAura.addColorStop(0.45, "rgba(249,115,22,0.3)");
-        aAura.addColorStop(1, "rgba(120,30,0,0)");
-        ctx.fillStyle = aAura;
-        ctx.beginPath(); ctx.arc(fb.x, fb.y, ar * 2.2, 0, Math.PI * 2); ctx.fill();
-        var aMid = ctx.createRadialGradient(fb.x - ar * 0.1, fb.y - ar * 0.1, 0, fb.x, fb.y, ar);
-        aMid.addColorStop(0, "rgba(255,255,240,1)");
-        aMid.addColorStop(0.25, "rgba(254,243,199,0.98)");
-        aMid.addColorStop(0.5, "rgba(251,191,36,0.9)");
-        aMid.addColorStop(0.8, "rgba(249,115,22,0.55)");
-        aMid.addColorStop(1, "rgba(180,40,0,0)");
-        ctx.fillStyle = aMid;
-        ctx.beginPath(); ctx.arc(fb.x, fb.y, ar, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = "rgba(255,255,255,0.95)";
-        ctx.beginPath(); ctx.arc(fb.x - ar * 0.18, fb.y - ar * 0.2, ar * 0.18, 0, Math.PI * 2); ctx.fill();
+        // trail wisps
+        if (fb.trails && fb.trails.length) {
+          for (var ti = 0; ti < fb.trails.length; ti++) {
+            var tp = fb.trails[ti];
+            var tu = 1 - tp.age / tp.life;
+            if (tu <= 0) continue;
+            ctx.globalAlpha = tu * 0.55;
+            var tsz = (fb.size || fb.r || 20) * 0.7 * tu;
+            var tg = ctx.createRadialGradient(tp.x, tp.y, 0, tp.x, tp.y, tsz * 1.2);
+            tg.addColorStop(0, "rgba(255,220,100,0.9)");
+            tg.addColorStop(0.5, "rgba(255,100,20,0.5)");
+            tg.addColorStop(1, "rgba(255,40,0,0)");
+            ctx.fillStyle = tg;
+            ctx.beginPath();
+            ctx.arc(tp.x, tp.y, tsz, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.globalAlpha = 1;
+        // body — match orbiting orb gradient + pulse
+        var sz = (fb.size || fb.r || 20) * (0.9 + 0.15 * Math.sin(performance.now() * 0.02 + (fb.phase || 0)));
+        var fg = ctx.createRadialGradient(fb.x - sz * 0.25, fb.y - sz * 0.3, 1, fb.x, fb.y, sz);
+        fg.addColorStop(0, "rgba(255,250,220,1)");
+        fg.addColorStop(0.3, "rgba(255,200,60,0.95)");
+        fg.addColorStop(0.65, "rgba(255,90,15,0.85)");
+        fg.addColorStop(1, "rgba(180,20,0,0)");
+        ctx.fillStyle = fg;
+        ctx.beginPath();
+        ctx.arc(fb.x, fb.y, sz, 0, Math.PI * 2);
+        ctx.fill();
+        // bright core (same as orbiters)
+        ctx.globalAlpha = 0.95;
+        ctx.fillStyle = "rgba(255,255,230,0.95)";
+        ctx.beginPath();
+        ctx.arc(fb.x - sz * 0.15, fb.y - sz * 0.15, sz * 0.28, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
       } else if (fb.kind === "greenfireball") {
         // Jade Voyager — large green Ace-style fireball (spherical, bright)

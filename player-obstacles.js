@@ -771,17 +771,20 @@
             var sang = (si / nShot) * Math.PI * 2 + Math.random() * 0.12;
             var ssp = 240 + Math.random() * 90; // fast enough to leave screen
             window.__airborneFireballs.push({
-              x: player.x + Math.cos(sang) * (player.w || 40) * 0.4,
-              y: player.y + Math.sin(sang) * (player.h || 30) * 0.4,
+              x: player.x + Math.cos(sang) * (player.w || 40) * 0.45,
+              y: player.y + Math.sin(sang) * (player.h || 30) * 0.45,
               vx: Math.cos(sang) * ssp,
               vy: Math.sin(sang) * ssp,
               life: 3.2, // long life so they exit the screen
               age: 0,
-              r: 12 + Math.random() * 4,
+              // 2× orbiting fireball size (orbiters are ~9–14)
+              r: 20 + Math.random() * 8,
+              size: 20 + Math.random() * 8,
+              phase: sang,
               trails: [],
               colors: ["#fff7ed", "#ffd24a", "#ff8a1a", "#ff3b00"],
               smokeCol: "rgba(50,40,30,0.85)",
-              kind: "aceOrb", // draw like rotating Ace fireballs
+              kind: "aceOrb", // same visual language as rotating Ace orbs
               pierce: 3,
               hitIds: {}
             });
