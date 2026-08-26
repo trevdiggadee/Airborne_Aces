@@ -884,74 +884,65 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       return;
     }
 
-    // Ivory Anchor — Tempest Dominion
+    // Ivory Anchor — Tempest Orbit (5 seconds)
     if (powerMode === "ivorybolt") {
       if (typeof sfxThunder === "function") sfxThunder();
-      try { if (typeof triggerScreenShake === "function") triggerScreenShake(8, 360); } catch (e) {}
+      try { if (typeof triggerScreenShake === "function") triggerScreenShake(6, 280); } catch (e) {}
+      var IVORY_SEC = 5.0;
+      var IVORY_MS = 5000;
       stormActive = true;
       stormMode = "ivorybolt";
-      stormTimer = POWER_DURATION_SEC;
+      stormTimer = IVORY_SEC;
       stormCharge = 0;
       window.__airborneActivePowerVisual = "ivorybolt";
-      window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
-      window.__airborneIvoryUntil = performance.now() + POWER_DURATION_MS;
+      window.__airborneActivePowerUntil = performance.now() + IVORY_MS;
+      window.__airborneIvoryUntil = performance.now() + IVORY_MS;
       window.__airborneIvoryBolts = [];
       window.__airborneIvoryFireballs = [];
-      var Ww0 = (typeof W === "number") ? W : 400;
-      var Hh0 = (typeof H === "number") ? H : 700;
+      // Tempest Orbit state
       window.__airborneTempest = {
         age: 0,
-        life: POWER_DURATION_SEC,
-        phase: "form",
-        strikeT: 0.25,
-        orbT: 0.4,
+        life: IVORY_SEC,
+        phase: "orbit", // orbit → intensify → supercharge → boom → after
+        seedT: 0.35,
         finaleDone: false,
+        screenFlash: 0.15,
         darkFlash: 0,
-        screenFlash: 0.2,
-        cloud: {
-          ox: 0, oy: -70,
-          w: 50, h: 28,
-          targetW: 240, targetH: 110,
-          swirl: 0,
-          follow: 0.15,
-          fx: (typeof player !== "undefined" && player) ? player.x : Ww0 * 0.3,
-          fy: (typeof player !== "undefined" && player) ? player.y : Hh0 * 0.4
-        },
-        halo: [],
-        rain: [],
+        cloudOrbs: [],
+        elecOrbs: [],
+        seeds: [],
         bolts: [],
-        orbs: [],
-        pulses: [],
-        after: []
+        webs: [],
+        vapor: [],
+        shockwave: null
       };
-      for (var hi = 0; hi < 6; hi++) {
-        window.__airborneTempest.halo.push({
-          ang: (hi / 6) * Math.PI * 2,
-          spin: 1.8 + Math.random() * 1.4,
-          dist: 30 + (hi % 3) * 10,
-          life: 0.18 + Math.random() * 0.15,
-          age: Math.random() * 0.15,
-          jump: 0,
-          points: null
+      // 4 massive dark storm-cloud orbs
+      for (var ci = 0; ci < 4; ci++) {
+        window.__airborneTempest.cloudOrbs.push({
+          ang: (ci / 4) * Math.PI * 2,
+          spin: 2.8 + Math.random() * 0.4,
+          dist: 48 + (ci % 2) * 6,
+          baseDist: 48 + (ci % 2) * 6,
+          r: 22 + Math.random() * 6,
+          pulse: Math.random() * Math.PI * 2,
+          flash: 0,
+          trail: [],
+          mode: "orbit",
+          hitIds: {}
         });
       }
-      for (var ri = 0; ri < 50; ri++) {
-        window.__airborneTempest.rain.push({
-          x: Math.random() * Ww0,
-          y: Math.random() * Hh0,
-          vy: 420 + Math.random() * 280,
-          len: 10 + Math.random() * 16
+      // 3–4 transparent electrical orbs (counter-rotate)
+      var nElec = 3 + Math.floor(Math.random() * 2);
+      for (var ei = 0; ei < nElec; ei++) {
+        window.__airborneTempest.elecOrbs.push({
+          ang: (ei / nElec) * Math.PI * 2 + 0.4,
+          spin: -(3.2 + Math.random() * 0.6), // opposite direction
+          dist: 28 + (ei % 2) * 5,
+          baseDist: 28 + (ei % 2) * 5,
+          r: 11 + Math.random() * 3,
+          arcPhase: Math.random() * Math.PI * 2,
+          mode: "orbit"
         });
-      }
-      // Opening bolts from above
-      if (typeof player !== "undefined" && player && typeof buildLightningPath === "function") {
-        for (var bi = 0; bi < 3; bi++) {
-          var bx = player.x + (Math.random() - 0.5) * 80;
-          window.__airborneTempest.bolts.push({
-            points: buildLightningPath(bx, -20, player.x + (Math.random() - 0.5) * 40, player.y - 20, 40),
-            age: 0, life: 0.3, major: true
-          });
-        }
       }
       try { if (window.PowerFX && player) window.PowerFX.activate("ivorybolt", player.x, player.y); } catch (e) {}
       updateStormMeterDisplay();
@@ -1698,7 +1689,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
     }
 
 
-    // Ivory Anchor — Tempest Dominion update
+    // Ivory Anchor — Tempest Orbit update
     if (stormMode === "ivorybolt" || window.__airborneTempest) {
       var tp = window.__airborneTempest;
       var untilIv = window.__airborneIvoryUntil || 0;
@@ -1709,248 +1700,291 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
 
       if (tp) {
         tp.age += dt;
-        if (tp.screenFlash > 0) tp.screenFlash = Math.max(0, tp.screenFlash - dt * 3.5);
-        if (tp.darkFlash > 0) tp.darkFlash = Math.max(0, tp.darkFlash - dt * 4);
+        var life = tp.life || 5;
+        var tNorm = tp.age / life;
+        if (tp.screenFlash > 0) tp.screenFlash = Math.max(0, tp.screenFlash - dt * 4);
+        if (tp.darkFlash > 0) tp.darkFlash = Math.max(0, tp.darkFlash - dt * 5);
 
-        // Moving storm cloud follows blimp
-        var cl = tp.cloud;
-        cl.swirl += dt * 1.4;
-        var expandT = Math.min(1, tp.age / 0.55);
-        cl.w += (cl.targetW * expandT - cl.w) * Math.min(1, dt * 3);
-        cl.h += (cl.targetH * expandT - cl.h) * Math.min(1, dt * 3);
-        cl.ox += (0 - cl.ox) * Math.min(1, dt * 2);
-        cl.oy += (-55 - cl.oy) * Math.min(1, dt * 2);
-        // soft follow offset
-        cl.fx = (cl.fx || px) + (px - (cl.fx || px)) * cl.follow;
-        cl.fy = (cl.fy || py) + (py - (cl.fy || py)) * cl.follow;
+        // Phase machine
+        if (tNorm < 0.7) tp.phase = "orbit";
+        else if (tNorm < 0.9) tp.phase = "intensify";
+        else if (tNorm < 0.98) tp.phase = "supercharge";
+        else tp.phase = "boom";
 
-        // Lightning halo
-        for (var hi = 0; hi < tp.halo.length; hi++) {
-          var h = tp.halo[hi];
-          h.ang += h.spin * dt;
-          h.age += dt;
-          if (h.age >= h.life) {
-            h.age = 0;
-            h.life = 0.15 + Math.random() * 0.2;
-            h.jump = Math.random() < 0.35 ? 1 : 0;
-            h.points = null;
-          }
-          if (!h.points || h.age < 0.02) {
-            var hx = px + Math.cos(h.ang) * h.dist;
-            var hy = py + Math.sin(h.ang) * h.dist * 0.7;
-            if (typeof buildLightningPath === "function") {
-              h.points = h.jump
-                ? buildLightningPath(px, py, hx, hy, 18)
-                : buildLightningPath(hx - 8, hy - 6, hx + 8, hy + 6, 12);
+        var spinMul = 1.0;
+        if (tp.phase === "intensify") spinMul = 1.55;
+        if (tp.phase === "supercharge") spinMul = 2.4;
+
+        // ---- Cloud orbs (outer) ----
+        for (var ci = 0; ci < tp.cloudOrbs.length; ci++) {
+          var co = tp.cloudOrbs[ci];
+          if (co.mode === "orbit") {
+            co.ang += co.spin * spinMul * dt;
+            co.pulse += dt * 6;
+            // Supercharge: spiral inward
+            if (tp.phase === "supercharge") {
+              co.dist = Math.max(8, co.dist - 55 * dt);
             } else {
-              h.points = [[px, py], [hx, hy]];
+              co.dist += (co.baseDist - co.dist) * Math.min(1, dt * 3);
             }
-          }
-        }
-
-        // Rain curtain
-        for (var ri = 0; ri < tp.rain.length; ri++) {
-          var rd = tp.rain[ri];
-          rd.y += rd.vy * dt;
-          if (rd.y > Hh + 20) {
-            rd.y = -20 - Math.random() * 40;
-            rd.x = Math.random() * Ww;
-          }
-        }
-        // Keep rain dense
-        if (tp.rain.length < 55 && Math.random() < 0.5) {
-          tp.rain.push({
-            x: Math.random() * Ww, y: -10,
-            vy: 450 + Math.random() * 250,
-            len: 10 + Math.random() * 14
-          });
-        }
-
-        // Periodic lightning strikes from cloud
-        tp.strikeT -= dt;
-        if (tp.strikeT <= 0 && tp.phase !== "after" && typeof obstacles !== "undefined") {
-          tp.strikeT = 0.32 + Math.random() * 0.28;
-          var cloudX = (cl.fx || px) + cl.ox + (Math.random() - 0.5) * cl.w * 0.5;
-          var cloudY = (cl.fy || py) + cl.oy + cl.h * 0.25;
-          // Prefer nearest obstacle under cloud
-          var best = null, bestD = 1e9;
-          for (var oi = 0; oi < obstacles.length; oi++) {
-            var o = obstacles[oi];
-            if (!o || o.isRing || o.type === "gold_ring" || o.type === "ring") continue;
-            if (o.powerAffected && o.onFire) continue;
-            var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
-            var d = Math.hypot(ox - cloudX, oy - cloudY);
-            if (d < bestD) { bestD = d; best = o; }
-          }
-          var tx = best ? (best.x + best.w * 0.5) : cloudX + (Math.random() - 0.5) * 80;
-          var ty = best ? (best.y + best.h * 0.5) : Math.min(Hh * 0.85, cloudY + 180 + Math.random() * 120);
-          var bolt = {
-            points: (typeof buildLightningPath === "function")
-              ? buildLightningPath(cloudX, cloudY, tx, ty, 36 + Math.random() * 24)
-              : [[cloudX, cloudY], [tx, ty]],
-            age: 0, life: 0.22 + Math.random() * 0.1,
-            major: true
-          };
-          tp.bolts.push(bolt);
-          tp.screenFlash = 0.18;
-          try { if (typeof sfxThunder === "function") sfxThunder(); } catch (e) {}
-          try { if (typeof triggerScreenShake === "function") triggerScreenShake(5, 160); } catch (e) {}
-          // Hit primary + chain
-          function zapObstacle(o, fromX, fromY, depth) {
-            if (!o || o.isRing || o.type === "gold_ring" || o.type === "ring") return;
-            if (o.powerAffected && o.onFire) return;
-            var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
-            o.onFire = true; o.powerAffected = true; o.hitFlash = 1;
-            o.vy = 90 + Math.random() * 50; o.vx = (Math.random() - 0.5) * 70;
-            o.spinVel = (Math.random() - 0.5) * 12; o.scored = true;
-            try { creditPowerKillScore(1); } catch (e) {}
-            // Thunder pulse shockwave
-            tp.pulses.push({ x: ox, y: oy, age: 0, life: 0.35, maxR: 55 + Math.random() * 30 });
-            if (depth < 2) {
-              for (var ci = 0; ci < obstacles.length; ci++) {
-                var co = obstacles[ci];
-                if (!co || co === o || co.isRing) continue;
-                if (co.powerAffected && co.onFire) continue;
-                var cx = co.x + co.w * 0.5, cy = co.y + co.h * 0.5;
-                if (Math.hypot(cx - ox, cy - oy) < 95) {
-                  tp.bolts.push({
-                    points: (typeof buildLightningPath === "function")
-                      ? buildLightningPath(ox, oy, cx, cy, 22)
-                      : [[ox, oy], [cx, cy]],
-                    age: 0, life: 0.15, major: false
-                  });
-                  zapObstacle(co, ox, oy, depth + 1);
-                }
+            co.x = px + Math.cos(co.ang) * co.dist;
+            co.y = py + Math.sin(co.ang) * co.dist * 0.72;
+            // Internal lightning flash
+            if (Math.random() < 0.04 * spinMul) co.flash = 0.25 + Math.random() * 0.2;
+            if (co.flash > 0) co.flash = Math.max(0, co.flash - dt * 3);
+            // Vapor trail
+            if (!co.trail) co.trail = [];
+            if ((co._ts = !co._ts)) {
+              co.trail.push({ x: co.x, y: co.y, age: 0, life: 0.28, r: co.r * 0.5 });
+              if (co.trail.length > 7) co.trail.shift();
+            }
+            for (var ti = co.trail.length - 1; ti >= 0; ti--) {
+              co.trail[ti].age += dt;
+              if (co.trail[ti].age >= co.trail[ti].life) co.trail.splice(ti, 1);
+            }
+            // Damage on contact
+            if (typeof obstacles !== "undefined") {
+              if (!co.hitIds) co.hitIds = {};
+              for (var hi = 0; hi < obstacles.length; hi++) {
+                var o = obstacles[hi];
+                if (!o || o.isRing || o.type === "gold_ring" || o.type === "ring") continue;
+                if (o.powerAffected && o.onFire) continue;
+                var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
+                if (Math.hypot(co.x - ox, co.y - oy) > co.r * 1.2 + Math.max(o.w, o.h) * 0.35) continue;
+                var oid = o._uid || (o._uid = "tc" + Math.random().toString(36).slice(2));
+                if (co.hitIds[oid]) continue;
+                co.hitIds[oid] = true;
+                o.onFire = true; o.powerAffected = true; o.hitFlash = 0.8;
+                o.vy = 80 + Math.random() * 40; o.vx = (Math.random() - 0.5) * 70;
+                o.scored = true;
+                try { creditPowerKillScore(1); } catch (e) {}
               }
             }
           }
-          if (best) zapObstacle(best, cloudX, cloudY, 0);
-          // Pulse push nearby
-          for (var pi = 0; pi < obstacles.length; pi++) {
-            var po = obstacles[pi];
-            if (!po || po.isRing) continue;
-            var pox = po.x + po.w * 0.5, poy = po.y + po.h * 0.5;
-            var pd = Math.hypot(pox - tx, poy - ty);
-            if (pd < 70 && !(po.powerAffected && po.onFire)) {
-              po.vx = ((pox - tx) / (pd || 1)) * 120;
-              po.vy = ((poy - ty) / (pd || 1)) * 80 - 30;
+        }
+
+        // ---- Electrical orbs (inner, counter-rotate) ----
+        for (var ei = 0; ei < tp.elecOrbs.length; ei++) {
+          var eo = tp.elecOrbs[ei];
+          if (eo.mode === "orbit") {
+            eo.ang += eo.spin * spinMul * dt;
+            eo.arcPhase += dt * 10;
+            if (tp.phase === "supercharge") {
+              eo.dist = Math.max(4, eo.dist - 40 * dt);
+            } else {
+              eo.dist += (eo.baseDist - eo.dist) * Math.min(1, dt * 3);
             }
+            eo.x = px + Math.cos(eo.ang) * eo.dist;
+            eo.y = py + Math.sin(eo.ang) * eo.dist * 0.7;
           }
         }
 
-        // Storm projectiles — lightning orbs from cloud
-        tp.orbT -= dt;
-        if (tp.orbT <= 0 && tp.phase !== "finale" && tp.phase !== "after") {
-          tp.orbT = 0.45 + Math.random() * 0.25;
-          var cox = (cl.fx || px) + cl.ox;
-          var coy = (cl.fy || py) + cl.oy + 10;
-          tp.orbs.push({
-            x: cox, y: coy,
-            vx: 200 + Math.random() * 80,
-            vy: (Math.random() - 0.5) * 60,
-            age: 0, life: 2.2, r: 7 + Math.random() * 3,
-            hitIds: {}
-          });
+        // ---- Lightning Seeds ----
+        var seedRate = (tp.phase === "intensify") ? 0.22 : 0.38;
+        if (tp.phase === "supercharge") seedRate = 0.16;
+        if (tp.phase === "orbit" || tp.phase === "intensify" || tp.phase === "supercharge") {
+          tp.seedT -= dt;
+          if (tp.seedT <= 0) {
+            tp.seedT = seedRate + Math.random() * 0.1;
+            // Form at electrical aura, launch forward
+            tp.seeds.push({
+              x: px + (typeof player !== "undefined" && player ? (player.w || 40) * 0.15 : 10),
+              y: py,
+              vx: 0, vy: 0,
+              age: 0,
+              life: 2.4,
+              r: 5,
+              phase: "form", // form → fly → web
+              formT: 0.12,
+              hitIds: {},
+              tendrils: []
+            });
+            try { if (typeof sfxShoot === "function") sfxShoot(); } catch (e) {}
+          }
         }
-        for (var oi = tp.orbs.length - 1; oi >= 0; oi--) {
-          var orb = tp.orbs[oi];
-          orb.age += dt;
-          orb.x += orb.vx * dt;
-          orb.y += orb.vy * dt;
-          if (typeof obstacles !== "undefined") {
-            for (var hi2 = 0; hi2 < obstacles.length; hi2++) {
-              var oo = obstacles[hi2];
-              if (!oo || oo.isRing || oo.type === "gold_ring") continue;
-              if (oo.powerAffected && oo.onFire) continue;
-              var oox = oo.x + oo.w * 0.5, ooy = oo.y + oo.h * 0.5;
-              if (Math.hypot(orb.x - oox, orb.y - ooy) > orb.r * 1.5 + Math.max(oo.w, oo.h) * 0.35) continue;
-              var id = oo._uid || (oo._uid = "iv" + Math.random().toString(36).slice(2));
-              if (orb.hitIds[id]) continue;
-              orb.hitIds[id] = true;
-              oo.onFire = true; oo.powerAffected = true; oo.hitFlash = 0.8;
-              oo.vy = 70 + Math.random() * 40; oo.vx = (Math.random() - 0.5) * 60;
-              oo.scored = true;
-              try { creditPowerKillScore(1); } catch (e) {}
-              // Branch arcs
-              tp.bolts.push({
-                points: (typeof buildLightningPath === "function")
-                  ? buildLightningPath(orb.x, orb.y, oox, ooy, 16)
-                  : [[orb.x, orb.y], [oox, ooy]],
-                age: 0, life: 0.12, major: false
+        for (var si = tp.seeds.length - 1; si >= 0; si--) {
+          var sd = tp.seeds[si];
+          sd.age += dt;
+          if (sd.phase === "form") {
+            sd.r = 3 + (sd.age / sd.formT) * 5;
+            if (sd.age >= sd.formT) {
+              sd.phase = "fly";
+              sd.vx = 260 + Math.random() * 70;
+              sd.vy = (Math.random() - 0.5) * 50;
+              sd.r = 6 + Math.random() * 2;
+            }
+          } else if (sd.phase === "fly") {
+            sd.x += sd.vx * dt;
+            sd.y += sd.vy * dt;
+            // Branching tendrils along path
+            if (Math.random() < 0.35) {
+              var ta = (Math.random() - 0.5) * 1.2;
+              sd.tendrils.push({
+                x: sd.x, y: sd.y,
+                ang: ta,
+                len: 8 + Math.random() * 14,
+                age: 0, life: 0.15
               });
             }
+            for (var tti = sd.tendrils.length - 1; tti >= 0; tti--) {
+              sd.tendrils[tti].age += dt;
+              if (sd.tendrils[tti].age >= sd.tendrils[tti].life) sd.tendrils.splice(tti, 1);
+            }
+            // Hit obstacles → lightning web
+            if (typeof obstacles !== "undefined") {
+              for (var hi = 0; hi < obstacles.length; hi++) {
+                var o = obstacles[hi];
+                if (!o || o.isRing || o.type === "gold_ring" || o.type === "ring") continue;
+                if (o.powerAffected && o.onFire) continue;
+                var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
+                if (Math.hypot(sd.x - ox, sd.y - oy) > sd.r * 1.8 + Math.max(o.w, o.h) * 0.35) continue;
+                // Web explosion
+                var web = { nodes: [{ x: ox, y: oy, o: o }], age: 0, life: 0.45 };
+                o.onFire = true; o.powerAffected = true; o.hitFlash = 1;
+                o.vy = 90 + Math.random() * 50; o.vx = (Math.random() - 0.5) * 80;
+                o.scored = true;
+                try { creditPowerKillScore(1); } catch (e) {}
+                // Chain sequential strikes
+                var chainTargets = [];
+                for (var ci2 = 0; ci2 < obstacles.length; ci2++) {
+                  var co2 = obstacles[ci2];
+                  if (!co2 || co2 === o || co2.isRing) continue;
+                  if (co2.powerAffected && co2.onFire) continue;
+                  var cx = co2.x + co2.w * 0.5, cy = co2.y + co2.h * 0.5;
+                  if (Math.hypot(cx - ox, cy - oy) < 110) chainTargets.push(co2);
+                }
+                chainTargets.sort(function (a, b) {
+                  var ax = a.x + a.w * 0.5, ay = a.y + a.h * 0.5;
+                  var bx = b.x + b.w * 0.5, by = b.y + b.h * 0.5;
+                  return Math.hypot(ax - ox, ay - oy) - Math.hypot(bx - ox, by - oy);
+                });
+                for (var cti = 0; cti < Math.min(3, chainTargets.length); cti++) {
+                  var ct = chainTargets[cti];
+                  var ctx_ = ct.x + ct.w * 0.5, cty = ct.y + ct.h * 0.5;
+                  web.nodes.push({ x: ctx_, y: cty, o: ct });
+                  ct.onFire = true; ct.powerAffected = true; ct.hitFlash = 0.85;
+                  ct.vy = 70 + Math.random() * 40; ct.vx = (Math.random() - 0.5) * 60;
+                  ct.scored = true;
+                  try { creditPowerKillScore(1); } catch (e) {}
+                  if (typeof buildLightningPath === "function") {
+                    tp.bolts.push({
+                      points: buildLightningPath(ox, oy, ctx_, cty, 20),
+                      age: 0, life: 0.2 + cti * 0.05, major: false
+                    });
+                  }
+                }
+                // Radial web tendrils
+                for (var wi = 0; wi < 6; wi++) {
+                  var wa = (wi / 6) * Math.PI * 2 + Math.random() * 0.3;
+                  var wl = 40 + Math.random() * 35;
+                  if (typeof buildLightningPath === "function") {
+                    tp.bolts.push({
+                      points: buildLightningPath(ox, oy, ox + Math.cos(wa) * wl, oy + Math.sin(wa) * wl, 16),
+                      age: 0, life: 0.18, major: false
+                    });
+                  }
+                }
+                tp.webs.push(web);
+                tp.screenFlash = Math.max(tp.screenFlash, 0.12);
+                try { if (typeof sfxThunder === "function") sfxThunder(); } catch (e) {}
+                sd.phase = "done";
+                break;
+              }
+            }
+            if (sd.x > Ww + 60 || sd.age >= sd.life) sd.phase = "done";
           }
-          if (orb.age >= orb.life || orb.x > Ww + 40) tp.orbs.splice(oi, 1);
+          if (sd.phase === "done") tp.seeds.splice(si, 1);
         }
 
-        // Age bolts and pulses
+        // Age bolts / webs
         for (var bi = tp.bolts.length - 1; bi >= 0; bi--) {
           tp.bolts[bi].age += dt;
           if (tp.bolts[bi].age >= tp.bolts[bi].life) tp.bolts.splice(bi, 1);
         }
-        for (var pui = tp.pulses.length - 1; pui >= 0; pui--) {
-          tp.pulses[pui].age += dt;
-          if (tp.pulses[pui].age >= tp.pulses[pui].life) tp.pulses.splice(pui, 1);
+        for (var wi = tp.webs.length - 1; wi >= 0; wi--) {
+          tp.webs[wi].age += dt;
+          if (tp.webs[wi].age >= tp.webs[wi].life) tp.webs.splice(wi, 1);
         }
 
-        // Finale
-        var left = untilIv - performance.now();
-        if (!tp.finaleDone && left < 550 && left > 0) {
+        // ---- Final boom ----
+        if (!tp.finaleDone && (tp.phase === "boom" || (untilIv - performance.now()) < 120)) {
           tp.finaleDone = true;
-          tp.phase = "finale";
-          tp.darkFlash = 0.25;
-          // Contract cloud
-          cl.targetW = 50; cl.targetH = 30;
-          // Giant vertical bolt
-          var cx = px;
-          tp.bolts.push({
-            points: (typeof buildLightningPath === "function")
-              ? buildLightningPath(cx, -30, cx + (Math.random() - 0.5) * 20, Hh + 30, 55)
-              : [[cx, -30], [cx, Hh + 30]],
-            age: 0, life: 0.45, major: true, final: true
-          });
-          tp.screenFlash = 0.4;
+          tp.screenFlash = 0.55;
+          tp.darkFlash = 0.12;
           try { if (typeof sfxThunder === "function") sfxThunder(); } catch (e) {}
-          try { if (typeof triggerScreenShake === "function") triggerScreenShake(14, 450); } catch (e) {}
-          // Wipe remaining hazards
-          if (typeof obstacles !== "undefined") {
-            for (var wi = 0; wi < obstacles.length; wi++) {
-              var wo = obstacles[wi];
-              if (!wo || wo.isRing || wo.type === "gold_ring") continue;
-              wo.onFire = true; wo.powerAffected = true; wo.hitFlash = 1;
-              wo.vy = 110 + Math.random() * 60; wo.vx = (Math.random() - 0.5) * 100;
-              wo.scored = true;
-              try { creditPowerKillScore(1); } catch (e) {}
+          try { if (typeof sfxExplosion === "function") sfxExplosion(0.6); } catch (e) {}
+          try { if (typeof triggerScreenShake === "function") triggerScreenShake(14, 420); } catch (e) {}
+          tp.shockwave = {
+            x: px, y: py, age: 0, life: 0.7,
+            maxR: Math.max(Ww, Hh) * 0.7
+          };
+          // Multiple branching bolts across screen
+          for (var fi = 0; fi < 8; fi++) {
+            var fa = (fi / 8) * Math.PI * 2 + Math.random() * 0.2;
+            var fl = Math.max(Ww, Hh) * 0.55;
+            if (typeof buildLightningPath === "function") {
+              tp.bolts.push({
+                points: buildLightningPath(px, py, px + Math.cos(fa) * fl, py + Math.sin(fa) * fl, 40),
+                age: 0, life: 0.4, major: true
+              });
             }
           }
-          // Aftershock branches
-          for (var ai = 0; ai < 6; ai++) {
-            var ax = Math.random() * Ww;
-            tp.after.push({
-              points: (typeof buildLightningPath === "function")
-                ? buildLightningPath(ax, Math.random() * Hh * 0.3, ax + (Math.random() - 0.5) * 40, Math.random() * Hh)
-                : [[ax, 0], [ax, Hh]],
-              age: 0, life: 0.5 + Math.random() * 0.3
+          // Vertical main bolt
+          if (typeof buildLightningPath === "function") {
+            tp.bolts.push({
+              points: buildLightningPath(px, -20, px + (Math.random() - 0.5) * 30, Hh + 20, 55),
+              age: 0, life: 0.45, major: true
             });
           }
+          // Vaporize cloud orbs into vapor puffs
+          for (var vi = 0; vi < tp.cloudOrbs.length; vi++) {
+            var vo = tp.cloudOrbs[vi];
+            for (var vj = 0; vj < 5; vj++) {
+              var va = Math.random() * Math.PI * 2;
+              tp.vapor.push({
+                x: vo.x || px, y: vo.y || py,
+                vx: Math.cos(va) * (40 + Math.random() * 60),
+                vy: Math.sin(va) * (30 + Math.random() * 50) - 20,
+                age: 0, life: 0.5 + Math.random() * 0.3,
+                r: 10 + Math.random() * 14
+              });
+            }
+            vo.mode = "done";
+          }
+          for (var ei2 = 0; ei2 < tp.elecOrbs.length; ei2++) tp.elecOrbs[ei2].mode = "done";
+          // Blast damage
+          if (typeof obstacles !== "undefined") {
+            for (var oi = 0; oi < obstacles.length; oi++) {
+              var bo = obstacles[oi];
+              if (!bo || bo.isRing || bo.type === "gold_ring") continue;
+              var bx = bo.x + bo.w * 0.5, by = bo.y + bo.h * 0.5;
+              if (Math.hypot(bx - px, by - py) < tp.shockwave.maxR * 0.9) {
+                bo.onFire = true; bo.powerAffected = true; bo.hitFlash = 1;
+                bo.vy = 100 + Math.random() * 60; bo.vx = (Math.random() - 0.5) * 110;
+                bo.scored = true;
+                try { creditPowerKillScore(1); } catch (e) {}
+              }
+            }
+          }
         }
-        if (tp.phase === "finale" && left < 200) tp.phase = "after";
-        for (var ai2 = tp.after.length - 1; ai2 >= 0; ai2--) {
-          tp.after[ai2].age += dt;
-          if (tp.after[ai2].age >= tp.after[ai2].life) tp.after.splice(ai2, 1);
+        if (tp.shockwave) {
+          tp.shockwave.age += dt;
+          if (tp.shockwave.age >= tp.shockwave.life) tp.shockwave = null;
+        }
+        for (var vpi = (tp.vapor || []).length - 1; vpi >= 0; vpi--) {
+          var vp = tp.vapor[vpi];
+          vp.age += dt; vp.x += vp.vx * dt; vp.y += vp.vy * dt; vp.r += 25 * dt;
+          if (vp.age >= vp.life) tp.vapor.splice(vpi, 1);
         }
       }
 
-      if (untilIv && performance.now() > untilIv) {
-        if (tp && tp.after && tp.after.length) {
-          // let aftershock finish briefly
-        } else {
-          stormActive = false;
-          stormMode = "storm";
-          window.__airborneTempest = null;
-          window.__airborneIvoryUntil = 0;
-          window.__airborneActivePowerVisual = null;
-        }
+      if (untilIv && performance.now() > untilIv + 400) {
+        stormActive = false;
+        stormMode = "storm";
+        window.__airborneTempest = null;
+        window.__airborneIvoryUntil = 0;
+        window.__airborneActivePowerVisual = null;
+        window.__airborneActivePowerUntil = 0;
       }
     }
 
@@ -4390,155 +4424,226 @@ if (window.__airbornePlasmaIgnite) {
     var Ww = (typeof W === "number") ? W : 400;
     var Hh = (typeof H === "number") ? H : 700;
     try {
-      if (typeof updatePowerFade === "function") updatePowerFade(window.__airborneActivePowerUntil || window.__airborneIvoryUntil);
+      if (typeof updatePowerFade === "function")
+        updatePowerFade(window.__airborneActivePowerUntil || window.__airborneIvoryUntil);
     } catch (e) {}
     var pf = (typeof window.__airbornePowerFade === "number") ? window.__airbornePowerFade : 1;
     ctx.save();
     ctx.globalAlpha = Math.max(0.05, pf);
 
-    // Dark flash (finale)
+    // Dark flash
     if (tp.darkFlash > 0) {
-      ctx.globalAlpha = Math.min(0.85, tp.darkFlash * 3) * pf;
+      ctx.globalAlpha = Math.min(0.7, tp.darkFlash * 4) * pf;
       ctx.fillStyle = "#02040a";
       ctx.fillRect(0, 0, Ww, Hh);
       ctx.globalAlpha = Math.max(0.05, pf);
     }
 
-    // Rain
-    ctx.strokeStyle = "rgba(190,210,240,0.55)";
-    ctx.lineWidth = 1.5;
-    for (var ri = 0; ri < tp.rain.length; ri++) {
-      var rd = tp.rain[ri];
-      ctx.beginPath();
-      ctx.moveTo(rd.x, rd.y);
-      ctx.lineTo(rd.x - 2, rd.y + rd.len);
-      ctx.stroke();
+    // ---- Cloud orb vapor trails ----
+    ctx.globalCompositeOperation = "source-over";
+    for (var ci = 0; ci < (tp.cloudOrbs || []).length; ci++) {
+      var co = tp.cloudOrbs[ci];
+      if (co.mode === "done") continue;
+      (co.trail || []).forEach(function (tr) {
+        var u = 1 - tr.age / tr.life;
+        ctx.globalAlpha = u * 0.35 * pf;
+        var tg = ctx.createRadialGradient(tr.x, tr.y, 0, tr.x, tr.y, tr.r * 1.5);
+        tg.addColorStop(0, "rgba(60,65,80,0.7)");
+        tg.addColorStop(1, "rgba(20,22,30,0)");
+        ctx.fillStyle = tg;
+        ctx.beginPath();
+        ctx.arc(tr.x, tr.y, tr.r * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
     }
 
-    // Storm cloud
-    var cl = tp.cloud;
-    var cx = (cl.fx || px) + cl.ox;
-    var cy = (cl.fy || py) + cl.oy;
-    ctx.globalCompositeOperation = "source-over";
-    // multi-blob cloud
-    for (var ci = 0; ci < 7; ci++) {
-      var ca = cl.swirl + ci * 0.9;
-      var bx = cx + Math.cos(ca) * cl.w * 0.28;
-      var by = cy + Math.sin(ca * 1.3) * cl.h * 0.22;
-      var br = cl.w * (0.22 + (ci % 3) * 0.06);
-      var cg = ctx.createRadialGradient(bx, by - br * 0.2, 0, bx, by, br);
-      cg.addColorStop(0, "rgba(90,100,130,0.9)");
-      cg.addColorStop(0.45, "rgba(45,50,75,0.85)");
-      cg.addColorStop(1, "rgba(15,18,30,0)");
-      ctx.fillStyle = cg;
+    // ---- 4 Dark storm-cloud orbs ----
+    for (var ci = 0; ci < (tp.cloudOrbs || []).length; ci++) {
+      var co = tp.cloudOrbs[ci];
+      if (co.mode === "done" || co.x == null) continue;
+      ctx.globalAlpha = pf;
+      var pulse = 0.9 + 0.1 * Math.sin(co.pulse || 0);
+      var rr = co.r * pulse;
+      // Multi-lobe charcoal cloud
+      for (var li = 0; li < 5; li++) {
+        var la = (li / 5) * Math.PI * 2 + (co.ang || 0) * 0.5;
+        var lx = co.x + Math.cos(la) * rr * 0.35;
+        var ly = co.y + Math.sin(la) * rr * 0.3;
+        var lr = rr * (0.55 + (li % 3) * 0.12);
+        var cg = ctx.createRadialGradient(lx, ly - lr * 0.15, 0, lx, ly, lr);
+        cg.addColorStop(0, "rgba(55,60,75,0.95)");
+        cg.addColorStop(0.5, "rgba(30,33,45,0.85)");
+        cg.addColorStop(1, "rgba(12,14,20,0)");
+        ctx.fillStyle = cg;
+        ctx.beginPath();
+        ctx.arc(lx, ly, lr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Internal lightning flash
+      if (co.flash > 0) {
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = co.flash * pf;
+        var fg = ctx.createRadialGradient(co.x, co.y, 0, co.x, co.y, rr * 0.8);
+        fg.addColorStop(0, "rgba(220,235,255,0.95)");
+        fg.addColorStop(0.4, "rgba(140,180,255,0.5)");
+        fg.addColorStop(1, "rgba(60,100,200,0)");
+        ctx.fillStyle = fg;
+        ctx.beginPath();
+        ctx.arc(co.x, co.y, rr * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalCompositeOperation = "source-over";
+        ctx.globalAlpha = pf;
+      }
+    }
+
+    // ---- Transparent electrical orbs (counter-rotating) ----
+    ctx.globalCompositeOperation = "lighter";
+    for (var ei = 0; ei < (tp.elecOrbs || []).length; ei++) {
+      var eo = tp.elecOrbs[ei];
+      if (eo.mode === "done" || eo.x == null) continue;
+      ctx.globalAlpha = 0.55 * pf;
+      // Translucent sphere field
+      var eg = ctx.createRadialGradient(eo.x, eo.y, 0, eo.x, eo.y, eo.r * 1.6);
+      eg.addColorStop(0, "rgba(200,230,255,0.35)");
+      eg.addColorStop(0.5, "rgba(120,180,255,0.2)");
+      eg.addColorStop(1, "rgba(40,100,200,0)");
+      ctx.fillStyle = eg;
       ctx.beginPath();
-      ctx.arc(bx, by, br, 0, Math.PI * 2);
+      ctx.arc(eo.x, eo.y, eo.r * 1.6, 0, Math.PI * 2);
       ctx.fill();
-    }
-    // Internal lightning glow in cloud
-    ctx.globalCompositeOperation = "lighter";
-    var flash = 0.3 + 0.7 * Math.max(tp.screenFlash || 0, 0);
-    var ig = ctx.createRadialGradient(cx, cy, 0, cx, cy, cl.w * 0.4);
-    ig.addColorStop(0, "rgba(200,220,255," + (0.35 * flash) + ")");
-    ig.addColorStop(1, "rgba(80,100,180,0)");
-    ctx.fillStyle = ig;
-    ctx.beginPath();
-    ctx.arc(cx, cy, cl.w * 0.4, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Storm aura around blimp
-    var auraR = 50 + Math.sin(tp.age * 4) * 6;
-    var ag = ctx.createRadialGradient(px, py, 10, px, py, auraR);
-    ag.addColorStop(0, "rgba(100,130,200,0.25)");
-    ag.addColorStop(0.6, "rgba(40,50,90,0.2)");
-    ag.addColorStop(1, "rgba(10,15,30,0)");
-    ctx.globalCompositeOperation = "source-over";
-    ctx.fillStyle = ag;
-    ctx.beginPath();
-    ctx.arc(px, py, auraR, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Halo arcs
-    ctx.globalCompositeOperation = "lighter";
-    for (var hi = 0; hi < tp.halo.length; hi++) {
-      var h = tp.halo[hi];
-      if (!h.points || !h.points.length) continue;
-      var ht = 1 - h.age / h.life;
-      ctx.globalAlpha = ht * 0.85 * pf;
-      ctx.strokeStyle = "rgba(200,220,255,1)";
-      ctx.lineWidth = 1.5 + ht;
+      // Surface lightning ring
+      ctx.globalAlpha = 0.7 * pf;
+      ctx.strokeStyle = "rgba(200,230,255,0.85)";
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
-      ctx.moveTo(h.points[0][0], h.points[0][1]);
-      for (var pi = 1; pi < h.points.length; pi++) ctx.lineTo(h.points[pi][0], h.points[pi][1]);
+      ctx.arc(eo.x, eo.y, eo.r * (0.85 + 0.1 * Math.sin(eo.arcPhase)), 0, Math.PI * 2);
       ctx.stroke();
-      ctx.strokeStyle = "rgba(255,255,255,0.7)";
-      ctx.lineWidth = 0.7;
-      ctx.stroke();
+      // Traveling arcs on surface
+      for (var ai = 0; ai < 3; ai++) {
+        var aa = eo.arcPhase + ai * 2.1;
+        var ax1 = eo.x + Math.cos(aa) * eo.r * 0.7;
+        var ay1 = eo.y + Math.sin(aa) * eo.r * 0.7;
+        var ax2 = eo.x + Math.cos(aa + 0.9) * eo.r * 0.75;
+        var ay2 = eo.y + Math.sin(aa + 0.9) * eo.r * 0.75;
+        ctx.strokeStyle = "rgba(255,255,255,0.75)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(ax1, ay1);
+        ctx.lineTo(ax2, ay2);
+        ctx.stroke();
+      }
     }
 
-    // Bolts
+    // ---- Lightning Seeds ----
+    for (var si = 0; si < (tp.seeds || []).length; si++) {
+      var sd = tp.seeds[si];
+      if (sd.phase === "done") continue;
+      ctx.globalCompositeOperation = "lighter";
+      if (sd.phase === "form") {
+        var ft = Math.min(1, sd.age / (sd.formT || 0.12));
+        ctx.globalAlpha = ft * pf;
+        var sg = ctx.createRadialGradient(sd.x, sd.y, 0, sd.x, sd.y, sd.r * 2.5);
+        sg.addColorStop(0, "rgba(255,255,255,1)");
+        sg.addColorStop(0.4, "rgba(180,210,255,0.8)");
+        sg.addColorStop(1, "rgba(60,120,220,0)");
+        ctx.fillStyle = sg;
+        ctx.beginPath();
+        ctx.arc(sd.x, sd.y, sd.r * 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        // Flying seed + tendrils
+        ctx.globalAlpha = pf;
+        var sg2 = ctx.createRadialGradient(sd.x, sd.y, 0, sd.x, sd.y, sd.r * 2);
+        sg2.addColorStop(0, "rgba(255,255,255,1)");
+        sg2.addColorStop(0.35, "rgba(200,225,255,0.9)");
+        sg2.addColorStop(1, "rgba(80,130,220,0)");
+        ctx.fillStyle = sg2;
+        ctx.beginPath();
+        ctx.arc(sd.x, sd.y, sd.r * 2, 0, Math.PI * 2);
+        ctx.fill();
+        // Dragged storm tendrils
+        (sd.tendrils || []).forEach(function (td) {
+          var tu = 1 - td.age / td.life;
+          ctx.globalAlpha = tu * 0.7 * pf;
+          ctx.strokeStyle = "rgba(180,210,255,0.9)";
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(td.x, td.y);
+          ctx.lineTo(td.x - Math.cos(td.ang) * td.len, td.y - Math.sin(td.ang) * td.len);
+          ctx.stroke();
+        });
+      }
+    }
+
+    // ---- Bolts / web arcs ----
+    ctx.globalCompositeOperation = "lighter";
     function strokeBolt(pts, major, u) {
       if (!pts || pts.length < 2) return;
       ctx.globalAlpha = u * pf;
-      ctx.strokeStyle = major ? "rgba(220,235,255,1)" : "rgba(160,190,255,0.9)";
-      ctx.lineWidth = major ? 3.5 : 1.8;
+      ctx.strokeStyle = major ? "rgba(230,240,255,1)" : "rgba(160,200,255,0.9)";
+      ctx.lineWidth = major ? 3.2 : 1.6;
       ctx.beginPath();
       ctx.moveTo(pts[0][0], pts[0][1]);
       for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
       ctx.stroke();
       ctx.strokeStyle = "rgba(255,255,255,0.85)";
-      ctx.lineWidth = major ? 1.4 : 0.7;
+      ctx.lineWidth = major ? 1.2 : 0.6;
       ctx.stroke();
     }
-    ctx.globalCompositeOperation = "lighter";
-    for (var bi = 0; bi < tp.bolts.length; bi++) {
+    for (var bi = 0; bi < (tp.bolts || []).length; bi++) {
       var b = tp.bolts[bi];
-      var bu = Math.max(0, 1 - b.age / b.life);
-      strokeBolt(b.points, b.major, bu);
-    }
-    for (var ai = 0; ai < (tp.after || []).length; ai++) {
-      var a = tp.after[ai];
-      var au = Math.max(0, 1 - a.age / a.life) * 0.6;
-      strokeBolt(a.points, false, au);
+      strokeBolt(b.points, b.major, Math.max(0, 1 - b.age / b.life));
     }
 
-    // Thunder pulses
-    for (var pui = 0; pui < tp.pulses.length; pui++) {
-      var pu = tp.pulses[pui];
-      var put = Math.max(0, 1 - pu.age / pu.life);
-      var pr = pu.maxR * (1 - put * 0.2) * (pu.age / pu.life + 0.15);
-      ctx.globalAlpha = put * 0.5 * pf;
-      ctx.strokeStyle = "rgba(180,210,255,0.9)";
-      ctx.lineWidth = 2.5 * put;
+    // ---- Shockwave ----
+    if (tp.shockwave) {
+      var sw = tp.shockwave;
+      var st = Math.max(0, 1 - sw.age / sw.life);
+      var expand = 1 - Math.pow(1 - Math.min(1, sw.age / (sw.life * 0.45)), 2);
+      var sr = 20 + expand * sw.maxR;
+      ctx.globalAlpha = st * st * pf;
+      var swg = ctx.createRadialGradient(sw.x, sw.y, 0, sw.x, sw.y, sr);
+      swg.addColorStop(0, "rgba(255,255,255,0.9)");
+      swg.addColorStop(0.25, "rgba(180,210,255,0.55)");
+      swg.addColorStop(0.55, "rgba(80,140,220,0.25)");
+      swg.addColorStop(1, "rgba(20,60,140,0)");
+      ctx.fillStyle = swg;
       ctx.beginPath();
-      ctx.arc(pu.x, pu.y, pr, 0, Math.PI * 2);
+      ctx.arc(sw.x, sw.y, sr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(220,235,255," + (st * 0.8) + ")";
+      ctx.lineWidth = 4 * st;
+      ctx.beginPath();
+      ctx.arc(sw.x, sw.y, sr * 0.9, 0, Math.PI * 2);
       ctx.stroke();
     }
 
-    // Lightning orbs
-    for (var oi = 0; oi < tp.orbs.length; oi++) {
-      var orb = tp.orbs[oi];
-      ctx.globalAlpha = pf;
-      var og = ctx.createRadialGradient(orb.x, orb.y, 0, orb.x, orb.y, orb.r * 2);
-      og.addColorStop(0, "rgba(255,255,255,1)");
-      og.addColorStop(0.4, "rgba(160,200,255,0.9)");
-      og.addColorStop(1, "rgba(40,80,180,0)");
-      ctx.fillStyle = og;
+    // ---- Vapor after cloud explode ----
+    ctx.globalCompositeOperation = "source-over";
+    for (var vi = 0; vi < (tp.vapor || []).length; vi++) {
+      var vp = tp.vapor[vi];
+      var vu = 1 - vp.age / vp.life;
+      ctx.globalAlpha = vu * 0.4 * pf;
+      var vg = ctx.createRadialGradient(vp.x, vp.y, 0, vp.x, vp.y, vp.r);
+      vg.addColorStop(0, "rgba(90,95,110,0.7)");
+      vg.addColorStop(1, "rgba(30,32,40,0)");
+      ctx.fillStyle = vg;
       ctx.beginPath();
-      ctx.arc(orb.x, orb.y, orb.r * 2, 0, Math.PI * 2);
+      ctx.arc(vp.x, vp.y, vp.r, 0, Math.PI * 2);
       ctx.fill();
     }
 
     // Screen flash
     if (tp.screenFlash > 0) {
       ctx.globalCompositeOperation = "screen";
-      ctx.globalAlpha = Math.min(0.55, tp.screenFlash * 2.5) * pf;
+      ctx.globalAlpha = Math.min(0.6, tp.screenFlash * 2.2) * pf;
       ctx.fillStyle = "#e8f0ff";
       ctx.fillRect(0, 0, Ww, Hh);
     }
 
     ctx.restore();
   }
+
 
   function drawSunBurst() {
     var list = window.__airborneSunBurst;
