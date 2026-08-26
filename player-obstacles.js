@@ -770,21 +770,23 @@
           for (var si = 0; si < nShot; si++) {
             var sang = (si / nShot) * Math.PI * 2 + Math.random() * 0.12;
             var ssp = 240 + Math.random() * 90; // fast enough to leave screen
+            var isGreen = window.__airborneFirePowerTint === "green";
             window.__airborneFireballs.push({
               x: player.x + Math.cos(sang) * (player.w || 40) * 0.45,
               y: player.y + Math.sin(sang) * (player.h || 30) * 0.45,
               vx: Math.cos(sang) * ssp,
               vy: Math.sin(sang) * ssp,
-              life: 3.2, // long life so they exit the screen
+              life: 3.2,
               age: 0,
-              // 2× orbiting fireball size (orbiters are ~9–14)
               r: 20 + Math.random() * 8,
               size: 20 + Math.random() * 8,
               phase: sang,
               trails: [],
-              colors: ["#fff7ed", "#ffd24a", "#ff8a1a", "#ff3b00"],
-              smokeCol: "rgba(50,40,30,0.85)",
-              kind: "aceOrb", // same visual language as rotating Ace orbs
+              colors: isGreen
+                ? ["#ecfdf5", "#6ee7b7", "#10b981", "#047857"]
+                : ["#fff7ed", "#ffd24a", "#ff8a1a", "#ff3b00"],
+              smokeCol: isGreen ? "rgba(30,80,50,0.85)" : "rgba(50,40,30,0.85)",
+              kind: isGreen ? "jadeOrb" : "aceOrb",
               pierce: 3,
               hitIds: {}
             });
@@ -873,7 +875,7 @@
             fb.age += dt;
             fb.x += fb.vx * dt;
             fb.y += fb.vy * dt;
-            if (fb.kind === "aceOrb") {
+            if (fb.kind === "aceOrb" || fb.kind === "jadeOrb") {
               // keep radial flight so they leave the screen
               fb.vy += 12 * dt;
             } else {
@@ -1029,10 +1031,17 @@
         // Heat shimmer / dense core aura around blimp
         var coreR = Math.max(player.w, player.h) * (0.55 + 0.25 * act) * pulse;
         var cg = ctx.createRadialGradient(player.x, player.y, coreR * 0.15, player.x, player.y, coreR);
-        cg.addColorStop(0, "rgba(255,245,180," + (0.75 * act) + ")");
-        cg.addColorStop(0.35, "rgba(255,140,30," + (0.45 * act) + ")");
-        cg.addColorStop(0.7, "rgba(255,50,0," + (0.18 * act) + ")");
-        cg.addColorStop(1, "rgba(180,20,0,0)");
+        if (window.__airborneFirePowerTint === "green") {
+          cg.addColorStop(0, "rgba(236,253,245," + (0.75 * act) + ")");
+          cg.addColorStop(0.35, "rgba(52,211,153," + (0.45 * act) + ")");
+          cg.addColorStop(0.7, "rgba(5,150,105," + (0.18 * act) + ")");
+          cg.addColorStop(1, "rgba(4,80,50,0)");
+        } else {
+          cg.addColorStop(0, "rgba(255,245,180," + (0.75 * act) + ")");
+          cg.addColorStop(0.35, "rgba(255,140,30," + (0.45 * act) + ")");
+          cg.addColorStop(0.7, "rgba(255,50,0," + (0.18 * act) + ")");
+          cg.addColorStop(1, "rgba(180,20,0,0)");
+        }
         ctx.globalCompositeOperation = "lighter";
         ctx.fillStyle = cg;
         ctx.beginPath();
@@ -1040,7 +1049,9 @@
         ctx.fill();
         // subtle outer heat ring shimmer
         ctx.globalAlpha = 0.25 * act;
-        ctx.strokeStyle = "rgba(255,200,80,0.8)";
+        ctx.strokeStyle = window.__airborneFirePowerTint === "green"
+          ? "rgba(110,231,183,0.85)"
+          : "rgba(255,200,80,0.8)";
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.arc(player.x, player.y, coreR * (0.92 + 0.04 * Math.sin(performance.now() * 0.02)), 0, Math.PI * 2);
@@ -1063,9 +1074,15 @@
               if (tu <= 0) continue;
               ctx.globalAlpha = tu * 0.55 * alpha * act;
               var tg = ctx.createRadialGradient(tp.x, tp.y, 0, tp.x, tp.y, orb.size * 0.9 * sc);
-              tg.addColorStop(0, "rgba(255,220,100,0.9)");
-              tg.addColorStop(0.5, "rgba(255,100,20,0.5)");
-              tg.addColorStop(1, "rgba(255,40,0,0)");
+              if (window.__airborneFirePowerTint === "green") {
+                tg.addColorStop(0, "rgba(167,243,208,0.9)");
+                tg.addColorStop(0.5, "rgba(16,185,129,0.5)");
+                tg.addColorStop(1, "rgba(4,80,50,0)");
+              } else {
+                tg.addColorStop(0, "rgba(255,220,100,0.9)");
+                tg.addColorStop(0.5, "rgba(255,100,20,0.5)");
+                tg.addColorStop(1, "rgba(255,40,0,0)");
+              }
               ctx.fillStyle = tg;
               ctx.beginPath();
               ctx.arc(tp.x, tp.y, orb.size * 0.7 * sc * tu, 0, Math.PI * 2);
@@ -1076,17 +1093,24 @@
           ctx.globalAlpha = alpha * act;
           var sz = orb.size * sc * (0.9 + 0.15 * Math.sin(performance.now() * 0.02 + orb.phase));
           var fg = ctx.createRadialGradient(orb.x - sz * 0.25, orb.y - sz * 0.3, 1, orb.x, orb.y, sz);
-          fg.addColorStop(0, "rgba(255,250,220,1)");
-          fg.addColorStop(0.3, "rgba(255,200,60,0.95)");
-          fg.addColorStop(0.65, "rgba(255,90,15,0.85)");
-          fg.addColorStop(1, "rgba(180,20,0,0)");
+          if (window.__airborneFirePowerTint === "green") {
+            fg.addColorStop(0, "rgba(236,253,245,1)");
+            fg.addColorStop(0.3, "rgba(110,231,183,0.95)");
+            fg.addColorStop(0.65, "rgba(16,185,129,0.85)");
+            fg.addColorStop(1, "rgba(4,80,50,0)");
+          } else {
+            fg.addColorStop(0, "rgba(255,250,220,1)");
+            fg.addColorStop(0.3, "rgba(255,200,60,0.95)");
+            fg.addColorStop(0.65, "rgba(255,90,15,0.85)");
+            fg.addColorStop(1, "rgba(180,20,0,0)");
+          }
           ctx.fillStyle = fg;
           ctx.beginPath();
           ctx.arc(orb.x, orb.y, sz, 0, Math.PI * 2);
           ctx.fill();
           // bright core
           ctx.globalAlpha = alpha * act * 0.9;
-          ctx.fillStyle = "rgba(255,255,230,0.95)";
+          ctx.fillStyle = "rgba(255,255,255,0.95)";
           ctx.beginPath();
           ctx.arc(orb.x - sz * 0.15, orb.y - sz * 0.15, sz * 0.28, 0, Math.PI * 2);
           ctx.fill();

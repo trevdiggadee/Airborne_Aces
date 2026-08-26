@@ -492,6 +492,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       try {
         window.__airborneFirePowerActive = true;
         window.__airborneFirePowerUntil = performance.now() + POWER_DURATION_MS;
+        window.__airborneFirePowerTint = "orange";
         window.__airborneFireOrbiters = []; // rebuild on next update
         window.__airborneFireActivateT = 0;
         // Initial radial volley — same fireball style from all sides
@@ -526,8 +527,38 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       return;
     }
 
+    // Jade Voyager — Zeppelin Ace-style green fire orbs + full-screen sunburst
+    if (powerMode === "greenfireball") {
+      try {
+        window.__airborneFirePowerActive = true;
+        window.__airborneFirePowerUntil = performance.now() + POWER_DURATION_MS;
+        window.__airborneFirePowerTint = "green";
+        window.__airborneFireOrbiters = [];
+        window.__airborneFireActivateT = 0;
+        window.__airborneFireLaunchBurst = true;
+        window.__airborneActivePowerVisual = "greenfireball";
+        window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
+        var W0 = (typeof W === "number") ? W : 400;
+        var H0 = (typeof H === "number") ? H : 700;
+        window.__airborneSunBurst = [{
+          x: player.x,
+          y: player.y,
+          age: 0,
+          life: 1.4,
+          maxR: Math.max(W0, H0) * 1.4,
+          fullScreen: true
+        }];
+        if (typeof sfxExplosion === "function") sfxExplosion(0.55);
+        try { if (typeof triggerScreenShake === "function") triggerScreenShake(8, 360); } catch (e2) {}
+      } catch (e) {}
+      stormActive = false;
+      stormCharge = 0;
+      updateStormMeterDisplay();
+      return;
+    }
+
     // Ironworks — lob fireballs with smoke trails that ignite obstacles
-    if (powerMode === "fireball" || powerMode === "bluefireball" || powerMode === "greenfireball") {
+    if (powerMode === "fireball" || powerMode === "bluefireball") {
       if (typeof sfxShoot === "function") sfxShoot();
       if (typeof sfxExplosion === "function") sfxExplosion(0.4);
       stormActive = true;
@@ -540,13 +571,6 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       window.__airborneFireballs = [];
       window.__airborneFireballKind = powerMode;
       window.__airborneGreenSpiralAng = 0;
-      if (powerMode === "greenfireball") {
-        // Burst of sunlight from center
-        if (!window.__airborneSunBurst) window.__airborneSunBurst = [];
-        window.__airborneSunBurst.push({ x: player.x, y: player.y, age: 0, life: 0.85 });
-        window.__airborneSunFreezeUntil = performance.now() + 900;
-        try { if (typeof triggerScreenShake === "function") triggerScreenShake(4, 200); } catch (e) {}
-      }
       if (powerMode === "bluefireball") {
         // Aero Slicer — Plasma Orbit + Azure Barrage
         window.__airborneBlueFlash = { x: player.x, y: player.y, age: 0, life: 0.85, phase: 1 };
@@ -3708,29 +3732,49 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
   function drawSunBurst() {
     var list = window.__airborneSunBurst;
     if (!list || !list.length || typeof ctx === "undefined") return;
+    var Ww = (typeof W === "number") ? W : 400;
+    var Hh = (typeof H === "number") ? H : 700;
     ctx.save();
     for (var i = 0; i < list.length; i++) {
       var s = list[i];
       var t = Math.max(0, 1 - s.age / s.life);
-      var r = 20 + (1 - t) * 120;
+      // Ease-out expand, ease-in fade so it fills the screen then dissolves
+      var expand = 1 - Math.pow(1 - Math.min(1, s.age / (s.life * 0.55)), 2);
+      var fade = t * t;
+      var maxR = s.maxR || Math.max(Ww, Hh) * 1.35;
+      var r = s.fullScreen ? (40 + expand * maxR) : (20 + (1 - t) * 120);
       ctx.globalCompositeOperation = "lighter";
+      // Soft full-screen wash behind rays
+      if (s.fullScreen) {
+        ctx.globalAlpha = fade * 0.35;
+        var wash = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, maxR);
+        wash.addColorStop(0, "rgba(255,250,210,0.9)");
+        wash.addColorStop(0.35, "rgba(255,220,120,0.45)");
+        wash.addColorStop(0.7, "rgba(255,180,60,0.15)");
+        wash.addColorStop(1, "rgba(255,160,0,0)");
+        ctx.fillStyle = wash;
+        ctx.fillRect(0, 0, Ww, Hh);
+        ctx.globalAlpha = 1;
+      }
       var g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, r);
-      g.addColorStop(0, "rgba(255,250,200," + (t * 0.95) + ")");
-      g.addColorStop(0.35, "rgba(255,220,100," + (t * 0.55) + ")");
-      g.addColorStop(0.7, "rgba(255,180,40," + (t * 0.25) + ")");
+      g.addColorStop(0, "rgba(255,250,200," + (fade * 0.95) + ")");
+      g.addColorStop(0.25, "rgba(255,230,140," + (fade * 0.65) + ")");
+      g.addColorStop(0.55, "rgba(255,190,60," + (fade * 0.35) + ")");
       g.addColorStop(1, "rgba(255,160,0,0)");
       ctx.fillStyle = g;
       ctx.beginPath();
       ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
       ctx.fill();
-      // Rays
-      for (var ri = 0; ri < 12; ri++) {
-        var a = (ri / 12) * Math.PI * 2 + s.age * 2;
-        ctx.strokeStyle = "rgba(255,240,180," + (t * 0.4) + ")";
-        ctx.lineWidth = 2;
+      // Long rays that stretch toward full screen
+      var rayN = s.fullScreen ? 18 : 12;
+      for (var ri = 0; ri < rayN; ri++) {
+        var a = (ri / rayN) * Math.PI * 2 + s.age * 1.6;
+        var rayLen = r * (s.fullScreen ? 1.05 : 0.95);
+        ctx.strokeStyle = "rgba(255,245,200," + (fade * 0.45) + ")";
+        ctx.lineWidth = s.fullScreen ? 3 : 2;
         ctx.beginPath();
-        ctx.moveTo(s.x + Math.cos(a) * 8, s.y + Math.sin(a) * 8);
-        ctx.lineTo(s.x + Math.cos(a) * r * 0.95, s.y + Math.sin(a) * r * 0.95);
+        ctx.moveTo(s.x + Math.cos(a) * 10, s.y + Math.sin(a) * 10);
+        ctx.lineTo(s.x + Math.cos(a) * rayLen, s.y + Math.sin(a) * rayLen);
         ctx.stroke();
       }
     }
@@ -4611,7 +4655,7 @@ function drawFireballs() {
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "lighter";
       // aceOrb uses its own size (already 2× orbiters) — don't apply 2.2× again
-      var rr = (fb.kind === "aceOrb")
+      var rr = (fb.kind === "aceOrb" || fb.kind === "jadeOrb")
         ? (fb.size || fb.r || 20)
         : (fb.r * (fb.finisher ? 2.8 : 2.2));
       var g = ctx.createRadialGradient(fb.x, fb.y, 0, fb.x, fb.y, rr);
@@ -4739,6 +4783,47 @@ function drawFireballs() {
         // bright core (same as orbiters)
         ctx.globalAlpha = 0.95;
         ctx.fillStyle = "rgba(255,255,230,0.95)";
+        ctx.beginPath();
+        ctx.arc(fb.x - sz * 0.15, fb.y - sz * 0.15, sz * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      } else if (fb.kind === "jadeOrb") {
+        // Jade Voyager radial — Ace orb look in green (drawOrb), 2× size
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        // trail wisps
+        if (fb.trails && fb.trails.length) {
+          for (var ti = 0; ti < fb.trails.length; ti++) {
+            var tp = fb.trails[ti];
+            var tu = 1 - tp.age / tp.life;
+            if (tu <= 0) continue;
+            ctx.globalAlpha = tu * 0.55;
+            var tsz = (fb.size || fb.r || 20) * 0.7 * tu;
+            var tg = ctx.createRadialGradient(tp.x, tp.y, 0, tp.x, tp.y, tsz * 1.2);
+            tg.addColorStop(0, "rgba(167,243,208,0.9)");
+            tg.addColorStop(0.5, "rgba(16,185,129,0.5)");
+            tg.addColorStop(1, "rgba(4,80,50,0)");
+            ctx.fillStyle = tg;
+            ctx.beginPath();
+            ctx.arc(tp.x, tp.y, tsz, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.globalAlpha = 1;
+        // body — match orbiting orb gradient + pulse
+        var sz = (fb.size || fb.r || 20) * (0.9 + 0.15 * Math.sin(performance.now() * 0.02 + (fb.phase || 0)));
+        var fg = ctx.createRadialGradient(fb.x - sz * 0.25, fb.y - sz * 0.3, 1, fb.x, fb.y, sz);
+        fg.addColorStop(0, "rgba(236,253,245,1)");
+        fg.addColorStop(0.3, "rgba(110,231,183,0.95)");
+        fg.addColorStop(0.65, "rgba(16,185,129,0.85)");
+        fg.addColorStop(1, "rgba(4,80,50,0)");
+        ctx.fillStyle = fg;
+        ctx.beginPath();
+        ctx.arc(fb.x, fb.y, sz, 0, Math.PI * 2);
+        ctx.fill();
+        // bright core (same as orbiters)
+        ctx.globalAlpha = 0.95;
+        ctx.fillStyle = "rgba(255,255,255,0.95)";
         ctx.beginPath();
         ctx.arc(fb.x - sz * 0.15, fb.y - sz * 0.15, sz * 0.28, 0, Math.PI * 2);
         ctx.fill();
