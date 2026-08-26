@@ -527,7 +527,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       return;
     }
 
-    // Jade Voyager — Zeppelin Ace-style green fire orbs + full-screen sunburst
+    // Jade Voyager — enhanced solar orbit + sunburst + reform burst
     if (powerMode === "greenfireball") {
       try {
         window.__airborneFirePowerActive = true;
@@ -535,18 +535,24 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         window.__airborneFirePowerTint = "green";
         window.__airborneFireOrbiters = [];
         window.__airborneFireActivateT = 0;
-        window.__airborneFireLaunchBurst = true;
+        window.__airborneFireLaunchBurst = false; // delayed until sunburst peak
+        window.__airborneJadePhase = "ignite"; // ignite → burst → orbit → finale
+        window.__airborneJadeBurstAt = performance.now() + 480;
+        window.__airborneJadeFinale = false;
+        window.__airborneJadeMotes = [];
         window.__airborneActivePowerVisual = "greenfireball";
         window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
         var W0 = (typeof W === "number") ? W : 400;
         var H0 = (typeof H === "number") ? H : 700;
+        // Golden-green full-screen sunburst
         window.__airborneSunBurst = [{
           x: player.x,
           y: player.y,
           age: 0,
-          life: 1.4,
-          maxR: Math.max(W0, H0) * 1.4,
-          fullScreen: true
+          life: 1.5,
+          maxR: Math.max(W0, H0) * 1.45,
+          fullScreen: true,
+          jade: true
         }];
         if (typeof sfxExplosion === "function") sfxExplosion(0.55);
         try { if (typeof triggerScreenShake === "function") triggerScreenShake(8, 360); } catch (e2) {}
@@ -3746,21 +3752,36 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       ctx.globalCompositeOperation = "lighter";
       // Soft full-screen wash behind rays
       if (s.fullScreen) {
-        ctx.globalAlpha = fade * 0.35;
+        ctx.globalAlpha = fade * 0.4;
         var wash = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, maxR);
-        wash.addColorStop(0, "rgba(255,250,210,0.9)");
-        wash.addColorStop(0.35, "rgba(255,220,120,0.45)");
-        wash.addColorStop(0.7, "rgba(255,180,60,0.15)");
-        wash.addColorStop(1, "rgba(255,160,0,0)");
+        if (s.jade) {
+          wash.addColorStop(0, "rgba(255,255,220,0.95)");
+          wash.addColorStop(0.25, "rgba(190,255,160,0.55)");
+          wash.addColorStop(0.55, "rgba(52,211,153,0.25)");
+          wash.addColorStop(1, "rgba(16,120,80,0)");
+        } else {
+          wash.addColorStop(0, "rgba(255,250,210,0.9)");
+          wash.addColorStop(0.35, "rgba(255,220,120,0.45)");
+          wash.addColorStop(0.7, "rgba(255,180,60,0.15)");
+          wash.addColorStop(1, "rgba(255,160,0,0)");
+        }
         ctx.fillStyle = wash;
         ctx.fillRect(0, 0, Ww, Hh);
         ctx.globalAlpha = 1;
       }
       var g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, r);
-      g.addColorStop(0, "rgba(255,250,200," + (fade * 0.95) + ")");
-      g.addColorStop(0.25, "rgba(255,230,140," + (fade * 0.65) + ")");
-      g.addColorStop(0.55, "rgba(255,190,60," + (fade * 0.35) + ")");
-      g.addColorStop(1, "rgba(255,160,0,0)");
+      if (s.jade) {
+        g.addColorStop(0, "rgba(255,255,240," + (fade * 0.98) + ")");
+        g.addColorStop(0.2, "rgba(220,255,180," + (fade * 0.75) + ")");
+        g.addColorStop(0.45, "rgba(110,231,183," + (fade * 0.45) + ")");
+        g.addColorStop(0.75, "rgba(16,185,129," + (fade * 0.2) + ")");
+        g.addColorStop(1, "rgba(4,80,50,0)");
+      } else {
+        g.addColorStop(0, "rgba(255,250,200," + (fade * 0.95) + ")");
+        g.addColorStop(0.25, "rgba(255,230,140," + (fade * 0.65) + ")");
+        g.addColorStop(0.55, "rgba(255,190,60," + (fade * 0.35) + ")");
+        g.addColorStop(1, "rgba(255,160,0,0)");
+      }
       ctx.fillStyle = g;
       ctx.beginPath();
       ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
@@ -3770,7 +3791,9 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       for (var ri = 0; ri < rayN; ri++) {
         var a = (ri / rayN) * Math.PI * 2 + s.age * 1.6;
         var rayLen = r * (s.fullScreen ? 1.05 : 0.95);
-        ctx.strokeStyle = "rgba(255,245,200," + (fade * 0.45) + ")";
+        ctx.strokeStyle = s.jade
+          ? ("rgba(200,255,180," + (fade * 0.5) + ")")
+          : ("rgba(255,245,200," + (fade * 0.45) + ")");
         ctx.lineWidth = s.fullScreen ? 3 : 2;
         ctx.beginPath();
         ctx.moveTo(s.x + Math.cos(a) * 10, s.y + Math.sin(a) * 10);
