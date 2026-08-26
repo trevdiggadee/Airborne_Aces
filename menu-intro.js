@@ -410,12 +410,13 @@ preloadImages([TUTOR_SHEET_URL]);
 // ---------- Centralized volume preferences — music and SFX independently
 // adjustable from the menu control panel, persisted, and applied to every
 // sound source: menu music, gameplay MP3, the procedural music synth, and SFX. ----------
-let musicVolumePref = 0.25;
+let musicVolumePref = 0.20; // menu default 20%
 let sfxVolumePref = 1.0;
 try {
   const savedMusicVol = localStorage.getItem("aa_music_vol");
   const savedSfxVol = localStorage.getItem("aa_sfx_vol");
   if (savedMusicVol !== null) musicVolumePref = Math.max(0, Math.min(1, parseFloat(savedMusicVol)));
+  else musicVolumePref = 0.20;
   if (savedSfxVol !== null) sfxVolumePref = Math.max(0, Math.min(1, parseFloat(savedSfxVol)));
 } catch (e) {}
 
@@ -435,11 +436,25 @@ let gameplayMusicMuted = false;
 try { gameplayMusicMuted = localStorage.getItem("aa_muted") === "1"; } catch (e) {}
 
 function applyGameplayMusicVolumeNow() {
-  // All MP3 music disabled — SFX only
   const el = getGameplayMusicEl();
-  if (el) { try { el.volume = 0; el.pause(); } catch (e) {} }
+  // Gameplay MP3 still optional / disabled by default
+  if (el && !window.__airborneGameplayMusicEnabled) {
+    try { el.volume = 0; } catch (e) {}
+  } else if (el) {
+    try {
+      el.volume = (gameplayMusicMuted || (typeof muted !== "undefined" && muted))
+        ? 0
+        : Math.max(0, Math.min(1, musicVolumePref));
+    } catch (e) {}
+  }
   const menuEl = document.getElementById("menuMusic");
-  if (menuEl) { try { menuEl.volume = 0; menuEl.pause(); } catch (e) {} }
+  if (menuEl) {
+    try {
+      const isMuted = gameplayMusicMuted || (typeof muted !== "undefined" && muted);
+      if (isMuted) menuEl.volume = 0;
+      else if (!menuEl.paused) menuEl.volume = Math.max(0, Math.min(1, musicVolumePref));
+    } catch (e) {}
+  }
 }
 
 
@@ -512,9 +527,25 @@ function menuMusicFadeStep() {
 if (menuMusic) menuMusic.addEventListener("timeupdate", menuMusicFadeStep);
 
 function startMenuMusic() {
-  // MP3 menu music disabled — keep silent
   if (!menuMusic) return;
-  try { menuMusic.volume = 0; menuMusic.pause(); } catch (e) {}
+  try {
+    const isMuted = gameplayMusicMuted || (typeof muted !== "undefined" && muted);
+    menuMusic.loop = true;
+    // Target 20% (or current musicVolumePref)
+    const vol = isMuted ? 0 : Math.max(0, Math.min(1, (typeof musicVolumePref === "number" ? musicVolumePref : 0.20)));
+    menuMusic.volume = vol;
+    const p = menuMusic.play();
+    if (p && typeof p.then === "function") {
+      p.then(function () {
+        menuMusicUnlocked = true;
+        try { menuMusic.volume = isMuted ? 0 : Math.max(0, Math.min(1, musicVolumePref)); } catch (e) {}
+      }).catch(function () {
+        // autoplay blocked — wait for user gesture
+      });
+    } else {
+      menuMusicUnlocked = true;
+    }
+  } catch (e) {}
 }
 
 function stopMenuMusicImmediately() {
