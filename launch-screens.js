@@ -149,6 +149,15 @@
     try {
       if (window.__airborneStopSplashRadar) window.__airborneStopSplashRadar();
     } catch (e) {}
+    // Stop splash track hard, then start hangar music
+    try { window.__airborneLeftSplash = true; } catch (e) {}
+    try {
+      var sm = document.getElementById('splashMusic');
+      if (sm) { sm.pause(); sm.currentTime = 0; sm.volume = 0; }
+    } catch (e) {}
+    try {
+      if (typeof stopSplashMusicImmediately === 'function') stopSplashMusicImmediately();
+    } catch (e) {}
     const oldSplash = document.getElementById('splashScreen');
     if (oldSplash) {
       oldSplash.classList.add('hidden');
@@ -166,6 +175,18 @@
     } catch (e) {
       console.warn('[OTG Launch] showMenu', e);
     }
+    // Start menu music after splash is gone
+    try {
+      if (typeof startMenuMusic === 'function') startMenuMusic();
+      else if (window.startMenuMusic) window.startMenuMusic();
+    } catch (e) {}
+    // Safety: kill splash audio again after a beat
+    setTimeout(function () {
+      try {
+        var sm2 = document.getElementById('splashMusic');
+        if (sm2) { sm2.pause(); sm2.currentTime = 0; sm2.volume = 0; }
+      } catch (e) {}
+    }, 100);
     console.log('[OTG Launch] Enter Hangar → menu / hangar');
   }
 

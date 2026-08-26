@@ -506,6 +506,10 @@ const SPLASH_MUSIC_VOL = 0.20; // 20%
 
 function startSplashMusic() {
   if (!splashMusic) return;
+  if (window.__airborneLeftSplash) {
+    try { stopSplashMusicImmediately(); } catch (e) {}
+    return;
+  }
   try {
     const isMuted = (typeof gameplayMusicMuted !== "undefined" && gameplayMusicMuted)
       || (typeof muted !== "undefined" && muted);
@@ -544,6 +548,43 @@ function stopSplashMusicImmediately() {
   if (!splashMusic) return;
   try { splashMusic.pause(); splashMusic.currentTime = 0; splashMusic.volume = 0; } catch (e) {}
 }
+
+// Pause all page music when the tab/app is backgrounded
+document.addEventListener("visibilitychange", function () {
+  try {
+    if (document.hidden) {
+      if (splashMusic && !splashMusic.paused) {
+        splashMusic.dataset.wasPlaying = "1";
+        splashMusic.pause();
+      }
+      if (menuMusic && !menuMusic.paused) {
+        menuMusic.dataset.wasPlaying = "1";
+        menuMusic.pause();
+      }
+      var gm = document.getElementById("gameplayMusic");
+      if (gm && !gm.paused) {
+        gm.dataset.wasPlaying = "1";
+        gm.pause();
+      }
+    } else {
+      // Resume only if we were playing before hide
+      if (!window.__airborneLeftSplash && splashMusic && splashMusic.dataset.wasPlaying === "1") {
+        splashMusic.dataset.wasPlaying = "";
+        startSplashMusic();
+      }
+      if (window.__airborneLeftSplash && menuMusic && menuMusic.dataset.wasPlaying === "1") {
+        menuMusic.dataset.wasPlaying = "";
+        startMenuMusic();
+      }
+      var gm2 = document.getElementById("gameplayMusic");
+      if (gm2 && gm2.dataset.wasPlaying === "1" && window.__airborneGameplayMusicEnabled) {
+        gm2.dataset.wasPlaying = "";
+        try { gm2.play(); } catch (e) {}
+      }
+    }
+  } catch (e) {}
+});
+
 
 // ---------- Menu background music — a real audio file, faded in/out at the
 // loop seam so restarting the track doesn't sound like a hard cut ----------
@@ -604,15 +645,26 @@ function stopMenuMusicImmediately() {
   menuMusic.pause();
   menuMusic.currentTime = 0;
 }
+window.stopSplashMusicImmediately = stopSplashMusicImmediately;
+window.startSplashMusic = startSplashMusic;
+window.startMenuMusic = startMenuMusic;
+window.stopMenuMusicImmediately = stopMenuMusicImmediately;
 
 // Splash music on load (menu music only after Enter Hangar)
 startSplashMusic();
 document.addEventListener("pointerdown", function unlockSplashOrMenu() {
+  if (window.__airborneLeftSplash) {
+    // Hangar / game — never restart splash track
+    try { stopSplashMusicImmediately(); } catch (e) {}
+    if (!menuMusicUnlocked) startMenuMusic();
+    return;
+  }
   var splash = document.getElementById("splashScreen");
   var onSplash = splash && !splash.classList.contains("hidden") && splash.style.display !== "none";
   if (onSplash) {
     if (!splashMusicUnlocked) startSplashMusic();
   } else {
+    try { stopSplashMusicImmediately(); } catch (e) {}
     if (!menuMusicUnlocked) startMenuMusic();
   }
 }, { passive: true });
@@ -628,14 +680,19 @@ window.__airborneShowMenu = () => {
   try { updateProfile(selectedBlimp); } catch (e) {}
 };
 
+window.__airborneLeftSplash = false;
+
 const splashEnterBtn = document.getElementById("splashEnterBtn");
 if (splashEnterBtn) {
   splashEnterBtn.addEventListener("click", () => {
     if (window.__airborneStopSplashRadar) window.__airborneStopSplashRadar();
+    window.__airborneLeftSplash = true;
     const s = document.getElementById("splashScreen");
-    s.classList.add("fade-out");
-    // Fade splash track, then start hangar menu music
+    if (s) s.classList.add("fade-out");
+    // Hard-stop splash audio immediately, then fade leftover volume if any
+    try { stopSplashMusicImmediately(); } catch (e) {}
     fadeOutSplashMusic(function () {
+      try { stopSplashMusicImmediately(); } catch (e) {}
       try {
         if (s) {
           s.classList.add("hidden");
@@ -644,14 +701,16 @@ if (splashEnterBtn) {
       } catch (e) {}
       startMenuMusic();
     });
-    setTimeout(() => {
+    // Safety: force-stop splash again after fade window
+    setTimeout(function () {
+      try { stopSplashMusicImmediately(); } catch (e) {}
       try {
         if (s) {
           s.classList.add("hidden");
           s.style.display = "none";
         }
       } catch (e) {}
-    }, 500);
+    }, 600);
   });
 }
 

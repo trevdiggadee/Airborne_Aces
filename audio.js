@@ -758,6 +758,16 @@
     if (document.hidden) {
       musicWasPlayingBeforeHide = musicPlaying;
       if (musicPlaying) stopMusic();
+      // Pause HTML audio elements (menu / splash / gameplay) when leaving the tab
+      try {
+        ["menuMusic", "splashMusic", "gameplayMusic"].forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el && !el.paused) {
+            el.dataset.wasPlaying = "1";
+            el.pause();
+          }
+        });
+      } catch (e) {}
       if (audioCtx && audioCtx.state === "running") {
         try { audioCtx.suspend(); } catch (e) {}
       }
