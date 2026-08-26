@@ -17,7 +17,8 @@
     // Little Spy (blimp6) stays intentionally smaller.
     const sel = (typeof selectedBlimp !== "undefined" && selectedBlimp) ? selectedBlimp : "blimp1";
     let scale = 1.0;
-    if (sel === "blimp6") scale = 0.72 * 1.10;       // Little Spy smaller +10%
+    if (sel === "blimp1") scale = 1.15;              // Zeppelin Ace +15%
+    else if (sel === "blimp6") scale = 0.72 * 1.10;       // Little Spy smaller +10%
     else if (sel === "blimp4") scale = 1.20 * 1.05;  // Steampunk
     else if (sel === "blimp8") scale = 1.15;         // Ironworks +15%
     else if (sel === "blimp9") scale = 1.10;         // Jolly Rogers +10%
@@ -752,33 +753,36 @@
       // Dense core + orbiting fireball system (Zeppelin Ace)
       if (window.__airborneFirePowerActive && typeof player !== "undefined" && player) {
         // Ensure orbiters exist
+        var isJade = window.__airborneFirePowerTint === "green";
         if (!window.__airborneFireOrbiters || !window.__airborneFireOrbiters.length) {
           window.__airborneFireOrbiters = [];
           var nOrb = 6;
           for (var oi = 0; oi < nOrb; oi++) {
             window.__airborneFireOrbiters.push({
               phase: (oi / nOrb) * Math.PI * 2,
-              speed: 2.4 + Math.random() * 0.9,
-              radius: (0.52 + Math.random() * 0.18) * 1.15, // +15% orbit radius
+              speed: isJade ? (1.6 + Math.random() * 0.4) : (2.4 + Math.random() * 0.9),
+              baseSpeed: isJade ? (3.2 + Math.random() * 0.6) : (2.4 + Math.random() * 0.9),
+              radius: isJade ? (0.95 + Math.random() * 0.12) : ((0.52 + Math.random() * 0.18) * 1.15),
+              targetRadius: isJade ? ((0.55 + Math.random() * 0.12) * 1.15) : ((0.52 + Math.random() * 0.18) * 1.15),
               tilt: 0.55 + Math.random() * 0.35,
               wobble: 0.15 + Math.random() * 0.2,
               wobbleSpd: 1.5 + Math.random() * 2,
-              size: 9 + Math.random() * 5,
+              size: isJade ? (12 + Math.random() * 4) : (9 + Math.random() * 5),
               trail: [],
-              hitIds: {}
+              hitIds: {},
+              mode: "orbit"
             });
           }
           window.__airborneFireActivateT = 0;
         }
-        // One-shot radial fireball burst on activation
-        if (window.__airborneFireLaunchBurst) {
+        // Ace only: one-shot radial volley (never orange during jade)
+        if (window.__airborneFireLaunchBurst && !isJade) {
           window.__airborneFireLaunchBurst = false;
           if (!window.__airborneFireballs) window.__airborneFireballs = [];
           var nShot = 10;
           for (var si = 0; si < nShot; si++) {
             var sang = (si / nShot) * Math.PI * 2 + Math.random() * 0.12;
-            var ssp = 240 + Math.random() * 90; // fast enough to leave screen
-            var isGreen = window.__airborneFirePowerTint === "green";
+            var ssp = 240 + Math.random() * 90;
             window.__airborneFireballs.push({
               x: player.x + Math.cos(sang) * (player.w || 40) * 0.45,
               y: player.y + Math.sin(sang) * (player.h || 30) * 0.45,
@@ -790,18 +794,74 @@
               size: 20 + Math.random() * 8,
               phase: sang,
               trails: [],
-              colors: isGreen
-                ? ["#ecfdf5", "#6ee7b7", "#10b981", "#047857"]
-                : ["#fff7ed", "#ffd24a", "#ff8a1a", "#ff3b00"],
-              smokeCol: isGreen ? "rgba(30,80,50,0.85)" : "rgba(50,40,30,0.85)",
-              kind: isGreen ? "jadeOrb" : "aceOrb",
+              colors: ["#fff7ed", "#ffd24a", "#ff8a1a", "#ff3b00"],
+              smokeCol: "rgba(50,40,30,0.85)",
+              kind: "aceOrb",
               pierce: 3,
               hitIds: {}
             });
           }
           try { if (typeof sfxShoot === "function") sfxShoot(); } catch (e) {}
         }
-        window.__airborneFireActivateT = (window.__airborneFireActivateT || 0) + dt;
+        // Jade: delayed radial launch of the 6 orbiters after sunburst peak
+        if (isJade && window.__airborneJadePhase === "ignite" && performance.now() >= (window.__airborneJadeBurstAt || 0)) {
+          window.__airborneJadePhase = "burst";
+          var orbsL = window.__airborneFireOrbiters;
+          for (var li = 0; li < orbsL.length; li++) {
+            var lo = orbsL[li];
+            lo.mode = "outbound";
+            lo.outAge = 0;
+            lo.outLife = 0.65 + Math.random() * 0.12;
+            var la = lo.phase;
+            var rad0 = (lo.radius || 0.7) * 1.32;
+            lo.x = player.x + Math.cos(la) * player.w * rad0;
+            lo.y = player.y + Math.sin(la) * player.h * rad0 * (lo.tilt || 0.7);
+            lo.vx = Math.cos(la) * (300 + Math.random() * 50);
+            lo.vy = Math.sin(la) * (300 + Math.random() * 50);
+            lo.hitIds = {};
+          }
+          try { if (typeof sfxShoot === "function") sfxShoot(); } catch (e) {}
+          try { if (typeof triggerScreenShake === "function") triggerScreenShake(5, 220); } catch (e) {}
+        }
+        // Jade: tighten orbit + ambient motes + finale trigger
+        if (isJade) {
+          window.__airborneFireActivateT = (window.__airborneFireActivateT || 0) + dt;
+          var orbsJ = window.__airborneFireOrbiters || [];
+          for (var ji = 0; ji < orbsJ.length; ji++) {
+            var jo = orbsJ[ji];
+            if (jo.mode === "orbit" || jo.mode === "return") {
+              jo.radius += ((jo.targetRadius || jo.radius) - jo.radius) * Math.min(1, dt * 2.2);
+              jo.speed += ((jo.baseSpeed || jo.speed) - jo.speed) * Math.min(1, dt * 1.8);
+            }
+          }
+          if (!window.__airborneJadeMotes) window.__airborneJadeMotes = [];
+          if (Math.random() < 0.55) {
+            var ma = Math.random() * Math.PI * 2;
+            window.__airborneJadeMotes.push({
+              ang: ma, dist: 90 + Math.random() * 110,
+              spin: 1.2 + Math.random() * 1.5,
+              life: 1.1 + Math.random() * 0.6, age: 0,
+              r: 2 + Math.random() * 3
+            });
+          }
+          for (var mi = window.__airborneJadeMotes.length - 1; mi >= 0; mi--) {
+            var m = window.__airborneJadeMotes[mi];
+            m.age += dt; m.ang += m.spin * dt;
+            m.dist = Math.max(8, m.dist - 55 * dt);
+            if (m.age >= m.life || m.dist < 10) window.__airborneJadeMotes.splice(mi, 1);
+          }
+          var left = (window.__airborneFirePowerUntil || 0) - performance.now();
+          if (!window.__airborneJadeFinale && left < 550 && left > 0) {
+            window.__airborneJadeFinale = true;
+            window.__airborneJadePhase = "finale";
+            for (var fi = 0; fi < orbsJ.length; fi++) {
+              orbsJ[fi].mode = "collapse";
+              orbsJ[fi].hitIds = {};
+            }
+          }
+        } else {
+          window.__airborneFireActivateT = (window.__airborneFireActivateT || 0) + dt;
+        }
         // Core heat embers
         for (let i = 0; i < 3; i++) {
           const ang = Math.random() * Math.PI * 2;
@@ -813,7 +873,8 @@
             vy: -40 - Math.random() * 55,
             life: 0.25 + Math.random() * 0.3,
             age: 0,
-            r: 4 + Math.random() * 6
+            r: 4 + Math.random() * 6,
+            tint: window.__airborneFirePowerTint === "green" ? "green" : "orange"
           });
         }
         // Update orbiters + trails
@@ -885,7 +946,8 @@
               life: 0.2 + Math.random() * 0.2,
               age: 0,
               r: 2 + Math.random() * 3,
-              smoke: false
+              smoke: false,
+              tint: window.__airborneFirePowerTint === "green" ? "green" : "orange"
             });
           }
         }
@@ -896,7 +958,7 @@
             var orb = orbsDmg[oi];
             if (!orb || orb.x == null) continue;
             if (!orb.hitIds) orb.hitIds = {};
-            var hitR = (orb.size || 10) * 1.6;
+            var hitR = (orb.size || 10) * ((orb.mode === "outbound") ? 2.8 : 1.6);
             for (var hi = 0; hi < obstacles.length; hi++) {
               var o = obstacles[hi];
               if (!o || o.isRing || o.type === "gold_ring" || o.type === "ring") continue;
@@ -917,12 +979,13 @@
                 o.greenFire = true;
                 try {
                   if (window.PowerFX) window.PowerFX.burst(ox, oy, {
-                    count: 18,
+                    count: orb.mode === "outbound" ? 26 : 18,
                     colors: ["#fff", "#d1fae5", "#6ee7b7", "#10b981", "#047857"],
-                    speed: 130, life: 0.55, glow: true
+                    speed: orb.mode === "outbound" ? 160 : 130,
+                    life: 0.55, glow: true
                   });
                 } catch (e) {}
-                try { if (typeof triggerScreenShake === "function") triggerScreenShake(3, 120); } catch (e) {}
+                try { if (typeof triggerScreenShake === "function") triggerScreenShake(orb.mode === "outbound" ? 5 : 3, 140); } catch (e) {}
               }
             }
           }
@@ -1230,9 +1293,15 @@
         ctx.save();
         ctx.globalAlpha = Math.max(0, u);
         const gr = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        gr.addColorStop(0, "rgba(255,230,120,0.9)");
-        gr.addColorStop(0.5, "rgba(255,100,20,0.5)");
-        gr.addColorStop(1, "rgba(200,30,0,0)");
+        if (p.tint === "green" || window.__airborneFirePowerTint === "green") {
+          gr.addColorStop(0, "rgba(236,253,245,0.95)");
+          gr.addColorStop(0.5, "rgba(52,211,153,0.55)");
+          gr.addColorStop(1, "rgba(4,80,50,0)");
+        } else {
+          gr.addColorStop(0, "rgba(255,230,120,0.9)");
+          gr.addColorStop(0.5, "rgba(255,100,20,0.5)");
+          gr.addColorStop(1, "rgba(200,30,0,0)");
+        }
         ctx.fillStyle = gr;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
