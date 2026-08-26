@@ -3,7 +3,7 @@
 
 const BLIMP_DATA = {
   // Menu/static preview = first flight frame (no separate _main / .png stills needed)
-  blimp1: { url: "player_blimp_01.webp", key: "player_blimp_01", name: "Zeppelin Ace", effect: "propeller" },
+  blimp1: { url: "player_blimp_01.webp?cb=3", key: "player_blimp_01", name: "Zeppelin Ace", effect: "propeller" },
   blimp2: { url: "blimp2_flight_01.webp", key: "blimp2_flight_01", name: "Deco Liner", effect: "smoke" },
   blimp3: { url: "blimp3_flight_01.webp", key: "blimp3_flight_01", name: "Aero Slicer", effect: null },
   blimp4: { url: "blimp4_flight_01.webp", key: "blimp4_flight_01", name: "Steampunk", effect: "steam" },
@@ -214,7 +214,7 @@ function heroFramesFor(count, prefix) {
   return Array.from({ length: count }, (_, i) => AA_ASSET_BASE + prefix + String(i + 1).padStart(2, "0") + ".webp?cb=2");
 }
 const HERO_ANIM = {
-  blimp1: { urls: heroFramesFor(36, "player_blimp_"), fps: 24 },
+  blimp1: { urls: heroFramesFor(36, "player_blimp_"), fps: 20 },
   blimp2: { urls: heroFramesFor(25, "blimp2_flight_"), fps: 18 },
   blimp3: { urls: heroFramesFor(25, "blimp3_flight_"), fps: 18 },
   blimp4: { urls: heroFramesFor(25, "blimp4_flight_"), fps: 18 },
