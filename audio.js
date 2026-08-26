@@ -94,6 +94,13 @@
     if (window.__airborneSetGameplayMusicMuted) window.__airborneSetGameplayMusicMuted(muted);
     if (window.__airborneApplyGameplayMusicVolume) window.__airborneApplyGameplayMusicVolume();
     const menuEl = document.getElementById("menuMusic");
+    const splashEl = document.getElementById("splashMusic");
+    if (splashEl) {
+      try {
+        if (muted) splashEl.volume = 0;
+        else if (!splashEl.paused) splashEl.volume = 0.20;
+      } catch (e) {}
+    }
     if (menuEl) {
       if (muted) {
         menuEl.dataset.userMuted = "1";

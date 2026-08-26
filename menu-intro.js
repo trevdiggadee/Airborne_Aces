@@ -498,6 +498,53 @@ function setSfxVolumePref(v) {
   }
 })();
 
+
+// ---------- Splash page music (Splash_page.mp3) — stops/fades on Enter Hangar ----------
+const splashMusic = document.getElementById("splashMusic");
+let splashMusicUnlocked = false;
+const SPLASH_MUSIC_VOL = 0.20; // 20%
+
+function startSplashMusic() {
+  if (!splashMusic) return;
+  try {
+    const isMuted = (typeof gameplayMusicMuted !== "undefined" && gameplayMusicMuted)
+      || (typeof muted !== "undefined" && muted);
+    splashMusic.loop = true;
+    splashMusic.volume = isMuted ? 0 : SPLASH_MUSIC_VOL;
+    const p = splashMusic.play();
+    if (p && typeof p.then === "function") {
+      p.then(function () { splashMusicUnlocked = true; }).catch(function () {});
+    } else {
+      splashMusicUnlocked = true;
+    }
+  } catch (e) {}
+}
+
+function fadeOutSplashMusic(done) {
+  if (!splashMusic || splashMusic.paused) {
+    if (typeof done === "function") done();
+    return;
+  }
+  const fadeMs = 480;
+  const startVol = splashMusic.volume;
+  const t0 = performance.now();
+  (function step() {
+    const p = Math.min(1, (performance.now() - t0) / fadeMs);
+    try { splashMusic.volume = startVol * (1 - p); } catch (e) {}
+    if (p < 1) {
+      requestAnimationFrame(step);
+    } else {
+      try { splashMusic.pause(); splashMusic.currentTime = 0; splashMusic.volume = 0; } catch (e) {}
+      if (typeof done === "function") done();
+    }
+  })();
+}
+
+function stopSplashMusicImmediately() {
+  if (!splashMusic) return;
+  try { splashMusic.pause(); splashMusic.currentTime = 0; splashMusic.volume = 0; } catch (e) {}
+}
+
 // ---------- Menu background music — a real audio file, faded in/out at the
 // loop seam so restarting the track doesn't sound like a hard cut ----------
 const menuMusic = document.getElementById("menuMusic");
@@ -528,10 +575,16 @@ if (menuMusic) menuMusic.addEventListener("timeupdate", menuMusicFadeStep);
 
 function startMenuMusic() {
   if (!menuMusic) return;
+  // Never play menu track while splash is still up
+  try {
+    var splash = document.getElementById("splashScreen");
+    if (splash && !splash.classList.contains("hidden") && splash.style.display !== "none") {
+      return;
+    }
+  } catch (e) {}
   try {
     const isMuted = gameplayMusicMuted || (typeof muted !== "undefined" && muted);
     menuMusic.loop = true;
-    // Target 20% (or current musicVolumePref)
     const vol = isMuted ? 0 : Math.max(0, Math.min(1, (typeof musicVolumePref === "number" ? musicVolumePref : 0.20)));
     menuMusic.volume = vol;
     const p = menuMusic.play();
@@ -539,9 +592,7 @@ function startMenuMusic() {
       p.then(function () {
         menuMusicUnlocked = true;
         try { menuMusic.volume = isMuted ? 0 : Math.max(0, Math.min(1, musicVolumePref)); } catch (e) {}
-      }).catch(function () {
-        // autoplay blocked — wait for user gesture
-      });
+      }).catch(function () {});
     } else {
       menuMusicUnlocked = true;
     }
@@ -554,16 +605,25 @@ function stopMenuMusicImmediately() {
   menuMusic.currentTime = 0;
 }
 
-// autoplay is usually blocked until the user interacts with the page — try
-// right away, and again on the first tap/click anywhere on the menu
-startMenuMusic();
-document.addEventListener("pointerdown", function unlockMenuMusic() {
-  if (!menuMusicUnlocked) startMenuMusic();
+// Splash music on load (menu music only after Enter Hangar)
+startSplashMusic();
+document.addEventListener("pointerdown", function unlockSplashOrMenu() {
+  var splash = document.getElementById("splashScreen");
+  var onSplash = splash && !splash.classList.contains("hidden") && splash.style.display !== "none";
+  if (onSplash) {
+    if (!splashMusicUnlocked) startSplashMusic();
+  } else {
+    if (!menuMusicUnlocked) startMenuMusic();
+  }
 }, { passive: true });
 
 window.__airborneShowMenu = () => {
   startHeroAnimation(selectedBlimp);
-  startMenuMusic();
+  try {
+    var splash = document.getElementById("splashScreen");
+    var onSplash = splash && !splash.classList.contains("hidden") && splash.style.display !== "none";
+    if (!onSplash) startMenuMusic();
+  } catch (e) { startMenuMusic(); }
   try { stopHeroFireAura(); } catch (e) {}
   try { updateProfile(selectedBlimp); } catch (e) {}
 };
@@ -574,11 +634,24 @@ if (splashEnterBtn) {
     if (window.__airborneStopSplashRadar) window.__airborneStopSplashRadar();
     const s = document.getElementById("splashScreen");
     s.classList.add("fade-out");
+    // Fade splash track, then start hangar menu music
+    fadeOutSplashMusic(function () {
+      try {
+        if (s) {
+          s.classList.add("hidden");
+          s.style.display = "none";
+        }
+      } catch (e) {}
+      startMenuMusic();
+    });
     setTimeout(() => {
-      s.classList.add("hidden");
-      s.style.display = "none";
-    }, 480);
-    startMenuMusic();
+      try {
+        if (s) {
+          s.classList.add("hidden");
+          s.style.display = "none";
+        }
+      } catch (e) {}
+    }, 500);
   });
 }
 

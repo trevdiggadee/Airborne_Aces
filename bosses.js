@@ -4898,50 +4898,51 @@ function drawFireballs() {
         });
         ctx.restore();
       }
-      // Fireballs — back (z<0) then front (z>0) already sorted
+      // Orbiting plasma — same silhouette as Zeppelin Ace orbs, blue palette
       orbs.forEach(function(orb) {
         if (orb.x == null) return;
-        var pulse = 0.9 + 0.12 * Math.sin(orb.pulse || 0);
-        var rr = orb.r * pulse * (orb.z > 0 ? 1.08 : 0.92);
+        var isFront = (orb.z || 0) >= 0;
+        var sc = isFront ? 1.15 : 0.75;
+        var alpha = isFront ? 1 : 0.55;
+        var baseSize = (orb.r || 8) * 1.35; // comparable to Ace orb body
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
-        // outer cyan flame
-        var og = ctx.createRadialGradient(orb.x, orb.y, 0, orb.x, orb.y, rr * 2.4);
-        og.addColorStop(0, "rgba(255,255,255,0.95)");
-        og.addColorStop(0.2, "rgba(165,243,252,0.9)");
-        og.addColorStop(0.45, "rgba(56,189,248,0.7)");
-        og.addColorStop(0.75, "rgba(14,120,220,0.35)");
-        og.addColorStop(1, "rgba(2,60,140,0)");
-        ctx.fillStyle = og;
-        ctx.beginPath();
-        ctx.arc(orb.x, orb.y, rr * 2.4, 0, Math.PI * 2);
-        ctx.fill();
-        // Defined plasma core with depth
-        var oc = ctx.createRadialGradient(orb.x - rr * 0.12, orb.y - rr * 0.12, 0, orb.x, orb.y, rr * 0.55);
-        oc.addColorStop(0, "rgba(255,255,255,1)");
-        oc.addColorStop(0.3, "rgba(224,242,254,0.98)");
-        oc.addColorStop(0.55, "rgba(125,211,252,0.85)");
-        oc.addColorStop(0.8, "rgba(56,189,248,0.4)");
-        oc.addColorStop(1, "rgba(14,165,233,0)");
-        ctx.fillStyle = oc;
-        ctx.beginPath();
-        ctx.arc(orb.x, orb.y, rr * 0.55, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "rgba(255,255,255,0.9)";
-        ctx.beginPath();
-        ctx.arc(orb.x - rr * 0.12, orb.y - rr * 0.14, rr * 0.16, 0, Math.PI * 2);
-        ctx.fill();
-        // jagged energy tongues
-        ctx.globalAlpha = 0.7;
-        for (var jt = 0; jt < 4; jt++) {
-          var ja = orb.ang + jt * Math.PI * 0.5 + (orb.pulse || 0);
-          ctx.strokeStyle = "rgba(125,211,252,0.85)";
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.moveTo(orb.x, orb.y);
-          ctx.lineTo(orb.x + Math.cos(ja) * rr * 1.6, orb.y + Math.sin(ja) * rr * 1.6);
-          ctx.stroke();
+        // trail (blue)
+        if (orb.trail && orb.trail.length) {
+          for (var ti = 0; ti < orb.trail.length; ti++) {
+            var tp = orb.trail[ti];
+            var tu = 1 - tp.age / tp.life;
+            if (tu <= 0) continue;
+            ctx.globalAlpha = tu * 0.55 * alpha;
+            var tsz = baseSize * 0.7 * sc * tu;
+            var tg = ctx.createRadialGradient(tp.x, tp.y, 0, tp.x, tp.y, tsz * 1.15);
+            tg.addColorStop(0, "rgba(186,230,253,0.95)");
+            tg.addColorStop(0.5, "rgba(56,189,248,0.55)");
+            tg.addColorStop(1, "rgba(14,100,200,0)");
+            ctx.fillStyle = tg;
+            ctx.beginPath();
+            ctx.arc(tp.x, tp.y, tsz, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
+        // body — Ace orb structure, cyan/blue stops
+        ctx.globalAlpha = alpha;
+        var sz = baseSize * sc * (0.9 + 0.15 * Math.sin(performance.now() * 0.02 + (orb.ang || 0)));
+        var fg = ctx.createRadialGradient(orb.x - sz * 0.25, orb.y - sz * 0.3, 1, orb.x, orb.y, sz);
+        fg.addColorStop(0, "rgba(240,249,255,1)");
+        fg.addColorStop(0.3, "rgba(125,211,252,0.95)");
+        fg.addColorStop(0.65, "rgba(14,165,233,0.85)");
+        fg.addColorStop(1, "rgba(2,60,140,0)");
+        ctx.fillStyle = fg;
+        ctx.beginPath();
+        ctx.arc(orb.x, orb.y, sz, 0, Math.PI * 2);
+        ctx.fill();
+        // bright core
+        ctx.globalAlpha = alpha * 0.95;
+        ctx.fillStyle = "rgba(255,255,255,0.95)";
+        ctx.beginPath();
+        ctx.arc(orb.x - sz * 0.15, orb.y - sz * 0.15, sz * 0.28, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
       });
       // sparks
