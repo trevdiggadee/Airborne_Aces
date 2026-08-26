@@ -884,28 +884,76 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       return;
     }
 
-    // Chain lightning — zap several obstacles in sequence
+    // Ivory Anchor — Tempest Dominion
     if (powerMode === "ivorybolt") {
       if (typeof sfxThunder === "function") sfxThunder();
+      try { if (typeof triggerScreenShake === "function") triggerScreenShake(8, 360); } catch (e) {}
       stormActive = true;
       stormMode = "ivorybolt";
       stormTimer = POWER_DURATION_SEC;
+      stormCharge = 0;
       window.__airborneActivePowerVisual = "ivorybolt";
       window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
       window.__airborneIvoryUntil = performance.now() + POWER_DURATION_MS;
       window.__airborneIvoryBolts = [];
       window.__airborneIvoryFireballs = [];
-      // Initial sky fireballs
-      for (var ifb = 0; ifb < 8; ifb++) {
-        var ix = (typeof W !== "undefined" ? W : 400) * (0.15 + Math.random() * 0.7);
-        window.__airborneIvoryFireballs.push({
-          x: ix, y: -30 - Math.random() * 80,
-          vx: (Math.random() - 0.5) * 30,
-          vy: 180 + Math.random() * 100,
-          life: 3.5, age: 0, r: 11 + Math.random() * 5
+      var Ww0 = (typeof W === "number") ? W : 400;
+      var Hh0 = (typeof H === "number") ? H : 700;
+      window.__airborneTempest = {
+        age: 0,
+        life: POWER_DURATION_SEC,
+        phase: "form",
+        strikeT: 0.25,
+        orbT: 0.4,
+        finaleDone: false,
+        darkFlash: 0,
+        screenFlash: 0.2,
+        cloud: {
+          ox: 0, oy: -70,
+          w: 50, h: 28,
+          targetW: 240, targetH: 110,
+          swirl: 0,
+          follow: 0.15,
+          fx: (typeof player !== "undefined" && player) ? player.x : Ww0 * 0.3,
+          fy: (typeof player !== "undefined" && player) ? player.y : Hh0 * 0.4
+        },
+        halo: [],
+        rain: [],
+        bolts: [],
+        orbs: [],
+        pulses: [],
+        after: []
+      };
+      for (var hi = 0; hi < 6; hi++) {
+        window.__airborneTempest.halo.push({
+          ang: (hi / 6) * Math.PI * 2,
+          spin: 1.8 + Math.random() * 1.4,
+          dist: 30 + (hi % 3) * 10,
+          life: 0.18 + Math.random() * 0.15,
+          age: Math.random() * 0.15,
+          jump: 0,
+          points: null
         });
       }
-      try { if (window.PowerFX) window.PowerFX.activate("fireball", player.x, player.y); } catch (e) {}
+      for (var ri = 0; ri < 50; ri++) {
+        window.__airborneTempest.rain.push({
+          x: Math.random() * Ww0,
+          y: Math.random() * Hh0,
+          vy: 420 + Math.random() * 280,
+          len: 10 + Math.random() * 16
+        });
+      }
+      // Opening bolts from above
+      if (typeof player !== "undefined" && player && typeof buildLightningPath === "function") {
+        for (var bi = 0; bi < 3; bi++) {
+          var bx = player.x + (Math.random() - 0.5) * 80;
+          window.__airborneTempest.bolts.push({
+            points: buildLightningPath(bx, -20, player.x + (Math.random() - 0.5) * 40, player.y - 20, 40),
+            age: 0, life: 0.3, major: true
+          });
+        }
+      }
+      try { if (window.PowerFX && player) window.PowerFX.activate("ivorybolt", player.x, player.y); } catch (e) {}
       updateStormMeterDisplay();
       return;
     }
@@ -4357,8 +4405,8 @@ if (window.__airbornePlasmaIgnite) {
     }
 
     // Rain
-    ctx.strokeStyle = "rgba(180,200,230,0.35)";
-    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = "rgba(190,210,240,0.55)";
+    ctx.lineWidth = 1.5;
     for (var ri = 0; ri < tp.rain.length; ri++) {
       var rd = tp.rain[ri];
       ctx.beginPath();
@@ -4379,8 +4427,8 @@ if (window.__airbornePlasmaIgnite) {
       var by = cy + Math.sin(ca * 1.3) * cl.h * 0.22;
       var br = cl.w * (0.22 + (ci % 3) * 0.06);
       var cg = ctx.createRadialGradient(bx, by - br * 0.2, 0, bx, by, br);
-      cg.addColorStop(0, "rgba(70,80,110,0.75)");
-      cg.addColorStop(0.5, "rgba(35,40,60,0.65)");
+      cg.addColorStop(0, "rgba(90,100,130,0.9)");
+      cg.addColorStop(0.45, "rgba(45,50,75,0.85)");
       cg.addColorStop(1, "rgba(15,18,30,0)");
       ctx.fillStyle = cg;
       ctx.beginPath();
@@ -5933,9 +5981,11 @@ function drawFireballs() {
   window.__airborneDrawFireballs = drawFireballs;
 
   function drawStorm() {
+    // Ivory Tempest draws while active (even if other modes idle)
+    try { if (window.__airborneTempest) drawTempestDominion(); } catch (e) {}
     // Thunder Chain draws even mid-fade
     var tcDraw = window.__airborneThunderChain;
-    if (!stormActive && !tcDraw) return;
+    if (!stormActive && !tcDraw && !window.__airborneTempest) return;
     // Unified fade-out near end of any power
     try {
       var u = window.__airborneActivePowerUntil || 0;
