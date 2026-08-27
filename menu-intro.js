@@ -1635,7 +1635,7 @@ function powerPreviewKindFor(key) {
       blimp12: "heatseek",
       blimp13: "lattice",
       blimp14: "barrelbomb",
-      blimp15: "meteors"
+      blimp15: "royal"
     };
     var kind = map[key] || "storm";
     startHeroPowerFx(kind);

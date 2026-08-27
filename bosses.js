@@ -474,7 +474,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       blimp12: "heatseek",
       blimp13: "swarm",
       blimp14: "barrelbomb",
-      blimp15: "meteors"
+      blimp15: "royal"
     };
     const powerMode = SHIP_POWER_MODE[sel] || "storm";
     const swarmKey = SHIP_POWER_ICON_KEYS[sel] || null;
@@ -1112,17 +1112,17 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
 
 
     // Royal Stripe — Coronation Barrage (Art Deco gold & ivory, 5s)
-    if (powerMode === "meteors") {
+    if (powerMode === "royal" || powerMode === "meteors") {
       if (typeof sfxExplosion === "function") sfxExplosion(0.5);
       if (typeof sfxShoot === "function") sfxShoot();
       try { if (typeof triggerScreenShake === "function") triggerScreenShake(8, 340); } catch (e) {}
       var ROYAL_SEC = 5.0;
       var ROYAL_MS = 5000;
       stormActive = true;
-      stormMode = "meteors";
+      stormMode = "royal";
       stormTimer = ROYAL_SEC;
       stormCharge = 0;
-      window.__airborneActivePowerVisual = "meteors";
+      window.__airborneActivePowerVisual = "royal";
       window.__airborneActivePowerUntil = performance.now() + ROYAL_MS;
       window.__airborneMeteorUntil = performance.now() + ROYAL_MS;
       window.__airborneMeteors = [];
@@ -1132,9 +1132,10 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         age: 0,
         life: ROYAL_SEC,
         phase: "crown",
-        crownCharge: 0,
+        crownCharge: 0.15,
         barrageDone: false,
         rainT: 0.12,
+        screenFlash: 0.25,
         rings: [
           { ang: 0, spin: 3.2, dist: 44, w: 10 },
           { ang: Math.PI * 0.6, spin: -3.8, dist: 60, w: 12 }
@@ -2309,7 +2310,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       if (sd.age >= sd.life) window.__airborneMeteorSkyDark = null;
     }
     // Royal Stripe — Coronation Barrage
-    if (stormMode === "meteors" || window.__airborneRoyal) {
+    if (stormMode === "royal" || stormMode === "meteors" || window.__airborneRoyal) {
       var ry = window.__airborneRoyal;
       var untilM = window.__airborneMeteorUntil || 0;
       var Ww = (typeof W === "number") ? W : 400;
@@ -2322,16 +2323,17 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         var tN = ry.age / (ry.life || 5);
 
         // Phase
-        if (tN < 0.18) ry.phase = "crown";
-        else if (tN < 0.28) ry.phase = "barrage";
+        if (tN < 0.12) ry.phase = "crown";
+        else if (tN < 0.22) ry.phase = "barrage";
         else ry.phase = "reign";
 
         // Crown charge
         if (ry.phase === "crown") {
-          ry.crownCharge = Math.min(1, ry.age / 0.85);
+          ry.crownCharge = Math.min(1, ry.age / 0.55);
         } else {
           ry.crownCharge = 1;
         }
+        if (ry.screenFlash > 0) ry.screenFlash = Math.max(0, ry.screenFlash - dt * 3);
 
         // Orbit rings
         for (var ri = 0; ri < ry.rings.length; ri++) {
@@ -4558,6 +4560,7 @@ if (window.__airbornePlasmaIgnite) {
 
 
   function drawRoyalCoronation() {
+    // Royal Stripe Coronation Barrage
     var ry = window.__airborneRoyal;
     if (!ry || typeof ctx === "undefined") return;
     var px = (typeof player !== "undefined" && player) ? player.x : 0;
@@ -4810,9 +4813,18 @@ if (window.__airbornePlasmaIgnite) {
       ctx.fill();
     }
 
-    ctx.restore();
+        if (ry.screenFlash > 0) {
+      ctx.globalCompositeOperation = "screen";
+      ctx.globalAlpha = Math.min(0.5, ry.screenFlash * 2) * pf;
+      ctx.fillStyle = "#fff8e0";
+      ctx.fillRect(0, 0, Ww, Hh);
+    }
+
+ctx.restore();
   }
 
+
+  window.__airborneDrawRoyal = drawRoyalCoronation;
 
   function drawSunBurst() {
     var list = window.__airborneSunBurst;
@@ -6260,7 +6272,7 @@ function drawFireballs() {
     try { if (window.__airborneRoyal) drawRoyalCoronation(); } catch (e) {}
     // Thunder Chain draws even mid-fade
     var tcDraw = window.__airborneThunderChain;
-    if (!stormActive && !tcDraw && !window.__airborneTempest) return;
+    if (!stormActive && !tcDraw && !window.__airborneTempest && !window.__airborneRoyal) return;
     // Unified fade-out near end of any power
     try {
       var u = window.__airborneActivePowerUntil || 0;

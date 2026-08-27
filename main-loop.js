@@ -270,6 +270,7 @@
     drawWindParticlesFront();
     drawShieldEffect();
     drawStorm();
+    try { if (window.__airborneDrawRoyal) window.__airborneDrawRoyal(); } catch (e) {}
     drawRain();
     drawCloudWisps();
     drawDustParticles();
