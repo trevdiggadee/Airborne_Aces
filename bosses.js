@@ -1111,34 +1111,49 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
     }
 
 
+    // Royal Stripe — Coronation Barrage (Art Deco gold & ivory, 5s)
     if (powerMode === "meteors") {
+      if (typeof sfxExplosion === "function") sfxExplosion(0.5);
       if (typeof sfxShoot === "function") sfxShoot();
-      if (typeof sfxThunder === "function") sfxThunder();
-      try { if (typeof triggerScreenShake === "function") triggerScreenShake(6, 400); } catch (e) {}
+      try { if (typeof triggerScreenShake === "function") triggerScreenShake(8, 340); } catch (e) {}
+      var ROYAL_SEC = 5.0;
+      var ROYAL_MS = 5000;
       stormActive = true;
       stormMode = "meteors";
-      stormTimer = POWER_DURATION_SEC;
+      stormTimer = ROYAL_SEC;
+      stormCharge = 0;
       window.__airborneActivePowerVisual = "meteors";
-      window.__airborneActivePowerUntil = performance.now() + 6000;
-      window.__airborneMeteorUntil = performance.now() + 6000;
+      window.__airborneActivePowerUntil = performance.now() + ROYAL_MS;
+      window.__airborneMeteorUntil = performance.now() + ROYAL_MS;
       window.__airborneMeteors = [];
       window.__airborneMeteorMarks = [];
-      window.__airborneMeteorSkyDark = { age: 0, life: 6.0, alpha: 0 };
-      window.__airborneMeteorSpawnT = 0;
-      // Preload rock art
-      if (!window.__airborneMeteorRocks) {
-        window.__airborneMeteorRocks = [];
-        for (var ri = 1; ri <= 6; ri++) {
-          var im = new Image();
-          im.src = "meteor_rock_" + ri + ".png?v=ruff218";
-          window.__airborneMeteorRocks.push(im);
-        }
+      window.__airborneMeteorSkyDark = null;
+      window.__airborneRoyal = {
+        age: 0,
+        life: ROYAL_SEC,
+        phase: "crown",
+        crownCharge: 0,
+        barrageDone: false,
+        rainT: 0.12,
+        rings: [
+          { ang: 0, spin: 3.2, dist: 44, w: 10 },
+          { ang: Math.PI * 0.6, spin: -3.8, dist: 60, w: 12 }
+        ],
+        spirals: [],
+        sparks: [],
+        meteors: [],
+        rains: [],
+        explosions: []
+      };
+      for (var si = 0; si < 10; si++) {
+        window.__airborneRoyal.spirals.push({
+          ang: (si / 10) * Math.PI * 2,
+          spin: 1.8 + (si % 3) * 0.5,
+          dist: 20 + (si % 5) * 6,
+          phase: Math.random() * Math.PI * 2
+        });
       }
-      for (var ms = 0; ms < 22; ms++) {
-        if (typeof window.__airborneMakeMeteor === "function")
-          window.__airborneMeteors.push(window.__airborneMakeMeteor());
-      }
-      try { if (window.PowerFX) window.PowerFX.activate("meteors", player.x, player.y); } catch (e) {}
+      try { if (window.PowerFX && player) window.PowerFX.activate("meteors", player.x, player.y); } catch (e) {}
       updateStormMeterDisplay();
       return;
     }
@@ -2358,11 +2373,11 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
             var fsp = 280 + Math.random() * 60;
             ry.meteors.push({
               x: px + 10,
-              y: py - 28, // from crown
+              y: py - 32,
               vx: Math.cos(fang) * fsp,
               vy: Math.sin(fang) * fsp * 0.55 - 20,
-              life: 2.8, age: 0,
-              r: 16 + Math.random() * 5,
+              life: 3.0, age: 0,
+              r: 20 + Math.random() * 6,
               big: true,
               trails: [],
               hitIds: {}
@@ -4557,101 +4572,131 @@ if (window.__airbornePlasmaIgnite) {
     ctx.save();
     ctx.globalAlpha = Math.max(0.05, pf);
 
-    // Royal aura (gold-white) — keep moderate so blimp stays readable
-    var auraR = Math.max(36, (typeof player !== "undefined" && player ? Math.max(player.w, player.h) : 40) * 0.85);
-    var ag = ctx.createRadialGradient(px, py, 6, px, py, auraR * 1.5);
-    ag.addColorStop(0, "rgba(255,250,230,0.45)");
-    ag.addColorStop(0.4, "rgba(251,191,36,0.28)");
-    ag.addColorStop(1, "rgba(180,120,20,0)");
+    // Soft royal aura — transparent center so blimp stays clear
+    var auraR = Math.max(40, (typeof player !== "undefined" && player ? Math.max(player.w, player.h) : 40) * 0.95);
+    var ag = ctx.createRadialGradient(px, py, auraR * 0.35, px, py, auraR * 1.65);
+    ag.addColorStop(0, "rgba(255,250,230,0.08)");
+    ag.addColorStop(0.35, "rgba(255,236,180,0.32)");
+    ag.addColorStop(0.7, "rgba(251,191,36,0.22)");
+    ag.addColorStop(1, "rgba(140,80,10,0)");
     ctx.fillStyle = ag;
     ctx.beginPath();
-    ctx.arc(px, py, auraR * 1.5, 0, Math.PI * 2);
+    ctx.arc(px, py, auraR * 1.65, 0, Math.PI * 2);
     ctx.fill();
 
-    // Spiral energy motes
+    // Spiral golden energy around body
     ctx.globalCompositeOperation = "lighter";
     for (var si = 0; si < (ry.spirals || []).length; si++) {
       var sp = ry.spirals[si];
       var sx = px + Math.cos(sp.ang) * sp.dist;
-      var sy = py + Math.sin(sp.ang) * sp.dist * 0.7;
-      var su = 0.5 + 0.5 * Math.sin(sp.phase);
-      ctx.globalAlpha = (0.4 + 0.4 * su) * pf;
-      var sg = ctx.createRadialGradient(sx, sy, 0, sx, sy, 8);
-      sg.addColorStop(0, "rgba(255,255,240,0.95)");
-      sg.addColorStop(0.5, "rgba(251,191,36,0.6)");
-      sg.addColorStop(1, "rgba(180,100,20,0)");
+      var sy = py + Math.sin(sp.ang) * sp.dist * 0.68;
+      var su = 0.55 + 0.45 * Math.sin(sp.phase);
+      ctx.globalAlpha = (0.45 + 0.45 * su) * pf;
+      var sg = ctx.createRadialGradient(sx, sy, 0, sx, sy, 9);
+      sg.addColorStop(0, "rgba(255,255,245,1)");
+      sg.addColorStop(0.4, "rgba(253,224,71,0.75)");
+      sg.addColorStop(1, "rgba(180,90,10,0)");
       ctx.fillStyle = sg;
       ctx.beginPath();
-      ctx.arc(sx, sy, 7, 0, Math.PI * 2);
+      ctx.arc(sx, sy, 8, 0, Math.PI * 2);
       ctx.fill();
+      // short spiral streak
+      ctx.globalAlpha = 0.35 * su * pf;
+      ctx.strokeStyle = "rgba(255,220,140,0.8)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(px, py, sp.dist, sp.ang - 0.35, sp.ang + 0.05);
+      ctx.stroke();
     }
 
-    // Two thick translucent gold-white orbital rings
-    ctx.globalCompositeOperation = "lighter";
+    // Two thick translucent gold-white orbital rings (Art Deco ellipses)
     for (var ri = 0; ri < (ry.rings || []).length; ri++) {
       var rg = ry.rings[ri];
       ctx.save();
       ctx.translate(px, py);
       ctx.rotate(rg.ang);
-      ctx.scale(1, 0.55);
-      ctx.globalAlpha = 0.55 * pf;
-      ctx.strokeStyle = "rgba(255,236,180,0.85)";
+      ctx.scale(1, 0.52);
+      ctx.globalAlpha = 0.6 * pf;
+      ctx.strokeStyle = "rgba(255,236,180,0.9)";
       ctx.lineWidth = rg.w;
       ctx.beginPath();
       ctx.arc(0, 0, rg.dist, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.globalAlpha = 0.35 * pf;
-      ctx.strokeStyle = "rgba(255,255,255,0.7)";
-      ctx.lineWidth = rg.w * 0.35;
+      ctx.globalAlpha = 0.4 * pf;
+      ctx.strokeStyle = "rgba(255,255,255,0.85)";
+      ctx.lineWidth = rg.w * 0.32;
       ctx.beginPath();
       ctx.arc(0, 0, rg.dist, 0, Math.PI * 2);
       ctx.stroke();
+      // Deco diamond accents on ring
+      ctx.globalAlpha = 0.55 * pf;
+      for (var di = 0; di < 6; di++) {
+        var da = (di / 6) * Math.PI * 2;
+        var dx = Math.cos(da) * rg.dist;
+        var dy = Math.sin(da) * rg.dist;
+        ctx.fillStyle = "rgba(255,248,220,0.9)";
+        ctx.beginPath();
+        ctx.moveTo(dx, dy - 4);
+        ctx.lineTo(dx + 3, dy);
+        ctx.lineTo(dx, dy + 4);
+        ctx.lineTo(dx - 3, dy);
+        ctx.closePath();
+        ctx.fill();
+      }
       ctx.restore();
     }
 
     // Ornate crown above blimp
-    var crownY = py - (typeof player !== "undefined" && player ? player.h * 0.55 : 28) - 18;
+    var crownY = py - (typeof player !== "undefined" && player ? player.h * 0.58 : 30) - 20;
     var charge = ry.crownCharge || 1;
     ctx.globalCompositeOperation = "lighter";
     ctx.globalAlpha = pf;
-    // Crown glow
-    var cg = ctx.createRadialGradient(px, crownY, 2, px, crownY, 28 + charge * 12);
-    cg.addColorStop(0, "rgba(255,255,255," + (0.7 + charge * 0.3) + ")");
-    cg.addColorStop(0.4, "rgba(251,191,36," + (0.55 * charge) + ")");
-    cg.addColorStop(1, "rgba(180,100,20,0)");
+    var cg = ctx.createRadialGradient(px, crownY, 2, px, crownY, 32 + charge * 18);
+    cg.addColorStop(0, "rgba(255,255,255," + (0.75 + charge * 0.25) + ")");
+    cg.addColorStop(0.35, "rgba(253,224,71," + (0.65 * charge) + ")");
+    cg.addColorStop(1, "rgba(180,90,10,0)");
     ctx.fillStyle = cg;
     ctx.beginPath();
-    ctx.arc(px, crownY, 28 + charge * 12, 0, Math.PI * 2);
+    ctx.arc(px, crownY, 32 + charge * 18, 0, Math.PI * 2);
     ctx.fill();
-    // Crown shape (Art Deco stylized)
+
+    // Crown silhouette
     ctx.globalCompositeOperation = "source-over";
     ctx.globalAlpha = pf;
     ctx.fillStyle = "#fbbf24";
     ctx.strokeStyle = "#fffef5";
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1.6;
     ctx.beginPath();
-    ctx.moveTo(px - 16, crownY + 8);
-    ctx.lineTo(px - 14, crownY - 2);
-    ctx.lineTo(px - 8, crownY + 4);
-    ctx.lineTo(px - 4, crownY - 10);
-    ctx.lineTo(px, crownY + 2);
-    ctx.lineTo(px + 4, crownY - 10);
-    ctx.lineTo(px + 8, crownY + 4);
-    ctx.lineTo(px + 14, crownY - 2);
-    ctx.lineTo(px + 16, crownY + 8);
+    ctx.moveTo(px - 18, crownY + 9);
+    ctx.lineTo(px - 16, crownY - 2);
+    ctx.lineTo(px - 9, crownY + 5);
+    ctx.lineTo(px - 5, crownY - 12);
+    ctx.lineTo(px, crownY + 1);
+    ctx.lineTo(px + 5, crownY - 12);
+    ctx.lineTo(px + 9, crownY + 5);
+    ctx.lineTo(px + 16, crownY - 2);
+    ctx.lineTo(px + 18, crownY + 9);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    // Jewel
+    // Center jewel
+    ctx.globalCompositeOperation = "lighter";
     ctx.fillStyle = "rgba(255,255,255,0.95)";
     ctx.beginPath();
-    ctx.arc(px, crownY - 2, 3.5, 0, Math.PI * 2);
+    ctx.arc(px, crownY - 3, 4, 0, Math.PI * 2);
     ctx.fill();
-    // Base band
+    // Side jewels
+    ctx.fillStyle = "rgba(255,240,180,0.85)";
+    ctx.beginPath();
+    ctx.arc(px - 10, crownY + 2, 2.2, 0, Math.PI * 2);
+    ctx.arc(px + 10, crownY + 2, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = "source-over";
     ctx.fillStyle = "#d97706";
-    ctx.fillRect(px - 17, crownY + 7, 34, 5);
+    ctx.fillRect(px - 19, crownY + 8, 38, 5);
     ctx.strokeStyle = "#fff8dc";
-    ctx.strokeRect(px - 17, crownY + 7, 34, 5);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px - 19, crownY + 8, 38, 5);
 
     // Ambient sparks
     ctx.globalCompositeOperation = "lighter";
@@ -4659,99 +4704,115 @@ if (window.__airbornePlasmaIgnite) {
       var sk = ry.sparks[ski];
       var sku = 1 - sk.age / sk.life;
       ctx.globalAlpha = sku * pf;
-      var skg = ctx.createRadialGradient(sk.x, sk.y, 0, sk.x, sk.y, sk.r * 2);
-      skg.addColorStop(0, "rgba(255,255,240,1)");
-      skg.addColorStop(0.5, "rgba(251,191,36,0.7)");
-      skg.addColorStop(1, "rgba(180,100,0,0)");
+      var skg = ctx.createRadialGradient(sk.x, sk.y, 0, sk.x, sk.y, sk.r * 2.2);
+      skg.addColorStop(0, "rgba(255,255,245,1)");
+      skg.addColorStop(0.45, "rgba(251,191,36,0.75)");
+      skg.addColorStop(1, "rgba(180,80,0,0)");
       ctx.fillStyle = skg;
       ctx.beginPath();
-      ctx.arc(sk.x, sk.y, sk.r * 2, 0, Math.PI * 2);
+      ctx.arc(sk.x, sk.y, sk.r * 2.2, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    function drawGoldOrb(x, y, r, trails) {
+    function drawGoldMeteor(x, y, r, trails, isBig) {
       (trails || []).forEach(function (tr) {
         var u = 1 - tr.age / tr.life;
-        ctx.globalAlpha = u * 0.7 * pf;
-        var tg = ctx.createRadialGradient(tr.x, tr.y, 0, tr.x, tr.y, (tr.r || r) * u);
-        tg.addColorStop(0, "rgba(255,250,220,0.9)");
-        tg.addColorStop(0.4, "rgba(251,191,36,0.55)");
-        tg.addColorStop(1, "rgba(180,80,0,0)");
+        ctx.globalAlpha = u * 0.75 * pf;
+        var tg = ctx.createRadialGradient(tr.x, tr.y, 0, tr.x, tr.y, (tr.r || r) * u * 1.1);
+        tg.addColorStop(0, "rgba(255,252,230,0.95)");
+        tg.addColorStop(0.3, "rgba(253,224,71,0.7)");
+        tg.addColorStop(0.7, "rgba(245,158,11,0.35)");
+        tg.addColorStop(1, "rgba(140,50,0,0)");
         ctx.fillStyle = tg;
         ctx.beginPath();
-        ctx.arc(tr.x, tr.y, (tr.r || r) * u, 0, Math.PI * 2);
+        ctx.arc(tr.x, tr.y, (tr.r || r) * u * 1.1, 0, Math.PI * 2);
         ctx.fill();
       });
       ctx.globalAlpha = pf;
-      // Outer molten gold
-      var og = ctx.createRadialGradient(x - r * 0.2, y - r * 0.25, 0, x, y, r * 1.5);
-      og.addColorStop(0, "rgba(255,255,240,1)");
-      og.addColorStop(0.25, "rgba(253,224,120,0.95)");
-      og.addColorStop(0.55, "rgba(245,158,11,0.85)");
-      og.addColorStop(0.85, "rgba(180,80,10,0.4)");
+      // Outer molten glow
+      var og = ctx.createRadialGradient(x - r * 0.2, y - r * 0.25, 0, x, y, r * (isBig ? 1.7 : 1.5));
+      og.addColorStop(0, "rgba(255,255,250,1)");
+      og.addColorStop(0.2, "rgba(254,243,199,0.98)");
+      og.addColorStop(0.45, "rgba(251,191,36,0.9)");
+      og.addColorStop(0.75, "rgba(217,119,6,0.55)");
       og.addColorStop(1, "rgba(100,40,0,0)");
       ctx.fillStyle = og;
       ctx.beginPath();
-      ctx.arc(x, y, r * 1.5, 0, Math.PI * 2);
+      ctx.arc(x, y, r * (isBig ? 1.7 : 1.5), 0, Math.PI * 2);
       ctx.fill();
-      // White-hot core
-      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      // Molten gold rim
+      ctx.globalAlpha = 0.85 * pf;
+      ctx.strokeStyle = "rgba(245,158,11,0.9)";
+      ctx.lineWidth = isBig ? 3 : 2;
       ctx.beginPath();
-      ctx.arc(x - r * 0.15, y - r * 0.18, r * 0.35, 0, Math.PI * 2);
+      ctx.arc(x, y, r * 0.95, 0, Math.PI * 2);
+      ctx.stroke();
+      // Blazing white core
+      ctx.globalAlpha = pf;
+      ctx.fillStyle = "rgba(255,255,255,1)";
+      ctx.beginPath();
+      ctx.arc(x - r * 0.12, y - r * 0.15, r * 0.38, 0, Math.PI * 2);
       ctx.fill();
+      // Spark flecks
+      if (isBig) {
+        ctx.globalAlpha = 0.7 * pf;
+        for (var fi = 0; fi < 4; fi++) {
+          var fa = Math.random() * Math.PI * 2;
+          ctx.fillStyle = "rgba(255,250,200,0.9)";
+          ctx.beginPath();
+          ctx.arc(x + Math.cos(fa) * r * 0.7, y + Math.sin(fa) * r * 0.7, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
     }
 
-    // Big meteors
     ctx.globalCompositeOperation = "lighter";
     for (var mi = 0; mi < (ry.meteors || []).length; mi++) {
       var mt = ry.meteors[mi];
-      drawGoldOrb(mt.x, mt.y, mt.r, mt.trails);
+      drawGoldMeteor(mt.x, mt.y, mt.r, mt.trails, true);
     }
-    // Rain
     for (var rfi = 0; rfi < (ry.rains || []).length; rfi++) {
       var rf = ry.rains[rfi];
-      drawGoldOrb(rf.x, rf.y, rf.r, rf.trails);
+      drawGoldMeteor(rf.x, rf.y, rf.r, rf.trails, false);
     }
 
-    // Art Deco explosion rings
-    ctx.globalCompositeOperation = "lighter";
+    // Art Deco explosion rings + diamond ticks
     for (var exi = 0; exi < (ry.explosions || []).length; exi++) {
       var ex = ry.explosions[exi];
       var et = Math.max(0, 1 - ex.age / ex.life);
-      var expand = 1 - Math.pow(1 - Math.min(1, ex.age / (ex.life * 0.5)), 2);
+      var expand = 1 - Math.pow(1 - Math.min(1, ex.age / (ex.life * 0.45)), 2);
       for (var eri = 0; eri < (ex.rings || 3); eri++) {
-        var er = (10 + expand * ex.maxR) * (0.55 + eri * 0.25);
-        ctx.globalAlpha = et * (0.7 - eri * 0.15) * pf;
-        ctx.strokeStyle = eri === 0 ? "rgba(255,255,240,0.95)" : "rgba(251,191,36,0.8)";
-        ctx.lineWidth = (3.5 - eri) * et;
+        var er = (12 + expand * ex.maxR) * (0.5 + eri * 0.28);
+        ctx.globalAlpha = et * (0.75 - eri * 0.15) * pf;
+        ctx.strokeStyle = eri === 0 ? "rgba(255,255,240,0.95)" : "rgba(251,191,36,0.85)";
+        ctx.lineWidth = (4 - eri * 0.8) * et;
         ctx.beginPath();
         ctx.arc(ex.x, ex.y, er, 0, Math.PI * 2);
         ctx.stroke();
-        // Deco diamond ticks on outer ring
         if (eri === 2) {
-          for (var di = 0; di < 8; di++) {
-            var da = (di / 8) * Math.PI * 2;
+          for (var ddi = 0; ddi < 8; ddi++) {
+            var dda = (ddi / 8) * Math.PI * 2;
             ctx.beginPath();
-            ctx.moveTo(ex.x + Math.cos(da) * er, ex.y + Math.sin(da) * er);
-            ctx.lineTo(ex.x + Math.cos(da) * (er + 6 * et), ex.y + Math.sin(da) * (er + 6 * et));
+            ctx.moveTo(ex.x + Math.cos(dda) * er, ex.y + Math.sin(dda) * er);
+            ctx.lineTo(ex.x + Math.cos(dda) * (er + 8 * et), ex.y + Math.sin(dda) * (er + 8 * et));
             ctx.stroke();
           }
         }
       }
-      // Core flash
       ctx.globalAlpha = et * pf;
-      var eg = ctx.createRadialGradient(ex.x, ex.y, 0, ex.x, ex.y, 20 * et + 8);
+      var eg = ctx.createRadialGradient(ex.x, ex.y, 0, ex.x, ex.y, 24 * et + 10);
       eg.addColorStop(0, "rgba(255,255,255,0.95)");
-      eg.addColorStop(0.4, "rgba(251,191,36,0.5)");
+      eg.addColorStop(0.35, "rgba(251,191,36,0.55)");
       eg.addColorStop(1, "rgba(180,80,0,0)");
       ctx.fillStyle = eg;
       ctx.beginPath();
-      ctx.arc(ex.x, ex.y, 22 * et + 8, 0, Math.PI * 2);
+      ctx.arc(ex.x, ex.y, 26 * et + 10, 0, Math.PI * 2);
       ctx.fill();
     }
 
     ctx.restore();
   }
+
 
   function drawSunBurst() {
     var list = window.__airborneSunBurst;
