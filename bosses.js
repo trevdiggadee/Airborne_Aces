@@ -3146,28 +3146,140 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         d.age += dt; d.x += d.vx * dt; d.y += d.vy * dt; d.vy += 120 * dt;
         if (d.age >= d.life) fur.drips.splice(di, 1);
       }
-      // Orbit / sequential launch
+      // Orbiters stay in orbit; continuous forged-arc ammunition during foundry
       var orbsM = window.__airborneMoltenOrbs || [];
-      if (fur.phase === "spin") {
-        fur.launchT -= dt;
-        if (fur.launchT <= 0) {
-          fur.phase = "barrage";
-          fur.launchI = 0;
-          fur.launchGap = 0.05;
+      if (!window.__airborneForgeShots) window.__airborneForgeShots = [];
+      if (fur.phase === "foundry" || fur.phase === "build") {
+        fur.launchT = (fur.launchT || 0.5) - dt;
+        if (fur.phase === "foundry" && fur.launchT <= 0) {
+          fur.launchT = 0.2 + Math.random() * 0.1;
+          // Spawn forged-arc molten shot (does not consume orbiters)
+          var arcStyle = Math.random(); // varies arc height
+          var shot = {
+            x: player.x + (player.w || 40) * 0.35,
+            y: player.y,
+            age: 0,
+            life: 3.2,
+            r: 11 + Math.random() * 4,
+            phase: "drop", // drop → lift → hammer
+            phaseT: 0,
+            // Initial powerful forward burst with slight dip
+            vx: 200 + Math.random() * 50,
+            vy: 55 + Math.random() * 40, // heavy downward
+            liftPeak: -160 - arcStyle * 140, // upward strength
+            hammerG: 420 + arcStyle * 180,
+            trail: [],
+            sparks: [],
+            hitIds: {},
+            ignited: false
+          };
+          window.__airborneForgeShots.push(shot);
+          // Launch spark burst
+          for (var si = 0; si < 8; si++) {
+            var sa = -0.6 + Math.random() * 1.2;
+            shot.sparks.push({
+              x: shot.x, y: shot.y,
+              vx: Math.cos(sa) * (60 + Math.random() * 80),
+              vy: Math.sin(sa) * (40 + Math.random() * 50) - 20,
+              age: 0, life: 0.25 + Math.random() * 0.15, r: 1.5 + Math.random() * 2
+            });
+          }
+          fur.ringPulse = (fur.ringPulse || 0) + 2; // pulse ring on fire
+          try { if (typeof sfxShoot === "function") sfxShoot(); } catch (e) {}
         }
       }
-      if (fur.phase === "barrage") {
-        fur.launchGap -= dt;
-        if (fur.launchGap <= 0 && fur.launchI < orbsM.length) {
-          var lo = orbsM[fur.launchI];
-          lo.mode = "launch";
-          lo.vx = 320 + Math.random() * 80;
-          lo.vy = (Math.random() - 0.5) * 90;
-          lo.hitIds = {};
-          lo.trail = [];
-          fur.launchI++;
-          fur.launchGap = 0.26 + Math.random() * 0.08;
-          try { if (typeof sfxShoot === "function") sfxShoot(); } catch (e) {}
+      // Update forged-arc shots
+      for (var fsi = window.__airborneForgeShots.length - 1; fsi >= 0; fsi--) {
+        var fs = window.__airborneForgeShots[fsi];
+        fs.age += dt;
+        fs.phaseT += dt;
+        if (fs.phase === "drop") {
+          fs.x += fs.vx * dt;
+          fs.y += fs.vy * dt;
+          fs.vy += 80 * dt; // heavy fall
+          if (fs.phaseT > 0.18) {
+            fs.phase = "lift";
+            fs.phaseT = 0;
+            fs.vy = fs.liftPeak * 0.35; // kick upward
+            fs.vx = 240 + Math.random() * 60;
+            fs.ignited = true; // expand into plasma look
+            fs.r *= 1.25;
+          }
+        } else if (fs.phase === "lift") {
+          fs.x += fs.vx * dt;
+          fs.y += fs.vy * dt;
+          fs.vy += 120 * dt; // gravity slows the climb
+          if (fs.phaseT > 0.28 || fs.vy > 20) {
+            fs.phase = "hammer";
+            fs.phaseT = 0;
+            fs.vy = 40;
+          }
+        } else { // hammer
+          fs.x += fs.vx * dt;
+          fs.y += fs.vy * dt;
+          fs.vy += fs.hammerG * dt;
+          fs.vx *= (1 - 0.15 * dt);
+        }
+        // Heat trail
+        fs.trail.push({ x: fs.x, y: fs.y, age: 0, life: 0.55, r: fs.r * 0.55 });
+        if (fs.trail.length > 18) fs.trail.shift();
+        for (var ti = fs.trail.length - 1; ti >= 0; ti--) {
+          fs.trail[ti].age += dt;
+          if (fs.trail[ti].age >= fs.trail[ti].life) fs.trail.splice(ti, 1);
+        }
+        for (var ski = fs.sparks.length - 1; ski >= 0; ski--) {
+          var sk = fs.sparks[ski];
+          sk.age += dt; sk.x += sk.vx * dt; sk.y += sk.vy * dt;
+          if (sk.age >= sk.life) fs.sparks.splice(ski, 1);
+        }
+        // Trail sparks along path
+        if (Math.random() < 0.35) {
+          fs.sparks.push({
+            x: fs.x, y: fs.y,
+            vx: -30 - Math.random() * 40, vy: (Math.random() - 0.5) * 40,
+            age: 0, life: 0.2, r: 1.2 + Math.random()
+          });
+        }
+        // Hits
+        if (typeof obstacles !== "undefined") {
+          for (var hi = 0; hi < obstacles.length; hi++) {
+            var o = obstacles[hi];
+            if (!o || o.isRing || o.type === "gold_ring" || o.type === "ring") continue;
+            if (o.powerAffected && o.onFire) continue;
+            var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
+            if (Math.hypot(fs.x - ox, fs.y - oy) > fs.r * 1.6 + Math.max(o.w, o.h) * 0.4) continue;
+            o.onFire = true; o.powerAffected = true; o.hitFlash = 1;
+            o.vy = 100 + Math.random() * 50; o.vx = (Math.random() - 0.5) * 90;
+            o.scored = true;
+            try { creditPowerKillScore(1); } catch (e) {}
+            // Molten metal chunks
+            if (!window.__airborneFireballs) window.__airborneFireballs = [];
+            for (var fi = 0; fi < 6; fi++) {
+              var fa = Math.random() * Math.PI * 2;
+              window.__airborneFireballs.push({
+                x: ox, y: oy,
+                vx: Math.cos(fa) * (90 + Math.random() * 110),
+                vy: Math.sin(fa) * (70 + Math.random() * 90) - 30,
+                life: 0.5, age: 0, r: 4 + Math.random() * 4,
+                kind: "moltenSplat", pierce: 1, hitIds: {}, trails: []
+              });
+            }
+            try {
+              if (window.PowerFX) window.PowerFX.burst(ox, oy, {
+                count: 18, colors: ["#fff7ed", "#ffd24a", "#ff8a1a", "#b45309", "#dc2626"],
+                speed: 150, life: 0.5, glow: true
+              });
+            } catch (e) {}
+            window.__airborneForgeShots.splice(fsi, 1);
+            fs = null;
+            break;
+          }
+        }
+        if (fs) {
+          var Ww = (typeof W === "number") ? W : 500;
+          var Hh = (typeof H === "number") ? H : 700;
+          if (fs.age >= fs.life || fs.x > Ww + 80 || fs.y > Hh + 80 || fs.y < -80)
+            window.__airborneForgeShots.splice(fsi, 1);
         }
       }
       // Final forge blast near end
@@ -3203,7 +3315,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         if (mo.mode === "orbit") {
           mo.ang += mo.spin * dt * (1.15 + fur.heat * 0.9);
           mo.pulse += dt * 8;
-          // Gear-like uneven radius
+          // 3D-style orbit: depth passes in front (z>0) and behind (z<0) the blimp
           var gearR = (mo.baseDist || mo.dist) * (0.94 + 0.08 * Math.sin(mo.ang * 3 + fur.ringAng));
           if (fur.phase === "collapse") {
             gearR = Math.max(6, gearR - 90 * dt);
@@ -3211,8 +3323,13 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
           } else {
             mo.dist = gearR;
           }
-          mo.x = player.x + Math.cos(mo.ang) * mo.dist;
-          mo.y = player.y + Math.sin(mo.ang) * mo.dist * 0.7;
+          // Tilting orbital plane — z from sin for front/back
+          mo.z = Math.sin(mo.ang); // -1 behind, +1 in front
+          var depthScale = 0.82 + 0.22 * ((mo.z + 1) * 0.5); // smaller when behind
+          mo.x = player.x + Math.cos(mo.ang) * mo.dist * depthScale;
+          mo.y = player.y + Math.sin(mo.ang * 0.95) * mo.dist * 0.55 * depthScale;
+          mo.drawScale = depthScale;
+          mo.drawAlpha = 0.55 + 0.45 * ((mo.z + 1) * 0.5); // dimmer behind
           if (!mo.trail) mo.trail = [];
           if ((mo._ts = !mo._ts)) {
             mo.trail.push({ x: mo.x, y: mo.y, age: 0, life: 0.25 });
@@ -3324,6 +3441,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         window.__airborneFireballs = [];
         window.__airborneFurnace = null;
         window.__airborneMoltenOrbs = null;
+        window.__airborneForgeShots = null;
         window.__airborneForgeBlast = null;
         window.__airborneHeatHaze = null;
         window.__airbornePlasmaOrbits = null;
@@ -4525,10 +4643,15 @@ if (window.__airbornePlasmaIgnite) {
         ctx.fill();
       });
     }
-    // Molten orbs
-    var orbs = window.__airborneMoltenOrbs || [];
+    // Molten orbs — draw behind blimp first (z low), then in front
+    var orbs = (window.__airborneMoltenOrbs || []).slice().filter(function(mo) {
+      return mo && mo.mode !== "done" && mo.x != null;
+    });
+    orbs.sort(function(a, b) { return (a.z || 0) - (b.z || 0); });
     orbs.forEach(function (mo) {
       if (mo.mode === "done" || mo.x == null) return;
+      var depthA = (typeof mo.drawAlpha === "number") ? mo.drawAlpha : 1;
+      var dScale = (typeof mo.drawScale === "number") ? mo.drawScale : 1;
       // trail
       (mo.trail || []).forEach(function (tr) {
         var tu = 1 - tr.age / tr.life;
@@ -4546,7 +4669,8 @@ if (window.__airbornePlasmaIgnite) {
       });
       ctx.globalAlpha = Math.max(0.05, pf);
       var pulse = 0.9 + 0.12 * Math.sin(mo.pulse || 0);
-      var rr = mo.r * pulse;
+      var rr = mo.r * pulse * (typeof dScale === "number" ? dScale : 1);
+      ctx.globalAlpha = Math.max(0.05, pf * (typeof depthA === "number" ? depthA : 1));
       // outer molten shell
       var og = ctx.createRadialGradient(mo.x - rr * 0.2, mo.y - rr * 0.25, 1, mo.x, mo.y, rr * 1.35);
       og.addColorStop(0, "rgba(255,255,230,1)");
@@ -4564,6 +4688,91 @@ if (window.__airbornePlasmaIgnite) {
       ctx.arc(mo.x - rr * 0.15, mo.y - rr * 0.18, rr * 0.32, 0, Math.PI * 2);
       ctx.fill();
     });
+    // Forged-arc molten ammunition
+    var shots = window.__airborneForgeShots || [];
+    shots.forEach(function(fs) {
+      // Bending heat trail
+      (fs.trail || []).forEach(function(tr) {
+        var tu = 1 - tr.age / tr.life;
+        if (tu <= 0) return;
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = tu * 0.55 * pf;
+        var tg = ctx.createRadialGradient(tr.x, tr.y, 0, tr.x, tr.y, (tr.r || 6) * tu);
+        tg.addColorStop(0, "rgba(255,200,80,0.9)");
+        tg.addColorStop(0.5, "rgba(255,100,20,0.45)");
+        tg.addColorStop(1, "rgba(120,30,0,0)");
+        ctx.fillStyle = tg;
+        ctx.beginPath();
+        ctx.arc(tr.x, tr.y, (tr.r || 6) * tu, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      // Trail line (sweeping arc)
+      if (fs.trail && fs.trail.length > 1) {
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = 0.4 * pf;
+        ctx.strokeStyle = "rgba(255,140,40,0.7)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (var ti = 0; ti < fs.trail.length; ti++) {
+          if (ti === 0) ctx.moveTo(fs.trail[ti].x, fs.trail[ti].y);
+          else ctx.lineTo(fs.trail[ti].x, fs.trail[ti].y);
+        }
+        ctx.stroke();
+      }
+      // Sparks
+      (fs.sparks || []).forEach(function(sk) {
+        var su = 1 - sk.age / sk.life;
+        ctx.globalAlpha = su * pf;
+        ctx.fillStyle = "rgba(255,200,100,0.9)";
+        ctx.beginPath();
+        ctx.arc(sk.x, sk.y, sk.r * su, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      // Molten iron sphere
+      ctx.globalAlpha = pf;
+      var rr = fs.r * (fs.ignited ? 1.15 : 1);
+      var og = ctx.createRadialGradient(fs.x - rr * 0.2, fs.y - rr * 0.25, 0, fs.x, fs.y, rr * 1.5);
+      og.addColorStop(0, "rgba(255,245,200,1)");
+      og.addColorStop(0.25, "rgba(255,160,40,0.95)");
+      og.addColorStop(0.55, "rgba(220,70,10,0.8)");
+      og.addColorStop(1, "rgba(60,10,0,0)");
+      ctx.fillStyle = og;
+      ctx.beginPath();
+      ctx.arc(fs.x, fs.y, rr * 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      // Dark iron core
+      ctx.globalCompositeOperation = "source-over";
+      var mg = ctx.createRadialGradient(fs.x, fs.y, 0, fs.x, fs.y, rr * 0.65);
+      mg.addColorStop(0, "rgba(70,60,55,1)");
+      mg.addColorStop(0.5, "rgba(35,30,28,0.95)");
+      mg.addColorStop(1, "rgba(200,80,20,0)");
+      ctx.fillStyle = mg;
+      ctx.beginPath();
+      ctx.arc(fs.x, fs.y, rr * 0.65, 0, Math.PI * 2);
+      ctx.fill();
+      // Magma cracks
+      ctx.strokeStyle = "rgba(255,150,40,0.9)";
+      ctx.lineWidth = 1.3;
+      for (var ck = 0; ck < 4; ck++) {
+        var cka = (ck / 4) * Math.PI * 2 + fs.age * 3;
+        ctx.beginPath();
+        ctx.moveTo(fs.x + Math.cos(cka) * rr * 0.12, fs.y + Math.sin(cka) * rr * 0.12);
+        ctx.lineTo(fs.x + Math.cos(cka) * rr * 0.5, fs.y + Math.sin(cka) * rr * 0.5);
+        ctx.stroke();
+      }
+      // Flame plume behind
+      ctx.globalCompositeOperation = "lighter";
+      var backX = fs.x - (fs.vx || 200) * 0.04;
+      var backY = fs.y - (fs.vy || 0) * 0.04;
+      var pg = ctx.createRadialGradient(backX, backY, 0, backX, backY, rr * 1.8);
+      pg.addColorStop(0, "rgba(255,180,60,0.7)");
+      pg.addColorStop(1, "rgba(180,40,0,0)");
+      ctx.fillStyle = pg;
+      ctx.beginPath();
+      ctx.arc(backX, backY, rr * 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
     // Final forge blast
     if (window.__airborneForgeBlast) {
       var fb = window.__airborneForgeBlast;
