@@ -563,49 +563,56 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       return;
     }
 
-    // Ironworks — Furnace Overdrive (molten orbs, forge spin, final blast)
+    // Ironworks — Molten Foundry (5s flying furnace)
     if (powerMode === "fireball") {
       if (typeof sfxExplosion === "function") sfxExplosion(0.5);
       if (typeof sfxShoot === "function") sfxShoot();
       try { if (typeof triggerScreenShake === "function") triggerScreenShake(7, 320); } catch (e) {}
+      var FUR_SEC = 5.0;
+      var FUR_MS = 5000;
       stormActive = true;
       stormMode = "fireball";
-      stormTimer = POWER_DURATION_SEC;
+      stormTimer = FUR_SEC;
       stormCharge = 0;
-      window.__airborneFireballUntil = performance.now() + POWER_DURATION_MS;
+      window.__airborneFireballUntil = performance.now() + FUR_MS;
       window.__airborneActivePowerVisual = "fireball";
-      window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
+      window.__airborneActivePowerUntil = performance.now() + FUR_MS;
       window.__airborneFireballs = [];
       window.__airborneFireballKind = "fireball";
-      // Furnace state
-      var nMolten = 4 + Math.floor(Math.random() * 3); // 4–6
+      var nMolten = 5 + Math.floor(Math.random() * 2); // 5–6
       window.__airborneFurnace = {
         age: 0,
-        life: POWER_DURATION_SEC,
-        phase: "spin", // spin → barrage → finale
+        life: FUR_SEC,
+        phase: "build", // build → foundry → collapse
         launchI: 0,
-        launchT: 0.55, // delay before first launch
-        launchGap: 0.28,
+        launchT: 0.5,
+        launchGap: 0.22,
         finaleDone: false,
         heat: 0,
+        ringAng: 0,
+        ringPulse: 0,
         vents: [],
-        drips: []
+        drips: [],
+        sparks: []
       };
       window.__airborneMoltenOrbs = [];
       for (var mi = 0; mi < nMolten; mi++) {
+        // Uneven gear-like spacing
+        var gearOff = (mi % 2) * 0.22;
         window.__airborneMoltenOrbs.push({
-          ang: (mi / nMolten) * Math.PI * 2,
-          spin: 2.2 + Math.random() * 0.8,
-          dist: 38 + (mi % 3) * 6,
-          r: 14 + Math.random() * 5,
+          ang: (mi / nMolten) * Math.PI * 2 + gearOff,
+          spin: 2.0 + (mi % 3) * 0.35 + Math.random() * 0.4,
+          dist: 36 + (mi % 3) * 8,
+          baseDist: 36 + (mi % 3) * 8,
+          r: 13 + Math.random() * 5,
           pulse: Math.random() * Math.PI * 2,
           trail: [],
-          mode: "orbit", // orbit | launch
+          mode: "orbit",
           hitIds: {},
           x: 0, y: 0
         });
       }
-      window.__airborneHeatHaze = { age: 0, life: POWER_DURATION_SEC };
+      window.__airborneHeatHaze = { age: 0, life: FUR_SEC };
       try { if (window.PowerFX && player) window.PowerFX.activate("fireball", player.x, player.y); } catch (e) {}
       updateStormMeterDisplay();
       return;
@@ -975,10 +982,10 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         var ca = (ci / 5) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
         window.__airborneStormClouds.push({
           ang: ca,
-          baseDist: 48 + (ci % 3) * 14 + Math.random() * 10,
-          dist: 48 + (ci % 3) * 14,
-          r: 38 + Math.random() * 22,
-          baseR: 38 + Math.random() * 22,
+          baseDist: 52 + (ci % 3) * 16 + Math.random() * 10,
+          dist: 52 + (ci % 3) * 16,
+          r: 46 + Math.random() * 24,
+          baseR: 46 + Math.random() * 24,
           spin: (0.55 + Math.random() * 0.35) * (ci % 2 === 0 ? 1 : -0.7),
           phase: Math.random() * Math.PI * 2,
           wobble: Math.random() * Math.PI * 2,
@@ -2362,14 +2369,8 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
             tc.phaseT = 0;
           }
         } else if (tc.phase === "fade") {
-          // Floating residual sparks
-          if (Math.random() < 0.4) {
-            tc.sparks.push({
-              x: Math.random() * W, y: Math.random() * H * 0.7,
-              vx: (Math.random() - 0.5) * 30, vy: -20 - Math.random() * 40,
-              age: 0, life: 0.6 + Math.random() * 0.5, r: 1.5 + Math.random() * 2
-            });
-          }
+          // Clean fade — no residual dust/spark particles
+          tc.sparks = [];
         }
 
         // Age bolts / arcs / sparks
@@ -2390,6 +2391,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         }
 
         if (tc.age >= tc.life) {
+          if (tc) { tc.sparks = []; tc.bolts = []; tc.auraArcs = []; }
           window.__airborneThunderChain = null;
           window.__airborneStormClouds = null;
           window.__airborneStormRain = null;
@@ -3092,7 +3094,19 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
     if (stormMode === "fireball" && window.__airborneFurnace && typeof player !== "undefined" && player) {
       var fur = window.__airborneFurnace;
       fur.age += dt;
-      fur.heat = Math.min(1, fur.age / 0.6);
+      // 0.5s rapid build then max furnace
+      if (fur.age < 0.5) {
+        fur.phase = "build";
+        fur.heat = Math.min(1, fur.age / 0.5);
+      } else if (fur.age < fur.life - 0.45) {
+        fur.phase = "foundry";
+        fur.heat = 1;
+      } else {
+        fur.phase = "collapse";
+        fur.heat = Math.max(0.3, 1 - (fur.age - (fur.life - 0.45)) / 0.45);
+      }
+      fur.ringAng = (fur.ringAng || 0) + dt * 2.4;
+      fur.ringPulse = (fur.ringPulse || 0) + dt * 6;
       // Steam vents
       if (Math.random() < 0.4 + fur.heat * 0.4) {
         if (!fur.vents) fur.vents = [];
@@ -3187,10 +3201,18 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       for (var oi = 0; oi < orbsM.length; oi++) {
         var mo = orbsM[oi];
         if (mo.mode === "orbit") {
-          mo.ang += mo.spin * dt * (1.2 + fur.heat * 0.8);
+          mo.ang += mo.spin * dt * (1.15 + fur.heat * 0.9);
           mo.pulse += dt * 8;
+          // Gear-like uneven radius
+          var gearR = (mo.baseDist || mo.dist) * (0.94 + 0.08 * Math.sin(mo.ang * 3 + fur.ringAng));
+          if (fur.phase === "collapse") {
+            gearR = Math.max(6, gearR - 90 * dt);
+            mo.dist = gearR;
+          } else {
+            mo.dist = gearR;
+          }
           mo.x = player.x + Math.cos(mo.ang) * mo.dist;
-          mo.y = player.y + Math.sin(mo.ang) * mo.dist * 0.72;
+          mo.y = player.y + Math.sin(mo.ang) * mo.dist * 0.7;
           if (!mo.trail) mo.trail = [];
           if ((mo._ts = !mo._ts)) {
             mo.trail.push({ x: mo.x, y: mo.y, age: 0, life: 0.25 });
@@ -4444,6 +4466,36 @@ if (window.__airbornePlasmaIgnite) {
         ctx.lineTo(player.x + Math.cos(ca) * player.w * 0.42, player.y + Math.sin(ca) * player.h * 0.38);
         ctx.stroke();
       }
+      // Rotating forge ring (industrial furnace mechanism)
+      ctx.globalCompositeOperation = "lighter";
+      var ringPulse = 0.7 + 0.3 * Math.sin(fur.ringPulse || 0);
+      var ringR = Math.max(player.w, player.h) * 0.72;
+      ctx.save();
+      ctx.translate(player.x, player.y);
+      ctx.rotate(fur.ringAng || 0);
+      ctx.scale(1, 0.55);
+      ctx.globalAlpha = 0.55 * heat * ringPulse * pf;
+      ctx.strokeStyle = "rgba(255,160,40,0.95)";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(0, 0, ringR, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 0.4 * heat * pf;
+      ctx.strokeStyle = "rgba(255,220,120,0.9)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, ringR * 0.92, 0, Math.PI * 2);
+      ctx.stroke();
+      // Gear teeth accents
+      ctx.globalAlpha = 0.5 * heat * pf;
+      for (var gi = 0; gi < 8; gi++) {
+        var ga = (gi / 8) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(ga) * ringR * 0.88, Math.sin(ga) * ringR * 0.88);
+        ctx.lineTo(Math.cos(ga) * (ringR + 6), Math.sin(ga) * (ringR + 6));
+        ctx.stroke();
+      }
+      ctx.restore();
       ctx.globalAlpha = Math.max(0.05, pf);
       // Steam vents
       (fur.vents || []).forEach(function (v) {
@@ -6474,7 +6526,7 @@ function drawFireballs() {
           var cx = c.x, cy = c.y;
           var bodyR = (c.r || 40) * 1.15;
           // Main mass — translucent charcoal-blue
-          ctx.globalAlpha = 0.32 * pf;
+          ctx.globalAlpha = 0.52 * pf;
           var bg = ctx.createRadialGradient(cx, cy, bodyR * 0.12, cx, cy, bodyR);
           bg.addColorStop(0, "rgba(100,115,145,0.55)");
           bg.addColorStop(0.4, "rgba(55,65,95,0.35)");
