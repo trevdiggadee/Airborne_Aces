@@ -466,7 +466,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       blimp4: "steam",
       blimp5: "greenfireball",
       blimp6: "vortex",
-      blimp7: "ivorybolt", // Storm Chaser — same dark cloud orbit + white electric fireballs
+      blimp7: "ivorybolt", // Storm Chaser — dark storm cloud orbs + white electric fireballs
       blimp8: "fireball",
       blimp9: "jollybomb",
       blimp10: "ivorybolt",
@@ -2293,76 +2293,190 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       sd.alpha = 0.55 * st * fadeOut;
       if (sd.age >= sd.life) window.__airborneMeteorSkyDark = null;
     }
-    if (stormMode === "meteors" || (window.__airborneMeteors && window.__airborneMeteors.length)) {
+    // Royal Stripe — Coronation Barrage
+    if (stormMode === "meteors" || window.__airborneRoyal) {
+      var ry = window.__airborneRoyal;
       var untilM = window.__airborneMeteorUntil || 0;
-      // Continuous spawn from top
-      if (untilM && performance.now() < untilM) {
-        window.__airborneMeteorSpawnT = (window.__airborneMeteorSpawnT || 0) - dt;
-        if (window.__airborneMeteorSpawnT <= 0) {
-          window.__airborneMeteorSpawnT = 0.08 + Math.random() * 0.1;
-          if (typeof window.__airborneMakeMeteor === "function") {
-            window.__airborneMeteors = window.__airborneMeteors || [];
-            window.__airborneMeteors.push(window.__airborneMakeMeteor());
-            if (Math.random() < 0.5) window.__airborneMeteors.push(window.__airborneMakeMeteor());
+      var Ww = (typeof W === "number") ? W : 400;
+      var Hh = (typeof H === "number") ? H : 700;
+      var px = (typeof player !== "undefined" && player) ? player.x : Ww * 0.3;
+      var py = (typeof player !== "undefined" && player) ? player.y : Hh * 0.4;
+
+      if (ry) {
+        ry.age += dt;
+        var tN = ry.age / (ry.life || 5);
+
+        // Phase
+        if (tN < 0.18) ry.phase = "crown";
+        else if (tN < 0.28) ry.phase = "barrage";
+        else ry.phase = "reign";
+
+        // Crown charge
+        if (ry.phase === "crown") {
+          ry.crownCharge = Math.min(1, ry.age / 0.85);
+        } else {
+          ry.crownCharge = 1;
+        }
+
+        // Orbit rings
+        for (var ri = 0; ri < ry.rings.length; ri++) {
+          ry.rings[ri].ang += ry.rings[ri].spin * dt;
+        }
+        // Energy spirals
+        for (var si = 0; si < ry.spirals.length; si++) {
+          var sp = ry.spirals[si];
+          sp.ang += sp.spin * dt;
+          sp.phase += dt * 5;
+        }
+        // Ambient sparks near hull
+        if (Math.random() < 0.4) {
+          if (ry.sparks.length < 30) {
+            var sa = Math.random() * Math.PI * 2;
+            ry.sparks.push({
+              x: px + Math.cos(sa) * 20,
+              y: py + Math.sin(sa) * 14,
+              vx: (Math.random() - 0.5) * 40,
+              vy: -30 - Math.random() * 50,
+              age: 0, life: 0.35 + Math.random() * 0.25,
+              r: 2 + Math.random() * 2.5
+            });
           }
         }
-      }
-      if (!window.__airborneMeteors) window.__airborneMeteors = [];
-      for (var mti = window.__airborneMeteors.length - 1; mti >= 0; mti--) {
-        var mt = window.__airborneMeteors[mti];
-        mt.age += dt;
-        mt.x += mt.vx * dt + Math.sin(mt.age * 3 + mt.wobble) * mt.wobble * dt;
-        mt.y += mt.vy * dt;
-        mt.vy += 40 * dt; // slight accel
-        // sparks breaking away
-        if (!mt.sparks) mt.sparks = [];
-        if (Math.random() < mt.sparkRate) {
-          mt.sparks.push({
-            x: mt.x, y: mt.y,
-            vx: -mt.vx * 0.2 + (Math.random() - 0.5) * 60,
-            vy: -mt.vy * 0.1 + (Math.random() - 0.5) * 40,
-            life: 0.25 + Math.random() * 0.35, age: 0,
-            r: 1.5 + Math.random() * 2.5
-          });
+        for (var ski = ry.sparks.length - 1; ski >= 0; ski--) {
+          var sk = ry.sparks[ski];
+          sk.age += dt; sk.x += sk.vx * dt; sk.y += sk.vy * dt;
+          if (sk.age >= sk.life) ry.sparks.splice(ski, 1);
         }
-        for (var si = mt.sparks.length - 1; si >= 0; si--) {
-          var sp = mt.sparks[si];
-          sp.age += dt; sp.x += sp.vx * dt; sp.y += sp.vy * dt;
-          if (sp.age >= sp.life) mt.sparks.splice(si, 1);
+
+        // Fan meteor barrage once after crown charges
+        if (ry.phase === "barrage" && !ry.barrageDone) {
+          ry.barrageDone = true;
+          try { if (typeof sfxExplosion === "function") sfxExplosion(0.5); } catch (e) {}
+          try { if (typeof triggerScreenShake === "function") triggerScreenShake(10, 380); } catch (e) {}
+          for (var mi = 0; mi < 5; mi++) {
+            var fang = -0.55 + (mi / 4) * 1.1;
+            var fsp = 280 + Math.random() * 60;
+            ry.meteors.push({
+              x: px + 10,
+              y: py - 28, // from crown
+              vx: Math.cos(fang) * fsp,
+              vy: Math.sin(fang) * fsp * 0.55 - 20,
+              life: 2.8, age: 0,
+              r: 16 + Math.random() * 5,
+              big: true,
+              trails: [],
+              hitIds: {}
+            });
+          }
         }
-        var hitGround = mt.y > (typeof H !== "undefined" ? H : 700) - 4;
-        var hitObs = false;
-        if (typeof obstacles !== "undefined") {
-          for (var moi = obstacles.length - 1; moi >= 0; moi--) {
-            var mo = obstacles[moi];
-            if (!mo || mo.isRing) continue;
-            var mx = mo.x + mo.w * 0.5, my = mo.y + mo.h * 0.5;
-            if (Math.hypot(mx - mt.x, my - mt.y) < mt.r + Math.max(mo.w, mo.h) * 0.35) {
-              hitObs = true;
-              try { creditPowerKillScore(1); } catch (e) {}
-              obstacles.splice(moi, 1);
-              break;
+
+        // Golden rain during reign
+        if (ry.phase === "reign") {
+          ry.rainT -= dt;
+          if (ry.rainT <= 0) {
+            ry.rainT = 0.12 + Math.random() * 0.08;
+            ry.rains.push({
+              x: Math.random() * Ww,
+              y: -20 - Math.random() * 40,
+              vx: (Math.random() - 0.5) * 30,
+              vy: 200 + Math.random() * 120,
+              life: 2.5, age: 0,
+              r: 6 + Math.random() * 4,
+              trails: [],
+              hitIds: {}
+            });
+          }
+        }
+
+        function hitObstacles(proj, isBig) {
+          if (typeof obstacles === "undefined") return;
+          if (!proj.hitIds) proj.hitIds = {};
+          for (var hi = 0; hi < obstacles.length; hi++) {
+            var o = obstacles[hi];
+            if (!o || o.isRing || o.type === "gold_ring" || o.type === "ring") continue;
+            if (o.powerAffected && o.onFire) continue;
+            var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
+            if (Math.hypot(proj.x - ox, proj.y - oy) > proj.r * 1.4 + Math.max(o.w, o.h) * 0.4) continue;
+            var oid = o._uid || (o._uid = "ry" + Math.random().toString(36).slice(2));
+            if (proj.hitIds[oid]) continue;
+            proj.hitIds[oid] = true;
+            o.onFire = true; o.powerAffected = true; o.hitFlash = 1;
+            o.vy = 90 + Math.random() * 50; o.vx = (Math.random() - 0.5) * 90;
+            o.scored = true;
+            try { creditPowerKillScore(1); } catch (e) {}
+            // Art Deco explosion rings
+            ry.explosions.push({
+              x: ox, y: oy, age: 0, life: 0.55,
+              maxR: isBig ? 70 : 40,
+              rings: 3
+            });
+            try {
+              if (window.PowerFX) window.PowerFX.burst(ox, oy, {
+                count: isBig ? 22 : 12,
+                colors: ["#fffef5", "#fde68a", "#fbbf24", "#d97706", "#fff"],
+                speed: isBig ? 160 : 110, life: 0.5, glow: true
+              });
+            } catch (e) {}
+            if (isBig) {
+              try { if (typeof triggerScreenShake === "function") triggerScreenShake(4, 140); } catch (e) {}
             }
           }
         }
-        if (hitGround || hitObs || mt.age >= mt.life) {
-          var ix = mt.x, iy = Math.min(mt.y, (typeof H !== "undefined" ? H : 700) - 10);
-          try { if (typeof triggerScreenShake === "function") triggerScreenShake(mt.big ? 9 : 3, mt.big ? 350 : 120); } catch (e) {}
-          try { spawnRealisticBombExplosion(ix, iy); } catch (e) {}
-          try {
-            if (window.PowerFX) window.PowerFX.burst(ix, iy, {
-              count: mt.big ? 22 : 12,
-              colors: ["#fff7ed", "#fde68a", "#f97316", "#dc2626", "#78716c"],
-              speed: mt.big ? 160 : 100, glow: true
-            });
-          } catch (e) {}
-          window.__airborneMeteorFlash = { age: 0, life: 0.12, big: !!mt.big };
-          window.__airborneMeteors.splice(mti, 1);
+
+        // Update meteors
+        for (var mti = ry.meteors.length - 1; mti >= 0; mti--) {
+          var mt = ry.meteors[mti];
+          mt.age += dt;
+          mt.x += mt.vx * dt;
+          mt.y += mt.vy * dt;
+          mt.vy += 30 * dt;
+          mt.trails.push({ x: mt.x, y: mt.y, age: 0, life: 0.35, r: mt.r * 0.7 });
+          if (mt.trails.length > 12) mt.trails.shift();
+          for (var tti = mt.trails.length - 1; tti >= 0; tti--) {
+            mt.trails[tti].age += dt;
+            if (mt.trails[tti].age >= mt.trails[tti].life) mt.trails.splice(tti, 1);
+          }
+          hitObstacles(mt, true);
+          if (mt.age >= mt.life || mt.x > Ww + 80 || mt.y > Hh + 80)
+            ry.meteors.splice(mti, 1);
+        }
+
+        // Update rain fireballs
+        for (var rfi = ry.rains.length - 1; rfi >= 0; rfi--) {
+          var rf = ry.rains[rfi];
+          rf.age += dt;
+          rf.x += rf.vx * dt;
+          rf.y += rf.vy * dt;
+          rf.trails.push({ x: rf.x, y: rf.y, age: 0, life: 0.2, r: rf.r * 0.5 });
+          if (rf.trails.length > 6) rf.trails.shift();
+          for (var rti = rf.trails.length - 1; rti >= 0; rti--) {
+            rf.trails[rti].age += dt;
+            if (rf.trails[rti].age >= rf.trails[rti].life) rf.trails.splice(rti, 1);
+          }
+          hitObstacles(rf, false);
+          if (rf.age >= rf.life || rf.y > Hh + 40)
+            ry.rains.splice(rfi, 1);
+        }
+
+        // Explosions age
+        for (var exi = ry.explosions.length - 1; exi >= 0; exi--) {
+          ry.explosions[exi].age += dt;
+          if (ry.explosions[exi].age >= ry.explosions[exi].life)
+            ry.explosions.splice(exi, 1);
         }
       }
-      if (untilM && performance.now() > untilM && !window.__airborneMeteors.length) {
-        stormActive = false; stormMode = "storm";
-        window.__airborneMeteorSkyDark = null;
+
+      if (untilM && performance.now() > untilM) {
+        if (ry && (ry.meteors.length || ry.rains.length || ry.explosions.length)) {
+          // let residual finish
+        } else {
+          stormActive = false;
+          stormMode = "storm";
+          window.__airborneRoyal = null;
+          window.__airborneMeteorUntil = 0;
+          window.__airborneActivePowerVisual = null;
+          window.__airborneActivePowerUntil = 0;
+        }
       }
     }
 
@@ -4427,6 +4541,218 @@ if (window.__airbornePlasmaIgnite) {
   }
 
 
+
+  function drawRoyalCoronation() {
+    var ry = window.__airborneRoyal;
+    if (!ry || typeof ctx === "undefined") return;
+    var px = (typeof player !== "undefined" && player) ? player.x : 0;
+    var py = (typeof player !== "undefined" && player) ? player.y : 0;
+    var Ww = (typeof W === "number") ? W : 400;
+    var Hh = (typeof H === "number") ? H : 700;
+    try {
+      if (typeof updatePowerFade === "function")
+        updatePowerFade(window.__airborneActivePowerUntil || window.__airborneMeteorUntil);
+    } catch (e) {}
+    var pf = (typeof window.__airbornePowerFade === "number") ? window.__airbornePowerFade : 1;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0.05, pf);
+
+    // Royal aura (gold-white) — keep moderate so blimp stays readable
+    var auraR = Math.max(36, (typeof player !== "undefined" && player ? Math.max(player.w, player.h) : 40) * 0.85);
+    var ag = ctx.createRadialGradient(px, py, 6, px, py, auraR * 1.5);
+    ag.addColorStop(0, "rgba(255,250,230,0.45)");
+    ag.addColorStop(0.4, "rgba(251,191,36,0.28)");
+    ag.addColorStop(1, "rgba(180,120,20,0)");
+    ctx.fillStyle = ag;
+    ctx.beginPath();
+    ctx.arc(px, py, auraR * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Spiral energy motes
+    ctx.globalCompositeOperation = "lighter";
+    for (var si = 0; si < (ry.spirals || []).length; si++) {
+      var sp = ry.spirals[si];
+      var sx = px + Math.cos(sp.ang) * sp.dist;
+      var sy = py + Math.sin(sp.ang) * sp.dist * 0.7;
+      var su = 0.5 + 0.5 * Math.sin(sp.phase);
+      ctx.globalAlpha = (0.4 + 0.4 * su) * pf;
+      var sg = ctx.createRadialGradient(sx, sy, 0, sx, sy, 8);
+      sg.addColorStop(0, "rgba(255,255,240,0.95)");
+      sg.addColorStop(0.5, "rgba(251,191,36,0.6)");
+      sg.addColorStop(1, "rgba(180,100,20,0)");
+      ctx.fillStyle = sg;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Two thick translucent gold-white orbital rings
+    ctx.globalCompositeOperation = "lighter";
+    for (var ri = 0; ri < (ry.rings || []).length; ri++) {
+      var rg = ry.rings[ri];
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(rg.ang);
+      ctx.scale(1, 0.55);
+      ctx.globalAlpha = 0.55 * pf;
+      ctx.strokeStyle = "rgba(255,236,180,0.85)";
+      ctx.lineWidth = rg.w;
+      ctx.beginPath();
+      ctx.arc(0, 0, rg.dist, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 0.35 * pf;
+      ctx.strokeStyle = "rgba(255,255,255,0.7)";
+      ctx.lineWidth = rg.w * 0.35;
+      ctx.beginPath();
+      ctx.arc(0, 0, rg.dist, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Ornate crown above blimp
+    var crownY = py - (typeof player !== "undefined" && player ? player.h * 0.55 : 28) - 18;
+    var charge = ry.crownCharge || 1;
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = pf;
+    // Crown glow
+    var cg = ctx.createRadialGradient(px, crownY, 2, px, crownY, 28 + charge * 12);
+    cg.addColorStop(0, "rgba(255,255,255," + (0.7 + charge * 0.3) + ")");
+    cg.addColorStop(0.4, "rgba(251,191,36," + (0.55 * charge) + ")");
+    cg.addColorStop(1, "rgba(180,100,20,0)");
+    ctx.fillStyle = cg;
+    ctx.beginPath();
+    ctx.arc(px, crownY, 28 + charge * 12, 0, Math.PI * 2);
+    ctx.fill();
+    // Crown shape (Art Deco stylized)
+    ctx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = pf;
+    ctx.fillStyle = "#fbbf24";
+    ctx.strokeStyle = "#fffef5";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(px - 16, crownY + 8);
+    ctx.lineTo(px - 14, crownY - 2);
+    ctx.lineTo(px - 8, crownY + 4);
+    ctx.lineTo(px - 4, crownY - 10);
+    ctx.lineTo(px, crownY + 2);
+    ctx.lineTo(px + 4, crownY - 10);
+    ctx.lineTo(px + 8, crownY + 4);
+    ctx.lineTo(px + 14, crownY - 2);
+    ctx.lineTo(px + 16, crownY + 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // Jewel
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
+    ctx.beginPath();
+    ctx.arc(px, crownY - 2, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    // Base band
+    ctx.fillStyle = "#d97706";
+    ctx.fillRect(px - 17, crownY + 7, 34, 5);
+    ctx.strokeStyle = "#fff8dc";
+    ctx.strokeRect(px - 17, crownY + 7, 34, 5);
+
+    // Ambient sparks
+    ctx.globalCompositeOperation = "lighter";
+    for (var ski = 0; ski < (ry.sparks || []).length; ski++) {
+      var sk = ry.sparks[ski];
+      var sku = 1 - sk.age / sk.life;
+      ctx.globalAlpha = sku * pf;
+      var skg = ctx.createRadialGradient(sk.x, sk.y, 0, sk.x, sk.y, sk.r * 2);
+      skg.addColorStop(0, "rgba(255,255,240,1)");
+      skg.addColorStop(0.5, "rgba(251,191,36,0.7)");
+      skg.addColorStop(1, "rgba(180,100,0,0)");
+      ctx.fillStyle = skg;
+      ctx.beginPath();
+      ctx.arc(sk.x, sk.y, sk.r * 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawGoldOrb(x, y, r, trails) {
+      (trails || []).forEach(function (tr) {
+        var u = 1 - tr.age / tr.life;
+        ctx.globalAlpha = u * 0.7 * pf;
+        var tg = ctx.createRadialGradient(tr.x, tr.y, 0, tr.x, tr.y, (tr.r || r) * u);
+        tg.addColorStop(0, "rgba(255,250,220,0.9)");
+        tg.addColorStop(0.4, "rgba(251,191,36,0.55)");
+        tg.addColorStop(1, "rgba(180,80,0,0)");
+        ctx.fillStyle = tg;
+        ctx.beginPath();
+        ctx.arc(tr.x, tr.y, (tr.r || r) * u, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = pf;
+      // Outer molten gold
+      var og = ctx.createRadialGradient(x - r * 0.2, y - r * 0.25, 0, x, y, r * 1.5);
+      og.addColorStop(0, "rgba(255,255,240,1)");
+      og.addColorStop(0.25, "rgba(253,224,120,0.95)");
+      og.addColorStop(0.55, "rgba(245,158,11,0.85)");
+      og.addColorStop(0.85, "rgba(180,80,10,0.4)");
+      og.addColorStop(1, "rgba(100,40,0,0)");
+      ctx.fillStyle = og;
+      ctx.beginPath();
+      ctx.arc(x, y, r * 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      // White-hot core
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.beginPath();
+      ctx.arc(x - r * 0.15, y - r * 0.18, r * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Big meteors
+    ctx.globalCompositeOperation = "lighter";
+    for (var mi = 0; mi < (ry.meteors || []).length; mi++) {
+      var mt = ry.meteors[mi];
+      drawGoldOrb(mt.x, mt.y, mt.r, mt.trails);
+    }
+    // Rain
+    for (var rfi = 0; rfi < (ry.rains || []).length; rfi++) {
+      var rf = ry.rains[rfi];
+      drawGoldOrb(rf.x, rf.y, rf.r, rf.trails);
+    }
+
+    // Art Deco explosion rings
+    ctx.globalCompositeOperation = "lighter";
+    for (var exi = 0; exi < (ry.explosions || []).length; exi++) {
+      var ex = ry.explosions[exi];
+      var et = Math.max(0, 1 - ex.age / ex.life);
+      var expand = 1 - Math.pow(1 - Math.min(1, ex.age / (ex.life * 0.5)), 2);
+      for (var eri = 0; eri < (ex.rings || 3); eri++) {
+        var er = (10 + expand * ex.maxR) * (0.55 + eri * 0.25);
+        ctx.globalAlpha = et * (0.7 - eri * 0.15) * pf;
+        ctx.strokeStyle = eri === 0 ? "rgba(255,255,240,0.95)" : "rgba(251,191,36,0.8)";
+        ctx.lineWidth = (3.5 - eri) * et;
+        ctx.beginPath();
+        ctx.arc(ex.x, ex.y, er, 0, Math.PI * 2);
+        ctx.stroke();
+        // Deco diamond ticks on outer ring
+        if (eri === 2) {
+          for (var di = 0; di < 8; di++) {
+            var da = (di / 8) * Math.PI * 2;
+            ctx.beginPath();
+            ctx.moveTo(ex.x + Math.cos(da) * er, ex.y + Math.sin(da) * er);
+            ctx.lineTo(ex.x + Math.cos(da) * (er + 6 * et), ex.y + Math.sin(da) * (er + 6 * et));
+            ctx.stroke();
+          }
+        }
+      }
+      // Core flash
+      ctx.globalAlpha = et * pf;
+      var eg = ctx.createRadialGradient(ex.x, ex.y, 0, ex.x, ex.y, 20 * et + 8);
+      eg.addColorStop(0, "rgba(255,255,255,0.95)");
+      eg.addColorStop(0.4, "rgba(251,191,36,0.5)");
+      eg.addColorStop(1, "rgba(180,80,0,0)");
+      ctx.fillStyle = eg;
+      ctx.beginPath();
+      ctx.arc(ex.x, ex.y, 22 * et + 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
   function drawSunBurst() {
     var list = window.__airborneSunBurst;
     if (!list || !list.length || typeof ctx === "undefined") return;
@@ -5870,6 +6196,7 @@ function drawFireballs() {
   function drawStorm() {
     // Ivory Tempest draws while active (even if other modes idle)
     try { if (window.__airborneTempest) drawTempestDominion(); } catch (e) {}
+    try { if (window.__airborneRoyal) drawRoyalCoronation(); } catch (e) {}
     // Thunder Chain draws even mid-fade
     var tcDraw = window.__airborneThunderChain;
     if (!stormActive && !tcDraw && !window.__airborneTempest) return;
