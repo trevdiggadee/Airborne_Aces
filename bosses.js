@@ -1198,10 +1198,18 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         pulseAt: 0,
         orbitAng: 0,
         orbitSpd: 2.2,
-        baseDist: 78,
+        baseDist: 117, // 50% further from blimp
         emptyPhase: false,
         finalLaunched: false,
         endFlash: 0,
+        // One giant anchor behind blimp: expands full-screen then fades
+        backdrop: {
+          age: 0,
+          life: 1.4,
+          scale: 0.05,
+          maxScale: 1,
+          alpha: 1
+        },
         rings: [
           { ang: 0, spin: 2.5, dist: 42, w: 8 },
           { ang: Math.PI * 0.5, spin: -3.0, dist: 56, w: 10 }
@@ -1216,7 +1224,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
           id: ai,
           ang: (ai / nA) * Math.PI * 2,
           selfRot: Math.random() * Math.PI * 2,
-          r: 32, // double size
+          r: 16, // 50% smaller than previous double size
           alive: true,
           detonate: false,
           detT: 0,
@@ -2526,6 +2534,22 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         ac.age += dt;
         if (ac.flash > 0) ac.flash = Math.max(0, ac.flash - dt * 2.2);
         if (ac.endFlash > 0) ac.endFlash = Math.max(0, ac.endFlash - dt * 2);
+        // Giant backdrop anchor: expand from blimp center then fade
+        if (ac.backdrop) {
+          var bd = ac.backdrop;
+          bd.age += dt;
+          var u = Math.min(1, bd.age / bd.life);
+          // Expand fast in first 60%, fade in last 40%
+          if (u < 0.55) {
+            var eu = u / 0.55;
+            bd.scale = 0.08 + (1 - Math.pow(1 - eu, 2)) * 0.95;
+            bd.alpha = 0.55 + 0.35 * eu;
+          } else {
+            bd.scale = 1.0 + (u - 0.55) * 0.15;
+            bd.alpha = Math.max(0, 0.9 * (1 - (u - 0.55) / 0.45));
+          }
+          if (bd.age >= bd.life) ac.backdrop = null;
+        }
 
         var alive = [];
         for (var i = 0; i < ac.anchors.length; i++) {
@@ -2541,7 +2565,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
 
         ac.orbitSpd = 2.2 * spdMul;
         ac.orbitAng += ac.orbitSpd * dt;
-        ac.baseDist = 78 * distMul;
+        ac.baseDist = 117 * distMul;
 
         // Energy pulse along chain
         ac.pulseT += dt;
@@ -5116,6 +5140,50 @@ if (window.__airbornePlasmaIgnite) {
     var pf = (typeof window.__airbornePowerFade === "number") ? window.__airbornePowerFade : 1;
     ctx.save();
     ctx.globalAlpha = Math.max(0.05, pf);
+
+    // Giant single anchor behind blimp: expands from center to full-screen then fades
+    if (ac.backdrop) {
+      var bd = ac.backdrop;
+      var img = window.__airborneIvoryAnchorImg;
+      var imgReady = img && img.complete && img.naturalWidth > 0;
+      var Ww = (typeof W === "number") ? W : 400;
+      var Hh = (typeof H === "number") ? H : 700;
+      var maxDim = Math.max(Ww, Hh) * 1.15;
+      var aspect = imgReady ? (img.naturalHeight / img.naturalWidth) : 1.47;
+      var dw = maxDim * bd.scale;
+      var dh = dw * aspect;
+      // If taller than screen, fit height
+      if (dh > Hh * 1.2 * bd.scale / Math.max(bd.scale, 0.01)) {
+        dh = Math.max(Hh, Ww) * 1.15 * bd.scale;
+        dw = dh / aspect;
+      }
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = Math.max(0, bd.alpha) * pf * 0.85;
+      ctx.translate(px, py);
+      if (imgReady) {
+        ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+      } else {
+        ctx.strokeStyle = "rgba(255,240,200,0.9)";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(0, -dh * 0.3, dw * 0.12, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(255,245,220,0.7)";
+        ctx.fillRect(-dw * 0.04, -dh * 0.25, dw * 0.08, dh * 0.55);
+      }
+      // Soft gold wash
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = Math.max(0, bd.alpha) * 0.25 * pf;
+      var bg = ctx.createRadialGradient(0, 0, dw * 0.1, 0, 0, dw * 0.6);
+      bg.addColorStop(0, "rgba(255,230,160,0.5)");
+      bg.addColorStop(1, "rgba(180,100,30,0)");
+      ctx.fillStyle = bg;
+      ctx.beginPath();
+      ctx.arc(0, 0, dw * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
 
     // Soft perimeter aura
     var auraR = Math.max(36, (player && player.w ? Math.max(player.w, player.h) : 40) * 0.9);
