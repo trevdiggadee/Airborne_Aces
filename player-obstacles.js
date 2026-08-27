@@ -1893,6 +1893,12 @@
           fg.addColorStop(0, "rgba(220,255,230,0.6)");
           fg.addColorStop(0.45, "rgba(16,185,129,0.35)");
           fg.addColorStop(1, "rgba(4,120,80,0)");
+        } else if (o.fireTint === "ivory") {
+          // Ivory Anchor — ivory-gold flames
+          fg.addColorStop(0, "rgba(255,252,245,0.75)");
+          fg.addColorStop(0.3, "rgba(255,230,160,0.55)");
+          fg.addColorStop(0.65, "rgba(255,175,60,0.35)");
+          fg.addColorStop(1, "rgba(180,80,20,0)");
         } else {
           fg.addColorStop(0, "rgba(255,230,100,0.55)");
           fg.addColorStop(0.45, "rgba(255,90,15,0.3)");
@@ -1912,6 +1918,22 @@
             ctx.beginPath();
             ctx.moveTo((fi - 2) * 4, -o.h * 0.15);
             ctx.lineTo((fi - 2) * 4 + Math.cos(fang) * fl * 0.3, -o.h * 0.15 + Math.sin(fang) * fl);
+            ctx.stroke();
+          }
+        }
+        // Ivory-gold flame tongues
+        if (o.fireTint === "ivory") {
+          for (var fi = 0; fi < 5; fi++) {
+            var fang = -Math.PI / 2 + (fi - 2) * 0.35 + Math.sin(performance.now() * 0.01 + fi) * 0.15;
+            var fl = o.h * (0.28 + 0.15 * Math.sin(performance.now() * 0.012 + fi));
+            ctx.strokeStyle = "rgba(255,235,180,0.85)";
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo((fi - 2) * 4, -o.h * 0.15);
+            ctx.lineTo((fi - 2) * 4 + Math.cos(fang) * fl * 0.3, -o.h * 0.15 + Math.sin(fang) * fl);
+            ctx.stroke();
+            ctx.strokeStyle = "rgba(255,255,250,0.7)";
+            ctx.lineWidth = 1.2;
             ctx.stroke();
           }
         }

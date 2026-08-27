@@ -1199,6 +1199,8 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         orbitAng: 0,
         orbitSpd: 2.2,
         baseDist: 117, // 50% further from blimp
+        chainPhase: 0,
+        chainLen: 1,
         emptyPhase: false,
         finalLaunched: false,
         endFlash: 0,
@@ -2539,11 +2541,11 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
           var bd = ac.backdrop;
           bd.age += dt;
           var u = Math.min(1, bd.age / bd.life);
-          // Smooth ease-out expand across full life (screen-center, very transparent)
+          // Smooth ease-out expand (30% smaller than full-screen, 25% more visible)
           var ease = 1 - Math.pow(1 - u, 3);
-          bd.scale = 0.06 + ease * 1.05;
+          bd.scale = 0.05 + ease * 0.735; // was ~1.11 max → ~30% smaller
           var fade = u < 0.45 ? (u / 0.45) : (1 - (u - 0.45) / 0.55);
-          bd.alpha = 0.28 * fade;
+          bd.alpha = 0.35 * fade; // ~25% more visible than 0.28
           if (bd.age >= bd.life) ac.backdrop = null;
         }
 
@@ -2562,6 +2564,9 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         ac.orbitSpd = 2.2 * spdMul;
         ac.orbitAng += ac.orbitSpd * dt;
         ac.baseDist = 117 * distMul;
+        // Chain swing + breathe length
+        ac.chainPhase = (ac.chainPhase || 0) + dt * 2.4;
+        ac.chainLen = 0.72 + 0.38 * Math.sin(ac.chainPhase); // out and in
 
         // Energy pulse along chain
         ac.pulseT += dt;
@@ -2602,6 +2607,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
                     var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
                     if (Math.hypot(ox - an.x, oy - an.y) < 55 + an.r) {
                       o.onFire = true; o.powerAffected = true; o.hitFlash = 1;
+                      o.fireTint = "ivory";
                       o.vy = 90 + Math.random() * 50; o.vx = (Math.random() - 0.5) * 80;
                       o.scored = true;
                       try { creditPowerKillScore(1); } catch (e) {}
@@ -2681,6 +2687,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
               an.detonate = true;
               an.detT = 0;
               o.onFire = true; o.powerAffected = true; o.hitFlash = 1;
+              o.fireTint = "ivory"; // ivory-gold burn
               o.vy = 100 + Math.random() * 50; o.vx = (Math.random() - 0.5) * 90;
               o.scored = true;
               try { creditPowerKillScore(1); } catch (e) {}
@@ -2724,6 +2731,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
                 if (Math.hypot(la.x - ox, la.y - oy) > la.r * 1.3 + Math.max(o.w, o.h) * 0.4) continue;
                 la.detonate = true; la.detT = 0; la.launch = false;
                 o.onFire = true; o.powerAffected = true; o.hitFlash = 1;
+                o.fireTint = "ivory";
                 o.vy = 110; o.vx = 40; o.scored = true;
                 try { creditPowerKillScore(1); } catch (e) {}
                 break;
@@ -5141,7 +5149,7 @@ if (window.__airbornePlasmaIgnite) {
       var img = window.__airborneIvoryAnchorImg;
       var imgReady = img && img.complete && img.naturalWidth > 0;
       var cx = Ww * 0.5, cy = Hh * 0.5;
-      var maxDim = Math.max(Ww, Hh) * 1.15;
+      var maxDim = Math.max(Ww, Hh) * 0.8; // 30% smaller footprint
       var aspect = imgReady ? (img.naturalHeight / img.naturalWidth) : 1.47;
       var dw = maxDim * bd.scale;
       var dh = dw * aspect;
@@ -5261,32 +5269,39 @@ if (window.__airbornePlasmaIgnite) {
         var ay1 = a1.chainY != null ? a1.chainY : a1.y;
         var ax2 = a2.chainX != null ? a2.chainX : a2.x;
         var ay2 = a2.chainY != null ? a2.chainY : a2.y;
-        // Chain links along path (connect at anchor rings)
-        var segs = 6;
-        for (var s = 0; s <= segs; s++) {
+        // Swing: sag + side sway (not stiff straight line)
+        var chainLen = ac.chainLen != null ? ac.chainLen : 1;
+        var swing = Math.sin(ac.chainPhase + ci * 0.9) * 18 * chainLen;
+        var swing2 = Math.cos(ac.chainPhase * 0.7 + ci * 1.3) * 12 * chainLen;
+        var midX = (ax1 + ax2) * 0.5 + swing;
+        var midY = (ay1 + ay2) * 0.5 + 14 * chainLen + swing2 * 0.5;
+        // Length breathe: pull mid toward/away from blimp
+        midX += (midX - px) * (chainLen - 1) * 0.35;
+        midY += (midY - py) * (chainLen - 1) * 0.35;
+        var segs = 8;
+        var prevX = ax1, prevY = ay1;
+        for (var s = 1; s <= segs; s++) {
           var t = s / segs;
-          var lx = ax1 + (ax2 - ax1) * t;
-          var ly = ay1 + (ay2 - ay1) * t;
-          // slight bend
-          var mx = (a1.x + a2.x) * 0.5 - px;
-          var my = (a1.y + a2.y) * 0.5 - py;
-          lx += mx * 0.08 * Math.sin(t * Math.PI);
-          ly += my * 0.08 * Math.sin(t * Math.PI);
+          // Quadratic bezier through swinging mid
+          var omt = 1 - t;
+          var lx = omt * omt * ax1 + 2 * omt * t * midX + t * t * ax2;
+          var ly = omt * omt * ay1 + 2 * omt * t * midY + t * t * ay2;
           ctx.globalAlpha = (0.4 + (pulseHere ? 0.35 : 0)) * pf;
           ctx.strokeStyle = pulseHere ? "rgba(255,250,220,0.95)" : "rgba(255,210,120,0.85)";
           ctx.lineWidth = pulseHere ? 3.5 : 2.5;
           ctx.beginPath();
-          ctx.ellipse(lx, ly, 5, 3.5, Math.atan2(a2.y - a1.y, a2.x - a1.x), 0, Math.PI * 2);
+          ctx.ellipse(lx, ly, 5, 3.5, Math.atan2(ly - prevY, lx - prevX), 0, Math.PI * 2);
           ctx.stroke();
+          // Link connector
+          ctx.globalAlpha = (0.3 + (pulseHere ? 0.2 : 0)) * pf;
+          ctx.strokeStyle = "rgba(255,200,100,0.75)";
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.moveTo(prevX, prevY);
+          ctx.lineTo(lx, ly);
+          ctx.stroke();
+          prevX = lx; prevY = ly;
         }
-        // Energy line
-        ctx.globalAlpha = (0.25 + (pulseHere ? 0.25 : 0)) * pf;
-        ctx.strokeStyle = "rgba(255,200,100,0.7)";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(ax1, ay1);
-        ctx.lineTo(ax2, ay2);
-        ctx.stroke();
       }
     }
 
