@@ -2534,20 +2534,17 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         ac.age += dt;
         if (ac.flash > 0) ac.flash = Math.max(0, ac.flash - dt * 2.2);
         if (ac.endFlash > 0) ac.endFlash = Math.max(0, ac.endFlash - dt * 2);
-        // Giant backdrop anchor: expand from blimp center then fade
+        // Giant backdrop anchor: one smooth expand + fade (more transparent)
         if (ac.backdrop) {
           var bd = ac.backdrop;
           bd.age += dt;
           var u = Math.min(1, bd.age / bd.life);
-          // Expand fast in first 60%, fade in last 40%
-          if (u < 0.55) {
-            var eu = u / 0.55;
-            bd.scale = 0.08 + (1 - Math.pow(1 - eu, 2)) * 0.95;
-            bd.alpha = 0.55 + 0.35 * eu;
-          } else {
-            bd.scale = 1.0 + (u - 0.55) * 0.15;
-            bd.alpha = Math.max(0, 0.9 * (1 - (u - 0.55) / 0.45));
-          }
+          // Smooth ease-out expand across full life
+          var ease = 1 - Math.pow(1 - u, 3);
+          bd.scale = 0.06 + ease * 1.05;
+          // Peak alpha ~0.45 then fade; overall ~50% more transparent than before
+          var fade = u < 0.5 ? (u / 0.5) : (1 - (u - 0.5) / 0.5);
+          bd.alpha = 0.42 * fade;
           if (bd.age >= bd.life) ac.backdrop = null;
         }
 
@@ -5159,7 +5156,7 @@ if (window.__airbornePlasmaIgnite) {
       }
       ctx.save();
       ctx.globalCompositeOperation = "source-over";
-      ctx.globalAlpha = Math.max(0, bd.alpha) * pf * 0.85;
+      ctx.globalAlpha = Math.max(0, bd.alpha) * pf;
       ctx.translate(px, py);
       if (imgReady) {
         ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
@@ -5196,25 +5193,53 @@ if (window.__airbornePlasmaIgnite) {
     ctx.arc(px, py, auraR * 1.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // Orbital rings
+    // Orbital rings + white flame tongues
     ctx.globalCompositeOperation = "lighter";
     (ac.rings || []).forEach(function(rg) {
       ctx.save();
       ctx.translate(px, py);
       ctx.rotate(rg.ang);
       ctx.scale(1, 0.55);
-      ctx.globalAlpha = 0.55 * pf;
-      ctx.strokeStyle = "rgba(255,230,160,0.9)";
+      // Outer white flame haze
+      ctx.globalAlpha = 0.4 * pf;
+      ctx.strokeStyle = "rgba(255,255,255,0.85)";
+      ctx.lineWidth = rg.w + 6;
+      ctx.shadowColor = "rgba(255,255,250,0.9)";
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(0, 0, rg.dist, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      // Gold core ring
+      ctx.globalAlpha = 0.6 * pf;
+      ctx.strokeStyle = "rgba(255,230,160,0.95)";
       ctx.lineWidth = rg.w;
       ctx.beginPath();
       ctx.arc(0, 0, rg.dist, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.globalAlpha = 0.35 * pf;
-      ctx.strokeStyle = "rgba(255,255,245,0.75)";
-      ctx.lineWidth = 2;
+      // Bright white inner edge
+      ctx.globalAlpha = 0.5 * pf;
+      ctx.strokeStyle = "rgba(255,255,250,0.9)";
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.arc(0, 0, rg.dist * 0.92, 0, Math.PI * 2);
       ctx.stroke();
+      // White flame tongues along ring
+      for (var fi = 0; fi < 10; fi++) {
+        var fa = (fi / 10) * Math.PI * 2 + ac.age * 2.5;
+        var flicker = 0.7 + 0.3 * Math.sin(ac.age * 8 + fi);
+        var fx = Math.cos(fa) * rg.dist;
+        var fy = Math.sin(fa) * rg.dist;
+        ctx.globalAlpha = 0.45 * flicker * pf;
+        var fg = ctx.createRadialGradient(fx, fy, 0, fx, fy, 10 + flicker * 6);
+        fg.addColorStop(0, "rgba(255,255,255,0.95)");
+        fg.addColorStop(0.4, "rgba(255,250,230,0.55)");
+        fg.addColorStop(1, "rgba(255,200,120,0)");
+        ctx.fillStyle = fg;
+        ctx.beginPath();
+        ctx.arc(fx, fy, 10 + flicker * 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
     });
 
@@ -5293,99 +5318,63 @@ if (window.__airbornePlasmaIgnite) {
         sc *= 1 + an.detT * 2;
       }
       var rr = an.r * sc;
-      var img = window.__airborneIvoryAnchorImg;
-      var imgReady = img && img.complete && img.naturalWidth > 0;
 
-      // Comet trail
+      // Comet trail — ivory / molten gold
       ctx.globalCompositeOperation = "lighter";
       (an.trail || []).forEach(function(tr) {
         var tu = 1 - tr.age / tr.life;
         if (tu <= 0) return;
-        ctx.globalAlpha = tu * 0.5 * al;
-        var tg = ctx.createRadialGradient(tr.x, tr.y, 0, tr.x, tr.y, rr * 0.8 * tu);
-        tg.addColorStop(0, "rgba(255,230,160,0.9)");
-        tg.addColorStop(0.5, "rgba(255,160,50,0.45)");
+        ctx.globalAlpha = tu * 0.55 * al;
+        var tg = ctx.createRadialGradient(tr.x, tr.y, 0, tr.x, tr.y, rr * 0.85 * tu);
+        tg.addColorStop(0, "rgba(255,250,240,0.95)");
+        tg.addColorStop(0.35, "rgba(255,220,140,0.7)");
+        tg.addColorStop(0.7, "rgba(255,150,50,0.35)");
         tg.addColorStop(1, "rgba(180,60,10,0)");
         ctx.fillStyle = tg;
         ctx.beginPath();
-        ctx.arc(tr.x, tr.y, rr * 0.8 * tu, 0, Math.PI * 2);
+        ctx.arc(tr.x, tr.y, rr * 0.85 * tu, 0, Math.PI * 2);
         ctx.fill();
       });
 
-      // Outer molten-gold aura
-      ctx.globalAlpha = al * 0.85;
-      var og = ctx.createRadialGradient(an.x, an.y, rr * 0.35, an.x, an.y, rr * 1.7);
-      og.addColorStop(0, "rgba(255,245,220,0.5)");
-      og.addColorStop(0.35, "rgba(255,190,80,0.45)");
-      og.addColorStop(0.7, "rgba(255,120,30,0.25)");
+      ctx.globalAlpha = al;
+      // Outer gold flame
+      var og = ctx.createRadialGradient(an.x - rr * 0.15, an.y - rr * 0.2, 0, an.x, an.y, rr * 1.55);
+      og.addColorStop(0, "rgba(255,255,250,1)");
+      og.addColorStop(0.22, "rgba(255,235,180,0.95)");
+      og.addColorStop(0.5, "rgba(255,175,55,0.85)");
+      og.addColorStop(0.8, "rgba(220,90,20,0.4)");
       og.addColorStop(1, "rgba(80,20,0,0)");
       ctx.fillStyle = og;
       ctx.beginPath();
-      ctx.arc(an.x, an.y, rr * 1.7, 0, Math.PI * 2);
+      ctx.arc(an.x, an.y, rr * 1.55, 0, Math.PI * 2);
       ctx.fill();
-
-      // Draw steampunk anchor asset
-      ctx.globalCompositeOperation = "source-over";
-      ctx.globalAlpha = al;
-      ctx.save();
-      ctx.translate(an.x, an.y);
-      ctx.rotate(an.selfRot || 0);
-      var aspect = imgReady ? (img.naturalHeight / img.naturalWidth) : 1.47;
-      var dw = rr * 2.1;
-      var dh = dw * aspect;
-      // Offset so TOP RING of anchor sits near orbit path for chain connection
-      // Anchor image ring is at top; shift down so ring is near center of glow for chain
-      var yOff = dh * 0.12;
-      if (imgReady) {
-        ctx.drawImage(img, -dw / 2, -dh / 2 + yOff, dw, dh);
-      } else {
-        // Fallback procedural anchor
-        ctx.strokeStyle = "rgba(255,240,200,0.95)";
-        ctx.fillStyle = "rgba(255,248,230,0.9)";
-        ctx.lineWidth = 2.5;
-        var s = rr * 0.7;
-        ctx.beginPath();
-        ctx.arc(0, -s * 0.75, s * 0.3, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.fillRect(-s * 0.12, -s * 0.55, s * 0.24, s * 1.2);
-        ctx.beginPath();
-        ctx.moveTo(-s * 0.7, s * 0.45);
-        ctx.quadraticCurveTo(0, s * 0.3, s * 0.7, s * 0.45);
-        ctx.stroke();
-      }
-      ctx.restore();
-
-      // Ivory-white hot core behind/under (subtle, through lighter)
-      ctx.globalCompositeOperation = "lighter";
-      ctx.globalAlpha = al * 0.35;
-      ctx.fillStyle = "rgba(255,250,240,0.9)";
+      // Ivory-white hot core
+      ctx.fillStyle = "rgba(255,252,245,0.95)";
       ctx.beginPath();
-      ctx.arc(an.x, an.y + rr * 0.05, rr * 0.28, 0, Math.PI * 2);
+      ctx.arc(an.x - rr * 0.12, an.y - rr * 0.15, rr * 0.38, 0, Math.PI * 2);
       ctx.fill();
-
-      // Gold edge rim
-      ctx.globalAlpha = al * 0.55;
-      ctx.strokeStyle = "rgba(255,200,100,0.85)";
+      // Soft gold rim
+      ctx.globalAlpha = al * 0.65;
+      ctx.strokeStyle = "rgba(255,200,100,0.9)";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(an.x, an.y, rr * 1.05, 0, Math.PI * 2);
       ctx.stroke();
-
-      // Orbiting surface sparks
+      // Orbiting sparks
       for (var k = 0; k < 4; k++) {
         var ka = (an.selfRot || 0) + k * 1.6 + ac.age * 5;
-        ctx.globalAlpha = 0.7 * al;
-        ctx.fillStyle = "rgba(255,230,150,0.95)";
+        ctx.globalAlpha = 0.75 * al;
+        ctx.fillStyle = "rgba(255,240,200,0.95)";
         ctx.beginPath();
-        ctx.arc(an.x + Math.cos(ka) * rr * 0.85, an.y + Math.sin(ka) * rr * 0.85, 2, 0, Math.PI * 2);
+        ctx.arc(an.x + Math.cos(ka) * rr * 0.9, an.y + Math.sin(ka) * rr * 0.9, 2, 0, Math.PI * 2);
         ctx.fill();
       }
-
-      // Store chain attach point at TOP of drawn anchor (ring)
+      // Chain attach at center of fireball
       an.chainX = an.x;
-      an.chainY = an.y - rr * 0.55; // near top ring after yOff visual
+      an.chainY = an.y;
     }
     sorted.forEach(drawAnchorBall);
+
 
 
     // Explosions
