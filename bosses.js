@@ -1198,7 +1198,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         pulseAt: 0,
         orbitAng: 0,
         orbitSpd: 2.2,
-        baseDist: 58,
+        baseDist: 78,
         emptyPhase: false,
         finalLaunched: false,
         endFlash: 0,
@@ -1216,7 +1216,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
           id: ai,
           ang: (ai / nA) * Math.PI * 2,
           selfRot: Math.random() * Math.PI * 2,
-          r: 16,
+          r: 32, // double size
           alive: true,
           detonate: false,
           detT: 0,
@@ -2541,7 +2541,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
 
         ac.orbitSpd = 2.2 * spdMul;
         ac.orbitAng += ac.orbitSpd * dt;
-        ac.baseDist = 58 * distMul;
+        ac.baseDist = 78 * distMul;
 
         // Energy pulse along chain
         ac.pulseT += dt;
@@ -5094,6 +5094,13 @@ if (window.__airbornePlasmaIgnite) {
 
 
 
+  // Ivory Anchor orb asset (steampunk ivory/brass, bg removed)
+  window.__airborneIvoryAnchorImg = window.__airborneIvoryAnchorImg || (function() {
+    var im = new Image();
+    im.src = "ivory_anchor_orb.png?v=ruff291";
+    return im;
+  })();
+
   function drawRoyalCoronation() {
     // Ivory Anchor — Anchor Chain Barrage
     var ac = window.__airborneAnchorChain;
@@ -5160,12 +5167,16 @@ if (window.__airbornePlasmaIgnite) {
         var a1 = alive[ci];
         var a2 = alive[(ci + 1) % alive.length];
         var pulseHere = (ci === (ac.pulseAt % alive.length));
-        // Chain links along path
+        var ax1 = a1.chainX != null ? a1.chainX : a1.x;
+        var ay1 = a1.chainY != null ? a1.chainY : a1.y;
+        var ax2 = a2.chainX != null ? a2.chainX : a2.x;
+        var ay2 = a2.chainY != null ? a2.chainY : a2.y;
+        // Chain links along path (connect at anchor rings)
         var segs = 6;
         for (var s = 0; s <= segs; s++) {
           var t = s / segs;
-          var lx = a1.x + (a2.x - a1.x) * t;
-          var ly = a1.y + (a2.y - a1.y) * t;
+          var lx = ax1 + (ax2 - ax1) * t;
+          var ly = ay1 + (ay2 - ay1) * t;
           // slight bend
           var mx = (a1.x + a2.x) * 0.5 - px;
           var my = (a1.y + a2.y) * 0.5 - py;
@@ -5183,8 +5194,8 @@ if (window.__airbornePlasmaIgnite) {
         ctx.strokeStyle = "rgba(255,200,100,0.7)";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(a1.x, a1.y);
-        ctx.lineTo(a2.x, a2.y);
+        ctx.moveTo(ax1, ay1);
+        ctx.lineTo(ax2, ay2);
         ctx.stroke();
       }
     }
@@ -5213,77 +5224,101 @@ if (window.__airbornePlasmaIgnite) {
         al *= Math.max(0, 1 - an.detT * 5);
         sc *= 1 + an.detT * 2;
       }
-      ctx.globalAlpha = al;
+      var rr = an.r * sc;
+      var img = window.__airborneIvoryAnchorImg;
+      var imgReady = img && img.complete && img.naturalWidth > 0;
+
+      // Comet trail
       ctx.globalCompositeOperation = "lighter";
-      // Trail
       (an.trail || []).forEach(function(tr) {
         var tu = 1 - tr.age / tr.life;
         if (tu <= 0) return;
-        ctx.globalAlpha = tu * 0.45 * al;
-        var tg = ctx.createRadialGradient(tr.x, tr.y, 0, tr.x, tr.y, an.r * 0.7 * tu);
-        tg.addColorStop(0, "rgba(255,220,140,0.9)");
-        tg.addColorStop(1, "rgba(180,80,20,0)");
+        ctx.globalAlpha = tu * 0.5 * al;
+        var tg = ctx.createRadialGradient(tr.x, tr.y, 0, tr.x, tr.y, rr * 0.8 * tu);
+        tg.addColorStop(0, "rgba(255,230,160,0.9)");
+        tg.addColorStop(0.5, "rgba(255,160,50,0.45)");
+        tg.addColorStop(1, "rgba(180,60,10,0)");
         ctx.fillStyle = tg;
         ctx.beginPath();
-        ctx.arc(tr.x, tr.y, an.r * 0.7 * tu, 0, Math.PI * 2);
+        ctx.arc(tr.x, tr.y, rr * 0.8 * tu, 0, Math.PI * 2);
         ctx.fill();
       });
-      ctx.globalAlpha = al;
-      var rr = an.r * sc;
-      // Outer molten gold
-      var og = ctx.createRadialGradient(an.x - rr * 0.2, an.y - rr * 0.25, 0, an.x, an.y, rr * 1.5);
-      og.addColorStop(0, "rgba(255,255,245,1)");
-      og.addColorStop(0.25, "rgba(255,230,160,0.95)");
-      og.addColorStop(0.55, "rgba(255,170,50,0.85)");
-      og.addColorStop(0.85, "rgba(200,90,20,0.4)");
+
+      // Outer molten-gold aura
+      ctx.globalAlpha = al * 0.85;
+      var og = ctx.createRadialGradient(an.x, an.y, rr * 0.35, an.x, an.y, rr * 1.7);
+      og.addColorStop(0, "rgba(255,245,220,0.5)");
+      og.addColorStop(0.35, "rgba(255,190,80,0.45)");
+      og.addColorStop(0.7, "rgba(255,120,30,0.25)");
       og.addColorStop(1, "rgba(80,20,0,0)");
       ctx.fillStyle = og;
       ctx.beginPath();
-      ctx.arc(an.x, an.y, rr * 1.5, 0, Math.PI * 2);
+      ctx.arc(an.x, an.y, rr * 1.7, 0, Math.PI * 2);
       ctx.fill();
-      // Ivory white core
-      ctx.fillStyle = "rgba(255,252,245,0.95)";
-      ctx.beginPath();
-      ctx.arc(an.x - rr * 0.12, an.y - rr * 0.15, rr * 0.35, 0, Math.PI * 2);
-      ctx.fill();
-      // Anchor silhouette
+
+      // Draw steampunk anchor asset
       ctx.globalCompositeOperation = "source-over";
-      ctx.globalAlpha = al * 0.9;
+      ctx.globalAlpha = al;
       ctx.save();
       ctx.translate(an.x, an.y);
       ctx.rotate(an.selfRot || 0);
-      var s = rr * 0.55;
-      ctx.strokeStyle = "rgba(255,240,200,0.95)";
-      ctx.fillStyle = "rgba(255,248,230,0.85)";
-      ctx.lineWidth = 2;
-      // ring
-      ctx.beginPath();
-      ctx.arc(0, -s * 0.75, s * 0.28, 0, Math.PI * 2);
-      ctx.stroke();
-      // stem
-      ctx.fillRect(-s * 0.1, -s * 0.55, s * 0.2, s * 1.15);
-      // arms
-      ctx.beginPath();
-      ctx.moveTo(-s * 0.65, s * 0.45);
-      ctx.quadraticCurveTo(-s * 0.1, s * 0.25, 0, s * 0.55);
-      ctx.quadraticCurveTo(s * 0.1, s * 0.25, s * 0.65, s * 0.45);
-      ctx.stroke();
-      ctx.strokeStyle = "rgba(251,191,36,0.9)";
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
-      ctx.restore();
-      // Surface sparks
-      ctx.globalCompositeOperation = "lighter";
-      for (var k = 0; k < 3; k++) {
-        var ka = (an.selfRot || 0) + k * 2.1 + ac.age * 4;
-        ctx.globalAlpha = 0.6 * al;
-        ctx.fillStyle = "rgba(255,230,150,0.9)";
+      var aspect = imgReady ? (img.naturalHeight / img.naturalWidth) : 1.47;
+      var dw = rr * 2.1;
+      var dh = dw * aspect;
+      // Offset so TOP RING of anchor sits near orbit path for chain connection
+      // Anchor image ring is at top; shift down so ring is near center of glow for chain
+      var yOff = dh * 0.12;
+      if (imgReady) {
+        ctx.drawImage(img, -dw / 2, -dh / 2 + yOff, dw, dh);
+      } else {
+        // Fallback procedural anchor
+        ctx.strokeStyle = "rgba(255,240,200,0.95)";
+        ctx.fillStyle = "rgba(255,248,230,0.9)";
+        ctx.lineWidth = 2.5;
+        var s = rr * 0.7;
         ctx.beginPath();
-        ctx.arc(an.x + Math.cos(ka) * rr * 0.7, an.y + Math.sin(ka) * rr * 0.7, 1.5, 0, Math.PI * 2);
+        ctx.arc(0, -s * 0.75, s * 0.3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillRect(-s * 0.12, -s * 0.55, s * 0.24, s * 1.2);
+        ctx.beginPath();
+        ctx.moveTo(-s * 0.7, s * 0.45);
+        ctx.quadraticCurveTo(0, s * 0.3, s * 0.7, s * 0.45);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Ivory-white hot core behind/under (subtle, through lighter)
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = al * 0.35;
+      ctx.fillStyle = "rgba(255,250,240,0.9)";
+      ctx.beginPath();
+      ctx.arc(an.x, an.y + rr * 0.05, rr * 0.28, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Gold edge rim
+      ctx.globalAlpha = al * 0.55;
+      ctx.strokeStyle = "rgba(255,200,100,0.85)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(an.x, an.y, rr * 1.05, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Orbiting surface sparks
+      for (var k = 0; k < 4; k++) {
+        var ka = (an.selfRot || 0) + k * 1.6 + ac.age * 5;
+        ctx.globalAlpha = 0.7 * al;
+        ctx.fillStyle = "rgba(255,230,150,0.95)";
+        ctx.beginPath();
+        ctx.arc(an.x + Math.cos(ka) * rr * 0.85, an.y + Math.sin(ka) * rr * 0.85, 2, 0, Math.PI * 2);
         ctx.fill();
       }
+
+      // Store chain attach point at TOP of drawn anchor (ring)
+      an.chainX = an.x;
+      an.chainY = an.y - rr * 0.55; // near top ring after yOff visual
     }
     sorted.forEach(drawAnchorBall);
+
 
     // Explosions
     (ac.explosions || []).forEach(function(ex) {
