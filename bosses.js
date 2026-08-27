@@ -1173,53 +1173,79 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
     }
 
 
-    // Ivory Anchor — Coronation Barrage (Art Deco gold & ivory, 5s)
+    // Ivory Anchor — Divine Anchor Barrage (5s)
     if (powerMode === "royal") {
       if (typeof sfxExplosion === "function") sfxExplosion(0.5);
-      if (typeof sfxShoot === "function") sfxShoot();
-      try { if (typeof triggerScreenShake === "function") triggerScreenShake(8, 340); } catch (e) {}
-      var ROYAL_SEC = 5.0;
-      var ROYAL_MS = 5000;
+      if (typeof sfxThunder === "function") sfxThunder();
+      try { if (typeof triggerScreenShake === "function") triggerScreenShake(10, 360); } catch (e) {}
+      var DIV_SEC = 5.0;
+      var DIV_MS = 5000;
       stormActive = true;
       stormMode = "royal";
-      stormTimer = ROYAL_SEC;
+      stormTimer = DIV_SEC;
       stormCharge = 0;
       window.__airborneActivePowerVisual = "royal";
-      window.__airborneActivePowerUntil = performance.now() + ROYAL_MS;
-      window.__airborneMeteorUntil = performance.now() + ROYAL_MS;
-      window.__airborneMeteors = [];
-      window.__airborneMeteorMarks = [];
-      window.__airborneMeteorSkyDark = null;
-      window.__airborneRoyal = {
+      window.__airborneActivePowerUntil = performance.now() + DIV_MS;
+      window.__airborneMeteorUntil = performance.now() + DIV_MS;
+      window.__airborneRoyal = null;
+      window.__airborneDivine = {
         age: 0,
-        life: ROYAL_SEC,
-        phase: "crown",
-        crownCharge: 0.15,
-        barrageDone: false,
-        rainT: 0.12,
-        screenFlash: 0.25,
+        life: DIV_SEC,
+        phase: "aweigh",
+        flash: 0.55,
+        emblemT: 0.85,
+        slamDone: false,
+        strikeI: 0,
+        strikeT: 0.85,
+        judgmentDone: false,
+        endDone: false,
         rings: [
-          { ang: 0, spin: 3.2, dist: 44, w: 10 },
-          { ang: Math.PI * 0.6, spin: -3.8, dist: 60, w: 12 }
+          { ang: 0, spin: 2.8, dist: 48, w: 10 },
+          { ang: Math.PI * 0.45, spin: -3.3, dist: 64, w: 12 }
         ],
-        spirals: [],
-        sparks: [],
-        meteors: [],
-        rains: [],
-        explosions: []
+        chains: [],
+        anchors: [],
+        shards: [],
+        shockwaves: [],
+        links: [],
+        waves: [],
+        emblem: 1
       };
-      for (var si = 0; si < 10; si++) {
-        window.__airborneRoyal.spirals.push({
-          ang: (si / 10) * Math.PI * 2,
-          spin: 1.8 + (si % 3) * 0.5,
-          dist: 20 + (si % 5) * 6,
-          phase: Math.random() * Math.PI * 2
+      for (var ci = 0; ci < 4; ci++) {
+        window.__airborneDivine.chains.push({
+          ang: (ci / 4) * Math.PI * 2,
+          spin: (ci % 2 === 0 ? 1.6 : -1.5) * (1.0 + Math.random() * 0.4),
+          dist: 44 + (ci % 2) * 18,
+          links: 8,
+          whipT: 0.25 + ci * 0.15,
+          whipping: false,
+          whipAng: 0,
+          whipLen: 0,
+          hitIds: {}
         });
       }
+      for (var wi = 0; wi < 8; wi++) {
+        window.__airborneDivine.waves.push({
+          ang: Math.PI + (wi - 3.5) * 0.22,
+          age: wi * 0.06,
+          life: 0.9,
+          dist: 16
+        });
+      }
+      // Immediate ghost anchor form so player sees it instantly
+      window.__airborneDivine.anchors.push({
+        kind: "slam",
+        x: (typeof player !== "undefined" && player) ? player.x : 100,
+        y: (typeof player !== "undefined" && player) ? player.y - 90 : 100,
+        tx: (typeof player !== "undefined" && player) ? player.x : 100,
+        ty: (typeof H === "number" ? H : 700) * 0.82,
+        age: 0, life: 0.55, scale: 1.5, mode: "fall"
+      });
       try { if (window.PowerFX && player) window.PowerFX.activate("royal", player.x, player.y); } catch (e) {}
       updateStormMeterDisplay();
       return;
     }
+
 
     // Royal Stripe — classic meteor shower
     if (powerMode === "meteors") {
@@ -2517,10 +2543,10 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         if (dv.flash > 0) dv.flash = Math.max(0, dv.flash - dt * 2.5);
         if (dv.emblemT > 0) dv.emblemT = Math.max(0, dv.emblemT - dt);
 
-        if (tN < 0.12) dv.phase = "aweigh";
-        else if (tN < 0.24) dv.phase = "slam";
-        else if (tN < 0.88) dv.phase = "dominion";
-        else if (tN < 0.98) dv.phase = "judgment";
+        if (tN < 0.1) dv.phase = "aweigh";
+        else if (tN < 0.2) dv.phase = "slam";
+        else if (tN < 0.82) dv.phase = "dominion";
+        else if (tN < 0.94) dv.phase = "judgment";
         else dv.phase = "end";
 
         // Rings
@@ -2596,7 +2622,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         if (dv.phase === "dominion") {
           dv.strikeT -= dt;
           if (dv.strikeT <= 0 && dv.strikeI < 4) {
-            dv.strikeT = 0.7 + Math.random() * 0.15;
+            dv.strikeT = 0.55 + Math.random() * 0.1;
             var sk = dv.strikeI;
             dv.strikeI++;
             if (sk === 0) {
