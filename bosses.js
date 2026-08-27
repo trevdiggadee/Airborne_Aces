@@ -969,24 +969,44 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         primaryDone: false,
         finalDone: false
       };
-      // Large transparent storm cloud enveloping blimp (lots of movement)
-      window.__airborneStormClouds = [{
-        ang: 0,
-        dist: 0,
-        r: 70,
-        baseR: 70,
-        spin: 0.35,
-        phase: 0,
-        wobble: 0,
-        lobes: []
-      }];
-      for (var li = 0; li < 8; li++) {
-        window.__airborneStormClouds[0].lobes.push({
-          ang: (li / 8) * Math.PI * 2,
-          spin: (Math.random() < 0.5 ? -1 : 1) * (0.6 + Math.random() * 1.2),
-          dist: 28 + Math.random() * 22,
-          r: 32 + Math.random() * 24,
-          phase: Math.random() * Math.PI * 2
+      // Rotating miniature thunderstorm: heavy orbiting cloud masses (asymmetric)
+      window.__airborneStormClouds = [];
+      for (var ci = 0; ci < 5; ci++) {
+        var ca = (ci / 5) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+        window.__airborneStormClouds.push({
+          ang: ca,
+          baseDist: 48 + (ci % 3) * 14 + Math.random() * 10,
+          dist: 48 + (ci % 3) * 14,
+          r: 38 + Math.random() * 22,
+          baseR: 38 + Math.random() * 22,
+          spin: (0.55 + Math.random() * 0.35) * (ci % 2 === 0 ? 1 : -0.7),
+          phase: Math.random() * Math.PI * 2,
+          wobble: Math.random() * Math.PI * 2,
+          elev: -18 - (ci % 3) * 8,
+          lobes: []
+        });
+        var cloud = window.__airborneStormClouds[ci];
+        for (var li = 0; li < 4; li++) {
+          cloud.lobes.push({
+            ang: (li / 4) * Math.PI * 2 + Math.random(),
+            spin: (Math.random() < 0.5 ? -1 : 1) * (0.8 + Math.random()),
+            dist: 12 + Math.random() * 16,
+            r: 16 + Math.random() * 14,
+            phase: Math.random() * Math.PI * 2
+          });
+        }
+      }
+      // Dense rain curtain in storm zone
+      window.__airborneStormRain = [];
+      var WwR = (typeof W === "number") ? W : 400;
+      var HhR = (typeof H === "number") ? H : 700;
+      for (var ri = 0; ri < 55; ri++) {
+        window.__airborneStormRain.push({
+          x: Math.random() * WwR,
+          y: Math.random() * HhR,
+          len: 10 + Math.random() * 18,
+          vy: 380 + Math.random() * 280,
+          thick: 1 + Math.random() * 0.8
         });
       }
       try { if (window.PowerFX) window.PowerFX.activate("storm", player.x, player.y); } catch (e) {}
@@ -2136,24 +2156,53 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         var px = (typeof player !== "undefined" && player) ? player.x : W * 0.3;
         var py = (typeof player !== "undefined" && player) ? player.y : H * 0.4;
 
-        // Large transparent storm cloud — turbulent movement around blimp
+        // Heavy orbiting storm formations (substantial, dragged by electrical field)
         if (window.__airborneStormClouds) {
           window.__airborneStormClouds.forEach(function(c) {
-            c.ang += (c.spin || 0.3) * dtC;
-            c.phase = (c.phase || 0) + dtC * 2.2;
-            c.wobble = (c.wobble || 0) + dtC * 1.6;
-            c.x = px;
-            c.y = py - 8;
-            c.r = (c.baseR || 70) * (0.92 + 0.1 * Math.sin(c.phase));
+            c.ang += (c.spin || 0.5) * dtC;
+            c.phase = (c.phase || 0) + dtC * 1.8;
+            c.wobble = (c.wobble || 0) + dtC * 1.2;
+            // Pulse + expand
+            var pulse = 0.88 + 0.14 * Math.sin(c.phase);
+            c.dist = (c.baseDist || 50) * (0.95 + 0.08 * Math.sin(c.wobble));
+            c.r = (c.baseR || 40) * pulse;
+            // Orbit position — keep clear of blimp center
+            c.x = px + Math.cos(c.ang) * c.dist;
+            c.y = py + Math.sin(c.ang) * c.dist * 0.58 + (c.elev || -12);
             (c.lobes || []).forEach(function(l) {
               l.ang += l.spin * dtC;
-              l.phase += dtC * 3.5;
-              var pulse = 0.85 + 0.2 * Math.sin(l.phase);
-              l.x = px + Math.cos(l.ang + c.ang * 0.4) * l.dist * (0.9 + 0.15 * Math.sin(c.wobble + l.ang));
-              l.y = py - 10 + Math.sin(l.ang + c.ang * 0.4) * l.dist * 0.55 * pulse;
-              l.drawR = l.r * pulse;
+              l.phase += dtC * 2.8;
+              var lp = 0.85 + 0.18 * Math.sin(l.phase);
+              l.x = c.x + Math.cos(l.ang) * l.dist * lp;
+              l.y = c.y + Math.sin(l.ang) * l.dist * 0.55 * lp;
+              l.drawR = l.r * lp;
             });
           });
+        }
+        // Rain curtain — denser during lightning flash
+        if (!window.__airborneStormRain) window.__airborneStormRain = [];
+        var rainMul = 1 + (tc.flash > 0.1 ? 1.4 : 0);
+        var WwR = (typeof W === "number") ? W : 400;
+        var HhR = (typeof H === "number") ? H : 700;
+        // Keep rain dense
+        while (window.__airborneStormRain.length < 50) {
+          window.__airborneStormRain.push({
+            x: Math.random() * WwR,
+            y: -20 - Math.random() * 40,
+            len: 10 + Math.random() * 18,
+            vy: 380 + Math.random() * 280,
+            thick: 1 + Math.random() * 0.8
+          });
+        }
+        for (var rri = window.__airborneStormRain.length - 1; rri >= 0; rri--) {
+          var rr = window.__airborneStormRain[rri];
+          rr.y += rr.vy * rainMul * dtC;
+          if (rr.y > HhR + 30) {
+            rr.y = -20 - Math.random() * 60;
+            rr.x = Math.random() * WwR;
+            rr.len = 10 + Math.random() * 18;
+            rr.vy = 380 + Math.random() * 280;
+          }
         }
 
         // Continuous aura arcs around Storm Chaser
@@ -2343,6 +2392,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         if (tc.age >= tc.life) {
           window.__airborneThunderChain = null;
           window.__airborneStormClouds = null;
+          window.__airborneStormRain = null;
           window.__airborneActivePowerVisual = null;
           window.__airborneActivePowerUntil = 0;
           stormActive = false;
@@ -6415,47 +6465,64 @@ function drawFireballs() {
         ctx.restore();
       }
 
-      // Large transparent storm cloud with turbulent lobes (blimp stays visible)
+      // Orbiting heavy storm formations (transparent, blimp center clear)
       if (window.__airborneStormClouds) {
         ctx.save();
+        ctx.globalCompositeOperation = "source-over";
         window.__airborneStormClouds.forEach(function(c) {
-          var cx = c.x != null ? c.x : pdx;
-          var cy = c.y != null ? c.y : pdy;
-          // Soft translucent body
-          ctx.globalCompositeOperation = "source-over";
-          var bodyR = (c.r || 70) * 1.35;
-          ctx.globalAlpha = 0.28 * pf;
-          var bg = ctx.createRadialGradient(cx, cy - 12, bodyR * 0.15, cx, cy - 12, bodyR);
-          bg.addColorStop(0, "rgba(90,105,140,0.45)");
-          bg.addColorStop(0.45, "rgba(50,60,90,0.3)");
+          if (c.x == null) return;
+          var cx = c.x, cy = c.y;
+          var bodyR = (c.r || 40) * 1.15;
+          // Main mass — translucent charcoal-blue
+          ctx.globalAlpha = 0.32 * pf;
+          var bg = ctx.createRadialGradient(cx, cy, bodyR * 0.12, cx, cy, bodyR);
+          bg.addColorStop(0, "rgba(100,115,145,0.55)");
+          bg.addColorStop(0.4, "rgba(55,65,95,0.35)");
           bg.addColorStop(1, "rgba(20,25,40,0)");
           ctx.fillStyle = bg;
           ctx.beginPath();
-          ctx.arc(cx, cy - 12, bodyR, 0, Math.PI * 2);
+          ctx.arc(cx, cy, bodyR, 0, Math.PI * 2);
           ctx.fill();
-          // Moving translucent lobes
+          // Turbulent lobes on each mass
           (c.lobes || []).forEach(function(l) {
             if (l.x == null) return;
-            var lr = l.drawR || l.r || 30;
-            ctx.globalAlpha = 0.22 * pf;
+            var lr = l.drawR || l.r || 18;
+            ctx.globalAlpha = 0.26 * pf;
             var lg = ctx.createRadialGradient(l.x, l.y, 0, l.x, l.y, lr);
-            lg.addColorStop(0, "rgba(120,140,180,0.5)");
-            lg.addColorStop(0.5, "rgba(55,70,105,0.28)");
+            lg.addColorStop(0, "rgba(130,145,175,0.5)");
+            lg.addColorStop(0.55, "rgba(60,70,100,0.28)");
             lg.addColorStop(1, "rgba(15,20,35,0)");
             ctx.fillStyle = lg;
             ctx.beginPath();
             ctx.arc(l.x, l.y, lr, 0, Math.PI * 2);
             ctx.fill();
           });
-          // Occasional internal lightning flicker in cloud
-          if (Math.random() < 0.08) {
+          // Internal flicker when storm is active
+          if (Math.random() < 0.06 + (tcDraw.flash || 0) * 0.3) {
             ctx.globalCompositeOperation = "lighter";
-            ctx.globalAlpha = 0.25 * pf;
-            ctx.fillStyle = "rgba(180,210,255,0.6)";
+            ctx.globalAlpha = (0.2 + (tcDraw.flash || 0) * 0.35) * pf;
+            ctx.fillStyle = "rgba(190,215,255,0.7)";
             ctx.beginPath();
-            ctx.arc(cx + (Math.random() - 0.5) * 40, cy - 10 + (Math.random() - 0.5) * 20, 8 + Math.random() * 12, 0, Math.PI * 2);
+            ctx.arc(cx + (Math.random() - 0.5) * bodyR * 0.5, cy + (Math.random() - 0.5) * bodyR * 0.35, 6 + Math.random() * 10, 0, Math.PI * 2);
             ctx.fill();
+            ctx.globalCompositeOperation = "source-over";
           }
+        });
+        ctx.restore();
+      }
+
+      // Dense rain curtain — intensifies on lightning flash
+      if (window.__airborneStormRain && window.__airborneStormRain.length) {
+        ctx.save();
+        var rainA = 0.35 + (tcDraw.flash > 0.08 ? 0.35 : 0);
+        ctx.globalAlpha = rainA * pf;
+        ctx.strokeStyle = "rgba(180,200,230,0.7)";
+        window.__airborneStormRain.forEach(function(rr) {
+          ctx.lineWidth = rr.thick || 1.2;
+          ctx.beginPath();
+          ctx.moveTo(rr.x, rr.y);
+          ctx.lineTo(rr.x - 1.5, rr.y + rr.len);
+          ctx.stroke();
         });
         ctx.restore();
       }
