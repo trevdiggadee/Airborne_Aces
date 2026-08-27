@@ -1173,74 +1173,59 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
     }
 
 
-    // Ivory Anchor — Divine Anchor Barrage (5s)
+    // Ivory Anchor — Anchor Chain Barrage (5s)
     if (powerMode === "royal") {
-      if (typeof sfxExplosion === "function") sfxExplosion(0.5);
-      if (typeof sfxThunder === "function") sfxThunder();
-      try { if (typeof triggerScreenShake === "function") triggerScreenShake(10, 360); } catch (e) {}
-      var DIV_SEC = 5.0;
-      var DIV_MS = 5000;
+      if (typeof sfxExplosion === "function") sfxExplosion(0.45);
+      if (typeof sfxShoot === "function") sfxShoot();
+      try { if (typeof triggerScreenShake === "function") triggerScreenShake(8, 300); } catch (e) {}
+      var AC_SEC = 5.0;
+      var AC_MS = 5000;
       stormActive = true;
       stormMode = "royal";
-      stormTimer = DIV_SEC;
+      stormTimer = AC_SEC;
       stormCharge = 0;
       window.__airborneActivePowerVisual = "royal";
-      window.__airborneActivePowerUntil = performance.now() + DIV_MS;
-      window.__airborneMeteorUntil = performance.now() + DIV_MS;
+      window.__airborneActivePowerUntil = performance.now() + AC_MS;
+      window.__airborneMeteorUntil = performance.now() + AC_MS;
       window.__airborneRoyal = null;
-      window.__airborneDivine = {
+      window.__airborneDivine = null;
+      var nA = 5;
+      window.__airborneAnchorChain = {
         age: 0,
-        life: DIV_SEC,
-        phase: "aweigh",
-        flash: 0.55,
-        emblemT: 0.85,
-        slamDone: false,
-        strikeI: 0,
-        strikeT: 0.85,
-        judgmentDone: false,
-        endDone: false,
+        life: AC_SEC,
+        flash: 0.5,
+        pulseT: 0,
+        pulseAt: 0,
+        orbitAng: 0,
+        orbitSpd: 2.2,
+        baseDist: 58,
+        emptyPhase: false,
+        finalLaunched: false,
+        endFlash: 0,
         rings: [
-          { ang: 0, spin: 2.8, dist: 48, w: 10 },
-          { ang: Math.PI * 0.45, spin: -3.3, dist: 64, w: 12 }
+          { ang: 0, spin: 2.5, dist: 42, w: 8 },
+          { ang: Math.PI * 0.5, spin: -3.0, dist: 56, w: 10 }
         ],
-        chains: [],
         anchors: [],
-        shards: [],
-        shockwaves: [],
+        explosions: [],
         links: [],
-        waves: [],
-        emblem: 1
+        ghostChain: null
       };
-      for (var ci = 0; ci < 4; ci++) {
-        window.__airborneDivine.chains.push({
-          ang: (ci / 4) * Math.PI * 2,
-          spin: (ci % 2 === 0 ? 1.6 : -1.5) * (1.0 + Math.random() * 0.4),
-          dist: 44 + (ci % 2) * 18,
-          links: 8,
-          whipT: 0.25 + ci * 0.15,
-          whipping: false,
-          whipAng: 0,
-          whipLen: 0,
+      for (var ai = 0; ai < nA; ai++) {
+        window.__airborneAnchorChain.anchors.push({
+          id: ai,
+          ang: (ai / nA) * Math.PI * 2,
+          selfRot: Math.random() * Math.PI * 2,
+          r: 16,
+          alive: true,
+          detonate: false,
+          detT: 0,
+          x: 0, y: 0, z: 0,
+          sparks: [],
+          trail: [],
           hitIds: {}
         });
       }
-      for (var wi = 0; wi < 8; wi++) {
-        window.__airborneDivine.waves.push({
-          ang: Math.PI + (wi - 3.5) * 0.22,
-          age: wi * 0.06,
-          life: 0.9,
-          dist: 16
-        });
-      }
-      // Immediate ghost anchor form so player sees it instantly
-      window.__airborneDivine.anchors.push({
-        kind: "slam",
-        x: (typeof player !== "undefined" && player) ? player.x : 100,
-        y: (typeof player !== "undefined" && player) ? player.y - 90 : 100,
-        tx: (typeof player !== "undefined" && player) ? player.x : 100,
-        ty: (typeof H === "number" ? H : 700) * 0.82,
-        age: 0, life: 0.55, scale: 1.5, mode: "fall"
-      });
       try { if (window.PowerFX && player) window.PowerFX.activate("royal", player.x, player.y); } catch (e) {}
       updateStormMeterDisplay();
       return;
@@ -2528,254 +2513,263 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       }
     }
 
-    // Ivory Anchor — Divine Anchor Barrage
-    if (stormMode === "royal" || window.__airborneDivine) {
-      var dv = window.__airborneDivine;
-      var untilD = window.__airborneMeteorUntil || window.__airborneActivePowerUntil || 0;
+    // Ivory Anchor — Anchor Chain Barrage
+    if (stormMode === "royal" || window.__airborneAnchorChain) {
+      var ac = window.__airborneAnchorChain;
+      var untilA = window.__airborneActivePowerUntil || window.__airborneMeteorUntil || 0;
       var Ww = (typeof W === "number") ? W : 400;
       var Hh = (typeof H === "number") ? H : 700;
       var px = (typeof player !== "undefined" && player) ? player.x : Ww * 0.3;
       var py = (typeof player !== "undefined" && player) ? player.y : Hh * 0.4;
 
-      if (dv) {
-        dv.age += dt;
-        var tN = dv.age / (dv.life || 5);
-        if (dv.flash > 0) dv.flash = Math.max(0, dv.flash - dt * 2.5);
-        if (dv.emblemT > 0) dv.emblemT = Math.max(0, dv.emblemT - dt);
+      if (ac) {
+        ac.age += dt;
+        if (ac.flash > 0) ac.flash = Math.max(0, ac.flash - dt * 2.2);
+        if (ac.endFlash > 0) ac.endFlash = Math.max(0, ac.endFlash - dt * 2);
 
-        if (tN < 0.1) dv.phase = "aweigh";
-        else if (tN < 0.2) dv.phase = "slam";
-        else if (tN < 0.82) dv.phase = "dominion";
-        else if (tN < 0.94) dv.phase = "judgment";
-        else dv.phase = "end";
+        var alive = [];
+        for (var i = 0; i < ac.anchors.length; i++) {
+          if (ac.anchors[i].alive && !ac.anchors[i].detonate) alive.push(ac.anchors[i]);
+        }
+        var nAlive = alive.length;
+
+        // Speed & radius by remaining anchors
+        var spdMul = 1 + (5 - nAlive) * 0.35;
+        var distMul = 1 - (5 - nAlive) * 0.08;
+        if (nAlive === 1) { spdMul = 3.2; distMul = 0.7; }
+        if (nAlive === 0) { spdMul = 1; distMul = 1; }
+
+        ac.orbitSpd = 2.2 * spdMul;
+        ac.orbitAng += ac.orbitSpd * dt;
+        ac.baseDist = 58 * distMul;
+
+        // Energy pulse along chain
+        ac.pulseT += dt;
+        if (ac.pulseT > 0.55) {
+          ac.pulseT = 0;
+          ac.pulseAt = (ac.pulseAt + 1) % Math.max(1, nAlive);
+        }
 
         // Rings
-        for (var ri = 0; ri < dv.rings.length; ri++) {
-          if (dv.phase === "judgment" || dv.phase === "end") {
-            // lock rings
+        for (var ri = 0; ri < ac.rings.length; ri++) {
+          ac.rings[ri].ang += ac.rings[ri].spin * dt * (nAlive <= 1 ? 1.8 : 1);
+        }
+
+        // Update anchors
+        for (var ai = 0; ai < ac.anchors.length; ai++) {
+          var an = ac.anchors[ai];
+          if (!an.alive) continue;
+
+          if (an.detonate) {
+            an.detT += dt;
+            if (an.detT > 0.08 && an.detT < 0.12) {
+              // Explosion once
+              if (!an._boomed) {
+                an._boomed = true;
+                ac.explosions.push({
+                  x: an.x, y: an.y, age: 0, life: 0.55,
+                  maxR: 70 + (nAlive <= 1 ? 50 : 0),
+                  final: nAlive <= 1
+                });
+                try { if (typeof triggerScreenShake === "function") triggerScreenShake(nAlive <= 1 ? 12 : 6, nAlive <= 1 ? 350 : 180); } catch (e) {}
+                ac.flash = nAlive <= 1 ? 0.45 : 0.2;
+                // Damage nearby
+                if (typeof obstacles !== "undefined") {
+                  for (var oi = 0; oi < obstacles.length; oi++) {
+                    var o = obstacles[oi];
+                    if (!o || o.isRing || o.type === "gold_ring" || o.type === "ring") continue;
+                    if (o.powerAffected && o.onFire) continue;
+                    var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
+                    if (Math.hypot(ox - an.x, oy - an.y) < 55 + an.r) {
+                      o.onFire = true; o.powerAffected = true; o.hitFlash = 1;
+                      o.vy = 90 + Math.random() * 50; o.vx = (Math.random() - 0.5) * 80;
+                      o.scored = true;
+                      try { creditPowerKillScore(1); } catch (e) {}
+                    }
+                  }
+                }
+                // Chain link fragments
+                for (var lf = 0; lf < 8; lf++) {
+                  var la = Math.random() * Math.PI * 2;
+                  ac.links.push({
+                    x: an.x, y: an.y,
+                    vx: Math.cos(la) * (80 + Math.random() * 100),
+                    vy: Math.sin(la) * (60 + Math.random() * 80) - 20,
+                    age: 0, life: 0.5, rot: la
+                  });
+                }
+              }
+            }
+            if (an.detT > 0.2) {
+              an.alive = false;
+              an.detonate = false;
+            }
+            continue;
+          }
+
+          // Orbit with 3D tilt
+          an.ang = ac.orbitAng + (ai / Math.max(1, ac.anchors.length)) * Math.PI * 2;
+          // Re-space by alive count
+          var aliveIdx = 0;
+          for (var j = 0; j < ai; j++) if (ac.anchors[j].alive && !ac.anchors[j].detonate) aliveIdx++;
+          if (nAlive > 0) {
+            var myIdx = 0; var found = 0;
+            for (var j = 0; j < ac.anchors.length; j++) {
+              if (ac.anchors[j].alive && !ac.anchors[j].detonate) {
+                if (j === ai) { myIdx = found; break; }
+                found++;
+              }
+            }
+            an.ang = ac.orbitAng + (myIdx / nAlive) * Math.PI * 2;
+          }
+
+          an.z = Math.sin(an.ang); // front/back
+          var depth = 0.85 + 0.2 * ((an.z + 1) * 0.5);
+          var dist = ac.baseDist * depth;
+          if (nAlive === 1) {
+            // Cyclone spin tighter
+            dist = ac.baseDist * 0.55;
+            an.selfRot += dt * 12;
           } else {
-            dv.rings[ri].ang += dv.rings[ri].spin * dt;
+            an.selfRot += dt * 3;
+          }
+          an.x = px + Math.cos(an.ang) * dist;
+          an.y = py + Math.sin(an.ang) * dist * 0.55;
+          an.drawScale = depth;
+          an.drawAlpha = 0.6 + 0.4 * ((an.z + 1) * 0.5);
+
+          // Trail
+          if (!an.trail) an.trail = [];
+          an.trail.push({ x: an.x, y: an.y, age: 0, life: 0.25 });
+          if (an.trail.length > 6) an.trail.shift();
+          for (var ti = an.trail.length - 1; ti >= 0; ti--) {
+            an.trail[ti].age += dt;
+            if (an.trail[ti].age >= an.trail[ti].life) an.trail.splice(ti, 1);
+          }
+
+          // Collision
+          if (typeof obstacles !== "undefined" && nAlive > 0) {
+            for (var hi = 0; hi < obstacles.length; hi++) {
+              var o = obstacles[hi];
+              if (!o || o.isRing || o.type === "gold_ring" || o.type === "ring") continue;
+              if (o.powerAffected && o.onFire) continue;
+              var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
+              if (Math.hypot(an.x - ox, an.y - oy) > an.r + Math.max(o.w, o.h) * 0.4) continue;
+              var oid = o._uid || (o._uid = "ac" + Math.random().toString(36).slice(2));
+              if (an.hitIds[oid]) continue;
+              an.hitIds[oid] = true;
+              an.detonate = true;
+              an.detT = 0;
+              o.onFire = true; o.powerAffected = true; o.hitFlash = 1;
+              o.vy = 100 + Math.random() * 50; o.vx = (Math.random() - 0.5) * 90;
+              o.scored = true;
+              try { creditPowerKillScore(1); } catch (e) {}
+              try { if (typeof sfxExplosion === "function") sfxExplosion(0.4); } catch (e) {}
+              break;
+            }
           }
         }
 
-        // Chains orbit + whip
-        for (var ci = 0; ci < dv.chains.length; ci++) {
-          var ch = dv.chains[ci];
-          if (dv.phase !== "judgment" && dv.phase !== "end") {
-            ch.ang += ch.spin * dt;
+        // Final single anchor launch near end
+        if (nAlive === 1 && ac.age > ac.life - 1.2 && !ac.finalLaunched) {
+          ac.finalLaunched = true;
+          var last = null;
+          for (var li = 0; li < ac.anchors.length; li++) {
+            if (ac.anchors[li].alive && !ac.anchors[li].detonate) { last = ac.anchors[li]; break; }
           }
-          ch.whipT -= dt;
-          if (ch.whipT <= 0 && dv.phase === "dominion") {
-            ch.whipping = true;
-            ch.whipAng = ch.ang + (Math.random() - 0.5) * 0.8;
-            ch.whipLen = 0;
-            ch.whipT = 0.7 + Math.random() * 0.5;
-            ch.hitIds = {};
+          if (last) {
+            last.launch = true;
+            last.vx = 320;
+            last.vy = (Math.random() - 0.5) * 40;
+            last.r *= 1.5;
           }
-          if (ch.whipping) {
-            ch.whipLen += 280 * dt;
-            if (ch.whipLen > 120) {
-              ch.whipLen = Math.max(0, ch.whipLen - 400 * dt);
-              if (ch.whipLen <= 0) ch.whipping = false;
+        }
+        // Move launched final anchor
+        for (var li = 0; li < ac.anchors.length; li++) {
+          var la = ac.anchors[li];
+          if (la.launch && la.alive && !la.detonate) {
+            la.x += (la.vx || 300) * dt;
+            la.y += (la.vy || 0) * dt;
+            la.trail.push({ x: la.x, y: la.y, age: 0, life: 0.4 });
+            if (la.x > Ww + 60) {
+              la.detonate = true; la.detT = 0; la.launch = false;
             }
-            // Whip hit
-            if (ch.whipping && typeof obstacles !== "undefined") {
-              var tipX = px + Math.cos(ch.whipAng) * (ch.dist + ch.whipLen);
-              var tipY = py + Math.sin(ch.whipAng) * (ch.dist * 0.55 + ch.whipLen * 0.55);
+            // Hit while launching
+            if (typeof obstacles !== "undefined") {
               for (var hi = 0; hi < obstacles.length; hi++) {
                 var o = obstacles[hi];
                 if (!o || o.isRing || o.type === "gold_ring") continue;
                 if (o.powerAffected && o.onFire) continue;
                 var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
-                if (Math.hypot(tipX - ox, tipY - oy) > 28 + Math.max(o.w, o.h) * 0.3) continue;
-                var oid = o._uid || (o._uid = "dv" + Math.random().toString(36).slice(2));
-                if (ch.hitIds[oid]) continue;
-                ch.hitIds[oid] = true;
-                destroyWithChainReaction(o, ox, oy, dv, 2);
+                if (Math.hypot(la.x - ox, la.y - oy) > la.r * 1.3 + Math.max(o.w, o.h) * 0.4) continue;
+                la.detonate = true; la.detT = 0; la.launch = false;
+                o.onFire = true; o.powerAffected = true; o.hitFlash = 1;
+                o.vy = 110; o.vx = 40; o.scored = true;
+                try { creditPowerKillScore(1); } catch (e) {}
+                break;
               }
             }
           }
         }
 
-        // Waves fade
-        for (var wi = dv.waves.length - 1; wi >= 0; wi--) {
-          dv.waves[wi].age += dt;
-          dv.waves[wi].dist += 50 * dt;
-          if (dv.waves[wi].age >= dv.waves[wi].life) dv.waves.splice(wi, 1);
+        // Empty chain phase if all gone early
+        var stillAlive = 0;
+        for (var i = 0; i < ac.anchors.length; i++) {
+          if (ac.anchors[i].alive) stillAlive++;
         }
-
-        // Initial slam
-        if (dv.phase === "slam" && !dv.slamDone) {
-          dv.slamDone = true;
-          dv.anchors.push({
-            kind: "slam",
-            x: px, y: py - 80,
-            tx: px, ty: Hh * 0.85,
-            age: 0, life: 0.45,
-            scale: 1.4,
-            mode: "fall"
-          });
-          try { if (typeof triggerScreenShake === "function") triggerScreenShake(10, 280); } catch (e) {}
+        if (stillAlive === 0 && ac.age < ac.life - 0.6 && !ac.emptyPhase) {
+          ac.emptyPhase = true;
+          ac.ghostChain = { ang: 0, build: 0 };
         }
-
-        // Dominion strikes
-        if (dv.phase === "dominion") {
-          dv.strikeT -= dt;
-          if (dv.strikeT <= 0 && dv.strikeI < 4) {
-            dv.strikeT = 0.55 + Math.random() * 0.1;
-            var sk = dv.strikeI;
-            dv.strikeI++;
-            if (sk === 0) {
-              dv.anchors.push({ kind: "drop", x: px, y: py - 90, tx: px, ty: Hh * 0.8, age: 0, life: 0.4, scale: 1.1, mode: "fall" });
-            } else if (sk === 1) {
-              dv.anchors.push({ kind: "swing", x: px + 40, y: py - 50, tx: px + Ww * 0.35, ty: py + 80, age: 0, life: 0.5, scale: 1.0, mode: "fall" });
-            } else if (sk === 2) {
-              dv.anchors.push({ kind: "inward", x: px - 90, y: py, tx: px, ty: py, age: 0, life: 0.35, scale: 0.9, mode: "fall" });
-              dv.anchors.push({ kind: "inward", x: px + 90, y: py, tx: px, ty: py, age: 0, life: 0.35, scale: 0.9, mode: "fall" });
-            } else {
-              dv.anchors.push({ kind: "arc", x: px + 20, y: py - 100, tx: px + 80, ty: Hh * 0.75, age: 0, life: 0.5, scale: 1.25, mode: "fall" });
-            }
-            try { if (typeof sfxThunder === "function") sfxThunder(); } catch (e) {}
-          }
-          // Anchor shards rain
-          if (Math.random() < 0.45) {
-            dv.shards.push({
-              x: Math.random() * Ww,
-              y: -20,
-              vx: 40 + Math.random() * 80,
-              vy: 180 + Math.random() * 120,
-              rot: Math.random() * Math.PI * 2,
-              rotV: (Math.random() - 0.5) * 8,
-              age: 0, life: 2.5,
-              r: 5 + Math.random() * 4,
-              split: Math.random() < 0.15,
-              hitIds: {}
+        if (ac.emptyPhase && ac.ghostChain) {
+          ac.ghostChain.ang += dt * 3;
+          ac.ghostChain.build = Math.min(1, (ac.ghostChain.build || 0) + dt * 0.8);
+          if (ac.ghostChain.build >= 1 && !ac.finalLaunched) {
+            ac.finalLaunched = true;
+            // Spectral final anchor
+            ac.anchors.push({
+              id: 99, ang: 0, selfRot: 0, r: 22, alive: true, detonate: false, detT: 0,
+              x: px, y: py, z: 1, sparks: [], trail: [], hitIds: {},
+              launch: true, vx: 360, vy: 0, spectral: true
             });
           }
         }
 
-        // Judgment final harpoon
-        if (dv.phase === "judgment" && !dv.judgmentDone) {
-          dv.judgmentDone = true;
-          dv.anchors.push({
-            kind: "harpoon",
-            x: px, y: py - 100,
-            tx: Ww + 40, ty: py,
-            age: 0, life: 0.7,
-            scale: 1.6,
-            mode: "fall",
-            dragChain: true
-          });
-          dv.flash = 0.5;
-          try { if (typeof sfxExplosion === "function") sfxExplosion(0.6); } catch (e) {}
-          try { if (typeof triggerScreenShake === "function") triggerScreenShake(14, 400); } catch (e) {}
+        // Explosions age
+        for (var ei = ac.explosions.length - 1; ei >= 0; ei--) {
+          ac.explosions[ei].age += dt;
+          if (ac.explosions[ei].age >= ac.explosions[ei].life) ac.explosions.splice(ei, 1);
+        }
+        for (var li = ac.links.length - 1; li >= 0; li--) {
+          var lk = ac.links[li];
+          lk.age += dt; lk.x += lk.vx * dt; lk.y += lk.vy * dt; lk.vy += 100 * dt;
+          if (lk.age >= lk.life) ac.links.splice(li, 1);
         }
 
-        // Update anchors
-        for (var ai = dv.anchors.length - 1; ai >= 0; ai--) {
-          var an = dv.anchors[ai];
-          an.age += dt;
-          var u = Math.min(1, an.age / an.life);
-          // Ease-in slam
-          var ease = u * u;
-          an.cx = an.x + (an.tx - an.x) * ease;
-          an.cy = an.y + (an.ty - an.y) * ease;
-          if (u >= 1 && an.mode === "fall") {
-            an.mode = "boom";
-            // Shockwave
-            dv.shockwaves.push({
-              x: an.cx, y: an.cy, age: 0, life: 0.55,
-              maxR: an.kind === "harpoon" ? Math.max(Ww, Hh) * 0.5 : 90 + an.scale * 40
-            });
-            // Damage in radius
-            if (typeof obstacles !== "undefined") {
-              for (var oi = 0; oi < obstacles.length; oi++) {
-                var o = obstacles[oi];
-                if (!o || o.isRing || o.type === "gold_ring") continue;
-                if (o.powerAffected && o.onFire) continue;
-                var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
-                var rad = an.kind === "harpoon" ? 100 : 70 * an.scale;
-                if (Math.hypot(ox - an.cx, oy - an.cy) < rad) {
-                  destroyWithChainReaction(o, ox, oy, dv, 3);
-                }
-              }
-            }
-            try { if (typeof triggerScreenShake === "function") triggerScreenShake(6, 160); } catch (e) {}
-          }
-          if (an.mode === "boom") {
-            an.boomAge = (an.boomAge || 0) + dt;
-            if (an.boomAge > 0.35) dv.anchors.splice(ai, 1);
-          }
-        }
-
-        // Shards
-        for (var si = dv.shards.length - 1; si >= 0; si--) {
-          var sh = dv.shards[si];
-          sh.age += dt;
-          sh.x += sh.vx * dt;
-          sh.y += sh.vy * dt;
-          sh.rot += sh.rotV * dt;
-          if (typeof obstacles !== "undefined") {
-            for (var hi = 0; hi < obstacles.length; hi++) {
-              var o = obstacles[hi];
-              if (!o || o.isRing || o.type === "gold_ring") continue;
-              if (o.powerAffected && o.onFire) continue;
-              var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
-              if (Math.hypot(sh.x - ox, sh.y - oy) > sh.r + Math.max(o.w, o.h) * 0.35) continue;
-              destroyWithChainReaction(o, ox, oy, dv, 1);
-              if (sh.split) {
-                for (var k = 0; k < 3; k++) {
-                  var ka = (k / 3) * Math.PI * 2;
-                  dv.shards.push({
-                    x: sh.x, y: sh.y,
-                    vx: Math.cos(ka) * 80, vy: Math.sin(ka) * 60 + 40,
-                    rot: 0, rotV: 4, age: 0, life: 0.8, r: 3, split: false, hitIds: {}
-                  });
-                }
-              }
-              dv.shards.splice(si, 1);
-              sh = null;
-              break;
+        // End
+        if (ac.age >= ac.life) {
+          // Detonate any remaining
+          for (var i = 0; i < ac.anchors.length; i++) {
+            if (ac.anchors[i].alive && !ac.anchors[i].detonate) {
+              ac.anchors[i].detonate = true; ac.anchors[i].detT = 0;
             }
           }
-          if (sh && (sh.age >= sh.life || sh.y > Hh + 40)) dv.shards.splice(si, 1);
-        }
-
-        // Shockwaves
-        for (var swi = dv.shockwaves.length - 1; swi >= 0; swi--) {
-          dv.shockwaves[swi].age += dt;
-          if (dv.shockwaves[swi].age >= dv.shockwaves[swi].life) dv.shockwaves.splice(swi, 1);
-        }
-
-        // End: spiral links
-        if (dv.phase === "end" && !dv.endDone) {
-          dv.endDone = true;
-          dv.flash = 0.35;
-          for (var li = 0; li < 24; li++) {
-            var la = (li / 24) * Math.PI * 2;
-            dv.links.push({
-              ang: la, dist: 80, age: 0, life: 0.6,
-              spin: 4, targetDist: 0
-            });
+          if (ac.age >= ac.life + 0.4) {
+            window.__airborneAnchorChain = null;
+            window.__airborneDivine = null;
+            window.__airborneRoyal = null;
+            window.__airborneActivePowerVisual = null;
+            window.__airborneActivePowerUntil = 0;
+            stormActive = false;
+            stormMode = "storm";
+            stormTimer = 0;
           }
-        }
-        for (var li = dv.links.length - 1; li >= 0; li--) {
-          var lk = dv.links[li];
-          lk.age += dt;
-          lk.ang += lk.spin * dt;
-          lk.dist = 80 * Math.max(0, 1 - lk.age / lk.life);
-          if (lk.age >= lk.life) dv.links.splice(li, 1);
         }
       }
 
-      if (untilD && performance.now() > untilD + 200) {
+      if (untilA && performance.now() > untilA + 500 && !window.__airborneAnchorChain) {
         stormActive = false;
         stormMode = "storm";
-        window.__airborneDivine = null;
-        window.__airborneRoyal = null;
-        window.__airborneMeteorUntil = 0;
-        window.__airborneActivePowerVisual = null;
-        window.__airborneActivePowerUntil = 0;
       }
     }
 
@@ -5101,9 +5095,9 @@ if (window.__airbornePlasmaIgnite) {
 
 
   function drawRoyalCoronation() {
-    // Divine Anchor Barrage (Ivory Anchor)
-    var dv = window.__airborneDivine;
-    if (!dv || typeof ctx === "undefined") return;
+    // Ivory Anchor — Anchor Chain Barrage
+    var ac = window.__airborneAnchorChain;
+    if (!ac || typeof ctx === "undefined") return;
     var px = (typeof player !== "undefined" && player) ? player.x : 0;
     var py = (typeof player !== "undefined" && player) ? player.y : 0;
     var Ww = (typeof W === "number") ? W : 400;
@@ -5116,255 +5110,243 @@ if (window.__airbornePlasmaIgnite) {
     ctx.save();
     ctx.globalAlpha = Math.max(0.05, pf);
 
-    // Soft perimeter aura — keep blimp center clean
-    var auraR = Math.max(40, (typeof player !== "undefined" && player ? Math.max(player.w, player.h) : 40) * 0.95);
-    var ag = ctx.createRadialGradient(px, py, auraR * 0.4, px, py, auraR * 1.6);
-    ag.addColorStop(0, "rgba(255,250,240,0.05)");
-    ag.addColorStop(0.5, "rgba(255,220,140,0.28)");
+    // Soft perimeter aura
+    var auraR = Math.max(36, (player && player.w ? Math.max(player.w, player.h) : 40) * 0.9);
+    var ag = ctx.createRadialGradient(px, py, auraR * 0.45, px, py, auraR * 1.5);
+    ag.addColorStop(0, "rgba(255,250,240,0.04)");
+    ag.addColorStop(0.55, "rgba(255,220,140,0.3)");
     ag.addColorStop(1, "rgba(180,120,40,0)");
     ctx.fillStyle = ag;
     ctx.beginPath();
-    ctx.arc(px, py, auraR * 1.6, 0, Math.PI * 2);
+    ctx.arc(px, py, auraR * 1.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // Art Deco nautical emblem behind (activation)
-    if (dv.emblemT > 0) {
-      var em = Math.min(1, dv.emblemT / 0.35);
-      ctx.globalAlpha = em * 0.45 * pf;
-      ctx.strokeStyle = "rgba(255,220,140,0.9)";
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.arc(px, py, 55 + (1 - em) * 20, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(px, py, 40 + (1 - em) * 15, 0, Math.PI * 2);
-      ctx.stroke();
-      // Fan spokes
-      for (var fi = 0; fi < 8; fi++) {
-        var fa = (fi / 8) * Math.PI * 2;
-        ctx.beginPath();
-        ctx.moveTo(px + Math.cos(fa) * 25, py + Math.sin(fa) * 25);
-        ctx.lineTo(px + Math.cos(fa) * 55, py + Math.sin(fa) * 55);
-        ctx.stroke();
-      }
-    }
-
-    // Backward golden waves
+    // Orbital rings
     ctx.globalCompositeOperation = "lighter";
-    (dv.waves || []).forEach(function(w) {
-      var wu = 1 - w.age / w.life;
-      ctx.globalAlpha = wu * 0.4 * pf;
-      var wx = px + Math.cos(w.ang) * w.dist;
-      var wy = py + Math.sin(w.ang) * w.dist * 0.6;
-      var wg = ctx.createRadialGradient(wx, wy, 0, wx, wy, 20);
-      wg.addColorStop(0, "rgba(255,230,160,0.8)");
-      wg.addColorStop(1, "rgba(180,120,40,0)");
-      ctx.fillStyle = wg;
-      ctx.beginPath();
-      ctx.arc(wx, wy, 18, 0, Math.PI * 2);
-      ctx.fill();
-    });
-
-    // Two Art Deco rings with anchor insignias
-    ctx.globalCompositeOperation = "lighter";
-    (dv.rings || []).forEach(function(rg) {
+    (ac.rings || []).forEach(function(rg) {
       ctx.save();
       ctx.translate(px, py);
       ctx.rotate(rg.ang);
       ctx.scale(1, 0.55);
-      ctx.globalAlpha = 0.6 * pf;
+      ctx.globalAlpha = 0.55 * pf;
       ctx.strokeStyle = "rgba(255,230,160,0.9)";
       ctx.lineWidth = rg.w;
       ctx.beginPath();
       ctx.arc(0, 0, rg.dist, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.globalAlpha = 0.4 * pf;
-      ctx.strokeStyle = "rgba(255,255,245,0.8)";
-      ctx.lineWidth = rg.w * 0.3;
+      ctx.globalAlpha = 0.35 * pf;
+      ctx.strokeStyle = "rgba(255,255,245,0.75)";
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(0, 0, rg.dist, 0, Math.PI * 2);
+      ctx.arc(0, 0, rg.dist * 0.92, 0, Math.PI * 2);
       ctx.stroke();
-      // Tiny anchor insignias on ring
-      ctx.globalAlpha = 0.7 * pf;
-      ctx.fillStyle = "rgba(255,220,140,0.95)";
-      for (var ai = 0; ai < 6; ai++) {
-        var aa = (ai / 6) * Math.PI * 2;
-        var ax = Math.cos(aa) * rg.dist;
-        var ay = Math.sin(aa) * rg.dist;
-        // Mini anchor: stem + arms
-        ctx.save();
-        ctx.translate(ax, ay);
-        ctx.rotate(aa + Math.PI / 2);
-        ctx.fillRect(-1, -5, 2, 10);
-        ctx.beginPath();
-        ctx.arc(0, 4, 4, 0.2, Math.PI - 0.2);
-        ctx.stroke();
-        ctx.restore();
-      }
       ctx.restore();
     });
 
-    // Celestial chains
-    function drawChain(ch) {
-      var n = ch.links || 7;
-      var baseAng = ch.ang;
+    // Collect alive anchors for chain drawing
+    var alive = [];
+    for (var i = 0; i < ac.anchors.length; i++) {
+      var a = ac.anchors[i];
+      if (a.alive && !a.detonate && !a.launch) alive.push(a);
+    }
+    // Sort by z for depth
+    var sorted = ac.anchors.slice().filter(function(a) { return a.alive; });
+    sorted.sort(function(a, b) { return (a.z || 0) - (b.z || 0); });
+
+    // Draw chains between consecutive alive anchors
+    if (alive.length >= 2) {
       ctx.globalCompositeOperation = "lighter";
-      for (var i = 0; i < n; i++) {
-        var t = i / (n - 1);
-        var bend = Math.sin(t * Math.PI + dv.age * 2 + ch.ang) * 8;
-        var dist = ch.dist * (0.55 + t * 0.55) + bend;
-        if (ch.whipping && i > n * 0.4) {
-          dist = ch.dist + ch.whipLen * ((i - n * 0.4) / (n * 0.6));
-          baseAng = ch.whipAng;
-        }
-        var lx = px + Math.cos(baseAng) * dist;
-        var ly = py + Math.sin(baseAng) * dist * 0.55;
-        ctx.globalAlpha = (0.45 + 0.35 * t) * pf;
-        // Link oval
-        ctx.strokeStyle = "rgba(255,215,120,0.95)";
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.ellipse(lx, ly, 5, 3.5, baseAng, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.strokeStyle = "rgba(255,255,240,0.7)";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        // Trail
-        if (i > 0) {
-          var pt = (i - 1) / (n - 1);
-          var pd = ch.dist * (0.55 + pt * 0.55);
-          var px0 = px + Math.cos(baseAng) * pd;
-          var py0 = py + Math.sin(baseAng) * pd * 0.55;
-          ctx.globalAlpha = 0.25 * pf;
-          ctx.strokeStyle = "rgba(255,200,100,0.6)";
-          ctx.lineWidth = 1.5;
+      for (var ci = 0; ci < alive.length; ci++) {
+        var a1 = alive[ci];
+        var a2 = alive[(ci + 1) % alive.length];
+        var pulseHere = (ci === (ac.pulseAt % alive.length));
+        // Chain links along path
+        var segs = 6;
+        for (var s = 0; s <= segs; s++) {
+          var t = s / segs;
+          var lx = a1.x + (a2.x - a1.x) * t;
+          var ly = a1.y + (a2.y - a1.y) * t;
+          // slight bend
+          var mx = (a1.x + a2.x) * 0.5 - px;
+          var my = (a1.y + a2.y) * 0.5 - py;
+          lx += mx * 0.08 * Math.sin(t * Math.PI);
+          ly += my * 0.08 * Math.sin(t * Math.PI);
+          ctx.globalAlpha = (0.4 + (pulseHere ? 0.35 : 0)) * pf;
+          ctx.strokeStyle = pulseHere ? "rgba(255,250,220,0.95)" : "rgba(255,210,120,0.85)";
+          ctx.lineWidth = pulseHere ? 3.5 : 2.5;
           ctx.beginPath();
-          ctx.moveTo(px0, py0);
-          ctx.lineTo(lx, ly);
+          ctx.ellipse(lx, ly, 5, 3.5, Math.atan2(a2.y - a1.y, a2.x - a1.x), 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        // Energy line
+        ctx.globalAlpha = (0.25 + (pulseHere ? 0.25 : 0)) * pf;
+        ctx.strokeStyle = "rgba(255,200,100,0.7)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(a1.x, a1.y);
+        ctx.lineTo(a2.x, a2.y);
+        ctx.stroke();
+      }
+    }
+
+    // Ghost chain empty phase
+    if (ac.emptyPhase && ac.ghostChain) {
+      ctx.globalAlpha = 0.35 * pf * (ac.ghostChain.build || 0.5);
+      ctx.strokeStyle = "rgba(255,230,180,0.7)";
+      ctx.lineWidth = 2;
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(ac.ghostChain.ang);
+      ctx.scale(1, 0.55);
+      ctx.beginPath();
+      ctx.arc(0, 0, 50, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Draw anchors (back to front)
+    function drawAnchorBall(an) {
+      if (an.x == null) return;
+      var sc = an.drawScale || 1;
+      var al = (an.drawAlpha != null ? an.drawAlpha : 1) * pf;
+      if (an.detonate) {
+        al *= Math.max(0, 1 - an.detT * 5);
+        sc *= 1 + an.detT * 2;
+      }
+      ctx.globalAlpha = al;
+      ctx.globalCompositeOperation = "lighter";
+      // Trail
+      (an.trail || []).forEach(function(tr) {
+        var tu = 1 - tr.age / tr.life;
+        if (tu <= 0) return;
+        ctx.globalAlpha = tu * 0.45 * al;
+        var tg = ctx.createRadialGradient(tr.x, tr.y, 0, tr.x, tr.y, an.r * 0.7 * tu);
+        tg.addColorStop(0, "rgba(255,220,140,0.9)");
+        tg.addColorStop(1, "rgba(180,80,20,0)");
+        ctx.fillStyle = tg;
+        ctx.beginPath();
+        ctx.arc(tr.x, tr.y, an.r * 0.7 * tu, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = al;
+      var rr = an.r * sc;
+      // Outer molten gold
+      var og = ctx.createRadialGradient(an.x - rr * 0.2, an.y - rr * 0.25, 0, an.x, an.y, rr * 1.5);
+      og.addColorStop(0, "rgba(255,255,245,1)");
+      og.addColorStop(0.25, "rgba(255,230,160,0.95)");
+      og.addColorStop(0.55, "rgba(255,170,50,0.85)");
+      og.addColorStop(0.85, "rgba(200,90,20,0.4)");
+      og.addColorStop(1, "rgba(80,20,0,0)");
+      ctx.fillStyle = og;
+      ctx.beginPath();
+      ctx.arc(an.x, an.y, rr * 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      // Ivory white core
+      ctx.fillStyle = "rgba(255,252,245,0.95)";
+      ctx.beginPath();
+      ctx.arc(an.x - rr * 0.12, an.y - rr * 0.15, rr * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+      // Anchor silhouette
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = al * 0.9;
+      ctx.save();
+      ctx.translate(an.x, an.y);
+      ctx.rotate(an.selfRot || 0);
+      var s = rr * 0.55;
+      ctx.strokeStyle = "rgba(255,240,200,0.95)";
+      ctx.fillStyle = "rgba(255,248,230,0.85)";
+      ctx.lineWidth = 2;
+      // ring
+      ctx.beginPath();
+      ctx.arc(0, -s * 0.75, s * 0.28, 0, Math.PI * 2);
+      ctx.stroke();
+      // stem
+      ctx.fillRect(-s * 0.1, -s * 0.55, s * 0.2, s * 1.15);
+      // arms
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.65, s * 0.45);
+      ctx.quadraticCurveTo(-s * 0.1, s * 0.25, 0, s * 0.55);
+      ctx.quadraticCurveTo(s * 0.1, s * 0.25, s * 0.65, s * 0.45);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(251,191,36,0.9)";
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.restore();
+      // Surface sparks
+      ctx.globalCompositeOperation = "lighter";
+      for (var k = 0; k < 3; k++) {
+        var ka = (an.selfRot || 0) + k * 2.1 + ac.age * 4;
+        ctx.globalAlpha = 0.6 * al;
+        ctx.fillStyle = "rgba(255,230,150,0.9)";
+        ctx.beginPath();
+        ctx.arc(an.x + Math.cos(ka) * rr * 0.7, an.y + Math.sin(ka) * rr * 0.7, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    sorted.forEach(drawAnchorBall);
+
+    // Explosions
+    (ac.explosions || []).forEach(function(ex) {
+      var t = Math.max(0, 1 - ex.age / ex.life);
+      var expand = 1 - Math.pow(1 - Math.min(1, ex.age / (ex.life * 0.4)), 2);
+      var er = 12 + expand * ex.maxR;
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = t * t * pf;
+      var eg = ctx.createRadialGradient(ex.x, ex.y, 0, ex.x, ex.y, er);
+      eg.addColorStop(0, "rgba(255,255,250,0.95)");
+      eg.addColorStop(0.3, "rgba(255,230,150,0.7)");
+      eg.addColorStop(0.65, "rgba(255,160,50,0.35)");
+      eg.addColorStop(1, "rgba(150,60,10,0)");
+      ctx.fillStyle = eg;
+      ctx.beginPath();
+      ctx.arc(ex.x, ex.y, er, 0, Math.PI * 2);
+      ctx.fill();
+      // Art Deco rings
+      ctx.strokeStyle = "rgba(255,220,140,0.9)";
+      ctx.lineWidth = 3 * t;
+      ctx.beginPath();
+      ctx.arc(ex.x, ex.y, er * 0.7, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.lineWidth = 2 * t;
+      ctx.beginPath();
+      ctx.arc(ex.x, ex.y, er * 0.45, 0, Math.PI * 2);
+      ctx.stroke();
+      // Anchor silhouettes in blast
+      if (ex.final || ex.maxR > 90) {
+        ctx.globalAlpha = t * 0.5 * pf;
+        for (var di = 0; di < 5; di++) {
+          var da = (di / 5) * Math.PI * 2 + ex.age * 2;
+          ctx.strokeStyle = "rgba(255,240,200,0.8)";
+          ctx.lineWidth = 1.5;
+          var dx = ex.x + Math.cos(da) * er * 0.5;
+          var dy = ex.y + Math.sin(da) * er * 0.5;
+          ctx.beginPath();
+          ctx.moveTo(dx, dy - 6);
+          ctx.lineTo(dx, dy + 6);
           ctx.stroke();
         }
       }
-    }
-    (dv.chains || []).forEach(drawChain);
-
-    // Spectral anchors
-    function drawAnchor(an) {
-      var ax = an.cx != null ? an.cx : an.x;
-      var ay = an.cy != null ? an.cy : an.y;
-      var s = (an.scale || 1) * 18;
-      var fade = an.mode === "boom" ? Math.max(0, 1 - (an.boomAge || 0) / 0.35) : 1;
-      ctx.save();
-      ctx.translate(ax, ay);
-      ctx.globalAlpha = fade * pf;
-      ctx.globalCompositeOperation = "lighter";
-      // Glow
-      var gg = ctx.createRadialGradient(0, 0, 2, 0, 0, s * 2.2);
-      gg.addColorStop(0, "rgba(255,255,250,0.9)");
-      gg.addColorStop(0.4, "rgba(255,220,140,0.5)");
-      gg.addColorStop(1, "rgba(180,120,40,0)");
-      ctx.fillStyle = gg;
-      ctx.beginPath();
-      ctx.arc(0, 0, s * 2.2, 0, Math.PI * 2);
-      ctx.fill();
-      // Anchor body
-      ctx.globalCompositeOperation = "source-over";
-      ctx.strokeStyle = "#f5e6c8";
-      ctx.fillStyle = "rgba(255,250,240,0.95)";
-      ctx.lineWidth = 3;
-      // Ring
-      ctx.beginPath();
-      ctx.arc(0, -s * 0.9, s * 0.28, 0, Math.PI * 2);
-      ctx.stroke();
-      // Stem
-      ctx.fillRect(-s * 0.12, -s * 0.7, s * 0.24, s * 1.4);
-      // Arms
-      ctx.beginPath();
-      ctx.moveTo(-s * 0.7, s * 0.55);
-      ctx.quadraticCurveTo(-s * 0.15, s * 0.35, 0, s * 0.7);
-      ctx.quadraticCurveTo(s * 0.15, s * 0.35, s * 0.7, s * 0.55);
-      ctx.stroke();
-      // Gold edge
-      ctx.strokeStyle = "rgba(251,191,36,0.95)";
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      // Chain drag for harpoon
-      if (an.dragChain) {
-        ctx.globalCompositeOperation = "lighter";
-        ctx.strokeStyle = "rgba(255,210,120,0.7)";
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(0, -s);
-        ctx.lineTo(px - ax, py - ay);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-    (dv.anchors || []).forEach(drawAnchor);
-
-    // Anchor shards
-    ctx.globalCompositeOperation = "lighter";
-    (dv.shards || []).forEach(function(sh) {
-      ctx.save();
-      ctx.translate(sh.x, sh.y);
-      ctx.rotate(sh.rot || 0);
-      ctx.globalAlpha = pf;
-      ctx.fillStyle = "rgba(255,230,160,0.95)";
-      ctx.fillRect(-sh.r * 0.3, -sh.r, sh.r * 0.6, sh.r * 1.6);
-      ctx.strokeStyle = "rgba(251,191,36,0.9)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(-sh.r * 0.8, sh.r * 0.5);
-      ctx.lineTo(0, sh.r);
-      ctx.lineTo(sh.r * 0.8, sh.r * 0.5);
-      ctx.stroke();
-      ctx.restore();
     });
 
-    // Shockwaves
-    (dv.shockwaves || []).forEach(function(sw) {
-      var st = Math.max(0, 1 - sw.age / sw.life);
-      var expand = 1 - Math.pow(1 - Math.min(1, sw.age / (sw.life * 0.45)), 2);
-      var sr = 15 + expand * sw.maxR;
-      ctx.globalAlpha = st * st * pf;
-      ctx.strokeStyle = sw.mini ? "rgba(255,220,140,0.7)" : "rgba(255,240,200,0.95)";
-      ctx.lineWidth = (sw.mini ? 2 : 4) * st;
-      ctx.beginPath();
-      ctx.arc(sw.x, sw.y, sr, 0, Math.PI * 2);
-      ctx.stroke();
-      if (!sw.mini) {
-        ctx.strokeStyle = "rgba(255,200,100,0.6)";
-        ctx.lineWidth = 2 * st;
-        ctx.beginPath();
-        ctx.arc(sw.x, sw.y, sr * 0.7, 0, Math.PI * 2);
-        ctx.stroke();
-        // Anchor symbols on ring
-        for (var di = 0; di < 6; di++) {
-          var da = (di / 6) * Math.PI * 2;
-          ctx.fillStyle = "rgba(255,230,160,0.8)";
-          ctx.beginPath();
-          ctx.arc(sw.x + Math.cos(da) * sr, sw.y + Math.sin(da) * sr, 3 * st, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-    });
-
-    // End spiral links
-    (dv.links || []).forEach(function(lk) {
-      var lx = px + Math.cos(lk.ang) * lk.dist;
-      var ly = py + Math.sin(lk.ang) * lk.dist * 0.55;
-      var lu = 1 - lk.age / lk.life;
-      ctx.globalAlpha = lu * pf;
-      ctx.strokeStyle = "rgba(255,215,120,0.9)";
+    // Flying chain links
+    (ac.links || []).forEach(function(lk) {
+      var tu = 1 - lk.age / lk.life;
+      ctx.globalAlpha = tu * pf;
+      ctx.strokeStyle = "rgba(255,210,120,0.9)";
       ctx.lineWidth = 2;
+      ctx.save();
+      ctx.translate(lk.x, lk.y);
+      ctx.rotate(lk.rot || 0);
       ctx.beginPath();
-      ctx.ellipse(lx, ly, 4, 3, lk.ang, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, 5, 3.5, 0, 0, Math.PI * 2);
       ctx.stroke();
+      ctx.restore();
     });
 
     // Screen flash
-    if (dv.flash > 0) {
+    if (ac.flash > 0.02) {
       ctx.globalCompositeOperation = "screen";
-      ctx.globalAlpha = Math.min(0.55, dv.flash * 1.8) * pf;
+      ctx.globalAlpha = Math.min(0.5, ac.flash * 1.6) * pf;
       ctx.fillStyle = "#fff8e8";
       ctx.fillRect(0, 0, Ww, Hh);
     }
@@ -6818,10 +6800,10 @@ function drawFireballs() {
   function drawStorm() {
     // Ivory Tempest draws while active (even if other modes idle)
     try { if (window.__airborneTempest) drawTempestDominion(); } catch (e) {}
-    try { if (window.__airborneDivine || window.__airborneRoyal) drawRoyalCoronation(); } catch (e) {}
+    try { if (window.__airborneAnchorChain || window.__airborneDivine || window.__airborneRoyal) drawRoyalCoronation(); } catch (e) {}
     // Thunder Chain draws even mid-fade
     var tcDraw = window.__airborneThunderChain;
-    if (!stormActive && !tcDraw && !window.__airborneTempest && !window.__airborneRoyal && !window.__airborneDivine) return;
+    if (!stormActive && !tcDraw && !window.__airborneTempest && !window.__airborneRoyal && !window.__airborneDivine && !window.__airborneAnchorChain) return;
     // Unified fade-out near end of any power
     try {
       var u = window.__airborneActivePowerUntil || 0;
