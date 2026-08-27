@@ -2539,12 +2539,11 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
           var bd = ac.backdrop;
           bd.age += dt;
           var u = Math.min(1, bd.age / bd.life);
-          // Smooth ease-out expand across full life
+          // Smooth ease-out expand across full life (screen-center, very transparent)
           var ease = 1 - Math.pow(1 - u, 3);
           bd.scale = 0.06 + ease * 1.05;
-          // Peak alpha ~0.45 then fade; overall ~50% more transparent than before
-          var fade = u < 0.5 ? (u / 0.5) : (1 - (u - 0.5) / 0.5);
-          bd.alpha = 0.42 * fade;
+          var fade = u < 0.45 ? (u / 0.45) : (1 - (u - 0.45) / 0.55);
+          bd.alpha = 0.28 * fade;
           if (bd.age >= bd.life) ac.backdrop = null;
         }
 
@@ -5122,85 +5121,56 @@ if (window.__airbornePlasmaIgnite) {
     return im;
   })();
 
-  function drawRoyalCoronation() {
-    // Ivory Anchor — Anchor Chain Barrage
+  function drawRoyalBehind() {
+    // Backdrop + orbital rings — drawn BEFORE blimp so they sit behind it
     var ac = window.__airborneAnchorChain;
     if (!ac || typeof ctx === "undefined") return;
     var px = (typeof player !== "undefined" && player) ? player.x : 0;
     var py = (typeof player !== "undefined" && player) ? player.y : 0;
-    var Ww = (typeof W === "number") ? W : 400;
-    var Hh = (typeof H === "number") ? H : 700;
     try {
       if (typeof updatePowerFade === "function")
         updatePowerFade(window.__airborneActivePowerUntil || window.__airborneMeteorUntil);
     } catch (e) {}
     var pf = (typeof window.__airbornePowerFade === "number") ? window.__airbornePowerFade : 1;
-    ctx.save();
-    ctx.globalAlpha = Math.max(0.05, pf);
+    var Ww = (typeof W === "number") ? W : 400;
+    var Hh = (typeof H === "number") ? H : 700;
 
-    // Giant single anchor behind blimp: expands from center to full-screen then fades
+    // Screen-center expanding anchor (very transparent)
     if (ac.backdrop) {
       var bd = ac.backdrop;
       var img = window.__airborneIvoryAnchorImg;
       var imgReady = img && img.complete && img.naturalWidth > 0;
-      var Ww = (typeof W === "number") ? W : 400;
-      var Hh = (typeof H === "number") ? H : 700;
+      var cx = Ww * 0.5, cy = Hh * 0.5;
       var maxDim = Math.max(Ww, Hh) * 1.15;
       var aspect = imgReady ? (img.naturalHeight / img.naturalWidth) : 1.47;
       var dw = maxDim * bd.scale;
       var dh = dw * aspect;
-      // If taller than screen, fit height
-      if (dh > Hh * 1.2 * bd.scale / Math.max(bd.scale, 0.01)) {
-        dh = Math.max(Hh, Ww) * 1.15 * bd.scale;
-        dw = dh / aspect;
-      }
       ctx.save();
       ctx.globalCompositeOperation = "source-over";
       ctx.globalAlpha = Math.max(0, bd.alpha) * pf;
-      ctx.translate(px, py);
       if (imgReady) {
-        ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
-      } else {
-        ctx.strokeStyle = "rgba(255,240,200,0.9)";
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.arc(0, -dh * 0.3, dw * 0.12, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.fillStyle = "rgba(255,245,220,0.7)";
-        ctx.fillRect(-dw * 0.04, -dh * 0.25, dw * 0.08, dh * 0.55);
+        ctx.drawImage(img, cx - dw / 2, cy - dh / 2, dw, dh);
       }
-      // Soft gold wash
       ctx.globalCompositeOperation = "lighter";
-      ctx.globalAlpha = Math.max(0, bd.alpha) * 0.25 * pf;
-      var bg = ctx.createRadialGradient(0, 0, dw * 0.1, 0, 0, dw * 0.6);
-      bg.addColorStop(0, "rgba(255,230,160,0.5)");
+      ctx.globalAlpha = Math.max(0, bd.alpha) * 0.2 * pf;
+      var bg = ctx.createRadialGradient(cx, cy, dw * 0.08, cx, cy, dw * 0.55);
+      bg.addColorStop(0, "rgba(255,230,160,0.45)");
       bg.addColorStop(1, "rgba(180,100,30,0)");
       ctx.fillStyle = bg;
       ctx.beginPath();
-      ctx.arc(0, 0, dw * 0.6, 0, Math.PI * 2);
+      ctx.arc(cx, cy, dw * 0.55, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
 
-    // Soft perimeter aura
-    var auraR = Math.max(36, (player && player.w ? Math.max(player.w, player.h) : 40) * 0.9);
-    var ag = ctx.createRadialGradient(px, py, auraR * 0.45, px, py, auraR * 1.5);
-    ag.addColorStop(0, "rgba(255,250,240,0.04)");
-    ag.addColorStop(0.55, "rgba(255,220,140,0.3)");
-    ag.addColorStop(1, "rgba(180,120,40,0)");
-    ctx.fillStyle = ag;
-    ctx.beginPath();
-    ctx.arc(px, py, auraR * 1.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Orbital rings + white flame tongues
+    // Rings around blimp (behind hull)
+    ctx.save();
     ctx.globalCompositeOperation = "lighter";
     (ac.rings || []).forEach(function(rg) {
       ctx.save();
       ctx.translate(px, py);
       ctx.rotate(rg.ang);
       ctx.scale(1, 0.55);
-      // Outer white flame haze
       ctx.globalAlpha = 0.4 * pf;
       ctx.strokeStyle = "rgba(255,255,255,0.85)";
       ctx.lineWidth = rg.w + 6;
@@ -5210,21 +5180,18 @@ if (window.__airbornePlasmaIgnite) {
       ctx.arc(0, 0, rg.dist, 0, Math.PI * 2);
       ctx.stroke();
       ctx.shadowBlur = 0;
-      // Gold core ring
       ctx.globalAlpha = 0.6 * pf;
       ctx.strokeStyle = "rgba(255,230,160,0.95)";
       ctx.lineWidth = rg.w;
       ctx.beginPath();
       ctx.arc(0, 0, rg.dist, 0, Math.PI * 2);
       ctx.stroke();
-      // Bright white inner edge
       ctx.globalAlpha = 0.5 * pf;
       ctx.strokeStyle = "rgba(255,255,250,0.9)";
       ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.arc(0, 0, rg.dist * 0.92, 0, Math.PI * 2);
       ctx.stroke();
-      // White flame tongues along ring
       for (var fi = 0; fi < 10; fi++) {
         var fa = (fi / 10) * Math.PI * 2 + ac.age * 2.5;
         var flicker = 0.7 + 0.3 * Math.sin(ac.age * 8 + fi);
@@ -5242,6 +5209,36 @@ if (window.__airbornePlasmaIgnite) {
       }
       ctx.restore();
     });
+    ctx.restore();
+  }
+  window.__airborneDrawRoyalBehind = drawRoyalBehind;
+
+  function drawRoyalCoronation() {
+    // Ivory Anchor — Anchor Chain Barrage
+    var ac = window.__airborneAnchorChain;
+    if (!ac || typeof ctx === "undefined") return;
+    var px = (typeof player !== "undefined" && player) ? player.x : 0;
+    var py = (typeof player !== "undefined" && player) ? player.y : 0;
+    var Ww = (typeof W === "number") ? W : 400;
+    var Hh = (typeof H === "number") ? H : 700;
+    try {
+      if (typeof updatePowerFade === "function")
+        updatePowerFade(window.__airborneActivePowerUntil || window.__airborneMeteorUntil);
+    } catch (e) {}
+    var pf = (typeof window.__airbornePowerFade === "number") ? window.__airbornePowerFade : 1;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0.05, pf);
+
+    // Soft perimeter aura
+    var auraR = Math.max(36, (player && player.w ? Math.max(player.w, player.h) : 40) * 0.9);
+    var ag = ctx.createRadialGradient(px, py, auraR * 0.45, px, py, auraR * 1.5);
+    ag.addColorStop(0, "rgba(255,250,240,0.04)");
+    ag.addColorStop(0.55, "rgba(255,220,140,0.3)");
+    ag.addColorStop(1, "rgba(180,120,40,0)");
+    ctx.fillStyle = ag;
+    ctx.beginPath();
+    ctx.arc(px, py, auraR * 1.5, 0, Math.PI * 2);
+    ctx.fill();
 
     // Collect alive anchors for chain drawing
     var alive = [];
