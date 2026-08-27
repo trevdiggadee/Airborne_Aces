@@ -466,15 +466,15 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       blimp4: "steam",
       blimp5: "greenfireball",
       blimp6: "vortex",
-      blimp7: "ivorybolt", // Storm Chaser — dark storm cloud orbs + white electric fireballs
+      blimp7: "chain", // Storm Chaser — Thunder Chain + large transparent storm cloud
       blimp8: "fireball",
       blimp9: "jollybomb",
-      blimp10: "ivorybolt",
+      blimp10: "royal", // Ivory Anchor — Coronation Barrage
       blimp11: "warshark",
       blimp12: "heatseek",
       blimp13: "swarm",
       blimp14: "barrelbomb",
-      blimp15: "royal"
+      blimp15: "meteors"
     };
     const powerMode = SHIP_POWER_MODE[sel] || "storm";
     const swarmKey = SHIP_POWER_ICON_KEYS[sel] || null;
@@ -969,15 +969,23 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         primaryDone: false,
         finalDone: false
       };
-      // Dark storm clouds around blimp
-      window.__airborneStormClouds = [];
-      for (var ci = 0; ci < 6; ci++) {
-        var ca = (ci / 6) * Math.PI * 2 + Math.random() * 0.3;
-        window.__airborneStormClouds.push({
-          ang: ca,
-          dist: 28 + Math.random() * 36,
-          r: 18 + Math.random() * 22,
-          spin: (Math.random() < 0.5 ? -1 : 1) * (0.4 + Math.random() * 0.8),
+      // Large transparent storm cloud enveloping blimp (lots of movement)
+      window.__airborneStormClouds = [{
+        ang: 0,
+        dist: 0,
+        r: 70,
+        baseR: 70,
+        spin: 0.35,
+        phase: 0,
+        wobble: 0,
+        lobes: []
+      }];
+      for (var li = 0; li < 8; li++) {
+        window.__airborneStormClouds[0].lobes.push({
+          ang: (li / 8) * Math.PI * 2,
+          spin: (Math.random() < 0.5 ? -1 : 1) * (0.6 + Math.random() * 1.2),
+          dist: 28 + Math.random() * 22,
+          r: 32 + Math.random() * 24,
           phase: Math.random() * Math.PI * 2
         });
       }
@@ -1111,8 +1119,8 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
     }
 
 
-    // Royal Stripe — Coronation Barrage (Art Deco gold & ivory, 5s)
-    if (powerMode === "royal" || powerMode === "meteors") {
+    // Ivory Anchor — Coronation Barrage (Art Deco gold & ivory, 5s)
+    if (powerMode === "royal") {
       if (typeof sfxExplosion === "function") sfxExplosion(0.5);
       if (typeof sfxShoot === "function") sfxShoot();
       try { if (typeof triggerScreenShake === "function") triggerScreenShake(8, 340); } catch (e) {}
@@ -1154,7 +1162,41 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
           phase: Math.random() * Math.PI * 2
         });
       }
-      try { if (window.PowerFX && player) window.PowerFX.activate("meteors", player.x, player.y); } catch (e) {}
+      try { if (window.PowerFX && player) window.PowerFX.activate("royal", player.x, player.y); } catch (e) {}
+      updateStormMeterDisplay();
+      return;
+    }
+
+    // Royal Stripe — classic meteor shower
+    if (powerMode === "meteors") {
+      if (typeof sfxShoot === "function") sfxShoot();
+      if (typeof sfxThunder === "function") sfxThunder();
+      try { if (typeof triggerScreenShake === "function") triggerScreenShake(6, 400); } catch (e) {}
+      stormActive = true;
+      stormMode = "meteors";
+      stormTimer = POWER_DURATION_SEC;
+      stormCharge = 0;
+      window.__airborneActivePowerVisual = "meteors";
+      window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
+      window.__airborneMeteorUntil = performance.now() + POWER_DURATION_MS;
+      window.__airborneMeteors = [];
+      window.__airborneMeteorMarks = [];
+      window.__airborneMeteorSkyDark = { age: 0, life: POWER_DURATION_SEC, alpha: 0 };
+      window.__airborneMeteorSpawnT = 0;
+      window.__airborneRoyal = null;
+      if (!window.__airborneMeteorRocks) {
+        window.__airborneMeteorRocks = [];
+        for (var ri = 1; ri <= 6; ri++) {
+          var im = new Image();
+          im.src = "meteor_rock_" + ri + ".png?v=ruff218";
+          window.__airborneMeteorRocks.push(im);
+        }
+      }
+      for (var ms = 0; ms < 22; ms++) {
+        if (typeof window.__airborneMakeMeteor === "function")
+          window.__airborneMeteors.push(window.__airborneMakeMeteor());
+      }
+      try { if (window.PowerFX) window.PowerFX.activate("meteors", player.x, player.y); } catch (e) {}
       updateStormMeterDisplay();
       return;
     }
@@ -2094,13 +2136,23 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         var px = (typeof player !== "undefined" && player) ? player.x : W * 0.3;
         var py = (typeof player !== "undefined" && player) ? player.y : H * 0.4;
 
-        // Update storm clouds orbiting blimp
+        // Large transparent storm cloud — turbulent movement around blimp
         if (window.__airborneStormClouds) {
           window.__airborneStormClouds.forEach(function(c) {
-            c.ang += c.spin * dtC;
-            c.phase += dtC * 3;
-            c.x = px + Math.cos(c.ang) * c.dist;
-            c.y = py + Math.sin(c.ang) * c.dist * 0.55 - 10;
+            c.ang += (c.spin || 0.3) * dtC;
+            c.phase = (c.phase || 0) + dtC * 2.2;
+            c.wobble = (c.wobble || 0) + dtC * 1.6;
+            c.x = px;
+            c.y = py - 8;
+            c.r = (c.baseR || 70) * (0.92 + 0.1 * Math.sin(c.phase));
+            (c.lobes || []).forEach(function(l) {
+              l.ang += l.spin * dtC;
+              l.phase += dtC * 3.5;
+              var pulse = 0.85 + 0.2 * Math.sin(l.phase);
+              l.x = px + Math.cos(l.ang + c.ang * 0.4) * l.dist * (0.9 + 0.15 * Math.sin(c.wobble + l.ang));
+              l.y = py - 10 + Math.sin(l.ang + c.ang * 0.4) * l.dist * 0.55 * pulse;
+              l.drawR = l.r * pulse;
+            });
           });
         }
 
@@ -2309,8 +2361,70 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       sd.alpha = 0.55 * st * fadeOut;
       if (sd.age >= sd.life) window.__airborneMeteorSkyDark = null;
     }
-    // Royal Stripe — Coronation Barrage
-    if (stormMode === "royal" || stormMode === "meteors" || window.__airborneRoyal) {
+    // Royal Stripe — classic meteor shower update
+    if (stormMode === "meteors" || (window.__airborneMeteors && window.__airborneMeteors.length)) {
+      var untilM = window.__airborneMeteorUntil || 0;
+      var WwM = (typeof W === "number") ? W : 400;
+      var HhM = (typeof H === "number") ? H : 700;
+      if (window.__airborneMeteorSkyDark) {
+        var sd = window.__airborneMeteorSkyDark;
+        sd.age = (sd.age || 0) + dt;
+        sd.alpha = Math.min(0.35, sd.age * 0.4);
+        if (sd.age >= sd.life) window.__airborneMeteorSkyDark = null;
+      }
+      if (untilM && performance.now() < untilM) {
+        window.__airborneMeteorSpawnT = (window.__airborneMeteorSpawnT || 0) - dt;
+        if (window.__airborneMeteorSpawnT <= 0) {
+          window.__airborneMeteorSpawnT = 0.08 + Math.random() * 0.1;
+          window.__airborneMeteors = window.__airborneMeteors || [];
+          if (typeof window.__airborneMakeMeteor === "function") {
+            window.__airborneMeteors.push(window.__airborneMakeMeteor());
+            if (Math.random() < 0.5) window.__airborneMeteors.push(window.__airborneMakeMeteor());
+          }
+        }
+      }
+      if (!window.__airborneMeteors) window.__airborneMeteors = [];
+      for (var mti = window.__airborneMeteors.length - 1; mti >= 0; mti--) {
+        var mt = window.__airborneMeteors[mti];
+        mt.age = (mt.age || 0) + dt;
+        mt.x += (mt.vx || 0) * dt;
+        mt.y += (mt.vy || 0) * dt;
+        if (typeof obstacles !== "undefined") {
+          for (var oi = 0; oi < obstacles.length; oi++) {
+            var o = obstacles[oi];
+            if (!o || o.isRing || o.type === "gold_ring" || o.type === "ring") continue;
+            if (o.powerAffected && o.onFire) continue;
+            var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
+            if (Math.hypot(mt.x - ox, mt.y - oy) > (mt.r || 10) + Math.max(o.w, o.h) * 0.4) continue;
+            o.onFire = true; o.powerAffected = true; o.hitFlash = 0.9;
+            o.vy = 90 + Math.random() * 50; o.vx = (Math.random() - 0.5) * 80;
+            o.scored = true;
+            try { creditPowerKillScore(1); } catch (e) {}
+            try {
+              if (window.PowerFX) window.PowerFX.burst(ox, oy, {
+                count: 14, colors: ["#fff7ed", "#fde68a", "#f97316", "#dc2626"],
+                speed: 120, life: 0.4, glow: true
+              });
+            } catch (e) {}
+            window.__airborneMeteors.splice(mti, 1);
+            mt = null;
+            break;
+          }
+        }
+        if (mt && (mt.y > HhM + 40 || mt.x < -40 || mt.x > WwM + 40 || (mt.life && mt.age >= mt.life)))
+          window.__airborneMeteors.splice(mti, 1);
+      }
+      if (untilM && performance.now() > untilM && !(window.__airborneMeteors && window.__airborneMeteors.length)) {
+        stormActive = false;
+        stormMode = "storm";
+        window.__airborneMeteorSkyDark = null;
+        window.__airborneActivePowerVisual = null;
+        window.__airborneActivePowerUntil = 0;
+      }
+    }
+
+    // Ivory Anchor — Coronation Barrage
+    if (stormMode === "royal" || window.__airborneRoyal) {
       var ry = window.__airborneRoyal;
       var untilM = window.__airborneMeteorUntil || 0;
       var Ww = (typeof W === "number") ? W : 400;
@@ -6301,21 +6415,47 @@ function drawFireballs() {
         ctx.restore();
       }
 
-      // Dark storm clouds around blimp
+      // Large transparent storm cloud with turbulent lobes (blimp stays visible)
       if (window.__airborneStormClouds) {
         ctx.save();
         window.__airborneStormClouds.forEach(function(c) {
-          if (c.x == null) return;
-          var pulse = 0.85 + 0.15 * Math.sin(c.phase || 0);
-          ctx.globalAlpha = 0.55 * pulse;
-          var cg = ctx.createRadialGradient(c.x, c.y, 2, c.x, c.y, c.r * pulse);
-          cg.addColorStop(0, "rgba(60,70,100,0.85)");
-          cg.addColorStop(0.5, "rgba(30,35,55,0.55)");
-          cg.addColorStop(1, "rgba(10,12,20,0)");
-          ctx.fillStyle = cg;
+          var cx = c.x != null ? c.x : pdx;
+          var cy = c.y != null ? c.y : pdy;
+          // Soft translucent body
+          ctx.globalCompositeOperation = "source-over";
+          var bodyR = (c.r || 70) * 1.35;
+          ctx.globalAlpha = 0.28 * pf;
+          var bg = ctx.createRadialGradient(cx, cy - 12, bodyR * 0.15, cx, cy - 12, bodyR);
+          bg.addColorStop(0, "rgba(90,105,140,0.45)");
+          bg.addColorStop(0.45, "rgba(50,60,90,0.3)");
+          bg.addColorStop(1, "rgba(20,25,40,0)");
+          ctx.fillStyle = bg;
           ctx.beginPath();
-          ctx.arc(c.x, c.y, c.r * pulse, 0, Math.PI * 2);
+          ctx.arc(cx, cy - 12, bodyR, 0, Math.PI * 2);
           ctx.fill();
+          // Moving translucent lobes
+          (c.lobes || []).forEach(function(l) {
+            if (l.x == null) return;
+            var lr = l.drawR || l.r || 30;
+            ctx.globalAlpha = 0.22 * pf;
+            var lg = ctx.createRadialGradient(l.x, l.y, 0, l.x, l.y, lr);
+            lg.addColorStop(0, "rgba(120,140,180,0.5)");
+            lg.addColorStop(0.5, "rgba(55,70,105,0.28)");
+            lg.addColorStop(1, "rgba(15,20,35,0)");
+            ctx.fillStyle = lg;
+            ctx.beginPath();
+            ctx.arc(l.x, l.y, lr, 0, Math.PI * 2);
+            ctx.fill();
+          });
+          // Occasional internal lightning flicker in cloud
+          if (Math.random() < 0.08) {
+            ctx.globalCompositeOperation = "lighter";
+            ctx.globalAlpha = 0.25 * pf;
+            ctx.fillStyle = "rgba(180,210,255,0.6)";
+            ctx.beginPath();
+            ctx.arc(cx + (Math.random() - 0.5) * 40, cy - 10 + (Math.random() - 0.5) * 20, 8 + Math.random() * 12, 0, Math.PI * 2);
+            ctx.fill();
+          }
         });
         ctx.restore();
       }

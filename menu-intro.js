@@ -1630,12 +1630,12 @@ function powerPreviewKindFor(key) {
       blimp7: "chain",
       blimp8: "fireball",
       blimp9: "jollybomb",
-      blimp10: "ivorybolt",
+      blimp10: "royal",
       blimp11: "warshark",
       blimp12: "heatseek",
       blimp13: "lattice",
       blimp14: "barrelbomb",
-      blimp15: "royal"
+      blimp15: "meteors"
     };
     var kind = map[key] || "storm";
     startHeroPowerFx(kind);
