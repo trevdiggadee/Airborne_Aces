@@ -5171,48 +5171,53 @@ if (window.__airbornePlasmaIgnite) {
       ctx.restore();
     }
 
-    // Rings around blimp (behind hull)
+    // Ivory plasma orbit rings — Jade Voyager style, ivory/white
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
-    (ac.rings || []).forEach(function(rg) {
+    (ac.rings || []).forEach(function(rg, ri) {
+      var nBeads = 14;
+      // Soft continuous trail ring (energy path)
       ctx.save();
       ctx.translate(px, py);
       ctx.rotate(rg.ang);
-      ctx.scale(1, 0.55);
-      ctx.globalAlpha = 0.4 * pf;
-      ctx.strokeStyle = "rgba(255,255,255,0.85)";
-      ctx.lineWidth = rg.w + 6;
-      ctx.shadowColor = "rgba(255,255,250,0.9)";
-      ctx.shadowBlur = 12;
+      ctx.scale(1, 0.58);
+      ctx.globalAlpha = 0.35 * pf;
+      ctx.strokeStyle = "rgba(255,245,220,0.7)";
+      ctx.lineWidth = 14;
+      ctx.shadowColor = "rgba(255,250,240,0.85)";
+      ctx.shadowBlur = 16;
       ctx.beginPath();
       ctx.arc(0, 0, rg.dist, 0, Math.PI * 2);
       ctx.stroke();
       ctx.shadowBlur = 0;
-      ctx.globalAlpha = 0.6 * pf;
-      ctx.strokeStyle = "rgba(255,230,160,0.95)";
-      ctx.lineWidth = rg.w;
-      ctx.beginPath();
-      ctx.arc(0, 0, rg.dist, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.globalAlpha = 0.5 * pf;
-      ctx.strokeStyle = "rgba(255,255,250,0.9)";
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.arc(0, 0, rg.dist * 0.92, 0, Math.PI * 2);
-      ctx.stroke();
-      for (var fi = 0; fi < 10; fi++) {
-        var fa = (fi / 10) * Math.PI * 2 + ac.age * 2.5;
-        var flicker = 0.7 + 0.3 * Math.sin(ac.age * 8 + fi);
-        var fx = Math.cos(fa) * rg.dist;
-        var fy = Math.sin(fa) * rg.dist;
-        ctx.globalAlpha = 0.45 * flicker * pf;
-        var fg = ctx.createRadialGradient(fx, fy, 0, fx, fy, 10 + flicker * 6);
-        fg.addColorStop(0, "rgba(255,255,255,0.95)");
-        fg.addColorStop(0.4, "rgba(255,250,230,0.55)");
-        fg.addColorStop(1, "rgba(255,200,120,0)");
-        ctx.fillStyle = fg;
+      // Jade-style fireball beads along orbit (ivory/white/gold)
+      for (var bi = 0; bi < nBeads; bi++) {
+        var ba = (bi / nBeads) * Math.PI * 2 + rg.ang * 0.3;
+        var pulse = 0.85 + 0.15 * Math.sin(ac.age * 6 + bi * 0.8 + ri);
+        var bx = Math.cos(ba) * rg.dist;
+        var by = Math.sin(ba) * rg.dist;
+        var br = (7 + (ri === 0 ? 2 : 0)) * pulse;
+        // Outer gold soft flame
+        ctx.globalAlpha = 0.55 * pf;
+        var og = ctx.createRadialGradient(bx, by, 0, bx, by, br * 2.2);
+        og.addColorStop(0, "rgba(255,255,250,0.95)");
+        og.addColorStop(0.25, "rgba(255,235,190,0.75)");
+        og.addColorStop(0.55, "rgba(255,190,90,0.4)");
+        og.addColorStop(1, "rgba(200,100,30,0)");
+        ctx.fillStyle = og;
         ctx.beginPath();
-        ctx.arc(fx, fy, 10 + flicker * 6, 0, Math.PI * 2);
+        ctx.arc(bx, by, br * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+        // Ivory-white hot core (Jade core style)
+        ctx.globalAlpha = 0.95 * pf;
+        var cg = ctx.createRadialGradient(bx - br * 0.15, by - br * 0.2, 0, bx, by, br);
+        cg.addColorStop(0, "rgba(255,255,255,1)");
+        cg.addColorStop(0.35, "rgba(255,250,240,0.95)");
+        cg.addColorStop(0.7, "rgba(255,220,160,0.55)");
+        cg.addColorStop(1, "rgba(255,180,80,0)");
+        ctx.fillStyle = cg;
+        ctx.beginPath();
+        ctx.arc(bx, by, br, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.restore();
