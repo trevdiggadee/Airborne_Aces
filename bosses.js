@@ -784,33 +784,63 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
     }
 
     if (powerMode === "jollybomb") {
+      // Jolly Roger — Dead Man's Broadside (5s)
       if (typeof sfxShoot === "function") sfxShoot();
-      if (typeof sfxExplosion === "function") sfxExplosion(0.3);
+      if (typeof sfxExplosion === "function") sfxExplosion(0.45);
+      try { if (typeof triggerScreenShake === "function") triggerScreenShake(9, 320); } catch (e) {}
+      var JR_SEC = 5.0, JR_MS = 5000;
       stormActive = true;
       stormMode = "jollybomb";
-      stormTimer = POWER_DURATION_SEC;
+      stormTimer = JR_SEC;
       stormCharge = 0;
-      window.__airborneHeatseekUntil = performance.now() + POWER_DURATION_MS;
+      window.__airborneHeatseekUntil = performance.now() + JR_MS;
       window.__airborneActivePowerVisual = "jollybomb";
-      window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
+      window.__airborneActivePowerUntil = performance.now() + JR_MS;
       window.__airborneHeatseekers = [];
-      // Pre-spawn arcing spinning bombs
-      for (var ji = 0; ji < 5; ji++) {
-        var ang = -0.85 + ji * 0.35 + (Math.random() - 0.5) * 0.08;
-        var sp = 160 + Math.random() * 50;
+      window.__airborneJolly = {
+        age: 0,
+        life: JR_SEC,
+        salvoT: 0.05,
+        ghostT: 0.8,
+        skullEvery: 0,
+        finaleDone: false,
+        smoke: 1,
+        flag: 1,
+        cannons: [
+          { side: -1, ang: -0.4, fireT: 0.1, flash: 0 },
+          { side: -1, ang: 0.0, fireT: 0.25, flash: 0 },
+          { side: -1, ang: 0.4, fireT: 0.4, flash: 0 },
+          { side: 1, ang: -0.4, fireT: 0.15, flash: 0 },
+          { side: 1, ang: 0.0, fireT: 0.3, flash: 0 },
+          { side: 1, ang: 0.4, fireT: 0.45, flash: 0 }
+        ],
+        ghostCannons: [
+          { ang: 0, life: 0, flash: 0 },
+          { ang: -0.35, life: 0, flash: 0 },
+          { ang: 0.35, life: 0, flash: 0 }
+        ],
+        impacts: []
+      };
+      // Opening broadside fan — 6 cannonballs
+      var px0 = (typeof player !== "undefined" && player) ? player.x : 100;
+      var py0 = (typeof player !== "undefined" && player) ? player.y : 200;
+      for (var ji = 0; ji < 6; ji++) {
+        var ang = -0.95 + ji * 0.32;
+        var sp = 170 + Math.random() * 40;
         window.__airborneHeatseekers.push({
-          x: (typeof player !== "undefined" && player) ? player.x + (player.w || 40) * 0.2 : 100,
-          y: (typeof player !== "undefined" && player) ? player.y : 200,
+          x: px0 + 10, y: py0,
           vx: Math.cos(ang) * sp,
-          vy: Math.sin(ang) * sp - 80 - Math.random() * 40, // upward arch
-          life: 2.5,
-          age: 0,
+          vy: Math.sin(ang) * sp * 0.7 - 40,
+          life: 3.2, age: 0,
           rot: Math.random() * Math.PI * 2,
-          spin: 8 + Math.random() * 6,
-          trails: [],
-          target: null,
+          spin: 7 + Math.random() * 6,
+          trails: [], target: null,
           kind: "jollybomb",
-          gravity: 220
+          gravity: 180,
+          ricochet: 2,
+          skull: false,
+          heavy: ji === 2 || ji === 4,
+          r: (ji === 2 || ji === 4) ? 16 : 11
         });
       }
       try {
@@ -4060,6 +4090,7 @@ if (window.__airbornePlasmaIgnite) {
           (window.__airborneWarBullets && window.__airborneWarBullets.length);
         if (!stillFlying) {
           window.__airbornePredator = null;
+          window.__airborneJolly = null;
           stormActive = false;
           stormMode = "storm";
           stormTimer = 0;
@@ -4081,6 +4112,9 @@ if (window.__airbornePlasmaIgnite) {
           ? (tN < 0.2 ? 0.44 : (tN < 0.6 ? 0.35 : (tN < 0.9 ? 0.22 : 0.12))) // ~25% fewer
           : (stormMode === "barrelbomb") ? 99 : 0.45;
         window.__airborneHeatseekSpawnT = spawnGap;
+        if (stormMode === "jollybomb") {
+          // Handled by Dead Man's Broadside brain below
+        } else {
         var ang = -0.35 + Math.random() * 0.7;
         var sp = 180 + Math.random() * 70;
         var shark = {
@@ -4103,6 +4137,110 @@ if (window.__airbornePlasmaIgnite) {
           huntSnap: false
         };
         window.__airborneHeatseekers.push(shark);
+        }
+      }
+
+      // Dead Man's Broadside brain
+      if (stormMode === "jollybomb" && window.__airborneJolly) {
+        var jr = window.__airborneJolly;
+        jr.age += dt;
+        if (jr.smoke > 0) jr.smoke = Math.max(0, jr.smoke - dt * 0.4);
+        if (jr.flag > 0) jr.flag = Math.max(0.3, jr.flag - dt * 0.3);
+        var tN = jr.age / jr.life;
+        var canFire = window.__airborneHeatseekUntil && performance.now() < window.__airborneHeatseekUntil;
+        // Staggered side cannons
+        if (canFire) {
+          (jr.cannons || []).forEach(function(cn) {
+            cn.fireT -= dt;
+            if (cn.flash > 0) cn.flash = Math.max(0, cn.flash - dt * 4);
+            if (cn.fireT <= 0 && typeof player !== "undefined" && player) {
+              var gap = tN < 0.2 ? 0.38 : (tN < 0.6 ? 0.28 : (tN < 0.9 ? 0.18 : 0.12));
+              cn.fireT = gap + Math.random() * 0.08;
+              cn.flash = 1;
+              var fang = cn.ang + (cn.side > 0 ? 0.15 : -0.15) + (Math.random() - 0.5) * 0.2;
+              // Flip side: left fires left-ish, right fires right-ish but mostly forward
+              var baseAng = cn.side < 0 ? -0.6 + cn.ang * 0.5 : 0.3 + cn.ang * 0.4;
+              baseAng += (Math.random() - 0.5) * 0.25;
+              var sp = 160 + Math.random() * 70;
+              jr.skullEvery++;
+              var isSkull = tN > 0.35 && (jr.skullEvery % 4 === 0);
+              var isHeavy = Math.random() < 0.18;
+              window.__airborneHeatseekers.push({
+                x: player.x + cn.side * 22,
+                y: player.y + Math.sin(cn.ang) * 16,
+                vx: Math.cos(baseAng) * sp,
+                vy: Math.sin(baseAng) * sp * 0.75 - 30,
+                life: 3.0, age: 0,
+                rot: Math.random() * Math.PI * 2,
+                spin: 6 + Math.random() * 8,
+                trails: [], target: null,
+                kind: "jollybomb",
+                gravity: 160 + Math.random() * 40,
+                ricochet: 2,
+                skull: isSkull,
+                heavy: isHeavy,
+                r: isHeavy ? 17 : (isSkull ? 14 : 11)
+              });
+            }
+          });
+          // Ghost cannon every ~1s
+          jr.ghostT -= dt;
+          if (jr.ghostT <= 0 && typeof player !== "undefined" && player) {
+            jr.ghostT = 1.0;
+            var gAng = -0.1 + (Math.random() - 0.5) * 0.2;
+            jr.ghostCannons[0].life = 0.55;
+            jr.ghostCannons[0].flash = 1;
+            jr.ghostCannons[0].ang = gAng;
+            window.__airborneHeatseekers.push({
+              x: player.x - 10, y: player.y,
+              vx: Math.cos(gAng) * 260,
+              vy: Math.sin(gAng) * 40,
+              life: 2.5, age: 0,
+              rot: 0, spin: 4,
+              trails: [], target: null,
+              kind: "jollybomb",
+              gravity: 40,
+              ricochet: 1,
+              skull: false,
+              heavy: true,
+              ghost: true,
+              r: 20
+            });
+          }
+          (jr.ghostCannons || []).forEach(function(gc) {
+            if (gc.life > 0) gc.life -= dt;
+            if (gc.flash > 0) gc.flash = Math.max(0, gc.flash - dt * 3);
+          });
+          // Finale broadside
+          if (jr.age > jr.life - 0.5 && !jr.finaleDone && typeof player !== "undefined" && player) {
+            jr.finaleDone = true;
+            for (var fi = 0; fi < 10; fi++) {
+              var fa = -1.0 + fi * 0.22;
+              window.__airborneHeatseekers.push({
+                x: player.x, y: player.y,
+                vx: Math.cos(fa) * (180 + Math.random() * 50),
+                vy: Math.sin(fa) * 100 - 20,
+                life: 2.8, age: 0,
+                rot: Math.random() * Math.PI * 2,
+                spin: 8 + Math.random() * 5,
+                trails: [], target: null,
+                kind: "jollybomb",
+                gravity: 170,
+                ricochet: 2,
+                skull: fi % 3 === 0,
+                heavy: fi % 4 === 0,
+                r: fi % 4 === 0 ? 16 : 12
+              });
+            }
+            try { if (typeof triggerScreenShake === "function") triggerScreenShake(12, 400); } catch (e) {}
+            try { if (typeof sfxExplosion === "function") sfxExplosion(0.6); } catch (e) {}
+          }
+        }
+        // Age impacts
+        for (var ii = (jr.impacts || []).length - 1; ii >= 0; ii--) {
+          jr.impacts[ii].age += dt;
+          if (jr.impacts[ii].age >= jr.impacts[ii].life) jr.impacts.splice(ii, 1);
+        }
       }
 
       // Predator Swarm brain (War Shark)
@@ -4231,11 +4369,20 @@ if (window.__airbornePlasmaIgnite) {
           rk.vx = Math.cos(rk.rot) * spd;
           rk.vy = Math.sin(rk.rot) * spd;
         }
-        // Arch + spin for Jolly bombs
+        // Arch + spin + ricochet for Jolly cannonballs
         if (rk.kind === "jollybomb") {
           rk.vy += (rk.gravity || 220) * dt;
           rk.spin = rk.spin || 10;
           rk.rot = (rk.rot || 0) + rk.spin * dt;
+          // Screen-edge ricochet
+          var Ww = typeof W !== "undefined" ? W : 400;
+          var Hh = typeof H !== "undefined" ? H : 700;
+          if ((rk.ricochet || 0) > 0) {
+            if (rk.x < 8 && rk.vx < 0) { rk.vx *= -0.85; rk.ricochet--; rk.x = 8; }
+            if (rk.x > Ww - 8 && rk.vx > 0) { rk.vx *= -0.85; rk.ricochet--; rk.x = Ww - 8; }
+            if (rk.y < 8 && rk.vy < 0) { rk.vy *= -0.85; rk.ricochet--; rk.y = 8; }
+            if (rk.y > Hh - 8 && rk.vy > 0) { rk.vy *= -0.75; rk.ricochet--; rk.y = Hh - 8; }
+          }
         }
         rk.x += rk.vx * dt;
         rk.y += rk.vy * dt;
@@ -4321,7 +4468,33 @@ if (window.__airbornePlasmaIgnite) {
             if (Math.hypot(rk.x - ox, rk.y - oy) < 22 + Math.max(o.w, o.h) * 0.3) {
               hit = true;
               if (rk.kind === "barrelbomb" || rk.kind === "jollybomb") {
-                aoeDestroyAt(rk.x, rk.y, 95);
+                aoeDestroyAt(rk.x, rk.y, rk.heavy || rk.ghost ? 110 : 90);
+                // Skull bomb splits into 5 scatter shots
+                if (rk.kind === "jollybomb" && rk.skull) {
+                  for (var si = 0; si < 5; si++) {
+                    var sa = (si / 5) * Math.PI * 2 + Math.random() * 0.3;
+                    window.__airborneHeatseekers.push({
+                      x: rk.x, y: rk.y,
+                      vx: Math.cos(sa) * (120 + Math.random() * 60),
+                      vy: Math.sin(sa) * (120 + Math.random() * 60) - 40,
+                      life: 1.6, age: 0,
+                      rot: Math.random() * Math.PI * 2,
+                      spin: 10, trails: [], target: null,
+                      kind: "jollybomb", gravity: 200,
+                      ricochet: 1, skull: false, heavy: false, r: 8, shard: true
+                    });
+                  }
+                  if (window.__airborneJolly) {
+                    window.__airborneJolly.impacts.push({
+                      x: rk.x, y: rk.y, age: 0, life: 0.45, skull: true
+                    });
+                  }
+                } else if (rk.kind === "jollybomb" && window.__airborneJolly) {
+                  window.__airborneJolly.impacts.push({
+                    x: rk.x, y: rk.y, age: 0, life: 0.3, skull: false
+                  });
+                }
+                try { if (typeof triggerScreenShake === "function") triggerScreenShake(rk.skull ? 8 : 4, 180); } catch (e) {}
               } else {
                 try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
                 try { if (typeof triggerBigExplosion === "function") triggerBigExplosion(ox, oy, 0.7); } catch (e) {}
@@ -6509,6 +6682,100 @@ function drawMeteorMarks() {
 
   window.__airborneDrawShockFX = drawShockFX;
 
+
+  function drawJollyBroadside() {
+    var jr = window.__airborneJolly;
+    if (!jr || typeof ctx === "undefined") return;
+    if (typeof player === "undefined" || !player) return;
+    var px = player.x, py = player.y;
+    var pf = 1;
+    try {
+      if (typeof updatePowerFade === "function") updatePowerFade(window.__airborneActivePowerUntil);
+      pf = (typeof window.__airbornePowerFade === "number") ? window.__airbornePowerFade : 1;
+    } catch (e) {}
+    ctx.save();
+    // Activation smoke cloud
+    if (jr.smoke > 0.05) {
+      ctx.globalAlpha = jr.smoke * 0.35 * pf;
+      for (var s = 0; s < 5; s++) {
+        var sx = px + Math.cos(s * 1.4) * 20;
+        var sy = py + Math.sin(s * 1.4) * 14;
+        var sg = ctx.createRadialGradient(sx, sy, 0, sx, sy, 28);
+        sg.addColorStop(0, "rgba(60,50,40,0.5)");
+        sg.addColorStop(1, "rgba(20,15,10,0)");
+        ctx.fillStyle = sg;
+        ctx.beginPath(); ctx.arc(sx, sy, 28, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    // Ghost cannons behind blimp
+    (jr.ghostCannons || []).forEach(function(gc) {
+      if (gc.life <= 0 && gc.flash <= 0) return;
+      var a = Math.max(gc.life / 0.55, gc.flash);
+      ctx.globalAlpha = a * 0.55 * pf;
+      ctx.save();
+      ctx.translate(px - 30, py);
+      ctx.rotate(gc.ang || 0);
+      // Spectral barrel
+      ctx.fillStyle = "rgba(180,220,160,0.5)";
+      ctx.fillRect(-8, -6, 40, 12);
+      ctx.strokeStyle = "rgba(220,255,200,0.7)";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(-8, -6, 40, 12);
+      if (gc.flash > 0) {
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = gc.flash * 0.8 * pf;
+        var fg = ctx.createRadialGradient(32, 0, 0, 32, 0, 28);
+        fg.addColorStop(0, "rgba(255,200,80,0.9)");
+        fg.addColorStop(1, "rgba(255,80,0,0)");
+        ctx.fillStyle = fg;
+        ctx.beginPath(); ctx.arc(32, 0, 28, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    });
+    // Side cannon flashes
+    (jr.cannons || []).forEach(function(cn) {
+      if (cn.flash <= 0) return;
+      ctx.globalAlpha = cn.flash * 0.7 * pf;
+      ctx.globalCompositeOperation = "lighter";
+      var cx = px + cn.side * 24;
+      var cy = py + Math.sin(cn.ang) * 14;
+      var fg = ctx.createRadialGradient(cx, cy, 0, cx, cy, 18);
+      fg.addColorStop(0, "rgba(255,220,120,0.95)");
+      fg.addColorStop(0.4, "rgba(255,100,30,0.5)");
+      fg.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = fg;
+      ctx.beginPath(); ctx.arc(cx, cy, 18, 0, Math.PI * 2); ctx.fill();
+    });
+    // Impact FX — smoke + optional skull face
+    ctx.globalCompositeOperation = "source-over";
+    (jr.impacts || []).forEach(function(imp) {
+      var t = 1 - imp.age / imp.life;
+      if (t <= 0) return;
+      ctx.globalAlpha = t * 0.7 * pf;
+      var ig = ctx.createRadialGradient(imp.x, imp.y, 0, imp.x, imp.y, 40 * t + 20);
+      ig.addColorStop(0, "rgba(255,180,60,0.7)");
+      ig.addColorStop(0.35, "rgba(80,50,30,0.5)");
+      ig.addColorStop(1, "rgba(20,15,10,0)");
+      ctx.fillStyle = ig;
+      ctx.beginPath(); ctx.arc(imp.x, imp.y, 40 * t + 20, 0, Math.PI * 2); ctx.fill();
+      // Shock ring
+      ctx.globalAlpha = t * 0.5 * pf;
+      ctx.strokeStyle = "rgba(255,200,100,0.8)";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(imp.x, imp.y, 25 + (1 - t) * 40, 0, Math.PI * 2); ctx.stroke();
+      if (imp.skull) {
+        ctx.globalAlpha = t * 0.85 * pf;
+        ctx.fillStyle = "rgba(240,230,210,0.9)";
+        ctx.beginPath(); ctx.arc(imp.x, imp.y - 4, 14 * t, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "rgba(20,20,20,0.9)";
+        ctx.beginPath(); ctx.arc(imp.x - 5, imp.y - 6, 3 * t, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(imp.x + 5, imp.y - 6, 3 * t, 0, Math.PI * 2); ctx.fill();
+      }
+    });
+    ctx.restore();
+  }
+  window.__airborneDrawJollyBroadside = drawJollyBroadside;
+
   function drawHeatseekers() {
     if (typeof ctx === "undefined") return;
     // Always draw lattice torpedoes + meteor shower when active
@@ -6518,6 +6785,7 @@ function drawMeteorMarks() {
     try { drawSpyShield(); } catch (e) {}
     try { drawSteamParts(); } catch (e) {}
     try { drawShockFX(); } catch (e) {}
+    try { drawJollyBroadside(); } catch (e) {}
     try { drawTempestDominion(); } catch (e) {}
     try { drawFurnaceOverdrive(); } catch (e) {}
     try { drawSunBurst(); } catch (e) {}
@@ -6562,21 +6830,44 @@ function drawMeteorMarks() {
         rh = rw * aspect;
         ctx.drawImage(img, -rw * 0.35, -rh / 2, rw, rh);
       } else if (rk.kind === "jollybomb") {
-        // Spinning skull bomb
-        var br = 14;
-        ctx.fillStyle = "#1a1a1a";
+        // Heavy iron cannonball — glowing red-hot seams, optional skull
+        var br = rk.r || (rk.heavy ? 16 : 11);
+        // Smoke trail sparks drawn in trail loop; body:
+        var g = ctx.createRadialGradient(-br * 0.3, -br * 0.3, 0, 0, 0, br);
+        g.addColorStop(0, "#4a4a4a");
+        g.addColorStop(0.5, "#2a2a2a");
+        g.addColorStop(1, "#0d0d0d");
+        ctx.fillStyle = g;
         ctx.beginPath(); ctx.arc(0, 0, br, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = "#c9a227"; ctx.lineWidth = 2;
+        // Red-hot seams
+        ctx.strokeStyle = "rgba(255,80,20,0.85)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, br * 0.7, 0.2, 1.8);
         ctx.stroke();
-        // skull
-        ctx.fillStyle = "#f0e6d0";
-        ctx.beginPath(); ctx.arc(0, -2, 6, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = "#1a1a1a";
-        ctx.beginPath(); ctx.arc(-2.5, -3, 1.5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(2.5, -3, 1.5, 0, Math.PI * 2); ctx.fill();
-        // fuse spark
-        ctx.fillStyle = "#ff8a1a";
-        ctx.beginPath(); ctx.arc(0, -br - 2, 2.5, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "rgba(255,120,40,0.55)";
+        ctx.beginPath();
+        ctx.arc(0, 0, br * 0.45, -1, 0.5);
+        ctx.stroke();
+        // Specular
+        ctx.fillStyle = "rgba(255,255,255,0.25)";
+        ctx.beginPath(); ctx.arc(-br * 0.3, -br * 0.35, br * 0.22, 0, Math.PI * 2); ctx.fill();
+        if (rk.skull) {
+          ctx.fillStyle = "rgba(240,230,210,0.95)";
+          ctx.beginPath(); ctx.arc(0, -1, br * 0.4, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#1a1a1a";
+          ctx.beginPath(); ctx.arc(-br * 0.15, -2, br * 0.1, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(br * 0.15, -2, br * 0.1, 0, Math.PI * 2); ctx.fill();
+        }
+        if (rk.ghost) {
+          ctx.globalAlpha = 0.7;
+          ctx.strokeStyle = "rgba(180,255,160,0.6)";
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(0, 0, br + 3, 0, Math.PI * 2); ctx.stroke();
+        }
+        // Ember sparks
+        ctx.fillStyle = "rgba(255,100,20,0.9)";
+        ctx.beginPath(); ctx.arc(br * 0.6, br * 0.2, 1.5, 0, Math.PI * 2); ctx.fill();
       } else {
         ctx.fillStyle = "#3a6a9a";
         ctx.fillRect(-12, -6, 28, 12);
