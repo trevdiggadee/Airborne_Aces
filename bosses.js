@@ -905,21 +905,67 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
     }
 
     if (powerMode === "heatseek") {
+      // Sky Rocket — 5 steampunk jets in pyramid formation
       if (typeof sfxShoot === "function") sfxShoot();
-      if (typeof sfxExplosion === "function") sfxExplosion(0.35);
+      if (typeof sfxExplosion === "function") sfxExplosion(0.4);
+      try { if (typeof triggerScreenShake === "function") triggerScreenShake(8, 300); } catch (e) {}
+      var SR_SEC = 5.0, SR_MS = 5000;
       stormActive = true;
       stormMode = "heatseek";
-      stormTimer = POWER_DURATION_SEC;
+      stormTimer = SR_SEC;
       stormCharge = 0;
-      window.__airborneHeatseekUntil = performance.now() + POWER_DURATION_MS;
+      window.__airborneHeatseekUntil = performance.now() + SR_MS;
       window.__airborneActivePowerVisual = "heatseek";
-      window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
+      window.__airborneActivePowerUntil = performance.now() + SR_MS;
       window.__airborneHeatseekers = [];
-      // Preload image
-      if (!window.__airborneRocketImg) {
-        var ri = new Image();
-        ri.src = "sky_rocket_missile.jpg";
-        window.__airborneRocketImg = ri;
+      if (!window.__airborneSkyJetImg) {
+        var sji = new Image();
+        sji.src = "skyrocket_jet.png?v=ruff307";
+        window.__airborneSkyJetImg = sji;
+      }
+      // Pyramid of 5 jets: row of 1, then 2, then 2 — spawn immediately left of blimp, fly L→R and R→L
+      // Formation offsets relative to lead jet
+      var form = [
+        { ox: 0, oy: 0 },      // tip
+        { ox: -28, oy: -22 },  // upper left
+        { ox: -28, oy: 22 },   // lower left
+        { ox: -56, oy: -36 },  // far upper
+        { ox: -56, oy: 36 }    // far lower
+      ];
+      window.__airborneSkyJets = [];
+      var px0 = (typeof player !== "undefined" && player) ? player.x : 100;
+      var py0 = (typeof player !== "undefined" && player) ? player.y : 200;
+      // Group A: fly left → right
+      for (var ji = 0; ji < 5; ji++) {
+        var f = form[ji];
+        window.__airborneSkyJets.push({
+          x: -40 + f.ox,
+          y: py0 + f.oy,
+          vx: 220 + Math.random() * 30,
+          vy: 0,
+          dir: 1,
+          life: 4.5,
+          age: 0,
+          fireT: 0.05 + ji * 0.04,
+          bullets: [],
+          exhaust: []
+        });
+      }
+      // Group B: fly right → left (mirror pyramid)
+      for (var ji2 = 0; ji2 < 5; ji2++) {
+        var f2 = form[ji2];
+        window.__airborneSkyJets.push({
+          x: (typeof W !== "undefined" ? W : 400) + 40 - f2.ox,
+          y: py0 + f2.oy + 8,
+          vx: -(220 + Math.random() * 30),
+          vy: 0,
+          dir: -1,
+          life: 4.5,
+          age: 0,
+          fireT: 0.08 + ji2 * 0.04,
+          bullets: [],
+          exhaust: []
+        });
       }
       try {
         if (window.PowerFX && player) window.PowerFX.activate("heatseek", player.x, player.y);
@@ -4270,6 +4316,94 @@ if (window.__airbornePlasmaIgnite) {
     }
 
 
+    // ---- Sky Rocket jets (pyramid wingmen) ----
+    if (window.__airborneSkyJets && window.__airborneSkyJets.length) {
+      var jets = window.__airborneSkyJets;
+      var Ww = typeof W !== "undefined" ? W : 400;
+      var Hh = typeof H !== "undefined" ? H : 700;
+      for (var ji = jets.length - 1; ji >= 0; ji--) {
+        var jet = jets[ji];
+        jet.age += dt;
+        jet.x += jet.vx * dt;
+        jet.y += jet.vy * dt;
+        // Exhaust flames
+        if (!jet.exhaust) jet.exhaust = [];
+        if (Math.random() < 0.95) {
+          var ex = jet.x - jet.dir * 28;
+          var ey = jet.y + (Math.random() - 0.5) * 6;
+          jet.exhaust.push({
+            x: ex, y: ey,
+            vx: -jet.dir * (40 + Math.random() * 60),
+            vy: (Math.random() - 0.5) * 40,
+            life: 0.25 + Math.random() * 0.2, age: 0,
+            r: 4 + Math.random() * 6
+          });
+        }
+        for (var ei = jet.exhaust.length - 1; ei >= 0; ei--) {
+          var ep = jet.exhaust[ei];
+          ep.age += dt;
+          ep.x += ep.vx * dt;
+          ep.y += ep.vy * dt;
+          ep.r *= (1 - 1.5 * dt);
+          if (ep.age >= ep.life) jet.exhaust.splice(ei, 1);
+        }
+        // Massive firepower
+        jet.fireT -= dt;
+        if (jet.fireT <= 0) {
+          jet.fireT = 0.12 + Math.random() * 0.06;
+          if (!jet.bullets) jet.bullets = [];
+          // Double forward stream
+          for (var bi = 0; bi < 2; bi++) {
+            jet.bullets.push({
+              x: jet.x + jet.dir * 30,
+              y: jet.y + (bi - 0.5) * 8,
+              vx: jet.dir * (320 + Math.random() * 40),
+              vy: (Math.random() - 0.5) * 30,
+              life: 1.2, age: 0, r: 5
+            });
+          }
+        }
+        for (var bi2 = (jet.bullets || []).length - 1; bi2 >= 0; bi2--) {
+          var bu = jet.bullets[bi2];
+          bu.age += dt;
+          bu.x += bu.vx * dt;
+          bu.y += bu.vy * dt;
+          // Hit obstacles
+          if (typeof obstacles !== "undefined") {
+            for (var oi = obstacles.length - 1; oi >= 0; oi--) {
+              var o = obstacles[oi];
+              if (!o || o.isRing || o.onFire) continue;
+              var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
+              if (Math.hypot(bu.x - ox, bu.y - oy) < 28) {
+                try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
+                try { if (typeof triggerBigExplosion === "function") triggerBigExplosion(ox, oy, 0.8); } catch (e) {}
+                try {
+                  if (window.PowerFX) window.PowerFX.burst(ox, oy, {
+                    count: 20, colors: ["#ffd24a", "#ff6b3d", "#fff", "#ff1a00"],
+                    speed: 150, glow: true
+                  });
+                } catch (e) {}
+                try { creditPowerKillScore(1); } catch (e) {}
+                obstacles.splice(oi, 1);
+                bu.age = bu.life;
+                break;
+              }
+            }
+          }
+          if (bu.age >= bu.life || bu.x < -40 || bu.x > Ww + 40) jet.bullets.splice(bi2, 1);
+        }
+        // Off screen either side
+        if (jet.age >= jet.life || (jet.dir > 0 && jet.x > Ww + 80) || (jet.dir < 0 && jet.x < -80)) {
+          jets.splice(ji, 1);
+        }
+      }
+      if (!jets.length && stormMode === "heatseek" && performance.now() > (window.__airborneHeatseekUntil || 0)) {
+        window.__airborneSkyJets = null;
+        stormActive = false;
+        stormMode = "storm";
+      }
+    }
+
     // ---- Sky Rocket heat-seekers ----
     if (stormMode === "heatseek" || stormMode === "warshark" || stormMode === "barrelbomb" || stormMode === "jollybomb") {
       var nowHs = performance.now();
@@ -4287,7 +4421,8 @@ if (window.__airbornePlasmaIgnite) {
           window.__airbornePredator.ended = true;
         }
         var stillFlying = (window.__airborneHeatseekers && window.__airborneHeatseekers.length) ||
-          (window.__airborneWarBullets && window.__airborneWarBullets.length);
+          (window.__airborneWarBullets && window.__airborneWarBullets.length) ||
+          (window.__airborneSkyJets && window.__airborneSkyJets.length);
         if (!stillFlying) {
           window.__airbornePredator = null;
           window.__airborneJolly = null;
@@ -7176,6 +7311,85 @@ function drawMeteorMarks() {
   }
   window.__airborneDrawJollyBroadside = drawJollyBroadside;
 
+
+  function drawSkyJets() {
+    var jets = window.__airborneSkyJets;
+    if (!jets || !jets.length || typeof ctx === "undefined") return;
+    var img = window.__airborneSkyJetImg;
+    var imgReady = img && img.complete && img.naturalWidth > 0;
+    ctx.save();
+    jets.forEach(function(jet) {
+      // Exhaust flames
+      ctx.globalCompositeOperation = "lighter";
+      (jet.exhaust || []).forEach(function(ep) {
+        var t = 1 - ep.age / ep.life;
+        if (t <= 0) return;
+        ctx.globalAlpha = t * 0.9;
+        var eg = ctx.createRadialGradient(ep.x, ep.y, 0, ep.x, ep.y, ep.r * 2);
+        eg.addColorStop(0, "rgba(255,255,200,1)");
+        eg.addColorStop(0.3, "rgba(255,160,40,0.85)");
+        eg.addColorStop(0.7, "rgba(255,60,10,0.4)");
+        eg.addColorStop(1, "rgba(80,0,0,0)");
+        ctx.fillStyle = eg;
+        ctx.beginPath();
+        ctx.arc(ep.x, ep.y, ep.r * 2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      // Bullets
+      (jet.bullets || []).forEach(function(bu) {
+        var t = 1 - bu.age / bu.life;
+        ctx.globalAlpha = t;
+        var bg = ctx.createRadialGradient(bu.x, bu.y, 0, bu.x, bu.y, bu.r * 2.5);
+        bg.addColorStop(0, "rgba(255,250,200,1)");
+        bg.addColorStop(0.4, "rgba(255,180,50,0.9)");
+        bg.addColorStop(1, "rgba(255,80,0,0)");
+        ctx.fillStyle = bg;
+        ctx.beginPath();
+        ctx.arc(bu.x, bu.y, bu.r * 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        // streak
+        ctx.strokeStyle = "rgba(255,200,80,0.7)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(bu.x - jet.dir * 12, bu.y);
+        ctx.lineTo(bu.x, bu.y);
+        ctx.stroke();
+      });
+      // Jet body
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 1;
+      ctx.save();
+      ctx.translate(jet.x, jet.y);
+      if (jet.dir < 0) ctx.scale(-1, 1);
+      var dw = 72, dh = 32;
+      if (imgReady) {
+        var aspect = img.naturalHeight / img.naturalWidth;
+        dw = 78;
+        dh = dw * aspect;
+        ctx.drawImage(img, -dw * 0.45, -dh / 2, dw, dh);
+      } else {
+        ctx.fillStyle = "#2a6a7a";
+        ctx.fillRect(-30, -10, 50, 20);
+        ctx.fillStyle = "#c9a227";
+        ctx.beginPath();
+        ctx.moveTo(20, 0); ctx.lineTo(10, -8); ctx.lineTo(10, 8); ctx.fill();
+      }
+      // Extra exhaust glow at rear
+      ctx.globalCompositeOperation = "lighter";
+      var fg = ctx.createRadialGradient(-dw * 0.4, 0, 0, -dw * 0.4, 0, 22);
+      fg.addColorStop(0, "rgba(255,240,180,0.95)");
+      fg.addColorStop(0.4, "rgba(255,120,20,0.6)");
+      fg.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = fg;
+      ctx.beginPath();
+      ctx.arc(-dw * 0.4, 0, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+    ctx.restore();
+  }
+  window.__airborneDrawSkyJets = drawSkyJets;
+
   function drawHeatseekers() {
     if (typeof ctx === "undefined") return;
     // Always draw lattice torpedoes + meteor shower when active
@@ -7186,6 +7400,7 @@ function drawMeteorMarks() {
     try { drawSteamParts(); } catch (e) {}
     try { drawShockFX(); } catch (e) {}
     try { drawJollyBroadside(); } catch (e) {}
+    try { drawSkyJets(); } catch (e) {}
     try { drawTempestDominion(); } catch (e) {}
     try { drawFurnaceOverdrive(); } catch (e) {}
     try { drawSunBurst(); } catch (e) {}
