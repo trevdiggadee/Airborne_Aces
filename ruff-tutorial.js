@@ -1554,57 +1554,52 @@
     ruffCoins = ruffCoins.filter(c => !c.collected && c.x > -50);
   }
 
+  // Star-coin sprite sheet (36 frames, horizontal, bg removed)
+  window.__airborneCoinSheet = window.__airborneCoinSheet || (function () {
+    var im = new Image();
+    im.src = "coin_star_sheet.png?v=ruff297";
+    return im;
+  })();
+  window.__airborneCoinFrame = 0;
+  window.__airborneCoinFrameT = 0;
+
   function drawTrainingCoins() {
     if (!ruffCoins.length || typeof ctx === "undefined") return;
+    var sheet = window.__airborneCoinSheet;
+    var sheetReady = sheet && sheet.complete && sheet.naturalWidth > 0;
+    var fw = 128, nFrames = 36;
     ruffCoins.forEach(function (c) {
       if (c.collected) return;
       const by = c.y + Math.sin(c.bob) * 5;
-      const squash = 0.55 + 0.45 * Math.abs(Math.cos(c.spin)); // spin edge-on illusion
+      // Animate frame from spin
+      var frame = Math.floor(((c.spin % (Math.PI * 2)) / (Math.PI * 2)) * nFrames) % nFrames;
+      if (frame < 0) frame += nFrames;
+      const size = c.r * 2.4;
       ctx.save();
       ctx.translate(c.x, by);
-      ctx.scale(squash, 1);
-      // outer glow
+      // soft glow
       ctx.globalAlpha = 0.35;
       ctx.fillStyle = "#ffd700";
       ctx.beginPath();
       ctx.arc(0, 0, c.r * 1.35, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
-      // rim
-      const g = ctx.createRadialGradient(-c.r * 0.3, -c.r * 0.35, 1, 0, 0, c.r);
-      g.addColorStop(0, "#fff6c8");
-      g.addColorStop(0.35, "#ffd700");
-      g.addColorStop(0.75, "#d4a017");
-      g.addColorStop(1, "#8a6a0a");
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(0, 0, c.r, 0, Math.PI * 2);
-      ctx.fill();
-      // inner ring
-      ctx.strokeStyle = "rgba(140, 100, 20, 0.7)";
-      ctx.lineWidth = Math.max(1.5, c.r * 0.12);
-      ctx.beginPath();
-      ctx.arc(0, 0, c.r * 0.72, 0, Math.PI * 2);
-      ctx.stroke();
-      // embossed star / AA mark
-      ctx.fillStyle = "rgba(120, 80, 10, 0.85)";
-      ctx.beginPath();
-      const sr = c.r * 0.28;
-      for (let i = 0; i < 5; i++) {
-        const a = -Math.PI / 2 + i * Math.PI * 2 / 5;
-        const x = Math.cos(a) * sr;
-        const y = Math.sin(a) * sr;
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        const a2 = a + Math.PI / 5;
-        ctx.lineTo(Math.cos(a2) * sr * 0.45, Math.sin(a2) * sr * 0.45);
+      if (sheetReady) {
+        ctx.drawImage(sheet, frame * fw, 0, fw, fw, -size / 2, -size / 2, size, size);
+      } else {
+        // fallback gold disc + star
+        const squash = 0.55 + 0.45 * Math.abs(Math.cos(c.spin));
+        ctx.scale(squash, 1);
+        var g = ctx.createRadialGradient(-c.r * 0.3, -c.r * 0.35, 1, 0, 0, c.r);
+        g.addColorStop(0, "#fff6c8");
+        g.addColorStop(0.35, "#ffd700");
+        g.addColorStop(0.75, "#d4a017");
+        g.addColorStop(1, "#8a6a0a");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(0, 0, c.r, 0, Math.PI * 2);
+        ctx.fill();
       }
-      ctx.closePath();
-      ctx.fill();
-      // specular
-      ctx.fillStyle = "rgba(255,255,255,0.55)";
-      ctx.beginPath();
-      ctx.ellipse(-c.r * 0.28, -c.r * 0.32, c.r * 0.28, c.r * 0.16, -0.4, 0, Math.PI * 2);
-      ctx.fill();
       ctx.restore();
     });
   }
