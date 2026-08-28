@@ -737,7 +737,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         age: 0,
         life: WS_SEC,
         phase: "activate", // activate → swarm → barrage → finale
-        sonarT: 0.15,
+        sonarT: 0.05,
         sonarPulses: [],
         reticles: {},
         aura: 1,
@@ -4113,12 +4113,17 @@ if (window.__airbornePlasmaIgnite) {
         if (pred.aura > 0.4) pred.aura = Math.max(0.4, pred.aura - dt * 0.15);
         if (!pred.ended) {
           pred.sonarT -= dt;
+          // ~4x pulse rate so rings always ripple outward
           if (pred.sonarT <= 0) {
-            pred.sonarT = 0.9;
-            pred.sonarPulses.push({ age: 0, life: 0.75, r: 16, maxR: Math.min(W || 400, H || 700) * 0.48 });
+            pred.sonarT = 0.22;
+            pred.sonarPulses.push({
+              age: 0,
+              life: 0.95,
+              r: 14,
+              maxR: Math.min(W || 400, H || 700) * 0.52
+            });
           }
         } else {
-          // Fade any leftover pulses quickly
           pred.sonarPulses = [];
           pred.reticles = {};
         }
@@ -4657,71 +4662,49 @@ if (window.__airbornePlasmaIgnite) {
           pf = (typeof window.__airbornePowerFade === "number") ? window.__airbornePowerFade : 1;
         } catch (e) {}
         var px = player.x, py = player.y;
-        // Green shield-like predator field (skip if power ended)
-        if (pred.ended) { /* cleaned */ }
-        else {
+        // Continuous green ripple sonar only (no shield bubble)
+        if (!pred.ended) {
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
-        // Soft green shield bubble around blimp
-        var shieldR = 48 + Math.sin(performance.now() * 0.006) * 3;
-        ctx.globalAlpha = 0.35 * (pred.aura || 0.5) * pf;
-        var ag = ctx.createRadialGradient(px, py, 6, px, py, shieldR);
-        ag.addColorStop(0, "rgba(180,255,210,0.25)");
-        ag.addColorStop(0.45, "rgba(50,200,120,0.28)");
-        ag.addColorStop(0.75, "rgba(20,140,80,0.2)");
-        ag.addColorStop(1, "rgba(0,60,30,0)");
-        ctx.fillStyle = ag;
-        ctx.beginPath();
-        ctx.arc(px, py, shieldR, 0, Math.PI * 2);
-        ctx.fill();
-        // Shield rim
-        ctx.globalAlpha = 0.5 * pf;
-        ctx.strokeStyle = "rgba(120,255,180,0.85)";
-        ctx.lineWidth = 2.5;
-        ctx.shadowColor = "rgba(80,255,160,0.8)";
-        ctx.shadowBlur = 10;
-        ctx.beginPath();
-        ctx.arc(px, py, shieldR * 0.92, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-        // Port warning flash
+        // Port flash on activate
         if (pred.portsFlash > 0) {
-          ctx.globalAlpha = pred.portsFlash * 0.55 * pf;
+          ctx.globalAlpha = pred.portsFlash * 0.5 * pf;
           ctx.fillStyle = "rgba(80,255,140,0.9)";
           ctx.beginPath();
           ctx.arc(px + 18, py - 8, 4, 0, Math.PI * 2);
           ctx.arc(px + 18, py + 8, 4, 0, Math.PI * 2);
           ctx.fill();
         }
-        // Green sonar pulses (shield-style rings)
+        // Expanding ripple rings — always another wave coming out
         (pred.sonarPulses || []).forEach(function(sp) {
           var t = Math.max(0, 1 - sp.age / sp.life);
           var expand = sp.r;
-          // Soft fill disc
-          ctx.globalAlpha = t * 0.12 * pf;
-          var sg = ctx.createRadialGradient(px, py, expand * 0.7, px, py, expand);
-          sg.addColorStop(0, "rgba(80,220,140,0)");
-          sg.addColorStop(0.7, "rgba(60,200,120,0.25)");
+          // Soft trailing wash just behind the rim
+          ctx.globalAlpha = t * 0.14 * pf;
+          var sg = ctx.createRadialGradient(px, py, Math.max(0, expand - 18), px, py, expand + 4);
+          sg.addColorStop(0, "rgba(60,200,120,0)");
+          sg.addColorStop(0.6, "rgba(80,230,150,0.3)");
           sg.addColorStop(1, "rgba(40,180,100,0)");
           ctx.fillStyle = sg;
           ctx.beginPath();
-          ctx.arc(px, py, expand, 0, Math.PI * 2);
+          ctx.arc(px, py, expand + 4, 0, Math.PI * 2);
           ctx.fill();
-          // Bright green rim like shield edge
-          ctx.globalAlpha = t * 0.55 * pf;
-          ctx.strokeStyle = "rgba(140,255,190,0.95)";
-          ctx.lineWidth = 3;
-          ctx.shadowColor = "rgba(80,255,160,0.9)";
-          ctx.shadowBlur = 12;
+          // Main green ring — pulses out and fades
+          ctx.globalAlpha = t * 0.6 * pf;
+          ctx.strokeStyle = "rgba(130,255,185,0.95)";
+          ctx.lineWidth = 2.8 * (0.6 + 0.4 * t);
+          ctx.shadowColor = "rgba(80,255,160,0.85)";
+          ctx.shadowBlur = 10;
           ctx.beginPath();
           ctx.arc(px, py, expand, 0, Math.PI * 2);
           ctx.stroke();
           ctx.shadowBlur = 0;
-          ctx.globalAlpha = t * 0.3 * pf;
-          ctx.strokeStyle = "rgba(220,255,230,0.8)";
-          ctx.lineWidth = 1.5;
+          // Thin bright inner edge
+          ctx.globalAlpha = t * 0.35 * pf;
+          ctx.strokeStyle = "rgba(230,255,240,0.9)";
+          ctx.lineWidth = 1.2;
           ctx.beginPath();
-          ctx.arc(px, py, expand * 0.92, 0, Math.PI * 2);
+          ctx.arc(px, py, expand * 0.94, 0, Math.PI * 2);
           ctx.stroke();
         });
         // Green target reticles
@@ -4731,10 +4714,10 @@ if (window.__airbornePlasmaIgnite) {
           var ra = 1 - rt.age / rt.life;
           var rx = rt.o ? rt.o.x + rt.o.w * 0.5 : rt.x;
           var ry = rt.o ? rt.o.y + rt.o.h * 0.5 : rt.y;
-          ctx.globalAlpha = ra * 0.9 * pf;
+          ctx.globalAlpha = ra * 0.85 * pf;
           ctx.strokeStyle = "rgba(100,255,160,0.95)";
-          ctx.lineWidth = 1.8;
-          var rs = 12 + Math.sin(performance.now() * 0.02) * 2;
+          ctx.lineWidth = 1.6;
+          var rs = 11 + Math.sin(performance.now() * 0.02) * 2;
           ctx.strokeRect(rx - rs, ry - rs, rs * 2, rs * 2);
           ctx.beginPath();
           ctx.moveTo(rx - rs - 4, ry); ctx.lineTo(rx - rs + 4, ry);
