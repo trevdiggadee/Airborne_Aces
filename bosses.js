@@ -714,21 +714,69 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
 
     // Sky Rocket — heat-seeking missiles (image + flame/smoke, explode on contact)
     if (powerMode === "warshark") {
+      // War Shark — Predator Swarm (5s)
       if (typeof sfxShoot === "function") sfxShoot();
-      if (typeof sfxExplosion === "function") sfxExplosion(0.35);
+      if (typeof sfxExplosion === "function") sfxExplosion(0.4);
+      try { if (typeof triggerScreenShake === "function") triggerScreenShake(7, 280); } catch (e) {}
+      var WS_SEC = 5.0;
+      var WS_MS = 5000;
       stormActive = true;
       stormMode = "warshark";
-      stormTimer = POWER_DURATION_SEC;
+      stormTimer = WS_SEC;
       stormCharge = 0;
-      window.__airborneHeatseekUntil = performance.now() + POWER_DURATION_MS;
+      window.__airborneHeatseekUntil = performance.now() + WS_MS;
       window.__airborneActivePowerVisual = "warshark";
-      window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
+      window.__airborneActivePowerUntil = performance.now() + WS_MS;
       window.__airborneHeatseekers = [];
       window.__airborneWarBullets = [];
       window.__airborneWarSharkImg = null;
       var wi = new Image();
       wi.src = "war_shark_missile.png?v=ruff200";
       window.__airborneWarSharkImg = wi;
+      window.__airbornePredator = {
+        age: 0,
+        life: WS_SEC,
+        phase: "activate", // activate → swarm → barrage → finale
+        sonarT: 0.15,
+        sonarPulses: [],
+        reticles: {},
+        aura: 1,
+        portsFlash: 1,
+        finaleDone: false
+      };
+      // Initial 5 sharks: 2 forward, 2 arc out, 1 hold near blimp
+      var px0 = player.x, py0 = player.y;
+      var initSharks = [
+        { mode: "circle", hold: 0.15, ang: -0.15, circleT: 0.35 },
+        { mode: "circle", hold: 0.15, ang: 0.15, circleT: 0.35 },
+        { mode: "circle", hold: 0.25, ang: -1.1, circleT: 0.55 },
+        { mode: "circle", hold: 0.25, ang: 1.1, circleT: 0.55 },
+        { mode: "circle", hold: 0.55, ang: 0, circleT: 0.7 }
+      ];
+      for (var si = 0; si < initSharks.length; si++) {
+        var cfg = initSharks[si];
+        var ang = cfg.ang;
+        window.__airborneHeatseekers.push({
+          x: px0 + Math.cos(ang) * 28,
+          y: py0 + Math.sin(ang) * 18,
+          vx: Math.cos(ang) * 40,
+          vy: Math.sin(ang) * 30,
+          life: 3.5,
+          age: 0,
+          rot: ang,
+          spin: 0,
+          trails: [],
+          target: null,
+          kind: "warshark",
+          mode: cfg.mode,
+          circleT: cfg.circleT,
+          hold: cfg.hold,
+          circleAng: ang,
+          circleR: 36 + si * 6,
+          eyeFlash: 1,
+          huntSnap: false
+        });
+      }
       try {
         if (window.PowerFX && player) window.PowerFX.activate("warshark", player.x, player.y);
       } catch (e) {}
@@ -4019,28 +4067,123 @@ if (window.__airbornePlasmaIgnite) {
       window.__airborneHeatseekSpawnT -= dt;
       var canSpawnHs = window.__airborneHeatseekUntil && performance.now() < window.__airborneHeatseekUntil;
       if (canSpawnHs && window.__airborneHeatseekSpawnT <= 0 && typeof player !== "undefined" && player) {
-        window.__airborneHeatseekSpawnT = (stormMode === "warshark") ? 0.39 : (stormMode === "barrelbomb") ? 99 : 0.45;
-        var ang = -0.25 + Math.random() * 0.5;
-        var sp = 200 + Math.random() * 60;
-        window.__airborneHeatseekers.push({
-          x: player.x + (player.w || 40) * 0.3,
-          y: player.y + (Math.random() - 0.5) * (player.h || 30) * 0.35,
-          vx: Math.cos(ang) * sp,
-          vy: Math.sin(ang) * sp * 0.5,
-          life: stormMode === "barrelbomb" ? 3.2 : 2.2,
+        // Escalate spawn rate for Predator Swarm
+        var pred = window.__airbornePredator;
+        var tN = pred ? (pred.age / pred.life) : 0.5;
+        var spawnGap = (stormMode === "warshark")
+          ? (tN < 0.2 ? 0.35 : (tN < 0.6 ? 0.28 : (tN < 0.9 ? 0.16 : 0.08)))
+          : (stormMode === "barrelbomb") ? 99 : 0.45;
+        window.__airborneHeatseekSpawnT = spawnGap;
+        var ang = -0.35 + Math.random() * 0.7;
+        var sp = 180 + Math.random() * 70;
+        var shark = {
+          x: player.x + (player.w || 40) * 0.25,
+          y: player.y + (Math.random() - 0.5) * (player.h || 30) * 0.4,
+          vx: Math.cos(ang) * sp * 0.35,
+          vy: Math.sin(ang) * sp * 0.25,
+          life: stormMode === "barrelbomb" ? 3.2 : 2.8,
           age: 0,
           rot: ang,
           trails: [],
           target: null,
-          kind: stormMode
-        });
-        // War Shark: no continuous bullets — barrel bombs only
+          kind: stormMode,
+          mode: stormMode === "warshark" ? "circle" : "hunt",
+          circleT: 0.25 + Math.random() * 0.35,
+          hold: 0.05,
+          circleAng: ang + Math.PI * 0.5,
+          circleR: 32 + Math.random() * 28,
+          eyeFlash: 1,
+          huntSnap: false
+        };
+        window.__airborneHeatseekers.push(shark);
+      }
 
+      // Predator Swarm brain (War Shark)
+      if (stormMode === "warshark" && window.__airbornePredator) {
+        var pred = window.__airbornePredator;
+        pred.age += dt;
+        if (pred.portsFlash > 0) pred.portsFlash = Math.max(0, pred.portsFlash - dt * 2);
+        if (pred.aura > 0.4) pred.aura = Math.max(0.4, pred.aura - dt * 0.15);
+        pred.sonarT -= dt;
+        if (pred.sonarT <= 0) {
+          pred.sonarT = 0.85;
+          pred.sonarPulses.push({ age: 0, life: 0.9, r: 12, maxR: Math.min(W || 400, H || 700) * 0.55 });
+        }
+        for (var spi = pred.sonarPulses.length - 1; spi >= 0; spi--) {
+          var spu = pred.sonarPulses[spi];
+          spu.age += dt;
+          spu.r = 12 + (spu.maxR - 12) * Math.min(1, spu.age / spu.life);
+          // Mark obstacles under pulse with reticle
+          if (typeof obstacles !== "undefined" && typeof player !== "undefined" && player) {
+            for (var oi = 0; oi < obstacles.length; oi++) {
+              var o = obstacles[oi];
+              if (!o || o.isRing || o.type === "gold_ring") continue;
+              var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
+              var d = Math.hypot(ox - player.x, oy - player.y);
+              if (Math.abs(d - spu.r) < 18) {
+                var oid = o._uid || (o._uid = "ws" + Math.random().toString(36).slice(2));
+                pred.reticles[oid] = { x: ox, y: oy, life: 0.7, age: 0, o: o };
+              }
+            }
+          }
+          if (spu.age >= spu.life) pred.sonarPulses.splice(spi, 1);
+        }
+        for (var rid in pred.reticles) {
+          if (!pred.reticles.hasOwnProperty(rid)) continue;
+          pred.reticles[rid].age += dt;
+          if (pred.reticles[rid].age >= pred.reticles[rid].life) delete pred.reticles[rid];
+        }
+        // Finale: dump remaining sharks
+        if (pred.age > pred.life - 0.55 && !pred.finaleDone && typeof player !== "undefined" && player) {
+          pred.finaleDone = true;
+          for (var fi = 0; fi < 6; fi++) {
+            var fa = -0.9 + fi * 0.3;
+            window.__airborneHeatseekers.push({
+              x: player.x, y: player.y,
+              vx: Math.cos(fa) * 220, vy: Math.sin(fa) * 120,
+              life: 2.2, age: 0, rot: fa, trails: [], target: null,
+              kind: "warshark", mode: "hunt", huntSnap: true, eyeFlash: 1
+            });
+          }
+          pred.sonarPulses.push({ age: 0, life: 0.6, r: 20, maxR: Math.min(W || 400, H || 700) * 0.7 });
+          try { if (typeof triggerScreenShake === "function") triggerScreenShake(10, 320); } catch (e) {}
+        }
       }
       var rockets = window.__airborneHeatseekers;
       for (var ri = rockets.length - 1; ri >= 0; ri--) {
         var rk = rockets[ri];
         rk.age += dt;
+        // War Shark: circle / swim then snap to hunt
+        if (rk.kind === "warshark" && rk.mode === "circle") {
+          rk.hold = (rk.hold || 0) - dt;
+          rk.circleAng = (rk.circleAng || 0) + dt * (2.8 + Math.random() * 0.5);
+          var px = (typeof player !== "undefined" && player) ? player.x : rk.x;
+          var py = (typeof player !== "undefined" && player) ? player.y : rk.y;
+          var cr = rk.circleR || 40;
+          // Fluid predatory swim around blimp
+          var tx = px + Math.cos(rk.circleAng) * cr;
+          var ty = py + Math.sin(rk.circleAng) * cr * 0.55;
+          rk.vx = (tx - rk.x) * 4.5;
+          rk.vy = (ty - rk.y) * 4.5;
+          rk.x += rk.vx * dt;
+          rk.y += rk.vy * dt;
+          rk.rot = Math.atan2(rk.vy, rk.vx);
+          rk.circleT = (rk.circleT || 0.4) - dt;
+          if (!rk.trails) rk.trails = [];
+          rk.trails.push({ x: rk.x, y: rk.y, age: 0, life: 0.35 });
+          if (rk.trails.length > 12) rk.trails.shift();
+          if (rk.circleT <= 0 && rk.hold <= 0) {
+            rk.mode = "hunt";
+            rk.huntSnap = true;
+            rk.eyeFlash = 1;
+          }
+          // Still age trails
+          for (var ti = rk.trails.length - 1; ti >= 0; ti--) {
+            rk.trails[ti].age += dt;
+            if (rk.trails[ti].age >= rk.trails[ti].life) rk.trails.splice(ti, 1);
+          }
+          continue; // skip generic motion this frame
+        }
         // Acquire nearest obstacle as heat target (not for arcing jolly bombs)
         if (rk.kind !== "jollybomb" && typeof obstacles !== "undefined" && obstacles.length) {
           var best = null, bestD = 1e9;
@@ -4062,7 +4205,9 @@ if (window.__airbornePlasmaIgnite) {
           var da = desired - rk.rot;
           while (da > Math.PI) da -= Math.PI * 2;
           while (da < -Math.PI) da += Math.PI * 2;
-          rk.rot += Math.max(-3.5 * dt, Math.min(3.5 * dt, da));
+          var turnRate = (rk.kind === "warshark" && rk.huntSnap) ? 7.5 : 3.5;
+          rk.rot += Math.max(-turnRate * dt, Math.min(turnRate * dt, da));
+          if (rk.kind === "warshark" && rk.eyeFlash) rk.eyeFlash = Math.max(0, rk.eyeFlash - dt * 2);
           var spd = Math.hypot(rk.vx, rk.vy) || 200;
           spd = Math.min(280, spd + 40 * dt);
           rk.vx = Math.cos(rk.rot) * spd;
@@ -4163,11 +4308,37 @@ if (window.__airbornePlasmaIgnite) {
                 try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
                 try { if (typeof triggerBigExplosion === "function") triggerBigExplosion(ox, oy, 0.7); } catch (e) {}
                 try {
-                  if (window.PowerFX) window.PowerFX.burst(ox, oy, {
-                    count: 22, colors: ["#ffd24a", "#ff6b3d", "#fff", "#ff1a00"],
-                    speed: 160, gravity: 30, life: 0.55, glow: true, radial: true
-                  });
+                  if (window.PowerFX) {
+                    var cols = (rk.kind === "warshark")
+                      ? ["#e0f2fe", "#38bdf8", "#0284c7", "#0c4a6e", "#fff"]
+                      : ["#ffd24a", "#ff6b3d", "#fff", "#ff1a00"];
+                    window.PowerFX.burst(ox, oy, {
+                      count: rk.kind === "warshark" ? 28 : 22, colors: cols,
+                      speed: 160, gravity: 30, life: 0.55, glow: true, radial: true
+                    });
+                  }
                 } catch (e) {}
+                // Chain splash to nearby target (Predator)
+                if (rk.kind === "warshark" && typeof obstacles !== "undefined") {
+                  for (var ci = 0; ci < obstacles.length; ci++) {
+                    var co = obstacles[ci];
+                    if (!co || co === o || co.isRing) continue;
+                    if (co.onFire) continue;
+                    var cx2 = co.x + co.w * 0.5, cy2 = co.y + co.h * 0.5;
+                    if (Math.hypot(cx2 - ox, cy2 - oy) < 75) {
+                      co.onFire = true; co.powerAffected = true; co.hitFlash = 0.8;
+                      co.vy = 70; co.vx = (Math.random() - 0.5) * 60; co.scored = true;
+                      try { creditPowerKillScore(1); } catch (e) {}
+                      try {
+                        if (window.PowerFX) window.PowerFX.burst(cx2, cy2, {
+                          count: 12, colors: ["#bae6fd", "#38bdf8", "#0369a1"],
+                          speed: 100, life: 0.4, glow: true
+                        });
+                      } catch (e) {}
+                      break;
+                    }
+                  }
+                }
                 try {
                   try { creditPowerKillScore(1); } catch (e) {}
                 } catch (e) {}
@@ -4462,6 +4633,76 @@ if (window.__airbornePlasmaIgnite) {
   
   function drawWarSharkExtras() {
     if (typeof ctx === "undefined") return;
+    // Predator Swarm FX
+    try {
+      var pred = window.__airbornePredator;
+      if (pred && typeof player !== "undefined" && player) {
+        var pf = 1;
+        try {
+          if (typeof updatePowerFade === "function")
+            updatePowerFade(window.__airborneActivePowerUntil);
+          pf = (typeof window.__airbornePowerFade === "number") ? window.__airbornePowerFade : 1;
+        } catch (e) {}
+        var px = player.x, py = player.y;
+        // Steel-blue aura
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = 0.45 * (pred.aura || 0.5) * pf;
+        var ag = ctx.createRadialGradient(px, py, 8, px, py, 55);
+        ag.addColorStop(0, "rgba(180,220,255,0.5)");
+        ag.addColorStop(0.5, "rgba(40,100,160,0.35)");
+        ag.addColorStop(1, "rgba(10,30,60,0)");
+        ctx.fillStyle = ag;
+        ctx.beginPath();
+        ctx.arc(px, py, 55, 0, Math.PI * 2);
+        ctx.fill();
+        // Port warning flash
+        if (pred.portsFlash > 0) {
+          ctx.globalAlpha = pred.portsFlash * 0.6 * pf;
+          ctx.fillStyle = "rgba(255,80,40,0.9)";
+          ctx.beginPath();
+          ctx.arc(px + 18, py - 8, 4, 0, Math.PI * 2);
+          ctx.arc(px + 18, py + 8, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        // Sonar pulses
+        (pred.sonarPulses || []).forEach(function(sp) {
+          var t = 1 - sp.age / sp.life;
+          ctx.globalAlpha = t * 0.4 * pf;
+          ctx.strokeStyle = "rgba(120,200,255,0.85)";
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(px, py, sp.r, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.globalAlpha = t * 0.15 * pf;
+          ctx.strokeStyle = "rgba(200,240,255,0.6)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(px, py, sp.r * 0.85, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+        // Target reticles
+        for (var rid in pred.reticles) {
+          if (!pred.reticles.hasOwnProperty(rid)) continue;
+          var rt = pred.reticles[rid];
+          var ra = 1 - rt.age / rt.life;
+          var rx = rt.o ? rt.o.x + rt.o.w * 0.5 : rt.x;
+          var ry = rt.o ? rt.o.y + rt.o.h * 0.5 : rt.y;
+          ctx.globalAlpha = ra * 0.9 * pf;
+          ctx.strokeStyle = "rgba(100,220,255,0.95)";
+          ctx.lineWidth = 1.8;
+          var rs = 12 + Math.sin(performance.now() * 0.02) * 2;
+          ctx.strokeRect(rx - rs, ry - rs, rs * 2, rs * 2);
+          ctx.beginPath();
+          ctx.moveTo(rx - rs - 4, ry); ctx.lineTo(rx - rs + 4, ry);
+          ctx.moveTo(rx + rs - 4, ry); ctx.lineTo(rx + rs + 4, ry);
+          ctx.moveTo(rx, ry - rs - 4); ctx.lineTo(rx, ry - rs + 4);
+          ctx.moveTo(rx, ry + rs - 4); ctx.lineTo(rx, ry + rs + 4);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    } catch (e) {}
     // Headlamp locked to nose of War Shark — follows blimp rotation
     try {
       var sel = (typeof selectedBlimp !== "undefined") ? selectedBlimp : "";
