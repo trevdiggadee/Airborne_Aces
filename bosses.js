@@ -1170,14 +1170,17 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
 
     // Rockets / meteors / vortex / sunblade — use swarm projectiles with unique motion
     if (powerMode === "swarm") {
-      // Iron Lattice — steampunk torpedo barrage (no rotating orbs)
+      // Iron Lattice — Missile Grid (5s)
       if (typeof sfxShoot === "function") sfxShoot();
+      if (typeof sfxExplosion === "function") sfxExplosion(0.3);
+      try { if (typeof triggerScreenShake === "function") triggerScreenShake(6, 250); } catch (e) {}
+      var IL_SEC = 5.0, IL_MS = 5000;
       stormActive = true;
       stormMode = "lattice";
-      stormTimer = POWER_DURATION_SEC;
+      stormTimer = IL_SEC;
       window.__airborneActivePowerVisual = "lattice";
-      window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
-      window.__airborneLatticeUntil = performance.now() + 4000;
+      window.__airborneActivePowerUntil = performance.now() + IL_MS;
+      window.__airborneLatticeUntil = performance.now() + IL_MS;
       window.__airborneLatticeTorps = [];
       window.__airborneLatticeSpawnT = 0;
       if (!window.__airborneLatticeImg || !window.__airborneLatticeImg.complete) {
@@ -1185,18 +1188,38 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         window.__airborneLatticeImg.crossOrigin = "anonymous";
         window.__airborneLatticeImg.src = "iron_lattice_torpedo.png?v=ruff216";
       }
-      for (var li = 0; li < 5; li++) {
-        var ang = -0.35 + (li / 4) * 0.7;
+      // 8 ports around blimp: front×2, rear×2, up/down, diagonals
+      var portAngs = [0, 0.4, Math.PI * 0.5, Math.PI * 0.75, Math.PI, -Math.PI * 0.75, -Math.PI * 0.5, -0.4];
+      window.__airborneMissileGrid = {
+        age: 0,
+        life: IL_SEC,
+        portIdx: 0,
+        portAngs: portAngs,
+        rot: 0,
+        fireT: 0.05,
+        burstT: 1.8,
+        shotCount: 0,
+        finaleDone: false,
+        lines: [],
+        ports: portAngs.map(function(a) {
+          return { ang: a, flash: 0 };
+        })
+      };
+      // Opening volley from rotating ports
+      for (var li = 0; li < 4; li++) {
+        var pa = portAngs[li];
         window.__airborneLatticeTorps.push({
-          x: player.x + (player.w || 40) * 0.3,
-          y: player.y + (li - 2) * 12,
-          vx: Math.cos(ang) * (220 + Math.random() * 40),
-          vy: Math.sin(ang) * 80,
-          life: 2.8, age: 0, rot: ang,
-          w: 39, h: 27,
-          waveAmp: 18 + Math.random() * 14,
-          waveFreq: 4 + Math.random() * 3,
-          wavePhase: Math.random() * Math.PI * 2
+          x: player.x + Math.cos(pa) * 28,
+          y: player.y + Math.sin(pa) * 20,
+          vx: Math.cos(pa) * 200,
+          vy: Math.sin(pa) * 120,
+          life: 2.8, age: 0, rot: pa,
+          w: 36, h: 25,
+          waveAmp: 22 + Math.random() * 16,
+          waveFreq: 4.5 + Math.random() * 2.5,
+          wavePhase: Math.random() * Math.PI * 2,
+          heavy: false,
+          homeT: 0
         });
       }
       try { if (window.PowerFX) window.PowerFX.activate("swarm", player.x, player.y); } catch (e) {}
@@ -1685,28 +1708,120 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
     if (typeof W === "undefined") var W = 400;
     if (typeof H === "undefined") var H = 700;
 
-    // Iron Lattice torpedoes
+    // Iron Lattice — Missile Grid
     if (stormMode === "lattice" || (window.__airborneLatticeTorps && window.__airborneLatticeTorps.length)) {
       var untilL = window.__airborneLatticeUntil || 0;
-      if (untilL && performance.now() < untilL && typeof player !== "undefined" && player) {
-        window.__airborneLatticeSpawnT = (window.__airborneLatticeSpawnT || 0) - dt;
-        if (window.__airborneLatticeSpawnT <= 0) {
-          window.__airborneLatticeSpawnT = 0.32;
-          var ang = -0.25 + Math.random() * 0.5;
+      var mg = window.__airborneMissileGrid;
+      if (mg && untilL && performance.now() < untilL && typeof player !== "undefined" && player) {
+        mg.age += dt;
+        mg.rot += dt * 0.9; // slow rotation of whole pattern
+        mg.fireT -= dt;
+        (mg.ports || []).forEach(function(p) {
+          if (p.flash > 0) p.flash = Math.max(0, p.flash - dt * 4);
+        });
+        // Rotating sequential port fire
+        if (mg.fireT <= 0) {
+          var gap = mg.age < 1 ? 0.22 : (mg.age < 3 ? 0.16 : 0.12);
+          mg.fireT = gap;
+          var idx = mg.portIdx % (mg.portAngs || []).length;
+          mg.portIdx++;
+          var baseAng = (mg.portAngs[idx] || 0) + mg.rot;
+          if (mg.ports[idx]) mg.ports[idx].flash = 1;
+          mg.shotCount = (mg.shotCount || 0) + 1;
+          var isHeavy = (mg.shotCount % 5 === 0);
+          var sp = isHeavy ? 240 : 200 + Math.random() * 40;
           window.__airborneLatticeTorps = window.__airborneLatticeTorps || [];
           window.__airborneLatticeTorps.push({
-            x: player.x + (player.w || 40) * 0.3,
-            y: player.y + (Math.random() - 0.5) * (player.h || 30),
-            vx: Math.cos(ang) * (230 + Math.random() * 50),
-            vy: Math.sin(ang) * 70,
-            life: 2.6, age: 0, rot: ang, w: 39, h: 27
+            x: player.x + Math.cos(baseAng) * 30,
+            y: player.y + Math.sin(baseAng) * 22,
+            vx: Math.cos(baseAng) * sp,
+            vy: Math.sin(baseAng) * sp * 0.75,
+            life: 2.7, age: 0, rot: baseAng,
+            w: isHeavy ? 44 : 36, h: isHeavy ? 30 : 25,
+            waveAmp: 24 + Math.random() * 18,
+            waveFreq: 4.5 + Math.random() * 3,
+            wavePhase: Math.random() * Math.PI * 2,
+            heavy: isHeavy,
+            homeT: 0
+          });
+          // Lattice energy line stubs from blimp to launch
+          if (!mg.lines) mg.lines = [];
+          mg.lines.push({
+            x0: player.x, y0: player.y,
+            x1: player.x + Math.cos(baseAng) * 50,
+            y1: player.y + Math.sin(baseAng) * 36,
+            age: 0, life: 0.35
           });
         }
+        // Lattice burst — snap missiles toward targets
+        mg.burstT -= dt;
+        if (mg.burstT <= 0) {
+          mg.burstT = 2.0;
+          (window.__airborneLatticeTorps || []).forEach(function(lt) {
+            lt.homeT = 0.55;
+          });
+        }
+        // Finale 360 cage
+        if (mg.age > mg.life - 0.85 && !mg.finaleDone) {
+          mg.finaleDone = true;
+          for (var fi = 0; fi < 8; fi++) {
+            var fa = (fi / 8) * Math.PI * 2 + mg.rot;
+            window.__airborneLatticeTorps.push({
+              x: player.x + Math.cos(fa) * 26,
+              y: player.y + Math.sin(fa) * 20,
+              vx: Math.cos(fa) * 180,
+              vy: Math.sin(fa) * 180,
+              life: 2.5, age: 0, rot: fa,
+              w: 40, h: 28,
+              waveAmp: 30, waveFreq: 5, wavePhase: fi * 0.8,
+              heavy: true, homeT: 0.8, cage: true
+            });
+          }
+          try { if (typeof triggerScreenShake === "function") triggerScreenShake(10, 350); } catch (e) {}
+        }
+        // Age lattice lines
+        for (var li = (mg.lines || []).length - 1; li >= 0; li--) {
+          mg.lines[li].age += dt;
+          if (mg.lines[li].age >= mg.lines[li].life) mg.lines.splice(li, 1);
+        }
+        // Connect active missiles with subtle lattice web
+        var torps = window.__airborneLatticeTorps || [];
+        if (torps.length >= 2 && Math.random() < 0.4) {
+          var a = torps[Math.floor(Math.random() * torps.length)];
+          var b = torps[Math.floor(Math.random() * torps.length)];
+          if (a !== b && Math.hypot(a.x - b.x, a.y - b.y) < 160) {
+            mg.lines.push({ x0: a.x, y0: a.y, x1: b.x, y1: b.y, age: 0, life: 0.25 });
+          }
+        }
+      } else if (mg && (!untilL || performance.now() >= untilL)) {
+        // stop new fire
       }
       if (!window.__airborneLatticeTorps) window.__airborneLatticeTorps = [];
       for (var lti = window.__airborneLatticeTorps.length - 1; lti >= 0; lti--) {
         var lt = window.__airborneLatticeTorps[lti];
         lt.age += dt;
+        // Light homing during burst/cage
+        if (lt.homeT > 0 && typeof obstacles !== "undefined") {
+          lt.homeT -= dt;
+          var best = null, bestD = 1e9;
+          for (var oi = 0; oi < obstacles.length; oi++) {
+            var o = obstacles[oi];
+            if (!o || o.isRing || o.onFire) continue;
+            var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
+            var d = Math.hypot(ox - lt.x, oy - lt.y);
+            if (d < bestD) { bestD = d; best = o; }
+          }
+          if (best) {
+            var desired = Math.atan2(best.y + best.h * 0.5 - lt.y, best.x + best.w * 0.5 - lt.x);
+            var da = desired - lt.rot;
+            while (da > Math.PI) da -= Math.PI * 2;
+            while (da < -Math.PI) da += Math.PI * 2;
+            lt.rot += Math.max(-4 * dt, Math.min(4 * dt, da));
+            var hsp = Math.hypot(lt.vx, lt.vy) || 200;
+            lt.vx = Math.cos(lt.rot) * hsp;
+            lt.vy = Math.sin(lt.rot) * hsp;
+          }
+        }
         var wave = Math.sin(lt.age * (lt.waveFreq || 5) + (lt.wavePhase || 0)) * (lt.waveAmp || 16);
         // perpendicular to velocity for snake/wave path
         var spd = Math.hypot(lt.vx, lt.vy) || 1;
@@ -1743,21 +1858,22 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
             var o = obstacles[oi];
             if (!o || o.isRing) continue;
             var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
-            if (Math.hypot(lt.x - ox, lt.y - oy) < 36) {
+            if (Math.hypot(lt.x - ox, lt.y - oy) < (lt.heavy ? 44 : 36)) {
               try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
-              try { if (typeof sfxExplosion === "function") sfxExplosion(0.65); } catch (e) {}
-              try { if (typeof triggerScreenShake === "function") triggerScreenShake(7, 280); } catch (e) {}
+              try { if (typeof sfxExplosion === "function") sfxExplosion(lt.heavy ? 0.75 : 0.55); } catch (e) {}
+              try { if (typeof triggerScreenShake === "function") triggerScreenShake(lt.heavy ? 9 : 5, lt.heavy ? 300 : 200); } catch (e) {}
               try { if (typeof spawnRealisticBombExplosion === "function") spawnRealisticBombExplosion(ox, oy); } catch (e) {}
               try { if (window.PowerFX) {
                 window.PowerFX.burst(ox, oy, {
-                  count: 28, colors: ["#fbbf24", "#f59e0b", "#d97706", "#78716c", "#fff", "#ff6b3d"],
-                  speed: 180, glow: true
+                  count: lt.heavy ? 36 : 22,
+                  colors: ["#fbbf24", "#f59e0b", "#d97706", "#78716c", "#fff", "#ff6b3d"],
+                  speed: lt.heavy ? 200 : 160, glow: true
                 });
               } } catch (e) {}
               // secondary shock ring
               if (!window.__airborneShockFX) window.__airborneShockFX = [];
               window.__airborneShockFX.push({
-                x: ox, y: oy, r: 8, maxR: 70, life: 0.4, age: 0, width: 4
+                x: ox, y: oy, r: 8, maxR: lt.heavy ? 95 : 60, life: 0.4, age: 0, width: lt.heavy ? 5 : 3
               });
               try { creditPowerKillScore(1); } catch (e) {}
               obstacles.splice(oi, 1);
@@ -1770,6 +1886,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
           window.__airborneLatticeTorps.splice(lti, 1);
       }
       if (untilL && performance.now() > untilL && !window.__airborneLatticeTorps.length) {
+        window.__airborneMissileGrid = null;
         stormActive = false; stormMode = "storm";
       }
     }
@@ -6164,8 +6281,49 @@ if (window.__airbornePlasmaIgnite) {
   
   
   function drawLatticeTorps() {
-    var list = window.__airborneLatticeTorps;
-    if (!list || !list.length || typeof ctx === "undefined") return;
+    if (typeof ctx === "undefined") return;
+    var list = window.__airborneLatticeTorps || [];
+    var mg = window.__airborneMissileGrid;
+    // Ports + lattice energy web
+    if (mg && typeof player !== "undefined" && player) {
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      var px = player.x, py = player.y;
+      (mg.ports || []).forEach(function(p) {
+        var a = (p.ang || 0) + (mg.rot || 0);
+        var ox = px + Math.cos(a) * 26;
+        var oy = py + Math.sin(a) * 18;
+        ctx.globalAlpha = 0.35 + (p.flash || 0) * 0.55;
+        ctx.strokeStyle = "rgba(255,180,60,0.85)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ox, oy, 5 + (p.flash || 0) * 4, 0, Math.PI * 2);
+        ctx.stroke();
+        if (p.flash > 0) {
+          var fg = ctx.createRadialGradient(ox, oy, 0, ox, oy, 16);
+          fg.addColorStop(0, "rgba(255,220,120,0.9)");
+          fg.addColorStop(1, "rgba(255,100,20,0)");
+          ctx.fillStyle = fg;
+          ctx.beginPath();
+          ctx.arc(ox, oy, 16, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+      // Subtle geometric lattice lines
+      (mg.lines || []).forEach(function(ln) {
+        var t = 1 - ln.age / ln.life;
+        if (t <= 0) return;
+        ctx.globalAlpha = t * 0.35;
+        ctx.strokeStyle = "rgba(255,190,80,0.9)";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(ln.x0, ln.y0);
+        ctx.lineTo(ln.x1, ln.y1);
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+    if (!list.length) return;
     if (!window.__airborneLatticeImg) {
       window.__airborneLatticeImg = new Image();
       window.__airborneLatticeImg.crossOrigin = "anonymous";
