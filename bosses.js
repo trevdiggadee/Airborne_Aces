@@ -4320,13 +4320,8 @@ if (window.__airbornePlasmaIgnite) {
       for (var ji = jets.length - 1; ji >= 0; ji--) {
         var jet = jets[ji];
         jet.age += dt;
-        // Motion: slight vertical bob + micro bank for life
-        jet.bob = (jet.bob || 0) + dt * 5.5;
-        jet.yBase = jet.yBase != null ? jet.yBase : jet.y;
-        jet.yBase += jet.vy * dt;
         jet.x += jet.vx * dt;
-        jet.y = jet.yBase + Math.sin(jet.bob + (jet.followRank || 0)) * 5;
-        jet.bank = Math.sin(jet.bob * 0.7) * 0.08;
+        jet.y += jet.vy * dt;
         // Thin exhaust flames + smoke trails
         if (!jet.exhaust) jet.exhaust = [];
         if (!jet.smoke) jet.smoke = [];
@@ -7410,19 +7405,6 @@ function drawMeteorMarks() {
       ctx.save();
       ctx.translate(jet.x, jet.y);
       if (jet.dir < 0) ctx.scale(-1, 1);
-      if (jet.bank) ctx.rotate(jet.bank);
-      // motion speed lines
-      ctx.globalAlpha = 0.25;
-      ctx.strokeStyle = "rgba(255,220,150,0.6)";
-      ctx.lineWidth = 1.5;
-      for (var mi = 0; mi < 3; mi++) {
-        var my = (mi - 1) * 6;
-        ctx.beginPath();
-        ctx.moveTo(-50 - mi * 8, my);
-        ctx.lineTo(-28 - mi * 4, my);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
       var sc = jet.scale || 1.1;
       var dw = 72 * sc, dh = 32 * sc;
       if (imgReady) {
@@ -7504,7 +7486,7 @@ function drawMeteorMarks() {
       var rw = 48, rh = 22;
       if (img && img.complete && img.naturalWidth) {
         var aspect = img.naturalHeight / img.naturalWidth;
-        rw = (rk.kind === "barrelbomb") ? 47 : (rk.kind === "warshark") ? 39 : (rk.kind === "heatseek") ? 57 : 52; // heatseek +10%
+        rw = (rk.kind === "barrelbomb") ? 47 : (rk.kind === "warshark") ? 39 : (rk.kind === "heatseek") ? 63 : 52; // heatseek +10% more
         rh = rw * aspect;
         ctx.drawImage(img, -rw * 0.35, -rh / 2, rw, rh);
       } else if (rk.kind === "jollybomb") {
