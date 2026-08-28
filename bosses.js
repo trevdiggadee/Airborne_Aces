@@ -815,10 +815,13 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         // Expanding skull backdrop (Ivory-style)
         backdrop: {
           age: 0,
-          life: 1.5,
+          life: 1.55,
           scale: 0.05,
           alpha: 0
         },
+        screenFlash: 1.0, // brief red/orange darken
+        blimpSmoke: 1.0,
+        skullSmoke: [], // particles around skull
         cannons: [
           { side: -1, ang: -0.4, fireT: 0.1, flash: 0 },
           { side: -1, ang: 0.0, fireT: 0.25, flash: 0 },
@@ -4159,16 +4162,49 @@ if (window.__airbornePlasmaIgnite) {
         jr.age += dt;
         if (jr.smoke > 0) jr.smoke = Math.max(0, jr.smoke - dt * 0.4);
         if (jr.flag > 0) jr.flag = Math.max(0.3, jr.flag - dt * 0.3);
+        if (jr.screenFlash > 0) jr.screenFlash = Math.max(0, jr.screenFlash - dt * 2.8);
+        if (jr.blimpSmoke > 0) jr.blimpSmoke = Math.max(0, jr.blimpSmoke - dt * 0.35);
         // Skull backdrop expand + fade (smooth)
         if (jr.backdrop) {
           var bd = jr.backdrop;
           bd.age += dt;
           var u = Math.min(1, bd.age / bd.life);
           var ease = 1 - Math.pow(1 - u, 3);
-          bd.scale = 0.06 + ease * 0.75; // ~30% smaller than full screen
-          var fade = u < 0.45 ? (u / 0.45) : (1 - (u - 0.45) / 0.55);
-          bd.alpha = 0.42 * fade;
+          bd.scale = 0.06 + ease * 0.78;
+          var fade = u < 0.4 ? (u / 0.4) : (1 - (u - 0.4) / 0.6);
+          bd.alpha = 0.72 * fade;
+          // Spawn dark smoke around skull while visible
+          if (!jr.skullSmoke) jr.skullSmoke = [];
+          if (Math.random() < 0.55 && bd.alpha > 0.1) {
+            var Ww = typeof W !== "undefined" ? W : 400;
+            var Hh = typeof H !== "undefined" ? H : 700;
+            var ang = Math.random() * Math.PI * 2;
+            var rad = (0.2 + Math.random() * 0.45) * Math.max(Ww, Hh) * 0.35 * bd.scale;
+            jr.skullSmoke.push({
+              x: Ww * 0.5 + Math.cos(ang) * rad,
+              y: Hh * 0.5 + Math.sin(ang) * rad * 0.85,
+              vx: Math.cos(ang) * (15 + Math.random() * 25),
+              vy: -10 - Math.random() * 30,
+              r: 18 + Math.random() * 28,
+              age: 0,
+              life: 0.6 + Math.random() * 0.5,
+              baseA: bd.alpha
+            });
+          }
           if (bd.age >= bd.life) jr.backdrop = null;
+        }
+        // Age skull smoke (fades with skull)
+        if (jr.skullSmoke && jr.skullSmoke.length) {
+          var skA = jr.backdrop ? jr.backdrop.alpha : 0;
+          for (var si = jr.skullSmoke.length - 1; si >= 0; si--) {
+            var sm = jr.skullSmoke[si];
+            sm.age += dt;
+            sm.x += sm.vx * dt;
+            sm.y += sm.vy * dt;
+            sm.r += 20 * dt;
+            sm.vx *= (1 - 0.4 * dt);
+            if (sm.age >= sm.life || skA <= 0.02) jr.skullSmoke.splice(si, 1);
+          }
         }
         var tN = jr.age / jr.life;
         var canFire = window.__airborneHeatseekUntil && performance.now() < window.__airborneHeatseekUntil;
@@ -6718,6 +6754,39 @@ function drawMeteorMarks() {
       pf = (typeof window.__airbornePowerFade === "number") ? window.__airbornePowerFade : 1;
     } catch (e) {}
     ctx.save();
+    // Brief darkened red/orange screen flash on activate
+    if (jr.screenFlash > 0.02) {
+      ctx.save();
+      ctx.globalAlpha = jr.screenFlash * 0.45 * pf;
+      ctx.fillStyle = "rgba(90, 12, 0, 1)";
+      ctx.fillRect(0, 0, typeof W !== "undefined" ? W : 400, typeof H !== "undefined" ? H : 700);
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = jr.screenFlash * 0.2 * pf;
+      ctx.fillStyle = "rgba(255, 90, 20, 1)";
+      ctx.fillRect(0, 0, typeof W !== "undefined" ? W : 400, typeof H !== "undefined" ? H : 700);
+      ctx.restore();
+    }
+    // Dark smoke cloud around blimp
+    if (jr.blimpSmoke > 0.05 && typeof player !== "undefined" && player) {
+      ctx.save();
+      var bs = jr.blimpSmoke;
+      for (var bi = 0; bi < 8; bi++) {
+        var bang = bi * 0.785 + performance.now() * 0.001;
+        var bx = player.x + Math.cos(bang) * (22 + bi * 4);
+        var by = player.y + Math.sin(bang) * (16 + bi * 3);
+        var br = 22 + bi * 3 + (1 - bs) * 12;
+        ctx.globalAlpha = bs * (0.35 - bi * 0.03) * pf;
+        var bg = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+        bg.addColorStop(0, "rgba(40,30,25,0.7)");
+        bg.addColorStop(0.5, "rgba(25,18,12,0.4)");
+        bg.addColorStop(1, "rgba(10,8,5,0)");
+        ctx.fillStyle = bg;
+        ctx.beginPath();
+        ctx.arc(bx, by, br, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
     // Screen-center expanding skull (like Ivory anchor backdrop)
     if (jr.backdrop) {
       var bd = jr.backdrop;
@@ -6731,16 +6800,16 @@ function drawMeteorMarks() {
       var dh = dw;
       ctx.save();
       ctx.globalCompositeOperation = "source-over";
-      ctx.globalAlpha = Math.max(0, bd.alpha) * pf;
+      ctx.globalAlpha = Math.max(0, bd.alpha) * pf * 1.15;
       if (imgReady) {
         ctx.drawImage(img, cx - dw / 2, cy - dh / 2, dw, dh);
         // Glowing red eyes — approximate sockets on skull
         var eyeY = cy - dh * 0.06;
         var eyeSep = dw * 0.12;
-        var eyeR = dw * 0.045;
-        var pulse = 0.7 + 0.3 * Math.sin(performance.now() * 0.012);
+        var eyeR = dw * 0.05;
+        var pulse = 0.75 + 0.25 * Math.sin(performance.now() * 0.012);
         ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = Math.max(0, bd.alpha) * 0.9 * pulse * pf;
+        ctx.globalAlpha = Math.max(0, bd.alpha) * 1.0 * pulse * pf;
         function glowEye(ex, ey) {
           var eg = ctx.createRadialGradient(ex, ey, 0, ex, ey, eyeR * 2.5);
           eg.addColorStop(0, "rgba(255,80,40,1)");
@@ -6758,15 +6827,31 @@ function drawMeteorMarks() {
         glowEye(cx - eyeSep, eyeY);
         glowEye(cx + eyeSep, eyeY);
         // Soft gold/smoke wash behind skull
-        ctx.globalAlpha = Math.max(0, bd.alpha) * 0.2 * pf;
+        ctx.globalAlpha = Math.max(0, bd.alpha) * 0.28 * pf;
         var wash = ctx.createRadialGradient(cx, cy, dw * 0.1, cx, cy, dw * 0.55);
-        wash.addColorStop(0, "rgba(255,180,60,0.35)");
+        wash.addColorStop(0, "rgba(255,180,60,0.4)");
         wash.addColorStop(1, "rgba(40,20,0,0)");
         ctx.fillStyle = wash;
         ctx.beginPath();
         ctx.arc(cx, cy, dw * 0.55, 0, Math.PI * 2);
         ctx.fill();
       }
+      // Dark smoke swirling around skull (fades with it)
+      ctx.globalCompositeOperation = "source-over";
+      (jr.skullSmoke || []).forEach(function(sm) {
+        var t = Math.max(0, 1 - sm.age / sm.life);
+        var a = t * (jr.backdrop ? jr.backdrop.alpha : 0) * 0.55 * pf;
+        if (a <= 0.01) return;
+        ctx.globalAlpha = a;
+        var sg = ctx.createRadialGradient(sm.x, sm.y, 0, sm.x, sm.y, sm.r);
+        sg.addColorStop(0, "rgba(35,28,22,0.75)");
+        sg.addColorStop(0.45, "rgba(20,15,12,0.4)");
+        sg.addColorStop(1, "rgba(5,4,3,0)");
+        ctx.fillStyle = sg;
+        ctx.beginPath();
+        ctx.arc(sm.x, sm.y, sm.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
       ctx.restore();
     }
     // Activation smoke cloud
