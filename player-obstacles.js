@@ -456,7 +456,7 @@
   if (!window.__airborneCoinSheet) {
     window.__airborneCoinSheet = (function () {
       var im = new Image();
-      im.src = "coin_star_sheet.png?v=ruff297";
+      im.src = "coin_star_sheet.png?v=ruff298";
       return im;
     })();
   }
