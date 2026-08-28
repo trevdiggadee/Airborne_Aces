@@ -797,6 +797,12 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       window.__airborneActivePowerVisual = "jollybomb";
       window.__airborneActivePowerUntil = performance.now() + JR_MS;
       window.__airborneHeatseekers = [];
+      // Skull emblem asset (bg removed)
+      if (!window.__airborneJollySkullImg) {
+        var jsi = new Image();
+        jsi.src = "jolly_skull.png?v=ruff303";
+        window.__airborneJollySkullImg = jsi;
+      }
       window.__airborneJolly = {
         age: 0,
         life: JR_SEC,
@@ -806,6 +812,13 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         finaleDone: false,
         smoke: 1,
         flag: 1,
+        // Expanding skull backdrop (Ivory-style)
+        backdrop: {
+          age: 0,
+          life: 1.5,
+          scale: 0.05,
+          alpha: 0
+        },
         cannons: [
           { side: -1, ang: -0.4, fireT: 0.1, flash: 0 },
           { side: -1, ang: 0.0, fireT: 0.25, flash: 0 },
@@ -4146,6 +4159,17 @@ if (window.__airbornePlasmaIgnite) {
         jr.age += dt;
         if (jr.smoke > 0) jr.smoke = Math.max(0, jr.smoke - dt * 0.4);
         if (jr.flag > 0) jr.flag = Math.max(0.3, jr.flag - dt * 0.3);
+        // Skull backdrop expand + fade (smooth)
+        if (jr.backdrop) {
+          var bd = jr.backdrop;
+          bd.age += dt;
+          var u = Math.min(1, bd.age / bd.life);
+          var ease = 1 - Math.pow(1 - u, 3);
+          bd.scale = 0.06 + ease * 0.75; // ~30% smaller than full screen
+          var fade = u < 0.45 ? (u / 0.45) : (1 - (u - 0.45) / 0.55);
+          bd.alpha = 0.42 * fade;
+          if (bd.age >= bd.life) jr.backdrop = null;
+        }
         var tN = jr.age / jr.life;
         var canFire = window.__airborneHeatseekUntil && performance.now() < window.__airborneHeatseekUntil;
         // Staggered side cannons
@@ -6694,6 +6718,57 @@ function drawMeteorMarks() {
       pf = (typeof window.__airbornePowerFade === "number") ? window.__airbornePowerFade : 1;
     } catch (e) {}
     ctx.save();
+    // Screen-center expanding skull (like Ivory anchor backdrop)
+    if (jr.backdrop) {
+      var bd = jr.backdrop;
+      var img = window.__airborneJollySkullImg;
+      var imgReady = img && img.complete && img.naturalWidth > 0;
+      var Ww = typeof W !== "undefined" ? W : 400;
+      var Hh = typeof H !== "undefined" ? H : 700;
+      var cx = Ww * 0.5, cy = Hh * 0.5;
+      var maxDim = Math.max(Ww, Hh) * 0.72;
+      var dw = maxDim * bd.scale;
+      var dh = dw;
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = Math.max(0, bd.alpha) * pf;
+      if (imgReady) {
+        ctx.drawImage(img, cx - dw / 2, cy - dh / 2, dw, dh);
+        // Glowing red eyes — approximate sockets on skull
+        var eyeY = cy - dh * 0.06;
+        var eyeSep = dw * 0.12;
+        var eyeR = dw * 0.045;
+        var pulse = 0.7 + 0.3 * Math.sin(performance.now() * 0.012);
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = Math.max(0, bd.alpha) * 0.9 * pulse * pf;
+        function glowEye(ex, ey) {
+          var eg = ctx.createRadialGradient(ex, ey, 0, ex, ey, eyeR * 2.5);
+          eg.addColorStop(0, "rgba(255,80,40,1)");
+          eg.addColorStop(0.35, "rgba(255,40,20,0.7)");
+          eg.addColorStop(1, "rgba(180,0,0,0)");
+          ctx.fillStyle = eg;
+          ctx.beginPath();
+          ctx.arc(ex, ey, eyeR * 2.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "rgba(255,220,120,0.95)";
+          ctx.beginPath();
+          ctx.arc(ex, ey, eyeR * 0.35, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        glowEye(cx - eyeSep, eyeY);
+        glowEye(cx + eyeSep, eyeY);
+        // Soft gold/smoke wash behind skull
+        ctx.globalAlpha = Math.max(0, bd.alpha) * 0.2 * pf;
+        var wash = ctx.createRadialGradient(cx, cy, dw * 0.1, cx, cy, dw * 0.55);
+        wash.addColorStop(0, "rgba(255,180,60,0.35)");
+        wash.addColorStop(1, "rgba(40,20,0,0)");
+        ctx.fillStyle = wash;
+        ctx.beginPath();
+        ctx.arc(cx, cy, dw * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
     // Activation smoke cloud
     if (jr.smoke > 0.05) {
       ctx.globalAlpha = jr.smoke * 0.35 * pf;
