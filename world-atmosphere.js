@@ -1272,3 +1272,76 @@
     });
   }
 
+
+
+  // ---------- Art Deco sky + mid-cloud band (behind mountains) ----------
+  var artDecoSkyX = 0;
+  var artDecoCloudX = 0;
+  var artDecoSkyImg = null;
+  var artDecoCloudImg = null;
+
+  function ensureArtDecoLayers() {
+    if (!artDecoSkyImg) {
+      artDecoSkyImg = new Image();
+      artDecoSkyImg.src = "art_deco_sky.webp?v=ruff316";
+    }
+    if (!artDecoCloudImg) {
+      artDecoCloudImg = new Image();
+      artDecoCloudImg.src = "art_deco_clouds.webp?v=ruff316";
+    }
+  }
+
+  function updateArtDecoLayers(dtScale) {
+    ensureArtDecoLayers();
+    // Very slow sky scroll — seamless tile, never "runs out"
+    artDecoSkyX -= 0.015 * dtScale;
+    // Mid clouds slightly faster, still behind mountains
+    artDecoCloudX -= 0.045 * dtScale;
+  }
+
+  function drawArtDecoSky() {
+    ensureArtDecoLayers();
+    if (typeof ctx === "undefined" || typeof W === "undefined") return;
+    var img = artDecoSkyImg;
+    if (!img || !img.complete || !img.naturalWidth) return;
+    var ih = img.naturalHeight, iw = img.naturalWidth;
+    // Cover full screen height, tile horizontally
+    var scale = H / ih;
+    var dw = iw * scale;
+    var dh = H;
+    // Wrap scroll so it never goes off-screen
+    var x = artDecoSkyX % dw;
+    if (x > 0) x -= dw;
+    ctx.save();
+    ctx.globalAlpha = 1;
+    for (var sx = x; sx < W; sx += dw) {
+      ctx.drawImage(img, sx, 0, dw, dh);
+    }
+    ctx.restore();
+  }
+
+  function drawArtDecoCloudBand() {
+    ensureArtDecoLayers();
+    if (typeof ctx === "undefined" || typeof W === "undefined") return;
+    var img = artDecoCloudImg;
+    if (!img || !img.complete || !img.naturalWidth) return;
+    var ih = img.naturalHeight, iw = img.naturalWidth;
+    // Band in upper-mid sky, behind mountains
+    var scale = (H * 0.42) / ih;
+    var dw = iw * scale;
+    var dh = ih * scale;
+    var y = H * 0.12;
+    var x = artDecoCloudX % dw;
+    if (x > 0) x -= dw;
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    for (var sx = x; sx < W + dw; sx += dw) {
+      ctx.drawImage(img, sx, y, dw, dh);
+    }
+    ctx.restore();
+  }
+
+  window.__airborneUpdateArtDecoLayers = updateArtDecoLayers;
+  window.__airborneDrawArtDecoSky = drawArtDecoSky;
+  window.__airborneDrawArtDecoCloudBand = drawArtDecoCloudBand;
+

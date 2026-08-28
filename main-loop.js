@@ -117,6 +117,12 @@
 
     const dtScale = dt * 60; // normalize movement speeds tuned at 60fps baseline
 
+    // Art Deco sky layer (very slow continuous scroll, always on screen)
+    try {
+      if (window.__airborneUpdateArtDecoLayers) window.__airborneUpdateArtDecoLayers(dtScale);
+      if (window.__airborneDrawArtDecoSky) window.__airborneDrawArtDecoSky();
+    } catch (e) {}
+
     updateParallaxLayers(dtScale);
     if (typeof updateMountainParallax === "function") updateMountainParallax(dtScale);
     updateSkyline(dtScale);
@@ -124,7 +130,9 @@
 
     updateClouds(dtScale);
     updateBirdFlocks(dt);
-    // Mountains BEHIND landing strip / world (clouds drawn later, in front)
+    // Mid cloud band BEHIND mountains (separate from soft front clouds)
+    try { if (window.__airborneDrawArtDecoCloudBand) window.__airborneDrawArtDecoCloudBand(); } catch (e) {}
+    // Mountains BEHIND landing strip / world (soft clouds drawn later, in front)
     if (typeof drawMountainParallax === "function") drawMountainParallax();
     drawBirdFlocks();
     if (typeof drawAirfieldStrip === "function") drawAirfieldStrip();

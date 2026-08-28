@@ -43,6 +43,8 @@
     streetrow1: "streetrow1.webp",
     airfield_strip: "airfield_strip.webp",
     parallax_mountains: "mountains_cutout.webp",
+    art_deco_sky: "art_deco_sky.webp",
+    art_deco_clouds: "art_deco_clouds.webp",
     mountains_cutout: "mountains_cutout.webp",
     landing_field: "landing_field.webp",
     wind_flag_left: "wind_flag_left.webp",
