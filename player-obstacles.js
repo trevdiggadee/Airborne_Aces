@@ -444,7 +444,7 @@
       c.vx *= (1 - 0.35 * dt);
       c.vy += 420 * dt; // fall hard
       if (c.vy > 520) c.vy = 520;
-      c.spin += dt * 6.5;
+      c.spin += dt * 7.5;
       c.bob += dt * 2.5;
       // No player re-collection — spent coins leave the run
       if (c.y > H0 + 40 || c.x < -80 || c.x > W0 + 80 || c.age >= c.life) {

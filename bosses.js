@@ -933,7 +933,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       var Hh = typeof H !== "undefined" ? H : 700;
       var cy = Hh * 0.5; // leader on vertical center
       var followX = 52;  // how far each rank trails the leader
-      var gapY = 51;     // even vertical spacing (+15%)
+      var gapY = 59;     // vertical spacing +15% again
       // Rank 0 = leader (center). Higher rank = further back (left)
       var form = [
         { rank: 0, oy: 0 },           // LEADER — center line
@@ -944,7 +944,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       ];
       window.__airborneSkyJets = [];
       var leaderStartX = -20; // leader enters from left first
-      var speed = 235;
+      var speed = 270; // +15% formation speed
       for (var ji = 0; ji < 5; ji++) {
         var f = form[ji];
         window.__airborneSkyJets.push({
@@ -4320,8 +4320,13 @@ if (window.__airbornePlasmaIgnite) {
       for (var ji = jets.length - 1; ji >= 0; ji--) {
         var jet = jets[ji];
         jet.age += dt;
+        // Motion: slight vertical bob + micro bank for life
+        jet.bob = (jet.bob || 0) + dt * 5.5;
+        jet.yBase = jet.yBase != null ? jet.yBase : jet.y;
+        jet.yBase += jet.vy * dt;
         jet.x += jet.vx * dt;
-        jet.y += jet.vy * dt;
+        jet.y = jet.yBase + Math.sin(jet.bob + (jet.followRank || 0)) * 5;
+        jet.bank = Math.sin(jet.bob * 0.7) * 0.08;
         // Thin exhaust flames + smoke trails
         if (!jet.exhaust) jet.exhaust = [];
         if (!jet.smoke) jet.smoke = [];
@@ -4384,22 +4389,32 @@ if (window.__airbornePlasmaIgnite) {
           bu.age += dt;
           bu.x += bu.vx * dt;
           bu.y += bu.vy * dt;
-          // Hit obstacles
+          // Hit obstacles — reliable damage
           if (typeof obstacles !== "undefined") {
             for (var oi = obstacles.length - 1; oi >= 0; oi--) {
               var o = obstacles[oi];
-              if (!o || o.isRing || o.onFire) continue;
-              var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
-              if (Math.hypot(bu.x - ox, bu.y - oy) < 28) {
+              if (!o) continue;
+              if (o.isRing || o.type === "gold_ring" || o.type === "ring") continue;
+              if (o.powerAffected && o.onFire) continue;
+              var ox = o.x + (o.w || 20) * 0.5, oy = o.y + (o.h || 20) * 0.5;
+              var hitR = 32 + Math.max(o.w || 20, o.h || 20) * 0.25;
+              if (Math.hypot(bu.x - ox, bu.y - oy) < hitR) {
+                o.onFire = true;
+                o.powerAffected = true;
+                o.hitFlash = 1;
+                o.scored = true;
+                o.vy = 80 + Math.random() * 40;
+                o.vx = (Math.random() - 0.5) * 60;
                 try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
-                try { if (typeof triggerBigExplosion === "function") triggerBigExplosion(ox, oy, 0.8); } catch (e) {}
+                try { if (typeof triggerBigExplosion === "function") triggerBigExplosion(ox, oy, 0.7); } catch (e) {}
                 try {
                   if (window.PowerFX) window.PowerFX.burst(ox, oy, {
-                    count: 20, colors: ["#ffd24a", "#ff6b3d", "#fff", "#ff1a00"],
-                    speed: 150, glow: true
+                    count: 18, colors: ["#ffd24a", "#ff6b3d", "#fff", "#ff1a00"],
+                    speed: 140, glow: true
                   });
                 } catch (e) {}
                 try { creditPowerKillScore(1); } catch (e) {}
+                // Remove or let fall — remove for clear feedback
                 obstacles.splice(oi, 1);
                 bu.age = bu.life;
                 break;
@@ -4468,11 +4483,12 @@ if (window.__airbornePlasmaIgnite) {
         } else {
         var ang = -0.35 + Math.random() * 0.7;
         var sp = 180 + Math.random() * 70;
+        if (stormMode === "heatseek") sp *= 1.25; // Sky Rocket missiles +25%
         var shark = {
           x: player.x + (player.w || 40) * 0.25,
           y: player.y + (Math.random() - 0.5) * (player.h || 30) * 0.4,
-          vx: Math.cos(ang) * sp * 0.35,
-          vy: Math.sin(ang) * sp * 0.25,
+          vx: Math.cos(ang) * sp * (stormMode === "heatseek" ? 0.55 : 0.35),
+          vy: Math.sin(ang) * sp * (stormMode === "heatseek" ? 0.35 : 0.25),
           life: stormMode === "barrelbomb" ? 3.2 : 2.8,
           age: 0,
           rot: ang,
@@ -7394,6 +7410,19 @@ function drawMeteorMarks() {
       ctx.save();
       ctx.translate(jet.x, jet.y);
       if (jet.dir < 0) ctx.scale(-1, 1);
+      if (jet.bank) ctx.rotate(jet.bank);
+      // motion speed lines
+      ctx.globalAlpha = 0.25;
+      ctx.strokeStyle = "rgba(255,220,150,0.6)";
+      ctx.lineWidth = 1.5;
+      for (var mi = 0; mi < 3; mi++) {
+        var my = (mi - 1) * 6;
+        ctx.beginPath();
+        ctx.moveTo(-50 - mi * 8, my);
+        ctx.lineTo(-28 - mi * 4, my);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
       var sc = jet.scale || 1.1;
       var dw = 72 * sc, dh = 32 * sc;
       if (imgReady) {

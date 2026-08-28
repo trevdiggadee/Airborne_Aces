@@ -1514,8 +1514,32 @@
     ruffCoins.forEach(function (c) {
       if (c.collected) return;
       c.x -= spd * dt;
-      c.spin += dt * 4.5;
-      c.bob += dt * 2.8;
+      // Smooth continuous spin (not stepped)
+      c.spin += dt * 5.2;
+      c.bob += dt * 3.2;
+      c.glow = (c.glow || 0) + dt * 4;
+      c.sparkT = (c.sparkT || 0) - dt;
+      if (c.sparkT <= 0) {
+        c.sparkT = 0.12 + Math.random() * 0.15;
+        if (!c.sparks) c.sparks = [];
+        var sa = Math.random() * Math.PI * 2;
+        c.sparks.push({
+          x: Math.cos(sa) * c.r * 0.9,
+          y: Math.sin(sa) * c.r * 0.9,
+          vx: Math.cos(sa) * (20 + Math.random() * 30),
+          vy: Math.sin(sa) * (20 + Math.random() * 30) - 15,
+          life: 0.35 + Math.random() * 0.2, age: 0, r: 1.5 + Math.random() * 2
+        });
+      }
+      if (c.sparks) {
+        for (var si = c.sparks.length - 1; si >= 0; si--) {
+          var sp = c.sparks[si];
+          sp.age += dt;
+          sp.x += sp.vx * dt;
+          sp.y += sp.vy * dt;
+          if (sp.age >= sp.life) c.sparks.splice(si, 1);
+        }
+      }
       if (Math.abs(c.x - px) < pw + c.r && Math.abs(c.y - py) < ph + c.r) {
         c.collected = true;
         ruffStats.coins = (ruffStats.coins || 0) + 1;
@@ -1571,18 +1595,41 @@
     ruffCoins.forEach(function (c) {
       if (c.collected) return;
       const by = c.y + Math.sin(c.bob) * 5;
-      // Animate frame from spin
-      var frame = Math.floor(((c.spin % (Math.PI * 2)) / (Math.PI * 2)) * nFrames) % nFrames;
-      if (frame < 0) frame += nFrames;
-      const size = c.r * 2.4;
+      // Smooth frame from continuous spin
+      var spinN = ((c.spin % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      var frameF = (spinN / (Math.PI * 2)) * nFrames;
+      var frame = Math.floor(frameF) % nFrames;
+      const size = c.r * 2.5;
+      var pulse = 0.85 + 0.15 * Math.sin(c.glow || c.bob);
       ctx.save();
       ctx.translate(c.x, by);
-      // soft glow
-      ctx.globalAlpha = 0.35;
-      ctx.fillStyle = "#ffd700";
+      // Special aura rings
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = 0.25 * pulse;
+      ctx.strokeStyle = "rgba(255,220,100,0.9)";
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(0, 0, c.r * 1.35, 0, Math.PI * 2);
+      ctx.arc(0, 0, c.r * 1.55 + Math.sin((c.glow || 0) * 2) * 2, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 0.4 * pulse;
+      var ag = ctx.createRadialGradient(0, 0, c.r * 0.3, 0, 0, c.r * 1.8);
+      ag.addColorStop(0, "rgba(255,240,180,0.55)");
+      ag.addColorStop(0.5, "rgba(255,200,60,0.25)");
+      ag.addColorStop(1, "rgba(255,150,0,0)");
+      ctx.fillStyle = ag;
+      ctx.beginPath();
+      ctx.arc(0, 0, c.r * 1.8, 0, Math.PI * 2);
       ctx.fill();
+      // Sparkles around coin
+      (c.sparks || []).forEach(function(sp) {
+        var t = 1 - sp.age / sp.life;
+        ctx.globalAlpha = t * 0.9;
+        ctx.fillStyle = Math.random() > 0.5 ? "#fff6c8" : "#ffd700";
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, sp.r * t, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalCompositeOperation = "source-over";
       ctx.globalAlpha = 1;
       if (sheetReady) {
         ctx.drawImage(sheet, frame * fw, 0, fw, fw, -size / 2, -size / 2, size, size);
