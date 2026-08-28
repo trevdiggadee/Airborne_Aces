@@ -905,7 +905,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
     }
 
     if (powerMode === "heatseek") {
-      // Sky Rocket — 5 steampunk jets in pyramid formation
+      // Sky Rocket — classic heatseek missiles + 5 jets pyramid from left only
       if (typeof sfxShoot === "function") sfxShoot();
       if (typeof sfxExplosion === "function") sfxExplosion(0.4);
       try { if (typeof triggerScreenShake === "function") triggerScreenShake(8, 300); } catch (e) {}
@@ -918,53 +918,49 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       window.__airborneActivePowerVisual = "heatseek";
       window.__airborneActivePowerUntil = performance.now() + SR_MS;
       window.__airborneHeatseekers = [];
+      // Previous Sky Rocket missile asset
+      if (!window.__airborneRocketImg) {
+        var ri = new Image();
+        ri.src = "sky_rocket_missile.jpg";
+        window.__airborneRocketImg = ri;
+      }
       if (!window.__airborneSkyJetImg) {
         var sji = new Image();
-        sji.src = "skyrocket_jet.png?v=ruff307";
+        sji.src = "skyrocket_jet.png?v=ruff308";
         window.__airborneSkyJetImg = sji;
       }
-      // Pyramid of 5 jets: row of 1, then 2, then 2 — spawn immediately left of blimp, fly L→R and R→L
-      // Formation offsets relative to lead jet
+      // Pyramid from LEFT — CENTER jet is LEADER; others FOLLOW behind
+      var Hh = typeof H !== "undefined" ? H : 700;
+      var cy = Hh * 0.5; // leader on vertical center
+      var followX = 52;  // how far each rank trails the leader
+      var gapY = 44;     // even vertical spacing
+      // Rank 0 = leader (center). Higher rank = further back (left)
       var form = [
-        { ox: 0, oy: 0 },      // tip
-        { ox: -28, oy: -22 },  // upper left
-        { ox: -28, oy: 22 },   // lower left
-        { ox: -56, oy: -36 },  // far upper
-        { ox: -56, oy: 36 }    // far lower
+        { rank: 0, oy: 0 },           // LEADER — center line
+        { rank: 1, oy: -gapY },       // follows upper
+        { rank: 1, oy: gapY },        // follows lower
+        { rank: 2, oy: -gapY * 2 },   // rear upper
+        { rank: 2, oy: gapY * 2 }     // rear lower
       ];
       window.__airborneSkyJets = [];
-      var px0 = (typeof player !== "undefined" && player) ? player.x : 100;
-      var py0 = (typeof player !== "undefined" && player) ? player.y : 200;
-      // Group A: fly left → right
+      var leaderStartX = -20; // leader enters from left first
+      var speed = 235;
       for (var ji = 0; ji < 5; ji++) {
         var f = form[ji];
         window.__airborneSkyJets.push({
-          x: -40 + f.ox,
-          y: py0 + f.oy,
-          vx: 220 + Math.random() * 30,
+          x: leaderStartX - f.rank * followX,
+          y: cy + f.oy,
+          vx: speed,
           vy: 0,
           dir: 1,
-          life: 4.5,
+          life: 5.5,
           age: 0,
-          fireT: 0.05 + ji * 0.04,
+          fireT: 0.06 + ji * 0.03,
           bullets: [],
-          exhaust: []
-        });
-      }
-      // Group B: fly right → left (mirror pyramid)
-      for (var ji2 = 0; ji2 < 5; ji2++) {
-        var f2 = form[ji2];
-        window.__airborneSkyJets.push({
-          x: (typeof W !== "undefined" ? W : 400) + 40 - f2.ox,
-          y: py0 + f2.oy + 8,
-          vx: -(220 + Math.random() * 30),
-          vy: 0,
-          dir: -1,
-          life: 4.5,
-          age: 0,
-          fireT: 0.08 + ji2 * 0.04,
-          bullets: [],
-          exhaust: []
+          exhaust: [],
+          scale: 1.1,
+          isLeader: f.rank === 0,
+          followRank: f.rank
         });
       }
       try {
@@ -4329,8 +4325,8 @@ if (window.__airbornePlasmaIgnite) {
         // Exhaust flames
         if (!jet.exhaust) jet.exhaust = [];
         if (Math.random() < 0.95) {
-          var ex = jet.x - jet.dir * 28;
-          var ey = jet.y + (Math.random() - 0.5) * 6;
+          var ex = jet.x - jet.dir * 32 * (jet.scale || 1.1);
+          var ey = jet.y + (Math.random() - 0.5) * 7;
           jet.exhaust.push({
             x: ex, y: ey,
             vx: -jet.dir * (40 + Math.random() * 60),
@@ -7355,16 +7351,17 @@ function drawMeteorMarks() {
         ctx.lineTo(bu.x, bu.y);
         ctx.stroke();
       });
-      // Jet body
+      // Jet body (10% bigger)
       ctx.globalCompositeOperation = "source-over";
       ctx.globalAlpha = 1;
       ctx.save();
       ctx.translate(jet.x, jet.y);
       if (jet.dir < 0) ctx.scale(-1, 1);
-      var dw = 72, dh = 32;
+      var sc = jet.scale || 1.1;
+      var dw = 72 * sc, dh = 32 * sc;
       if (imgReady) {
         var aspect = img.naturalHeight / img.naturalWidth;
-        dw = 78;
+        dw = 86 * sc; // base was 78, +10%
         dh = dw * aspect;
         ctx.drawImage(img, -dw * 0.45, -dh / 2, dw, dh);
       } else {
