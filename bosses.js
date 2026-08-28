@@ -4796,15 +4796,34 @@ if (window.__airbornePlasmaIgnite) {
         if (Math.random() < ((rk.kind === "barrelbomb" || rk.kind === "jollybomb") ? 0.35 : 0.85)) {
           var bx = -Math.cos(rk.rot);
           var by = -Math.sin(rk.rot);
-          rk.trails.push({
-            x: rk.x + bx * 14, y: rk.y + by * 14,
-            vx: bx * 40 + (Math.random() - 0.5) * 20,
-            vy: by * 40 + (Math.random() - 0.5) * 20,
-            life: 0.35 + Math.random() * 0.25,
-            age: 0,
-            r: 3 + Math.random() * 4,
-            kind: (rk.kind === "barrelbomb" || rk.kind === "jollybomb") ? "smoke" : (Math.random() < 0.55 ? "flame" : "smoke")
-          });
+          // Perpendicular for dual ports
+          var px = -by, py = bx;
+          if (rk.kind === "heatseek") {
+            // Both upper + lower exhaust streams
+            for (var pi = -1; pi <= 1; pi += 2) {
+              var ox = bx * 22 + px * pi * 7;
+              var oy = by * 22 + py * pi * 7;
+              rk.trails.push({
+                x: rk.x + ox, y: rk.y + oy,
+                vx: bx * 50 + (Math.random() - 0.5) * 16,
+                vy: by * 50 + (Math.random() - 0.5) * 16,
+                life: 0.3 + Math.random() * 0.2,
+                age: 0,
+                r: 3 + Math.random() * 3.5,
+                kind: Math.random() < 0.65 ? "flame" : "smoke"
+              });
+            }
+          } else {
+            rk.trails.push({
+              x: rk.x + bx * 14, y: rk.y + by * 14,
+              vx: bx * 40 + (Math.random() - 0.5) * 20,
+              vy: by * 40 + (Math.random() - 0.5) * 20,
+              life: 0.35 + Math.random() * 0.25,
+              age: 0,
+              r: 3 + Math.random() * 4,
+              kind: (rk.kind === "barrelbomb" || rk.kind === "jollybomb") ? "smoke" : (Math.random() < 0.55 ? "flame" : "smoke")
+            });
+          }
         }
         for (var ti = rk.trails.length - 1; ti >= 0; ti--) {
           var tr = rk.trails[ti];
@@ -7486,9 +7505,15 @@ function drawMeteorMarks() {
       var rw = 48, rh = 22;
       if (img && img.complete && img.naturalWidth) {
         var aspect = img.naturalHeight / img.naturalWidth;
-        rw = (rk.kind === "barrelbomb") ? 47 : (rk.kind === "warshark") ? 39 : (rk.kind === "heatseek") ? 63 : 52; // heatseek +10% more
+        rw = (rk.kind === "barrelbomb") ? 47 : (rk.kind === "warshark") ? 39 : (rk.kind === "heatseek") ? 72 : 52; // heatseek +15%
         rh = rw * aspect;
-        ctx.drawImage(img, -rw * 0.35, -rh / 2, rw, rh);
+        // Sky Rocket: sprite faces right (flame left, nose right).
+        // Anchor on metal body so exhaust lines up with rear nozzles.
+        if (rk.kind === "heatseek") {
+          ctx.drawImage(img, -rw * 0.62, -rh / 2, rw, rh);
+        } else {
+          ctx.drawImage(img, -rw * 0.35, -rh / 2, rw, rh);
+        }
       } else if (rk.kind === "jollybomb") {
         // Heavy iron cannonball — glowing red-hot seams, optional skull
         var br = rk.r || (rk.heavy ? 16 : 11);
@@ -7535,16 +7560,33 @@ function drawMeteorMarks() {
         ctx.beginPath();
         ctx.moveTo(16, 0); ctx.lineTo(8, -6); ctx.lineTo(8, 6); ctx.fill();
       }
-      // rear flame glow on sprite
+      // Exhaust glow at correct nozzle positions
       ctx.globalCompositeOperation = "lighter";
-      var fg = ctx.createRadialGradient(-18, 0, 0, -18, 0, 16);
-      fg.addColorStop(0, "rgba(255,240,180,0.9)");
-      fg.addColorStop(0.5, "rgba(255,120,20,0.5)");
-      fg.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.fillStyle = fg;
-      ctx.beginPath();
-      ctx.arc(-18, 0, 16, 0, Math.PI * 2);
-      ctx.fill();
+      if (rk.kind === "heatseek") {
+        // Dual rear ports (upper + lower) — aligned to thruster ring on sprite
+        var nx = -rw * 0.28;
+        var ports = [{ x: nx, y: -rh * 0.18 }, { x: nx, y: rh * 0.18 }];
+        ports.forEach(function(p) {
+          var fg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 14);
+          fg.addColorStop(0, "rgba(255,250,200,0.95)");
+          fg.addColorStop(0.35, "rgba(255,160,40,0.65)");
+          fg.addColorStop(0.7, "rgba(255,60,10,0.3)");
+          fg.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = fg;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 14, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      } else {
+        var fg = ctx.createRadialGradient(-18, 0, 0, -18, 0, 16);
+        fg.addColorStop(0, "rgba(255,240,180,0.9)");
+        fg.addColorStop(0.5, "rgba(255,120,20,0.5)");
+        fg.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = fg;
+        ctx.beginPath();
+        ctx.arc(-18, 0, 16, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
     }
     ctx.restore();
