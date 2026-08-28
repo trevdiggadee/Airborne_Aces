@@ -926,14 +926,14 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       }
       if (!window.__airborneSkyJetImg) {
         var sji = new Image();
-        sji.src = "skyrocket_jet.png?v=ruff308";
+        sji.src = "skyrocket_jet.png?v=ruff311";
         window.__airborneSkyJetImg = sji;
       }
       // Pyramid from LEFT — CENTER jet is LEADER; others FOLLOW behind
       var Hh = typeof H !== "undefined" ? H : 700;
       var cy = Hh * 0.5; // leader on vertical center
       var followX = 52;  // how far each rank trails the leader
-      var gapY = 44;     // even vertical spacing
+      var gapY = 51;     // even vertical spacing (+15%)
       // Rank 0 = leader (center). Higher rank = further back (left)
       var form = [
         { rank: 0, oy: 0 },           // LEADER — center line
@@ -4322,17 +4322,28 @@ if (window.__airbornePlasmaIgnite) {
         jet.age += dt;
         jet.x += jet.vx * dt;
         jet.y += jet.vy * dt;
-        // Exhaust flames
+        // Thin exhaust flames + smoke trails
         if (!jet.exhaust) jet.exhaust = [];
-        if (Math.random() < 0.95) {
+        if (!jet.smoke) jet.smoke = [];
+        if (Math.random() < 0.55) {
           var ex = jet.x - jet.dir * 32 * (jet.scale || 1.1);
-          var ey = jet.y + (Math.random() - 0.5) * 7;
+          var ey = jet.y + (Math.random() - 0.5) * 4;
           jet.exhaust.push({
             x: ex, y: ey,
-            vx: -jet.dir * (40 + Math.random() * 60),
-            vy: (Math.random() - 0.5) * 40,
-            life: 0.25 + Math.random() * 0.2, age: 0,
-            r: 4 + Math.random() * 6
+            vx: -jet.dir * (50 + Math.random() * 40),
+            vy: (Math.random() - 0.5) * 18,
+            life: 0.18 + Math.random() * 0.12, age: 0,
+            r: 2 + Math.random() * 2.5
+          });
+        }
+        if (Math.random() < 0.7) {
+          jet.smoke.push({
+            x: jet.x - jet.dir * 36 * (jet.scale || 1.1),
+            y: jet.y + (Math.random() - 0.5) * 6,
+            vx: -jet.dir * (20 + Math.random() * 30),
+            vy: (Math.random() - 0.5) * 25 - 8,
+            life: 0.55 + Math.random() * 0.35, age: 0,
+            r: 5 + Math.random() * 7
           });
         }
         for (var ei = jet.exhaust.length - 1; ei >= 0; ei--) {
@@ -4340,22 +4351,31 @@ if (window.__airbornePlasmaIgnite) {
           ep.age += dt;
           ep.x += ep.vx * dt;
           ep.y += ep.vy * dt;
-          ep.r *= (1 - 1.5 * dt);
+          ep.r *= (1 - 2 * dt);
           if (ep.age >= ep.life) jet.exhaust.splice(ei, 1);
         }
-        // Massive firepower
+        for (var si = jet.smoke.length - 1; si >= 0; si--) {
+          var sp = jet.smoke[si];
+          sp.age += dt;
+          sp.x += sp.vx * dt;
+          sp.y += sp.vy * dt;
+          sp.r += 12 * dt;
+          sp.vx *= (1 - 0.5 * dt);
+          if (sp.age >= sp.life) jet.smoke.splice(si, 1);
+        }
+        // Bullet-style firepower (not flame orbs)
         jet.fireT -= dt;
         if (jet.fireT <= 0) {
-          jet.fireT = 0.12 + Math.random() * 0.06;
+          jet.fireT = 0.11 + Math.random() * 0.05;
           if (!jet.bullets) jet.bullets = [];
-          // Double forward stream
           for (var bi = 0; bi < 2; bi++) {
             jet.bullets.push({
-              x: jet.x + jet.dir * 30,
-              y: jet.y + (bi - 0.5) * 8,
-              vx: jet.dir * (320 + Math.random() * 40),
-              vy: (Math.random() - 0.5) * 30,
-              life: 1.2, age: 0, r: 5
+              x: jet.x + jet.dir * 34,
+              y: jet.y + (bi - 0.5) * 7,
+              vx: jet.dir * (340 + Math.random() * 40),
+              vy: (Math.random() - 0.5) * 18,
+              life: 1.15, age: 0, r: 3.2,
+              len: 14
             });
           }
         }
@@ -7315,41 +7335,58 @@ function drawMeteorMarks() {
     var imgReady = img && img.complete && img.naturalWidth > 0;
     ctx.save();
     jets.forEach(function(jet) {
-      // Exhaust flames
+      // Smoke trails (behind)
+      ctx.globalCompositeOperation = "source-over";
+      (jet.smoke || []).forEach(function(sp) {
+        var t = 1 - sp.age / sp.life;
+        if (t <= 0) return;
+        ctx.globalAlpha = t * 0.4;
+        var sg = ctx.createRadialGradient(sp.x, sp.y, 0, sp.x, sp.y, sp.r);
+        sg.addColorStop(0, "rgba(50,45,40,0.7)");
+        sg.addColorStop(0.5, "rgba(30,28,25,0.35)");
+        sg.addColorStop(1, "rgba(10,10,10,0)");
+        ctx.fillStyle = sg;
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, sp.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      // Thin exhaust flames
       ctx.globalCompositeOperation = "lighter";
       (jet.exhaust || []).forEach(function(ep) {
         var t = 1 - ep.age / ep.life;
         if (t <= 0) return;
-        ctx.globalAlpha = t * 0.9;
-        var eg = ctx.createRadialGradient(ep.x, ep.y, 0, ep.x, ep.y, ep.r * 2);
-        eg.addColorStop(0, "rgba(255,255,200,1)");
-        eg.addColorStop(0.3, "rgba(255,160,40,0.85)");
-        eg.addColorStop(0.7, "rgba(255,60,10,0.4)");
-        eg.addColorStop(1, "rgba(80,0,0,0)");
+        ctx.globalAlpha = t * 0.75;
+        var eg = ctx.createRadialGradient(ep.x, ep.y, 0, ep.x, ep.y, ep.r * 1.6);
+        eg.addColorStop(0, "rgba(255,240,180,0.95)");
+        eg.addColorStop(0.4, "rgba(255,140,30,0.55)");
+        eg.addColorStop(1, "rgba(255,50,0,0)");
         ctx.fillStyle = eg;
         ctx.beginPath();
-        ctx.arc(ep.x, ep.y, ep.r * 2, 0, Math.PI * 2);
+        ctx.arc(ep.x, ep.y, ep.r * 1.6, 0, Math.PI * 2);
         ctx.fill();
       });
-      // Bullets
+      // Bullet-style projectiles (tracer rounds, not flame orbs)
       (jet.bullets || []).forEach(function(bu) {
         var t = 1 - bu.age / bu.life;
         ctx.globalAlpha = t;
-        var bg = ctx.createRadialGradient(bu.x, bu.y, 0, bu.x, bu.y, bu.r * 2.5);
-        bg.addColorStop(0, "rgba(255,250,200,1)");
-        bg.addColorStop(0.4, "rgba(255,180,50,0.9)");
-        bg.addColorStop(1, "rgba(255,80,0,0)");
-        ctx.fillStyle = bg;
+        var len = bu.len || 14;
+        var dx = jet.dir * len;
+        // core tracer
+        ctx.strokeStyle = "rgba(255,230,120,0.95)";
+        ctx.lineWidth = 2.2;
+        ctx.lineCap = "round";
         ctx.beginPath();
-        ctx.arc(bu.x, bu.y, bu.r * 2.5, 0, Math.PI * 2);
-        ctx.fill();
-        // streak
-        ctx.strokeStyle = "rgba(255,200,80,0.7)";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(bu.x - jet.dir * 12, bu.y);
+        ctx.moveTo(bu.x - dx, bu.y);
         ctx.lineTo(bu.x, bu.y);
         ctx.stroke();
+        // bright tip
+        ctx.fillStyle = "rgba(255,255,230,1)";
+        ctx.beginPath();
+        ctx.arc(bu.x, bu.y, bu.r * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+        // thin body
+        ctx.fillStyle = "rgba(220,180,60,0.85)";
+        ctx.fillRect(bu.x - dx * 0.85, bu.y - 1.2, len * 0.7, 2.4);
       });
       // Jet body (10% bigger)
       ctx.globalCompositeOperation = "source-over";
@@ -7373,13 +7410,13 @@ function drawMeteorMarks() {
       }
       // Extra exhaust glow at rear
       ctx.globalCompositeOperation = "lighter";
-      var fg = ctx.createRadialGradient(-dw * 0.4, 0, 0, -dw * 0.4, 0, 22);
-      fg.addColorStop(0, "rgba(255,240,180,0.95)");
-      fg.addColorStop(0.4, "rgba(255,120,20,0.6)");
+      var fg = ctx.createRadialGradient(-dw * 0.4, 0, 0, -dw * 0.4, 0, 14);
+      fg.addColorStop(0, "rgba(255,240,180,0.7)");
+      fg.addColorStop(0.45, "rgba(255,120,20,0.35)");
       fg.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = fg;
       ctx.beginPath();
-      ctx.arc(-dw * 0.4, 0, 22, 0, Math.PI * 2);
+      ctx.arc(-dw * 0.4, 0, 14, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     });
@@ -7438,7 +7475,7 @@ function drawMeteorMarks() {
       var rw = 48, rh = 22;
       if (img && img.complete && img.naturalWidth) {
         var aspect = img.naturalHeight / img.naturalWidth;
-        rw = (rk.kind === "barrelbomb") ? 47 : (rk.kind === "warshark") ? 39 : 52; // warshark -25%
+        rw = (rk.kind === "barrelbomb") ? 47 : (rk.kind === "warshark") ? 39 : (rk.kind === "heatseek") ? 57 : 52; // heatseek +10%
         rh = rw * aspect;
         ctx.drawImage(img, -rw * 0.35, -rh / 2, rw, rh);
       } else if (rk.kind === "jollybomb") {
