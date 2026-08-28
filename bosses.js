@@ -1205,7 +1205,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
           return { ang: a, flash: 0 };
         })
       };
-      // Opening volley from rotating ports
+      // Opening volley from rotating ports (straight paths)
       for (var li = 0; li < 4; li++) {
         var pa = portAngs[li];
         window.__airborneLatticeTorps.push({
@@ -1215,13 +1215,14 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
           vy: Math.sin(pa) * 120,
           life: 2.8, age: 0, rot: pa,
           w: 36, h: 25,
-          waveAmp: 22 + Math.random() * 16,
-          waveFreq: 4.5 + Math.random() * 2.5,
-          wavePhase: Math.random() * Math.PI * 2,
-          heavy: false,
-          homeT: 0
+          waveAmp: 0, waveFreq: 1, wavePhase: 0,
+          heavy: false, homeT: 0, trail: []
         });
       }
+      // 3 massive shockwave missiles spaced across the 5s power-up
+      window.__airborneMissileGrid.shockSchedule = [0.6, 2.3, 4.0];
+      window.__airborneMissileGrid.shockIdx = 0;
+      window.__airborneMissileGrid.smokeClouds = [];
       try { if (window.PowerFX) window.PowerFX.activate("swarm", player.x, player.y); } catch (e) {}
       updateStormMeterDisplay();
       return;
@@ -1738,11 +1739,8 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
             vy: Math.sin(baseAng) * sp * 0.75,
             life: 2.7, age: 0, rot: baseAng,
             w: isHeavy ? 44 : 36, h: isHeavy ? 30 : 25,
-            waveAmp: 24 + Math.random() * 18,
-            waveFreq: 4.5 + Math.random() * 3,
-            wavePhase: Math.random() * Math.PI * 2,
-            heavy: isHeavy,
-            homeT: 0
+            waveAmp: 0, waveFreq: 1, wavePhase: 0,
+            heavy: isHeavy, homeT: 0, trail: []
           });
           // Lattice energy line stubs from blimp to launch
           if (!mg.lines) mg.lines = [];
@@ -1761,6 +1759,55 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
             lt.homeT = 0.55;
           });
         }
+        // 3 massive shockwave missiles spaced over duration
+        if (!mg.shockSchedule) mg.shockSchedule = [0.6, 2.3, 4.0];
+        if (mg.shockIdx == null) mg.shockIdx = 0;
+        if (!mg.smokeClouds) mg.smokeClouds = [];
+        while (mg.shockIdx < mg.shockSchedule.length && mg.age >= mg.shockSchedule[mg.shockIdx]) {
+          mg.shockIdx++;
+          var sAng = 0.05 + (Math.random() - 0.5) * 0.15;
+          window.__airborneLatticeTorps.push({
+            x: player.x + 20, y: player.y,
+            vx: Math.cos(sAng) * 280,
+            vy: Math.sin(sAng) * 40,
+            life: 3.2, age: 0, rot: sAng,
+            w: 58, h: 40,
+            waveAmp: 0, waveFreq: 1, wavePhase: 0,
+            heavy: true, shockwave: true, homeT: 0, trail: []
+          });
+          // Massive black smoke puff at launch
+          for (var sci = 0; sci < 14; sci++) {
+            var sa = Math.random() * Math.PI * 2;
+            mg.smokeClouds.push({
+              x: player.x + Math.cos(sa) * 8,
+              y: player.y + Math.sin(sa) * 6,
+              vx: Math.cos(sa) * (30 + Math.random() * 50),
+              vy: Math.sin(sa) * (20 + Math.random() * 40) - 15,
+              r: 28 + Math.random() * 36,
+              age: 0,
+              life: 1.1 + Math.random() * 0.5
+            });
+          }
+          try { if (typeof triggerScreenShake === "function") triggerScreenShake(16, 480); } catch (e) {}
+          try { if (typeof sfxExplosion === "function") sfxExplosion(0.7); } catch (e) {}
+          // Launch shock ring
+          if (!window.__airborneShockFX) window.__airborneShockFX = [];
+          window.__airborneShockFX.push({
+            kind: "ring", x: player.x, y: player.y,
+            r: 20, maxR: 120, r0: 20, life: 0.55, age: 0, width: 6
+          });
+        }
+        // Age smoke clouds
+        for (var smi = mg.smokeClouds.length - 1; smi >= 0; smi--) {
+          var sc = mg.smokeClouds[smi];
+          sc.age += dt;
+          sc.x += sc.vx * dt;
+          sc.y += sc.vy * dt;
+          sc.r += 35 * dt;
+          sc.vx *= (1 - 0.5 * dt);
+          sc.vy *= (1 - 0.4 * dt);
+          if (sc.age >= sc.life) mg.smokeClouds.splice(smi, 1);
+        }
         // Finale 360 cage
         if (mg.age > mg.life - 0.85 && !mg.finaleDone) {
           mg.finaleDone = true;
@@ -1773,8 +1820,8 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
               vy: Math.sin(fa) * 180,
               life: 2.5, age: 0, rot: fa,
               w: 40, h: 28,
-              waveAmp: 30, waveFreq: 5, wavePhase: fi * 0.8,
-              heavy: true, homeT: 0.8, cage: true
+              waveAmp: 0, waveFreq: 1, wavePhase: 0,
+              heavy: true, homeT: 0.8, cage: true, trail: []
             });
           }
           try { if (typeof triggerScreenShake === "function") triggerScreenShake(10, 350); } catch (e) {}
@@ -1822,31 +1869,31 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
             lt.vy = Math.sin(lt.rot) * hsp;
           }
         }
-        var wave = Math.sin(lt.age * (lt.waveFreq || 5) + (lt.wavePhase || 0)) * (lt.waveAmp || 16);
-        // perpendicular to velocity for snake/wave path
-        var spd = Math.hypot(lt.vx, lt.vy) || 1;
-        var px = -lt.vy / spd, py = lt.vx / spd;
-        lt.x += lt.vx * dt + px * wave * dt * 8;
-        lt.y += lt.vy * dt + py * wave * dt * 8;
-        lt.rot = Math.atan2(lt.vy + py * wave * 0.3, lt.vx + px * wave * 0.3);
-        // denser brass sparks
-        if (Math.random() < 0.55) {
-          if (!lt.trail) lt.trail = [];
+        // Straight path (no sinusoidal weave)
+        lt.x += lt.vx * dt;
+        lt.y += lt.vy * dt;
+        lt.rot = Math.atan2(lt.vy, lt.vx);
+        // Longer trails
+        if (!lt.trail) lt.trail = [];
+        var trailRate = lt.shockwave ? 1.0 : 0.9;
+        if (Math.random() < trailRate) {
           lt.trail.push({
-            x: lt.x - Math.cos(lt.rot) * 12,
+            x: lt.x - Math.cos(lt.rot) * 14,
             y: lt.y - Math.sin(lt.rot) * 8,
-            life: 0.35, age: 0, r: 2 + Math.random() * 4,
-            kind: Math.random() < 0.6 ? "spark" : "smoke"
+            life: lt.shockwave ? 0.85 : 0.7,
+            age: 0,
+            r: (lt.shockwave ? 6 : 3) + Math.random() * 5,
+            kind: Math.random() < 0.45 ? "spark" : "smoke"
           });
         }
-        // brass exhaust trail
-        if (!lt.trail) lt.trail = [];
-        if (Math.random() < 0.8) {
+        if (Math.random() < 0.7) {
           lt.trail.push({
-            x: lt.x - Math.cos(lt.rot) * 20,
-            y: lt.y - Math.sin(lt.rot) * 10,
-            life: 0.4, age: 0, r: 4 + Math.random() * 5,
-            kind: Math.random() < 0.5 ? "spark" : "smoke"
+            x: lt.x - Math.cos(lt.rot) * 24,
+            y: lt.y - Math.sin(lt.rot) * 12,
+            life: lt.shockwave ? 0.9 : 0.75,
+            age: 0,
+            r: (lt.shockwave ? 8 : 5) + Math.random() * 6,
+            kind: "smoke"
           });
         }
         for (var tr = (lt.trail||[]).length - 1; tr >= 0; tr--) {
@@ -1858,23 +1905,43 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
             var o = obstacles[oi];
             if (!o || o.isRing) continue;
             var ox = o.x + o.w * 0.5, oy = o.y + o.h * 0.5;
-            if (Math.hypot(lt.x - ox, lt.y - oy) < (lt.heavy ? 44 : 36)) {
+            if (Math.hypot(lt.x - ox, lt.y - oy) < (lt.shockwave ? 55 : (lt.heavy ? 44 : 36))) {
               try { if (typeof spawnHitParticles === "function") spawnHitParticles(ox, oy); } catch (e) {}
-              try { if (typeof sfxExplosion === "function") sfxExplosion(lt.heavy ? 0.75 : 0.55); } catch (e) {}
-              try { if (typeof triggerScreenShake === "function") triggerScreenShake(lt.heavy ? 9 : 5, lt.heavy ? 300 : 200); } catch (e) {}
+              try { if (typeof sfxExplosion === "function") sfxExplosion(lt.shockwave ? 0.85 : (lt.heavy ? 0.75 : 0.55)); } catch (e) {}
+              try {
+                if (typeof triggerScreenShake === "function")
+                  triggerScreenShake(lt.shockwave ? 18 : (lt.heavy ? 9 : 5), lt.shockwave ? 520 : (lt.heavy ? 300 : 200));
+              } catch (e) {}
               try { if (typeof spawnRealisticBombExplosion === "function") spawnRealisticBombExplosion(ox, oy); } catch (e) {}
               try { if (window.PowerFX) {
                 window.PowerFX.burst(ox, oy, {
-                  count: lt.heavy ? 36 : 22,
+                  count: lt.shockwave ? 48 : (lt.heavy ? 36 : 22),
                   colors: ["#fbbf24", "#f59e0b", "#d97706", "#78716c", "#fff", "#ff6b3d"],
-                  speed: lt.heavy ? 200 : 160, glow: true
+                  speed: lt.shockwave ? 240 : (lt.heavy ? 200 : 160), glow: true
                 });
               } } catch (e) {}
-              // secondary shock ring
               if (!window.__airborneShockFX) window.__airborneShockFX = [];
               window.__airborneShockFX.push({
-                x: ox, y: oy, r: 8, maxR: lt.heavy ? 95 : 60, life: 0.4, age: 0, width: lt.heavy ? 5 : 3
+                kind: "ring", x: ox, y: oy, r: 10, r0: 10,
+                maxR: lt.shockwave ? 140 : (lt.heavy ? 95 : 60),
+                life: lt.shockwave ? 0.55 : 0.4, age: 0, width: lt.shockwave ? 7 : (lt.heavy ? 5 : 3)
               });
+              // Massive black smoke on shockwave missile impact
+              if (lt.shockwave && window.__airborneMissileGrid) {
+                if (!window.__airborneMissileGrid.smokeClouds) window.__airborneMissileGrid.smokeClouds = [];
+                for (var sci2 = 0; sci2 < 16; sci2++) {
+                  var sa2 = Math.random() * Math.PI * 2;
+                  window.__airborneMissileGrid.smokeClouds.push({
+                    x: ox + Math.cos(sa2) * 6,
+                    y: oy + Math.sin(sa2) * 6,
+                    vx: Math.cos(sa2) * (40 + Math.random() * 70),
+                    vy: Math.sin(sa2) * (30 + Math.random() * 50) - 20,
+                    r: 32 + Math.random() * 40,
+                    age: 0,
+                    life: 1.2 + Math.random() * 0.6
+                  });
+                }
+              }
               try { creditPowerKillScore(1); } catch (e) {}
               obstacles.splice(oi, 1);
               lt.age = lt.life;
@@ -6309,6 +6376,21 @@ if (window.__airbornePlasmaIgnite) {
           ctx.fill();
         }
       });
+      // Massive black smoke clouds (shockwave puffs)
+      ctx.globalCompositeOperation = "source-over";
+      (mg.smokeClouds || []).forEach(function(sc) {
+        var t = Math.max(0, 1 - sc.age / sc.life);
+        ctx.globalAlpha = t * 0.55;
+        var sg = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, sc.r);
+        sg.addColorStop(0, "rgba(25,22,20,0.85)");
+        sg.addColorStop(0.4, "rgba(15,12,10,0.5)");
+        sg.addColorStop(1, "rgba(5,4,3,0)");
+        ctx.fillStyle = sg;
+        ctx.beginPath();
+        ctx.arc(sc.x, sc.y, sc.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalCompositeOperation = "lighter";
       // Subtle geometric lattice lines
       (mg.lines || []).forEach(function(ln) {
         var t = 1 - ln.age / ln.life;
