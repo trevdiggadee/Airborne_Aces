@@ -921,7 +921,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       // Previous Sky Rocket missile asset
       if (!window.__airborneRocketImg) {
         var ri = new Image();
-        ri.src = "sky_rocket_missile.jpg";
+        ri.src = "sky_rocket_missile.webp?v=ruff313";
         window.__airborneRocketImg = ri;
       }
       if (!window.__airborneSkyJetImg) {
