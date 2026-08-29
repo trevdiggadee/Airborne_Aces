@@ -1272,7 +1272,7 @@
     ruffSpecialBalloon = {
       x: W0 + 30,
       y: H0 * (0.12 + Math.random() * 0.25),
-      speed: 18 + Math.random() * 8,
+      speed: (18 + Math.random() * 8) * 0.8, // 20% slower
       bob: Math.random() * Math.PI * 2,
       scale: 0.22 + Math.random() * 0.06,
       alpha: 0.85

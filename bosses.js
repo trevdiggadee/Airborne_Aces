@@ -1144,10 +1144,10 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         var ca = (ci / 5) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
         window.__airborneStormClouds.push({
           ang: ca,
-          baseDist: 52 + (ci % 3) * 16 + Math.random() * 10,
-          dist: 52 + (ci % 3) * 16,
-          r: 46 + Math.random() * 24,
-          baseR: 46 + Math.random() * 24,
+          baseDist: (52 + (ci % 3) * 16 + Math.random() * 10) * 1.15,
+          dist: (52 + (ci % 3) * 16) * 1.15,
+          r: (46 + Math.random() * 24) * 1.2,
+          baseR: (46 + Math.random() * 24) * 1.2,
           spin: (0.55 + Math.random() * 0.35) * (ci % 2 === 0 ? 1 : -0.7),
           phase: Math.random() * Math.PI * 2,
           wobble: Math.random() * Math.PI * 2,
@@ -2574,7 +2574,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         if (Math.random() < 0.55 && tc.phase !== "fade") {
           var a1 = Math.random() * Math.PI * 2;
           var a2 = a1 + (0.6 + Math.random() * 1.2) * (Math.random() < 0.5 ? 1 : -1);
-          var ar = 20 + Math.random() * 30;
+          var ar = (20 + Math.random() * 30) * 1.15; // +15% electricity radius
           tc.auraArcs.push({
             points: (typeof buildLightningPath === "function")
               ? buildLightningPath(
@@ -2582,7 +2582,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
                   px + Math.cos(a2) * ar, py + Math.sin(a2) * ar * 0.7,
                   12)
               : [[px, py], [px + 20, py - 10]],
-            age: 0, life: 0.12 + Math.random() * 0.12, thick: 1.5
+            age: 0, life: 0.12 + Math.random() * 0.12, thick: 1.8
           });
         }
 
@@ -8200,12 +8200,13 @@ function drawFireballs() {
         window.__airborneStormClouds.forEach(function(c) {
           if (c.x == null) return;
           var cx = c.x, cy = c.y;
-          var bodyR = (c.r || 40) * 1.15;
-          // Main mass — translucent charcoal-blue
-          ctx.globalAlpha = 0.52 * pf;
-          var bg = ctx.createRadialGradient(cx, cy, bodyR * 0.12, cx, cy, bodyR);
-          bg.addColorStop(0, "rgba(100,115,145,0.55)");
-          bg.addColorStop(0.4, "rgba(55,65,95,0.35)");
+          var bodyR = (c.r || 40) * 1.25;
+          // Main mass — more visible charcoal-blue
+          ctx.globalAlpha = 0.78 * pf;
+          var bg = ctx.createRadialGradient(cx, cy, bodyR * 0.1, cx, cy, bodyR);
+          bg.addColorStop(0, "rgba(120,135,165,0.75)");
+          bg.addColorStop(0.35, "rgba(70,85,120,0.55)");
+          bg.addColorStop(0.7, "rgba(40,50,75,0.3)");
           bg.addColorStop(1, "rgba(20,25,40,0)");
           ctx.fillStyle = bg;
           ctx.beginPath();
