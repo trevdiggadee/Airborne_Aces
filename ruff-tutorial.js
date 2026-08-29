@@ -664,15 +664,15 @@
     if (name !== "boss1") {
       try { stopTrainingBossMusic(); } catch (e) {}
     }
-    // Clear lesson collectibles/obstacles so nothing freezes from prior stage
-    // (power missiles keep flying via bosses.js)
+    // Keep coins/crystals/obstacles/rings on screen between lessons —
+    // they only leave when collected, destroyed, or scrolled off.
+    // (Only clear on hard training start / report end, not stage changes.)
     try {
-      ruffCrystals = [];
-      ruffCoins = [];
-      if (typeof ruffRings !== "undefined") ruffRings = [];
-      if (typeof obstacles !== "undefined") {
-        // Keep only burning obstacles mid-fall; remove the rest
-        obstacles = obstacles.filter(function(o) { return o && o.onFire; });
+      if (name === "report" || name === "intro") {
+        // intro: fresh start handled by beginTraining; report: cleanup later
+        if (name === "report") {
+          /* leave world as-is until hangar */
+        }
       }
     } catch (e) {}
     ruffStage = name;
@@ -738,15 +738,12 @@
       }
     } catch (e) {}
 
-    // Clear items ONCE when entering a stage (never every frame mid-flight)
+    // Stage flags only — do NOT wipe coins/crystals/obstacles already on screen
     if (name === "altitude" || name === "crystals" || name === "powerup") {
-      if (typeof obstacles !== "undefined") obstacles = [];
-      ruffCrystals = [];
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
     } else if (name === "obstacles" || name === "shield") {
-      ruffCrystals = [];
       window.__airborneAirfieldObstacles = true;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.75; // denser obstacles
@@ -828,7 +825,6 @@
       window.__airborneAirfieldObstacles = true;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.7; // denser obstacles
-      if (typeof obstacles !== "undefined") obstacles = [];
       ruffWaitingAvoid = true;
     } else if (name === "powerup") {
       if (ruffLines.length) showRadio(ruffLines[0], 3.2);
@@ -1516,11 +1512,11 @@
         if (!c.sparks) c.sparks = [];
         var sa = Math.random() * Math.PI * 2;
         c.sparks.push({
-          x: Math.cos(sa) * c.r * 0.9,
-          y: Math.sin(sa) * c.r * 0.9,
-          vx: Math.cos(sa) * (20 + Math.random() * 30),
-          vy: Math.sin(sa) * (20 + Math.random() * 30) - 15,
-          life: 0.35 + Math.random() * 0.2, age: 0, r: 1.5 + Math.random() * 2
+          x: Math.cos(sa) * c.r * 0.85,
+          y: Math.sin(sa) * c.r * 0.85,
+          vx: Math.cos(sa) * (8 + Math.random() * 12),
+          vy: Math.sin(sa) * (8 + Math.random() * 12) - 6,
+          life: 0.55 + Math.random() * 0.3, age: 0, r: 0.7 + Math.random() * 1.0
         });
       }
       if (c.sparks) {
@@ -1683,19 +1679,19 @@
       ctx.fill();
       // Rising blue sparkles
       if (!c.sparkles) c.sparkles = [];
-      if (Math.random() < 0.12) {
+      if (Math.random() < 0.06) {
         c.sparkles.push({
-          x: (Math.random() - 0.5) * s * 0.6,
-          y: s * 0.2,
-          life: 0.8 + Math.random() * 0.4,
+          x: (Math.random() - 0.5) * s * 0.5,
+          y: s * 0.15,
+          life: 1.2 + Math.random() * 0.5,
           age: 0,
-          r: 1.5 + Math.random() * 2
+          r: 0.8 + Math.random() * 1.1
         });
       }
       for (var si = (c.sparkles || []).length - 1; si >= 0; si--) {
         var sp = c.sparkles[si];
         sp.age += 0.016;
-        sp.y -= 18 * 0.016;
+        sp.y -= 8 * 0.016;
         var st = 1 - sp.age / sp.life;
         if (st <= 0) { c.sparkles.splice(si, 1); continue; }
         ctx.globalAlpha = st * 0.95;
@@ -1994,7 +1990,26 @@
         row("LANDING", "★".repeat(Math.max(1, ruffStats.landingStars || 3)));
     }
 
-    const sc = (typeof score === "number") ? score : 0;
+    // Prefer live score; if zero, derive a training score from stats so popup isn't stuck at 0
+    var sc = (typeof score === "number") ? score : 0;
+    try {
+      var derived = (ruffStats.crystals || 0) * 25
+        + (ruffStats.coins || 0) * 10
+        + (ruffStats.rings || 0) * 50
+        + (ruffStats.powerups || 0) * 100
+        + (ruffStats.obstaclesAvoided || 0) * 15
+        + (ruffStats.bestCombo || 0) * 20
+        + Math.max(1, ruffStats.landingStars || 3) * 50;
+      if (sc < derived) sc = derived;
+      if (typeof score === "number" && score < sc) {
+        score = sc;
+        try {
+          if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(sc);
+          var sv = document.getElementById("scoreVal");
+          if (sv) sv.textContent = String(sc);
+        } catch (e) {}
+      }
+    } catch (e) {}
     const pilotRank = getPilotRank(sc, ruffStats);
 
     // Hide rank banner until score finishes counting
@@ -2028,6 +2043,13 @@
       rankBanner.style.opacity = "0";
     }
     el.classList.add("visible");
+    try {
+      el.style.display = "flex";
+      el.style.visibility = "visible";
+      el.style.opacity = "1";
+      el.style.zIndex = "90";
+      el.style.pointerEvents = "auto";
+    } catch (e) {}
     ensureSkipHandler();
 
     // Count-up → fade score → big RANK UP bounce
@@ -2583,7 +2605,6 @@ function finishToMap() {
         }
       }
     } else if (ruffStage === "shield") {
-      ruffCrystals = [];
       window.__airborneAirfieldAllowShield = true;
       // Spawn shield early
       if ((typeof shieldPickup === "undefined" || !shieldPickup || shieldPickup.x < -50) && ruffStageT < 8 && !(typeof shieldActive !== "undefined" && shieldActive)) {
@@ -2608,7 +2629,6 @@ function finishToMap() {
         requestNextStage();
       }
     } else if (ruffStage === "powerup") {
-      ruffCrystals = [];
       window.__airborneAirfieldAllowPowerup = true;
     try {
       if (typeof stormCharge !== "undefined" && typeof STORM_MAX === "number") {
@@ -2653,7 +2673,6 @@ function finishToMap() {
         }
       }
     } else if (ruffStage === "rings") {
-      ruffCrystals = [];
       if (typeof powerup !== "undefined") powerup = null;
       if (typeof window.__airborneRingCollects === "number") {
         ruffStats.rings = window.__airborneRingCollects;

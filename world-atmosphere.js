@@ -1425,10 +1425,10 @@
       skyDust.push({
         x: Math.random() * W,
         y: Math.random() * H * 0.55,
-        r: 0.6 + Math.random() * 1.4,
-        sp: 0.008 + Math.random() * 0.02,
+        r: 0.35 + Math.random() * 0.7,
+        sp: 0.004 + Math.random() * 0.01,
         bob: Math.random() * Math.PI * 2,
-        a: 0.08 + Math.random() * 0.12
+        a: 0.06 + Math.random() * 0.08
       });
     }
   }
