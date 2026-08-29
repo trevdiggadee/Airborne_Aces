@@ -1286,7 +1286,7 @@
   function ensureSpecialBalloonImg() {
     if (ruffSpecialBalloonImg) return;
     ruffSpecialBalloonImg = new Image();
-    ruffSpecialBalloonImg.src = "bg_hotair_balloon.webp?v=ruff325";
+    ruffSpecialBalloonImg.src = "bg_hotair_balloon.webp?v=ruff338";
   }
 
   function maybeSpawnSpecialBalloon() {
@@ -1346,7 +1346,7 @@
     hotairImgs = {};
     HOTAIR_KEYS.forEach(function(k) {
       var im = new Image();
-      im.src = k + ".webp?v=ruff332";
+      im.src = k + ".webp?v=ruff338";
       hotairImgs[k] = im;
     });
   }
