@@ -361,6 +361,52 @@
   // Dramatic sinking death for boss 1 (balloon) — slo-mo fall with fire/smoke
   let bossSinking = null; // visual-only corpse while rewards still process
 
+  // Training boss defeat sprite (36 frames)
+  var __defeatSpriteImgs = null;
+  var __defeatSpriteReady = false;
+  function ensureDefeatSprites() {
+    if (__defeatSpriteImgs) return __defeatSpriteImgs;
+    __defeatSpriteImgs = [];
+    var loaded = 0;
+    for (var i = 0; i < 36; i++) {
+      var im = new Image();
+      im.onload = function() { loaded++; if (loaded >= 36) __defeatSpriteReady = true; };
+      im.src = "boss_defeat_" + String(i).padStart(2, "0") + ".webp?v=ruff335";
+      __defeatSpriteImgs.push(im);
+    }
+    return __defeatSpriteImgs;
+  }
+
+  function spawnTrainHoleSmoke(s, burst) {
+    // Big puffs from the two balloon holes (relative to sprite center)
+    var dw = Math.min(s.w * 1.35, (typeof W !== "undefined" ? W : 400) * 0.55);
+    var dh = dw * 1.8;
+    var cx = s.x + s.w * 0.5;
+    var cy = s.y + s.h * 0.5;
+    // Hole anchors in balloon envelope (upper half of sprite)
+    var holes = [
+      { ox: -0.20 * dw, oy: -0.34 * dh }, // left tear
+      { ox:  0.16 * dw, oy: -0.30 * dh }  // right tear
+    ];
+    var n = burst ? 10 : 3;
+    for (var h = 0; h < holes.length; h++) {
+      for (var i = 0; i < n; i++) {
+        var ang = Math.random() * Math.PI * 2;
+        var spd = 18 + Math.random() * 55;
+        s.fx.push({
+          kind: "smoke",
+          x: cx + holes[h].ox + (Math.random() - 0.5) * 14,
+          y: cy + holes[h].oy + (Math.random() - 0.5) * 10,
+          vx: Math.cos(ang) * spd * 0.5 - 15 - Math.random() * 40,
+          vy: -30 - Math.random() * 70,
+          life: 1.2 + Math.random() * 1.1,
+          age: 0,
+          r: 16 + Math.random() * 28 // big puffs
+        });
+      }
+    }
+  }
+
   function spawnBossBalloonFireSmoke(sink, burst) {
     const n = burst ? 28 : 7;
     for (let i = 0; i < n; i++) {
@@ -491,7 +537,25 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     const t = Math.min(1, s.age / s.duration);
     const mode = s.mode || "fire_sink";
 
-    if (mode === "fire_sink") {
+    if (mode === "train_sprite") {
+      s.frameT = (s.frameT || 0) + dt;
+      var fdur = 2.25 / 36;
+      while (s.frameT >= fdur) {
+        s.frameT -= fdur;
+        s.frame = Math.min(35, (s.frame || 0) + 1);
+      }
+      s.vy = 40 + t * 90;
+      s.y += (s.vy || 40) * dt;
+      s.x += (s.vx || -15) * dt + Math.sin(s.age * 1.2) * 12 * dt;
+      s.tilt = Math.sin(s.age * 0.9) * 0.12 - t * 0.08;
+      s.alpha = Math.max(0.2, 1 - t * 0.45);
+      // Continuous big smoke from holes
+      s.fxTimer = (s.fxTimer || 0) + dt;
+      while (s.fxTimer > 0.055) {
+        s.fxTimer -= 0.055;
+        spawnTrainHoleSmoke(s, false);
+      }
+    } else if (mode === "fire_sink") {
       s.vy = 55 + t * t * 280; // 25% faster sink
       s.y += s.vy * dt;
       s.x += Math.sin(s.age * 1.35) * 20 * dt;
@@ -523,12 +587,14 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
       s.tilt = Math.sin(s.age * 1.5) * 0.2;
     }
 
-    s.fxTimer += dt;
-    const fxRate = mode === "heli_spin" ? 0.035 : 0.045;
-    while (s.fxTimer > fxRate) {
-      s.fxTimer -= fxRate;
-      if (mode === "fire_sink") spawnBossBalloonFireSmoke(s, false);
-      else spawnBossDeathFx(s, false);
+    if (mode !== "train_sprite") {
+      s.fxTimer += dt;
+      const fxRate = mode === "heli_spin" ? 0.035 : 0.045;
+      while (s.fxTimer > fxRate) {
+        s.fxTimer -= fxRate;
+        if (mode === "fire_sink") spawnBossBalloonFireSmoke(s, false);
+        else spawnBossDeathFx(s, false);
+      }
     }
 
     s.fx.forEach(function(p) {
@@ -536,7 +602,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       if (p.kind === "smoke" || p.kind === "ink") {
-        p.r += 20 * dt;
+        p.r += (p.r > 20 ? 32 : 20) * dt; // big hole puffs expand faster
         p.vy -= (p.kind === "ink" ? -10 : 12) * dt;
         p.vx *= 0.97;
       } else if (p.kind === "ember" || p.kind === "dust") {
@@ -553,11 +619,15 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     s.fx = s.fx.filter(function(p) { return p.age < p.life; });
 
     if (s.y > H + s.h * 0.4 || s.age >= s.duration || (s.alpha != null && s.alpha <= 0.02)) {
+      var wasTrain = s.mode === "train_sprite";
       bossSinking = null;
       defeatSlowMo = false;
       if (s.pendingCfg) {
         finishBossRewards(s.pendingCfg);
         s.pendingCfg = null;
+      }
+      if (wasTrain) {
+        try { window.__airborneTrainingBossDone = true; } catch (e) {}
       }
     }
   }
@@ -588,7 +658,19 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     ctx.scale(1 / Math.sqrt(sq), sq);
     let alpha = s.alpha != null ? s.alpha : Math.max(0.2, 1 - progress * 0.4);
     ctx.globalAlpha = alpha;
-    if (img && img.naturalWidth) {
+    if (s.mode === "train_sprite") {
+      try { ensureDefeatSprites(); } catch (e) {}
+      var fi = Math.min(35, s.frame || 0);
+      var simg = __defeatSpriteImgs && __defeatSpriteImgs[fi];
+      var dw = Math.min(s.w * 1.35, W * 0.55);
+      var dh = dw * 1.8;
+      if (simg && simg.naturalWidth) {
+        dh = dw * (simg.naturalHeight / simg.naturalWidth);
+        ctx.drawImage(simg, -dw / 2, -dh / 2, dw, dh);
+      } else if (img && img.naturalWidth) {
+        ctx.drawImage(img, -s.w / 2, -s.h / 2, s.w, s.h);
+      }
+    } else if (img && img.naturalWidth) {
       ctx.drawImage(img, -s.w / 2, -s.h / 2, s.w, s.h);
     }
     ctx.restore();
@@ -596,7 +678,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     s.fx.forEach(function(p) {
       const pt = 1 - p.age / p.life;
       ctx.save();
-      ctx.globalAlpha = Math.max(0, pt * (p.kind === "smoke" || p.kind === "ink" ? 0.55 : 0.92));
+      ctx.globalAlpha = Math.max(0, pt * (p.kind === "smoke" || p.kind === "ink" ? (p.r > 18 ? 0.72 : 0.55) : 0.92));
       if (p.kind === "fire") {
         const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
         g.addColorStop(0, "rgba(255,245,200," + (0.95 * pt) + ")");
@@ -644,6 +726,11 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     else if (kind === "octopus") mode = "ink_dissolve";
 
     if (boss) {
+      var isTrain = !!(window.__airborneTrainingBoss || window.__airborneAirfield || window.__airborneRuffActive);
+      if (isTrain) {
+        try { ensureDefeatSprites(); } catch (e) {}
+        mode = "train_sprite";
+      }
       bossSinking = {
         mode: mode,
         x: boss.x,
@@ -653,19 +740,22 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         img: img,
         age: 0,
         // 25% faster defeat sequence
-        duration: (mode === "heli_spin" ? 2.2 : (mode === "ink_dissolve" ? 2.5 : 2.6)) * 0.75,
-        vy: 40,
-        vx: mode === "heli_spin" ? 70 : 0,
+        duration: isTrain ? 2.25 : ((mode === "heli_spin" ? 2.2 : (mode === "ink_dissolve" ? 2.5 : 2.6)) * 0.75),
+        vy: isTrain ? 55 : 40,
+        vx: mode === "heli_spin" ? 70 : (isTrain ? -20 : 0),
         tilt: 0,
         spin: 0,
         squash: 1,
         alpha: 1,
+        frame: 0,
+        frameT: 0,
         fx: [],
         fxTimer: 0,
         pendingCfg: cfg
       };
       for (let i = 0; i < 3; i++) {
-        if (mode === "fire_sink") spawnBossBalloonFireSmoke(bossSinking, true);
+        if (mode === "train_sprite") spawnTrainHoleSmoke(bossSinking, true);
+        else if (mode === "fire_sink") spawnBossBalloonFireSmoke(bossSinking, true);
         else spawnBossDeathFx(bossSinking, true);
       }
       defeatSlowMo = true;
