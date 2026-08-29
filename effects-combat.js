@@ -372,7 +372,7 @@
       var im = new Image();
       im.onload = function() { loaded++; if (loaded >= 36) __defeatSpriteReady = true; };
       im.onerror = function() { loaded++; };
-      im.src = "boss_defeat_" + String(i).padStart(2, "0") + ".webp?v=ruff337";
+      im.src = "boss_defeat_" + String(i).padStart(2, "0") + ".webp?v=ruff343";
       __defeatSpriteImgs.push(im);
     }
     return __defeatSpriteImgs;
@@ -678,20 +678,18 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
       try { ensureDefeatSprites(); } catch (e) {}
       var fi = Math.min(35, Math.max(0, s.frame | 0));
       var simg = __defeatSpriteImgs && __defeatSpriteImgs[fi];
-      // Fixed width from boss; height always from sprite aspect (never squeeze thinner)
-      if (!s._baseW) {
-        s._baseW = Math.max(48, s.w || 100);
+      // Fixed footprint: match live boss width, aspect always 480/864 from sheet
+      if (!s._fitW) {
+        s._fitW = Math.max(40, Math.min(s.w || 90, (typeof W !== "undefined" ? W : 400) * 0.28));
+        s._fitH = s._fitW * (864 / 480); // sheet aspect — never changes
       }
       if (simg && simg.complete && simg.naturalWidth > 0) {
-        if (!s._fitW) {
-          var aspect0 = simg.naturalHeight / simg.naturalWidth;
-          s._fitW = s._baseW;
-          s._fitH = s._baseW * aspect0; // full natural proportion — no height clamp
-        }
         ctx.globalAlpha = 1;
-        ctx.drawImage(simg, -s._fitW / 2, -s._fitH / 2, s._fitW, s._fitH);
+        // Full sheet rect every frame (fixed size source) → no squeeze between frames
+        ctx.drawImage(simg, 0, 0, simg.naturalWidth, simg.naturalHeight,
+          -s._fitW / 2, -s._fitH / 2, s._fitW, s._fitH);
       } else if (img && img.naturalWidth) {
-        ctx.drawImage(img, -s._baseW / 2, -s.h / 2, s._baseW, s.h);
+        ctx.drawImage(img, -s._fitW / 2, -s._fitH / 2, s._fitW, s._fitH);
       }
     } else if (img && img.naturalWidth) {
       ctx.drawImage(img, -s.w / 2, -s.h / 2, s.w, s.h);
@@ -984,20 +982,28 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     ctx.globalAlpha = p.alpha * t;
     // Darker animated streaks for propeller wash / player trail
     if (p.source === "player") {
-      ctx.strokeStyle = "rgba(40, 36, 32, 0.85)";
-      ctx.lineWidth = 1.6;
+      // White + dark dual wind streak
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
+      ctx.lineWidth = 2.0;
       ctx.lineCap = "round";
       ctx.beginPath();
       const wobble = Math.sin((p.age + p.len) * 18) * 1.8;
       ctx.moveTo(p.x + p.len * 0.25, p.y + wobble * 0.3);
       ctx.quadraticCurveTo(p.x - p.len * 0.15, p.y + wobble, p.x - p.len * 0.85, p.y - wobble * 0.4);
       ctx.stroke();
-      ctx.globalAlpha = p.alpha * t * 0.45;
-      ctx.strokeStyle = "rgba(25, 22, 20, 0.9)";
-      ctx.lineWidth = 0.9;
+      ctx.globalAlpha = p.alpha * t * 0.7;
+      ctx.strokeStyle = "rgba(40, 36, 32, 0.75)";
+      ctx.lineWidth = 1.1;
       ctx.beginPath();
-      ctx.moveTo(p.x + p.len * 0.1, p.y + 1.5);
-      ctx.lineTo(p.x - p.len * 0.6, p.y + 1.5);
+      ctx.moveTo(p.x + p.len * 0.1, p.y + 1.2);
+      ctx.lineTo(p.x - p.len * 0.6, p.y + 1.2);
+      ctx.stroke();
+      ctx.globalAlpha = p.alpha * t * 0.5;
+      ctx.strokeStyle = "rgba(255,255,255,0.55)";
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(p.x + p.len * 0.15, p.y - 1.2);
+      ctx.lineTo(p.x - p.len * 0.55, p.y - 1.2);
       ctx.stroke();
     } else {
       ctx.strokeStyle = "rgba(255,255,255,0.55)";

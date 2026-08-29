@@ -96,6 +96,8 @@
   }
 
   function updatePlayer(dt) {
+    if (window.__airborneBossCamPause) return;
+
     // Calm rest on the landing pad
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) {
       player.vy = 0;
@@ -278,7 +280,7 @@
       const spin = (now - p.born) / 520;
       ctx.save();
       ctx.globalAlpha = a;
-      ctx.translate(W * 0.5, H * 0.24);
+      ctx.translate(W * 0.5, H * 0.245);
       ctx.scale(pop, pop);
       const R = Math.max(28, Math.min(42, W * 0.10));
       // Outer soft pulse
@@ -340,7 +342,7 @@
       ctx.fillStyle = "#f8ecd8";
       ctx.shadowColor = "rgba(0,0,0,0.5)";
       ctx.shadowBlur = 4;
-      ctx.fillText(String(p.text), 0, 1);
+      ctx.fillText(String(p.text), 0, Math.max(2, R * 0.08));
       ctx.shadowBlur = 0;
       ctx.restore();
     });
@@ -1367,6 +1369,7 @@
   }
 
 
+  function updateObstacles_camGate(dt){ if(window.__airborneBossCamPause) return; return updateObstacles(dt); }
   function updateObstacles(dt) {
     try { updateFirePower(dt); } catch (e) {}
     try { updateHitCoins(dt); } catch (e) {}
@@ -1496,8 +1499,8 @@
         o.animFrame = (o.animFrame + 1) % OBSTACLE_ANIM_FRAME_COUNT;
       }
       // Wind streaks on ALL obstacles (birds, balloons, mini-blimps, etc.)
-      maybeEmitWind(o.x + o.w * 0.55, o.y + o.h / 2, o.w * 0.35, o.h, 12, dt, "obstacle");
-      maybeEmitWind(o.x + o.w * 0.4, o.y + o.h * 0.35, o.w * 0.25, o.h * 0.5, 6, dt, "obstacle");
+      maybeEmitWind(o.x + o.w * 0.65, o.y + o.h / 2, o.w * 0.35, o.h, 11.4, dt, "obstacle"); // +10% right, -5% rate
+      maybeEmitWind(o.x + o.w * 0.5, o.y + o.h * 0.35, o.w * 0.25, o.h * 0.5, 5.7, dt, "obstacle");
       // Wake turbulence when the player slices close past this flyer
       const wakeDx = Math.abs(player.x - (o.x + o.w * 0.5));
       const wakeDy = Math.abs(player.y - (o.y + o.h * 0.5));
@@ -2350,15 +2353,24 @@ function spawnHealPickup() {
     const dh = dw;
     ctx.save();
     ctx.globalAlpha = alpha;
-    const glowR = dw * 0.65;
+    const glowR = dw * 0.95;
     const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, glowR);
-    g.addColorStop(0, "rgba(120,220,255," + (0.55 * alpha) + ")");
-    g.addColorStop(0.45, "rgba(40,140,255," + (0.25 * alpha) + ")");
-    g.addColorStop(1, "rgba(20,60,180,0)");
+    g.addColorStop(0, "rgba(180,240,255," + (0.85 * alpha) + ")");
+    g.addColorStop(0.3, "rgba(80,190,255," + (0.55 * alpha) + ")");
+    g.addColorStop(0.65, "rgba(40,140,255," + (0.3 * alpha) + ")");
+    g.addColorStop(1, "rgba(20,80,200,0)");
     ctx.fillStyle = g;
     ctx.beginPath();
     ctx.arc(cx, cy, glowR, 0, Math.PI * 2);
     ctx.fill();
+    // Outer blue halo ring
+    ctx.globalAlpha = alpha * 0.7;
+    ctx.strokeStyle = "rgba(120,210,255,0.85)";
+    ctx.lineWidth = Math.max(2, dw * 0.06);
+    ctx.beginPath();
+    ctx.arc(cx, cy, dw * 0.55, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = alpha;
     // Prefer animated sheet; fallback to static
     const sheet = (typeof images !== "undefined" && images)
       ? (images.shield_sheet || images.shieldPickup || null) : null;

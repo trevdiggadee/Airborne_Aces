@@ -774,7 +774,16 @@
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.75; // denser obstacles
     } else if (name === "boss1") {
-      // Keep existing balloons — do NOT respawn (prevents disappear/reappear)
+      // Clear any stuck cinematic pause
+      try {
+        window.__airborneBossCamPause = false;
+        if (window.__airborneCam) {
+          window.__airborneCam.phase = "idle";
+          window.__airborneCam.z = 1;
+          window.__airborneCam.paused = false;
+        }
+        if (typeof applyCamCss === "function") applyCamCss(1);
+      } catch (e) {}
       try {
         if (!ruffBgBalloons || !ruffBgBalloons.length) spawnTrainingBgBalloons();
       } catch (e) {}
@@ -1647,7 +1656,7 @@
       if (c.collected) return;
       c.x -= spd * dt;
       // Smooth continuous spin (not stepped)
-      c.spin += dt * 5.2;
+      c.spin += dt * 9.5;
       c.bob += dt * 3.2;
       c.glow = (c.glow || 0) + dt * 4;
       c.sparkT = (c.sparkT || 0) - dt;
@@ -1727,38 +1736,51 @@
     ruffCoins.forEach(function (c) {
       if (c.collected) return;
       const by = c.y + Math.sin(c.bob) * 5;
-      // Smooth frame from continuous spin
+      // Smooth continuous spin → frame (higher effective FPS via fractional spin)
       var spinN = ((c.spin % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
       var frameF = (spinN / (Math.PI * 2)) * nFrames;
-      var frame = Math.floor(frameF) % nFrames;
+      var frame = Math.floor(frameF + 0.0001) % nFrames;
       const size = c.r * 2.5;
       var pulse = 0.75 + 0.25 * Math.sin((c.glow || c.bob) * 1.2);
       ctx.save();
       ctx.translate(c.x, by);
-      // Glow BEHIND coin: solid gold core + soft outer halo
+      // Glow BEHIND coin: solid core + luminous glow around it
       ctx.globalCompositeOperation = "source-over";
-      // Solid core (opaque, sits behind sprite)
-      var coreR = c.r * (0.95 + 0.08 * pulse);
-      var core = ctx.createRadialGradient(0, 0, 0, 0, 0, coreR);
-      core.addColorStop(0, "rgb(255,248,200)");
-      core.addColorStop(0.45, "rgb(255,215,70)");
-      core.addColorStop(0.85, "rgb(230,170,30)");
-      core.addColorStop(1, "rgba(200,140,20,0)");
+      var coreR = c.r * (0.92 + 0.06 * pulse);
+      // Outer glow first (behind everything)
+      ctx.globalAlpha = 0.55 + 0.2 * pulse;
+      var outer = ctx.createRadialGradient(0, 0, coreR * 0.4, 0, 0, c.r * 2.6);
+      outer.addColorStop(0, "rgba(255,230,120,0.7)");
+      outer.addColorStop(0.4, "rgba(255,190,50,0.4)");
+      outer.addColorStop(1, "rgba(255,150,20,0)");
+      ctx.fillStyle = outer;
+      ctx.beginPath();
+      ctx.arc(0, 0, c.r * 2.6, 0, Math.PI * 2);
+      ctx.fill();
+      // Solid opaque core
       ctx.globalAlpha = 1;
+      var core = ctx.createRadialGradient(-coreR*0.15, -coreR*0.15, 0, 0, 0, coreR);
+      core.addColorStop(0, "rgb(255,252,220)");
+      core.addColorStop(0.4, "rgb(255,220,80)");
+      core.addColorStop(0.8, "rgb(240,180,40)");
+      core.addColorStop(1, "rgb(210,150,30)");
       ctx.fillStyle = core;
       ctx.beginPath();
       ctx.arc(0, 0, coreR, 0, Math.PI * 2);
       ctx.fill();
-      // Soft outer halo (still behind coin)
-      ctx.globalAlpha = 0.35 + 0.15 * pulse;
-      var halo = ctx.createRadialGradient(0, 0, coreR * 0.5, 0, 0, c.r * 2.2);
-      halo.addColorStop(0, "rgba(255,210,80,0.55)");
-      halo.addColorStop(0.55, "rgba(255,180,40,0.2)");
-      halo.addColorStop(1, "rgba(255,150,20,0)");
-      ctx.fillStyle = halo;
+      // Bright ring glow around solid core
+      ctx.globalAlpha = 0.85;
+      ctx.strokeStyle = "rgba(255,240,160,0.9)";
+      ctx.lineWidth = Math.max(1.5, c.r * 0.18);
       ctx.beginPath();
-      ctx.arc(0, 0, c.r * 2.2, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.arc(0, 0, coreR * 1.05, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 0.4 + 0.2 * pulse;
+      ctx.strokeStyle = "rgba(255,200,60,0.6)";
+      ctx.lineWidth = Math.max(2, c.r * 0.28);
+      ctx.beginPath();
+      ctx.arc(0, 0, coreR * 1.25, 0, Math.PI * 2);
+      ctx.stroke();
       // Gold sparkles
       (c.sparks || []).forEach(function(sp) {
         var t = 1 - sp.age / sp.life;
@@ -2894,8 +2916,8 @@ function finishToMap() {
       // No screen darken when boss appears
       updateTrainingBossDark(dt, 0);
       ruffBossDark = 0;
-      // ONE boss only after balloons have been scrolling ~4s
-      if (ruffStageT > 4.0 && !window.__airborneTrainingBossTried && !window.__airborneTrainingBossDone &&
+      // Boss arrives after short intro (~1.2s) — no long pause
+      if (ruffStageT > 1.2 && !window.__airborneTrainingBossTried && !window.__airborneTrainingBossDone &&
           !(typeof bossActive !== "undefined" && bossActive) && !ruffLessonPendingNext) {
         try {
           window.__airborneTrainingBossTried = true;

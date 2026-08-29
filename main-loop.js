@@ -22,7 +22,16 @@
     c.style.transform = (Math.abs(zz - 1) < 0.002) ? "none" : ("scale(" + zz.toFixed(4) + ")");
   }
   function startBossCamCinematic() {
-    // Boss zoom disabled per design
+    // Boss zoom disabled — never pause the game
+    try {
+      window.__airborneBossCamPause = false;
+      if (window.__airborneCam) {
+        window.__airborneCam.phase = "idle";
+        window.__airborneCam.z = 1;
+        window.__airborneCam.paused = false;
+      }
+      applyCamCss(1);
+    } catch (e) {}
     return;
     var cam = window.__airborneCam;
     if (cam.phase && cam.phase !== "idle") return;

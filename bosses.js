@@ -414,7 +414,8 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       r: r, big: big,
       age: 0, life: 4 + Math.random() * 2,
       coreHue: 25 + Math.random() * 25,
-      tailLen: 40 + Math.random() * 55 + (big ? 35 : 0),
+      tailLen: 70 + Math.random() * 90 + (big ? 50 : 0), // longer trails
+      trailLayers: 3,
       sparkRate: 0.5 + Math.random() * 0.45,
       wobble: Math.random() * 5,
       sparks: [],
@@ -963,6 +964,24 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
           followRank: f.rank
         });
       }
+      // Immediate first missile salvo so power always feels active
+      if (typeof player !== "undefined" && player) {
+        for (var hi0 = 0; hi0 < 3; hi0++) {
+          var ang0 = -0.4 + hi0 * 0.4;
+          var sp0 = 200 + Math.random() * 40;
+          window.__airborneHeatseekers.push({
+            x: player.x + (player.w || 40) * 0.3,
+            y: player.y + (hi0 - 1) * 12,
+            vx: Math.cos(ang0) * sp0 * 0.55,
+            vy: Math.sin(ang0) * sp0 * 0.35,
+            life: 2.8, age: 0, rot: ang0, trails: [],
+            target: null, kind: "heatseek", mode: "hunt",
+            circleT: 0, hold: 0, circleAng: 0, circleR: 0,
+            eyeFlash: 0, huntSnap: false
+          });
+        }
+      }
+      window.__airborneHeatseekSpawnT = 0.25;
       try {
         if (window.PowerFX && player) window.PowerFX.activate("heatseek", player.x, player.y);
       } catch (e) {}
@@ -6949,26 +6968,34 @@ function drawMeteorMarks() {
       if (!mt) continue;
       var ang = Math.atan2(mt.vy || 1, mt.vx || 0);
       var r = Math.max(4, (mt.r || 8) * 0.5); // 50% smaller on draw too
-      var tail = (mt.tailLen || 50) * 0.55;
+      var tail = (mt.tailLen || 90) * 0.85;
       mt.spin = (mt.spin || 0) + (mt.spinVel || 0.5) * 0.016;
 
-      // —— Fiery tail ——
+      // —— Multi-layer fiery trails ——
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      var tg = ctx.createLinearGradient(
-        mt.x - Math.cos(ang) * tail, mt.y - Math.sin(ang) * tail,
-        mt.x, mt.y
-      );
-      tg.addColorStop(0, "rgba(255,40,0,0)");
-      tg.addColorStop(0.45, "rgba(255,100,15,0.55)");
-      tg.addColorStop(1, "rgba(255,230,120,0.95)");
-      ctx.strokeStyle = tg;
-      ctx.lineWidth = Math.max(4, r * 1.4);
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(mt.x - Math.cos(ang) * tail, mt.y - Math.sin(ang) * tail);
-      ctx.lineTo(mt.x, mt.y);
-      ctx.stroke();
+      var layers = [
+        { len: tail * 1.15, w: Math.max(6, r * 2.0), a0: "rgba(255,30,0,0)", a1: "rgba(255,80,10,0.35)", a2: "rgba(255,180,60,0.55)" },
+        { len: tail * 0.9, w: Math.max(4, r * 1.5), a0: "rgba(255,60,0,0)", a1: "rgba(255,120,20,0.55)", a2: "rgba(255,220,100,0.9)" },
+        { len: tail * 0.55, w: Math.max(2.5, r * 0.9), a0: "rgba(255,120,40,0)", a1: "rgba(255,200,80,0.7)", a2: "rgba(255,255,220,1)" }
+      ];
+      for (var li = 0; li < layers.length; li++) {
+        var L = layers[li];
+        var tg = ctx.createLinearGradient(
+          mt.x - Math.cos(ang) * L.len, mt.y - Math.sin(ang) * L.len,
+          mt.x, mt.y
+        );
+        tg.addColorStop(0, L.a0);
+        tg.addColorStop(0.5, L.a1);
+        tg.addColorStop(1, L.a2);
+        ctx.strokeStyle = tg;
+        ctx.lineWidth = L.w;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(mt.x - Math.cos(ang) * L.len, mt.y - Math.sin(ang) * L.len);
+        ctx.lineTo(mt.x, mt.y);
+        ctx.stroke();
+      }
 
       // —— Outer fireball ——
       var fireR = r * 2.8;

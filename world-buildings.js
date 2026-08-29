@@ -2042,7 +2042,8 @@
       ctx.globalAlpha = f.alpha;
       f.members.forEach(m => {
         const bob = Math.sin(f.bobPhase * 1.3 + m.phase) * 3;
-        ctx.drawImage(img, f.x + m.ox - w / 2, baseY + m.oy + bob - h / 2, w, h);
+        // +10% right, slightly calmer motion (-5% wind feel)
+        ctx.drawImage(img, f.x + m.ox * 0.95 + w * 0.1 - w / 2, baseY + m.oy * 0.95 + bob * 0.95 - h / 2, w, h);
       });
       ctx.globalAlpha = 1;
     });
