@@ -540,17 +540,25 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     const mode = s.mode || "fire_sink";
 
     if (mode === "train_sprite") {
-      // Smooth frame from age (36 frames over duration)
+      // Frame from age; only advance when target frame image is ready (reduces glitch)
       var prog = Math.min(1, s.age / Math.max(0.01, s.duration));
-      s.frame = Math.min(35, Math.floor(prog * 36));
-      // Gentle float down — ease in
-      var sink = prog * prog;
-      s.vy = 18 + sink * 55;
+      var targetF = Math.min(35, Math.floor(prog * 36));
+      try { ensureDefeatSprites(); } catch (e) {}
+      var imgs = __defeatSpriteImgs;
+      if (imgs && imgs[targetF] && imgs[targetF].complete && imgs[targetF].naturalWidth > 0) {
+        s.frame = targetF;
+        s._lastGoodFrame = targetF;
+      } else if (s._lastGoodFrame != null) {
+        s.frame = s._lastGoodFrame;
+      } else {
+        s.frame = targetF;
+      }
+      // Fall off screen — accelerate downward, never fade
+      s.alpha = 1;
+      s.vy = 30 + prog * prog * 140;
       s.y += s.vy * dt;
-      s.x += (s.vx || -6) * dt;
-      s.tilt = Math.sin(s.age * 0.55) * 0.05 * (1 - prog * 0.5);
-      // Fade only in last 25%
-      s.alpha = prog < 0.75 ? 1 : Math.max(0.2, 1 - (prog - 0.75) / 0.25);
+      s.x += (s.vx || -5) * dt;
+      s.tilt = Math.sin(s.age * 0.5) * 0.04;
       s.fxTimer = (s.fxTimer || 0) + dt;
       while (s.fxTimer > 0.08) {
         s.fxTimer -= 0.08;
@@ -619,7 +627,11 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     });
     s.fx = s.fx.filter(function(p) { return p.age < p.life; });
 
-    if (s.y > H + s.h * 0.4 || s.age >= s.duration || (s.alpha != null && s.alpha <= 0.02)) {
+    var trainOff = (s.mode === "train_sprite") && (s.y > H + (s._dh || s.h || 80) * 0.5);
+    var done = trainOff || s.y > H + s.h * 0.4 || (s.mode !== "train_sprite" && s.age >= s.duration) || (s.alpha != null && s.alpha <= 0.02);
+    // Train: allow full fall even past duration clock
+    if (s.mode === "train_sprite" && !trainOff && s.age < s.duration * 1.8) done = false;
+    if (done) {
       var wasTrain = s.mode === "train_sprite";
       bossSinking = null;
       defeatSlowMo = false;
@@ -674,12 +686,15 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
       var dw = s._dw;
       var dh = s._dh;
       if (simg && simg.complete && simg.naturalWidth > 0) {
-        // Fit sprite inside fixed box, preserve aspect, no growth
-        var aspect = simg.naturalHeight / simg.naturalWidth;
-        var fitW = dw, fitH = dw * aspect;
-        if (fitH > dh) { fitH = dh; fitW = dh / aspect; }
-        ctx.globalAlpha = Math.max(0.25, alpha);
-        ctx.drawImage(simg, -fitW / 2, -fitH / 2, fitW, fitH);
+        // Lock fit size from first good frame to prevent size jumps between frames
+        if (!s._fitW) {
+          var aspect0 = simg.naturalHeight / simg.naturalWidth;
+          s._fitW = dw;
+          s._fitH = dw * aspect0;
+          if (s._fitH > dh) { s._fitH = dh; s._fitW = dh / aspect0; }
+        }
+        ctx.globalAlpha = 1; // never fade — falls off screen
+        ctx.drawImage(simg, -s._fitW / 2, -s._fitH / 2, s._fitW, s._fitH);
       } else if (img && img.naturalWidth) {
         ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
       }
@@ -756,9 +771,9 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         _dh: bh,
         img: img,
         age: 0,
-        duration: isTrain ? 2.4 : ((mode === "heli_spin" ? 2.2 : (mode === "ink_dissolve" ? 2.5 : 2.6)) * 0.75),
-        vy: isTrain ? 20 : 40,
-        vx: mode === "heli_spin" ? 70 : (isTrain ? -6 : 0),
+        duration: isTrain ? 2.25 : ((mode === "heli_spin" ? 2.2 : (mode === "ink_dissolve" ? 2.5 : 2.6)) * 0.75),
+        vy: isTrain ? 28 : 40,
+        vx: mode === "heli_spin" ? 70 : (isTrain ? -5 : 0),
         tilt: 0,
         spin: 0,
         squash: 1,

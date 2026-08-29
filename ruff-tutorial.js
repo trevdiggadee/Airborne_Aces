@@ -1354,9 +1354,9 @@
   // 4 parallax layers — far → near (speed / scale / alpha)
   // Far layers only — behind mountains / behind clouds, very slow
   var HOTAIR_LAYERS = [
-    { id: 0, speed: 2.5, scale: 0.10, dark: 0.48, y0: 0.08, y1: 0.42, behindMountains: true, behindClouds: false },
-    { id: 1, speed: 4.0, scale: 0.12, dark: 0.58, y0: 0.18, y1: 0.55, behindMountains: true, behindClouds: false },
-    { id: 2, speed: 5.5, scale: 0.14, dark: 0.68, y0: 0.12, y1: 0.48, behindMountains: false, behindClouds: true },
+    { id: 0, speed: 2.5, scale: 0.07, dark: 0.48, y0: 0.08, y1: 0.42, behindMountains: true, behindClouds: false },
+    { id: 1, speed: 4.0, scale: 0.09, dark: 0.58, y0: 0.18, y1: 0.55, behindMountains: true, behindClouds: false },
+    { id: 2, speed: 5.5, scale: 0.12, dark: 0.68, y0: 0.12, y1: 0.48, behindMountains: false, behindClouds: true },
     { id: 3, speed: 7.0, scale: 0.16, dark: 0.78, y0: 0.22, y1: 0.58, behindMountains: false, behindClouds: true }
   ];
 
