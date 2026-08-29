@@ -2023,7 +2023,8 @@
       el.style.zIndex = "70";
       const cont = document.getElementById("ruffContinueBtn");
       if (cont) {
-        cont.textContent = "RETURN TO HANGAR ▶";
+        cont.textContent = "";
+        cont.setAttribute("aria-label", "Return to Hangar");
         cont.onclick = function (e) {
           try { if (e) { e.preventDefault(); e.stopPropagation(); } } catch (err) {}
           if (typeof finishToHangar === "function") finishToHangar();

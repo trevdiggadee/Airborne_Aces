@@ -8200,39 +8200,81 @@ function drawFireballs() {
         window.__airborneStormClouds.forEach(function(c) {
           if (c.x == null) return;
           var cx = c.x, cy = c.y;
-          var bodyR = (c.r || 40) * 1.25;
-          // Main mass — more visible charcoal-blue
-          ctx.globalAlpha = 0.78 * pf;
-          var bg = ctx.createRadialGradient(cx, cy, bodyR * 0.1, cx, cy, bodyR);
-          bg.addColorStop(0, "rgba(120,135,165,0.75)");
-          bg.addColorStop(0.35, "rgba(70,85,120,0.55)");
-          bg.addColorStop(0.7, "rgba(40,50,75,0.3)");
-          bg.addColorStop(1, "rgba(20,25,40,0)");
-          ctx.fillStyle = bg;
+          var bodyR = (c.r || 40) * 1.15;
+          // Seed stable billow layout once (cloud-shaped, not a circle)
+          if (!c.puffs) {
+            c.puffs = [];
+            var n = 7 + ((c.ang * 10) | 0) % 3;
+            for (var pi = 0; pi < n; pi++) {
+              var pa = (pi / n) * Math.PI * 2 + (pi * 0.37);
+              var pr = bodyR * (0.15 + (pi % 3) * 0.12);
+              c.puffs.push({
+                ox: Math.cos(pa) * pr * (0.7 + (pi % 2) * 0.35),
+                oy: Math.sin(pa) * pr * 0.55 - bodyR * 0.08,
+                rx: bodyR * (0.32 + (pi % 4) * 0.08),
+                ry: bodyR * (0.22 + (pi % 3) * 0.07),
+                rot: pa * 0.3
+              });
+            }
+            // Dense core puffs
+            c.puffs.push({ ox: 0, oy: bodyR * 0.05, rx: bodyR * 0.42, ry: bodyR * 0.3, rot: 0 });
+            c.puffs.push({ ox: -bodyR * 0.25, oy: -bodyR * 0.05, rx: bodyR * 0.35, ry: bodyR * 0.28, rot: -0.3 });
+            c.puffs.push({ ox: bodyR * 0.22, oy: -bodyR * 0.02, rx: bodyR * 0.33, ry: bodyR * 0.26, rot: 0.25 });
+          }
+          // Soft under-shadow for volume
+          ctx.globalAlpha = 0.35 * pf;
+          ctx.fillStyle = "rgba(15,20,35,0.45)";
           ctx.beginPath();
-          ctx.arc(cx, cy, bodyR, 0, Math.PI * 2);
+          ctx.ellipse(cx, cy + bodyR * 0.25, bodyR * 0.75, bodyR * 0.28, 0, 0, Math.PI * 2);
           ctx.fill();
-          // Turbulent lobes on each mass
+          // Layered puffs (dark → light for depth)
+          for (var layer = 0; layer < 2; layer++) {
+            c.puffs.forEach(function(p, pi) {
+              var px = cx + p.ox;
+              var py = cy + p.oy + Math.sin((c.phase || 0) + pi) * 2;
+              var s = layer === 0 ? 1.05 : 0.88;
+              ctx.globalAlpha = (layer === 0 ? 0.55 : 0.42) * pf;
+              var g = ctx.createRadialGradient(px - p.rx * 0.2, py - p.ry * 0.25, 0, px, py, Math.max(p.rx, p.ry) * s);
+              if (layer === 0) {
+                g.addColorStop(0, "rgba(90,105,140,0.7)");
+                g.addColorStop(0.5, "rgba(50,60,90,0.45)");
+                g.addColorStop(1, "rgba(20,25,40,0)");
+              } else {
+                g.addColorStop(0, "rgba(150,165,195,0.55)");
+                g.addColorStop(0.45, "rgba(80,95,130,0.3)");
+                g.addColorStop(1, "rgba(30,35,55,0)");
+              }
+              ctx.fillStyle = g;
+              ctx.beginPath();
+              ctx.ellipse(px, py, p.rx * s, p.ry * s, p.rot, 0, Math.PI * 2);
+              ctx.fill();
+            });
+          }
+          // Extra turbulent lobes
           (c.lobes || []).forEach(function(l) {
             if (l.x == null) return;
-            var lr = l.drawR || l.r || 18;
-            ctx.globalAlpha = 0.26 * pf;
+            var lr = (l.drawR || l.r || 18) * 1.1;
+            ctx.globalAlpha = 0.4 * pf;
             var lg = ctx.createRadialGradient(l.x, l.y, 0, l.x, l.y, lr);
-            lg.addColorStop(0, "rgba(130,145,175,0.5)");
-            lg.addColorStop(0.55, "rgba(60,70,100,0.28)");
+            lg.addColorStop(0, "rgba(140,155,185,0.55)");
+            lg.addColorStop(0.5, "rgba(60,70,100,0.3)");
             lg.addColorStop(1, "rgba(15,20,35,0)");
             ctx.fillStyle = lg;
             ctx.beginPath();
-            ctx.arc(l.x, l.y, lr, 0, Math.PI * 2);
+            ctx.ellipse(l.x, l.y, lr * 1.15, lr * 0.75, l.ang || 0, 0, Math.PI * 2);
             ctx.fill();
           });
-          // Internal flicker when storm is active
-          if (Math.random() < 0.06 + (tcDraw.flash || 0) * 0.3) {
+          // Lightning flicker inside cloud
+          if (Math.random() < 0.07 + (tcDraw.flash || 0) * 0.35) {
             ctx.globalCompositeOperation = "lighter";
-            ctx.globalAlpha = (0.2 + (tcDraw.flash || 0) * 0.35) * pf;
-            ctx.fillStyle = "rgba(190,215,255,0.7)";
+            ctx.globalAlpha = (0.25 + (tcDraw.flash || 0) * 0.4) * pf;
+            ctx.fillStyle = "rgba(200,225,255,0.85)";
             ctx.beginPath();
-            ctx.arc(cx + (Math.random() - 0.5) * bodyR * 0.5, cy + (Math.random() - 0.5) * bodyR * 0.35, 6 + Math.random() * 10, 0, Math.PI * 2);
+            ctx.ellipse(
+              cx + (Math.random() - 0.5) * bodyR * 0.5,
+              cy + (Math.random() - 0.5) * bodyR * 0.3,
+              8 + Math.random() * 12, 5 + Math.random() * 8, 0, 0, Math.PI * 2
+            );
             ctx.fill();
             ctx.globalCompositeOperation = "source-over";
           }
