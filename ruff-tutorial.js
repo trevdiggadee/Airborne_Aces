@@ -1248,6 +1248,64 @@
   var ruffBgBalloons = [];
   var ruffBossDark = 0; // 0..1 overlay strength
 
+  // One-shot special hot-air balloon (mid-training only)
+  var ruffSpecialBalloon = null;
+  var ruffSpecialBalloonImg = null;
+  var ruffSpecialBalloonDone = false;
+
+  function ensureSpecialBalloonImg() {
+    if (ruffSpecialBalloonImg) return;
+    ruffSpecialBalloonImg = new Image();
+    ruffSpecialBalloonImg.src = "bg_hotair_balloon.webp?v=ruff325";
+  }
+
+  function maybeSpawnSpecialBalloon() {
+    if (ruffSpecialBalloonDone || ruffSpecialBalloon) return;
+    // Mid-training stages only (after altitude, before landing)
+    var mid = { obstacles:1, rings:1, crystals:1, shield:1, powerup:1, airship:1, combined:1 };
+    if (!mid[ruffStage]) return;
+    // Appear once when stage timer is past ~3s
+    if (ruffStageT < 3) return;
+    ensureSpecialBalloonImg();
+    var W0 = (typeof W !== "undefined") ? W : 400;
+    var H0 = (typeof H !== "undefined") ? H : 600;
+    ruffSpecialBalloon = {
+      x: W0 + 30,
+      y: H0 * (0.12 + Math.random() * 0.25),
+      speed: 18 + Math.random() * 8,
+      bob: Math.random() * Math.PI * 2,
+      scale: 0.22 + Math.random() * 0.06,
+      alpha: 0.85
+    };
+    ruffSpecialBalloonDone = true;
+  }
+
+  function updateSpecialBalloon(dt) {
+    maybeSpawnSpecialBalloon();
+    if (!ruffSpecialBalloon) return;
+    var b = ruffSpecialBalloon;
+    b.x -= b.speed * dt;
+    b.bob += dt * 0.8;
+    if (b.x < -180) ruffSpecialBalloon = null;
+  }
+
+  function drawSpecialBalloon() {
+    if (!ruffSpecialBalloon || typeof ctx === "undefined") return;
+    ensureSpecialBalloonImg();
+    var img = ruffSpecialBalloonImg;
+    if (!img || !img.complete || !img.naturalWidth) return;
+    var b = ruffSpecialBalloon;
+    var W0 = (typeof W !== "undefined") ? W : 400;
+    var bw = W0 * b.scale;
+    var bh = bw * (img.naturalHeight / img.naturalWidth);
+    var by = b.y + Math.sin(b.bob) * 6;
+    ctx.save();
+    ctx.globalAlpha = b.alpha;
+    ctx.drawImage(img, b.x, by, bw, bh);
+    ctx.restore();
+  }
+
+
   function spawnTrainingBgBalloons() {
     ruffBgBalloons = [];
     var W0 = (typeof W !== "undefined") ? W : 400;
@@ -1268,6 +1326,7 @@
   }
 
   function updateTrainingBgBalloons(dt) {
+    try { updateSpecialBalloon(dt); } catch (e) {}
     if (!ruffBgBalloons || !ruffBgBalloons.length) return;
     var W0 = (typeof W !== "undefined") ? W : 400;
     var H0 = (typeof H !== "undefined") ? H : 600;
@@ -1290,6 +1349,7 @@
   window.__airborneDrawTrainingBgBalloons = drawTrainingBgBalloons;
   window.__airborneUpdateTrainingBgBalloons = updateTrainingBgBalloons;
   function drawTrainingBgBalloons() {
+    try { drawSpecialBalloon(); } catch (e) {}
     if (!ruffBgBalloons || !ruffBgBalloons.length || typeof ctx === "undefined") return;
     for (var i = 0; i < ruffBgBalloons.length; i++) {
       var b = ruffBgBalloons[i];
