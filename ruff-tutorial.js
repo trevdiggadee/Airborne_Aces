@@ -1354,10 +1354,10 @@
   // 4 parallax layers — far → near (speed / scale / alpha)
   // Far layers only — behind mountains / behind clouds, very slow
   var HOTAIR_LAYERS = [
-    { id: 0, speed: 2.5, scale: 0.07, dark: 0.48, y0: 0.08, y1: 0.42, behindMountains: true, behindClouds: false },
-    { id: 1, speed: 4.0, scale: 0.09, dark: 0.58, y0: 0.18, y1: 0.55, behindMountains: true, behindClouds: false },
-    { id: 2, speed: 5.5, scale: 0.12, dark: 0.68, y0: 0.12, y1: 0.48, behindMountains: false, behindClouds: true },
-    { id: 3, speed: 7.0, scale: 0.16, dark: 0.78, y0: 0.22, y1: 0.58, behindMountains: false, behindClouds: true }
+    { id: 0, speed: 2.5, scale: 0.07, dark: 1, y0: 0.08, y1: 0.42, behindMountains: true, behindClouds: false },
+    { id: 1, speed: 4.0, scale: 0.09, dark: 1, y0: 0.18, y1: 0.55, behindMountains: true, behindClouds: false },
+    { id: 2, speed: 5.5, scale: 0.12, dark: 1, y0: 0.12, y1: 0.48, behindMountains: false, behindClouds: true },
+    { id: 3, speed: 7.0, scale: 0.16, dark: 1, y0: 0.22, y1: 0.58, behindMountains: false, behindClouds: true }
   ];
 
   function spawnTrainingBgBalloons() {
@@ -1434,11 +1434,10 @@
       var bh = bw * (img.naturalHeight / img.naturalWidth);
       var by = b.y + Math.sin(b.bob) * (4 + b.s * 12);
       ctx.save();
-      ctx.globalAlpha = 1; // no transparency
-      var d = (b.dark != null) ? b.dark : 1;
-      try { if (d < 0.99) ctx.filter = "brightness(" + d + ")"; } catch (e) {}
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+      // Full opacity — no brightness fade / no transparency
       ctx.drawImage(img, b.x, by, bw, bh);
-      try { ctx.filter = "none"; } catch (e) {}
       ctx.restore();
     }
   }
@@ -1736,26 +1735,29 @@
       var pulse = 0.75 + 0.25 * Math.sin((c.glow || c.bob) * 1.2);
       ctx.save();
       ctx.translate(c.x, by);
-      // Soft pulsing gold glow behind + around (no ring stroke)
-      ctx.globalCompositeOperation = "lighter";
-      ctx.globalAlpha = 0.55 * pulse;
-      var ag = ctx.createRadialGradient(0, 0, c.r * 0.15, 0, 0, c.r * 2.4);
-      ag.addColorStop(0, "rgba(255,250,200,0.85)");
-      ag.addColorStop(0.35, "rgba(255,210,80,0.45)");
-      ag.addColorStop(0.7, "rgba(255,170,40,0.15)");
-      ag.addColorStop(1, "rgba(255,140,0,0)");
-      ctx.fillStyle = ag;
+      // Glow BEHIND coin: solid gold core + soft outer halo
+      ctx.globalCompositeOperation = "source-over";
+      // Solid core (opaque, sits behind sprite)
+      var coreR = c.r * (0.95 + 0.08 * pulse);
+      var core = ctx.createRadialGradient(0, 0, 0, 0, 0, coreR);
+      core.addColorStop(0, "rgb(255,248,200)");
+      core.addColorStop(0.45, "rgb(255,215,70)");
+      core.addColorStop(0.85, "rgb(230,170,30)");
+      core.addColorStop(1, "rgba(200,140,20,0)");
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = core;
       ctx.beginPath();
-      ctx.arc(0, 0, c.r * 2.4, 0, Math.PI * 2);
+      ctx.arc(0, 0, coreR, 0, Math.PI * 2);
       ctx.fill();
-      // Outer soft halo pulse
-      ctx.globalAlpha = 0.22 * pulse;
-      var ag2 = ctx.createRadialGradient(0, 0, c.r * 0.8, 0, 0, c.r * 3.0);
-      ag2.addColorStop(0, "rgba(255,220,100,0.35)");
-      ag2.addColorStop(1, "rgba(255,180,40,0)");
-      ctx.fillStyle = ag2;
+      // Soft outer halo (still behind coin)
+      ctx.globalAlpha = 0.35 + 0.15 * pulse;
+      var halo = ctx.createRadialGradient(0, 0, coreR * 0.5, 0, 0, c.r * 2.2);
+      halo.addColorStop(0, "rgba(255,210,80,0.55)");
+      halo.addColorStop(0.55, "rgba(255,180,40,0.2)");
+      halo.addColorStop(1, "rgba(255,150,20,0)");
+      ctx.fillStyle = halo;
       ctx.beginPath();
-      ctx.arc(0, 0, c.r * 3.0, 0, Math.PI * 2);
+      ctx.arc(0, 0, c.r * 2.2, 0, Math.PI * 2);
       ctx.fill();
       // Gold sparkles
       (c.sparks || []).forEach(function(sp) {

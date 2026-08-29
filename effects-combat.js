@@ -678,25 +678,20 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
       try { ensureDefeatSprites(); } catch (e) {}
       var fi = Math.min(35, Math.max(0, s.frame | 0));
       var simg = __defeatSpriteImgs && __defeatSpriteImgs[fi];
-      // Lock draw size once to original boss footprint (no expansion / frame jitter)
-      if (!s._dw) {
-        s._dw = Math.max(40, s.w || 120);
-        s._dh = Math.max(40, s.h || s._dw * 1.7);
+      // Fixed width from boss; height always from sprite aspect (never squeeze thinner)
+      if (!s._baseW) {
+        s._baseW = Math.max(48, s.w || 100);
       }
-      var dw = s._dw;
-      var dh = s._dh;
       if (simg && simg.complete && simg.naturalWidth > 0) {
-        // Lock fit size from first good frame to prevent size jumps between frames
         if (!s._fitW) {
           var aspect0 = simg.naturalHeight / simg.naturalWidth;
-          s._fitW = dw;
-          s._fitH = dw * aspect0;
-          if (s._fitH > dh) { s._fitH = dh; s._fitW = dh / aspect0; }
+          s._fitW = s._baseW;
+          s._fitH = s._baseW * aspect0; // full natural proportion — no height clamp
         }
-        ctx.globalAlpha = 1; // never fade — falls off screen
+        ctx.globalAlpha = 1;
         ctx.drawImage(simg, -s._fitW / 2, -s._fitH / 2, s._fitW, s._fitH);
       } else if (img && img.naturalWidth) {
-        ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+        ctx.drawImage(img, -s._baseW / 2, -s.h / 2, s._baseW, s.h);
       }
     } else if (img && img.naturalWidth) {
       ctx.drawImage(img, -s.w / 2, -s.h / 2, s.w, s.h);
