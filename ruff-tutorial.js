@@ -1013,16 +1013,8 @@
   }
 
   function spawnAltitudeMarkers() {
+    // Markers disabled (no dashed lines on screen)
     ruffMarkers = [];
-    const w = typeof W !== "undefined" ? W : 400;
-    const h = typeof H !== "undefined" ? H : 600;
-    for (let i = 0; i < 4; i++) {
-      ruffMarkers.push({
-        x: w + 100 + i * 160,
-        yTop: h * 0.28,
-        yBot: h * 0.55
-      });
-    }
   }
 
   function playCrystalCollectSfx() {
@@ -1673,23 +1665,8 @@
   }
 
   function drawMarkers() {
-    if (!ruffMarkers.length || typeof ctx === "undefined") return;
-    const spd = (typeof obstacleSpeed === "number" ? obstacleSpeed : 180);
-    ruffMarkers.forEach(function (m) {
-      // markers are scrolled in update
-      ctx.save();
-      ctx.strokeStyle = "rgba(212,175,55,0.7)";
-      ctx.lineWidth = 2;
-      ctx.setLineDash([6, 5]);
-      ctx.beginPath();
-      ctx.moveTo(m.x - 20, m.yTop);
-      ctx.lineTo(m.x + 20, m.yTop);
-      ctx.moveTo(m.x - 20, m.yBot);
-      ctx.lineTo(m.x + 20, m.yBot);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.restore();
-    });
+    // Disabled — dashed altitude guides removed per design
+    return;
   }
 
   function updateMarkers(dt) {
@@ -2517,7 +2494,7 @@ function finishToMap() {
       }
     } else if (ruffStage === "altitude") {
       // Do NOT wipe obstacles every frame — causes random item disappear
-      if (typeof updateMarkers === "function") updateMarkers(dt);
+      ruffMarkers = []; // no dashed guides
       if (!ruffLessonPendingNext && ruffStageT > 9) requestNextStage();
     } else if (ruffStage === "crystals") {
       updateCrystals(dt);
