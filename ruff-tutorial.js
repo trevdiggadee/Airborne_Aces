@@ -225,25 +225,51 @@
   var __trainBossAudio = null;
   function playTrainingBossMusic() {
     try {
-      stopTrainingBossMusic();
+      stopTrainingBossMusic(true); // hard stop any previous
       var a = new Audio("the_engine_s_decree.mp3?v=ruff181");
       a.loop = true;
-      a.volume = 0.275; // 50% boss track track level
+      a.volume = 0; // fade in to 20%
       a.play().catch(function (e) { console.warn("boss mp3", e); });
       __trainBossAudio = a;
-      // Dip the soft bed while boss track plays
+      var target = 0.20;
+      var steps = 20;
+      var i = 0;
+      var fadeIn = setInterval(function () {
+        i++;
+        if (!__trainBossAudio || __trainBossAudio !== a) { clearInterval(fadeIn); return; }
+        a.volume = Math.min(target, target * (i / steps));
+        if (i >= steps) clearInterval(fadeIn);
+      }, 50); // ~1s fade in
       try {
         if (__trainBed && __trainBed.g1) __trainBed.g1.gain.value = 0.03;
         if (__trainBed && __trainBed.g2) __trainBed.g2.gain.value = 0.02;
       } catch (e) {}
     } catch (e) { console.warn(e); }
   }
-  function stopTrainingBossMusic() {
+  function stopTrainingBossMusic(hard) {
     try {
       if (__trainBossAudio) {
-        __trainBossAudio.pause();
-        __trainBossAudio.currentTime = 0;
-        __trainBossAudio = null;
+        var a = __trainBossAudio;
+        if (hard) {
+          try { a.pause(); a.currentTime = 0; } catch (e) {}
+          __trainBossAudio = null;
+        } else {
+          // Fade out ~1s then stop
+          var startV = a.volume || 0.2;
+          var steps = 20;
+          var i = 0;
+          var fadeOut = setInterval(function () {
+            i++;
+            try {
+              a.volume = Math.max(0, startV * (1 - i / steps));
+              if (i >= steps) {
+                clearInterval(fadeOut);
+                try { a.pause(); a.currentTime = 0; } catch (e2) {}
+                if (__trainBossAudio === a) __trainBossAudio = null;
+              }
+            } catch (e3) { clearInterval(fadeOut); __trainBossAudio = null; }
+          }, 50);
+        }
       }
       try {
         if (__trainBed && __trainBed.g1) __trainBed.g1.gain.value = 0.12;
@@ -253,7 +279,7 @@
   }
 
   function stopAllTrainingAudio() {
-    stopTrainingBossMusic();
+    stopTrainingBossMusic(true);
     stopTrainingMusic();
     trainEngineStop();
     trainWindStop();
@@ -748,9 +774,14 @@
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.75; // denser obstacles
     } else if (name === "boss1") {
-      try { spawnTrainingBgBalloons(); } catch (e) {}
+      // Keep existing balloons — do NOT respawn (prevents disappear/reappear)
+      try {
+        if (!ruffBgBalloons || !ruffBgBalloons.length) spawnTrainingBgBalloons();
+      } catch (e) {}
       try { sfxTrainingBossWarn(); } catch (e) {}
       try { playTrainingBossMusic(); } catch (e) {}
+      try { ensureDefeatSprites && ensureDefeatSprites(); } catch (e) {}
+      try { if (typeof window.__airbornePreloadDefeatSprites === "function") window.__airbornePreloadDefeatSprites(); } catch (e) {}
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
@@ -759,7 +790,6 @@
       window.__airborneTrainingBossTried = false;
       ruffBossDark = 0;
       try { bossBanner = null; } catch (e) {}
-      try { spawnTrainingBgBalloons(); } catch (e) {}
       // Boss spawned once from stage update only (avoids double spawn)
     } else if (name === "airship") {
       // Keep background balloons during airship lesson
@@ -2848,14 +2878,9 @@ function finishToMap() {
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       try { bossBanner = null; } catch (e) {}
       // Balloons drift in first (~4s), sky darkens gradually, then boss
+      // Keep continuous balloons — only seed if empty, without jump-resetting positions
       if (!ruffBgBalloons || !ruffBgBalloons.length) {
         try { spawnTrainingBgBalloons(); } catch (e) {}
-        // Start balloons off-screen right so they scroll in
-        if (ruffBgBalloons) {
-          for (var bi = 0; bi < ruffBgBalloons.length; bi++) {
-            ruffBgBalloons[bi].x += (typeof W !== "undefined" ? W : 400) * (0.3 + Math.random() * 0.5);
-          }
-        }
       }
       updateTrainingBgBalloons(dt);
       ensureScreenDust();

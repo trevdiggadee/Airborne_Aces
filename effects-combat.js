@@ -371,11 +371,13 @@
     for (var i = 0; i < 36; i++) {
       var im = new Image();
       im.onload = function() { loaded++; if (loaded >= 36) __defeatSpriteReady = true; };
-      im.src = "boss_defeat_" + String(i).padStart(2, "0") + ".webp?v=ruff335";
+      im.onerror = function() { loaded++; };
+      im.src = "boss_defeat_" + String(i).padStart(2, "0") + ".webp?v=ruff337";
       __defeatSpriteImgs.push(im);
     }
     return __defeatSpriteImgs;
   }
+  window.__airbornePreloadDefeatSprites = ensureDefeatSprites;
 
   function spawnTrainHoleSmoke(s, burst) {
     // Big puffs from the two balloon holes (relative to sprite center)
@@ -641,7 +643,10 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
 
     ctx.save();
     let veil = Math.min(0.32, s.age * 0.1);
-    if (mode === "ink_dissolve") {
+    if (mode === "train_sprite") {
+      veil = Math.min(0.12, s.age * 0.05); // keep sprite readable
+      ctx.fillStyle = "rgba(20,10,8," + veil + ")";
+    } else if (mode === "ink_dissolve") {
       ctx.fillStyle = "rgba(12,8,28," + Math.min(0.4, s.age * 0.14) + ")";
     } else if (mode === "rocket_blast") {
       ctx.fillStyle = "rgba(40,12,4," + veil + ")";
@@ -660,15 +665,23 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     ctx.globalAlpha = alpha;
     if (s.mode === "train_sprite") {
       try { ensureDefeatSprites(); } catch (e) {}
-      var fi = Math.min(35, s.frame || 0);
+      var fi = Math.min(35, Math.max(0, s.frame || 0));
       var simg = __defeatSpriteImgs && __defeatSpriteImgs[fi];
-      var dw = Math.min(s.w * 1.35, W * 0.55);
-      var dh = dw * 1.8;
-      if (simg && simg.naturalWidth) {
+      // Large readable defeat sprite centered on boss position
+      var dw = Math.min(W * 0.62, Math.max(s.w * 1.6, 180));
+      var dh = dw * 1.9;
+      if (simg && simg.complete && simg.naturalWidth > 0) {
         dh = dw * (simg.naturalHeight / simg.naturalWidth);
+        ctx.globalAlpha = Math.max(0.35, alpha);
         ctx.drawImage(simg, -dw / 2, -dh / 2, dw, dh);
       } else if (img && img.naturalWidth) {
         ctx.drawImage(img, -s.w / 2, -s.h / 2, s.w, s.h);
+      } else {
+        // Fallback silhouette so defeat is never invisible
+        ctx.fillStyle = "rgba(180,80,60,0.85)";
+        ctx.beginPath();
+        ctx.ellipse(0, -dh * 0.15, dw * 0.35, dh * 0.28, 0, 0, Math.PI * 2);
+        ctx.fill();
       }
     } else if (img && img.naturalWidth) {
       ctx.drawImage(img, -s.w / 2, -s.h / 2, s.w, s.h);
@@ -731,18 +744,26 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         try { ensureDefeatSprites(); } catch (e) {}
         mode = "train_sprite";
       }
+      var bx = boss.x, by = boss.y, bw = boss.w, bh = boss.h;
+      if (isTrain) {
+        // Keep on-screen and sizable for the sprite sequence
+        bw = Math.max(bw || 0, (typeof W !== "undefined" ? W : 400) * 0.35);
+        bh = Math.max(bh || 0, bw * 1.6);
+        if (bx + bw * 0.5 > W) bx = W * 0.55 - bw * 0.5;
+        if (bx < 0) bx = W * 0.2;
+        if (by < H * 0.05) by = H * 0.12;
+      }
       bossSinking = {
         mode: mode,
-        x: boss.x,
-        y: boss.y,
-        w: boss.w,
-        h: boss.h,
+        x: bx,
+        y: by,
+        w: bw,
+        h: bh,
         img: img,
         age: 0,
-        // 25% faster defeat sequence
         duration: isTrain ? 2.25 : ((mode === "heli_spin" ? 2.2 : (mode === "ink_dissolve" ? 2.5 : 2.6)) * 0.75),
-        vy: isTrain ? 55 : 40,
-        vx: mode === "heli_spin" ? 70 : (isTrain ? -20 : 0),
+        vy: isTrain ? 35 : 40,
+        vx: mode === "heli_spin" ? 70 : (isTrain ? -12 : 0),
         tilt: 0,
         spin: 0,
         squash: 1,
@@ -753,6 +774,9 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         fxTimer: 0,
         pendingCfg: cfg
       };
+      if (isTrain) {
+        try { ensureDefeatSprites(); } catch (e) {}
+      }
       for (let i = 0; i < 3; i++) {
         if (mode === "train_sprite") spawnTrainHoleSmoke(bossSinking, true);
         else if (mode === "fire_sink") spawnBossBalloonFireSmoke(bossSinking, true);
