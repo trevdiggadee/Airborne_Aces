@@ -128,7 +128,8 @@
     updateSkyline(dtScale);
     drawSkyline();
 
-    updateClouds(dtScale);
+    // Front cloud layer OFF for now
+    // updateClouds(dtScale);
     updateBirdFlocks(dt);
     // Mid cloud band BEHIND mountains (separate from soft front clouds)
     try { if (window.__airborneDrawArtDecoCloudBand) window.__airborneDrawArtDecoCloudBand(); } catch (e) {}
@@ -272,8 +273,8 @@
     drawPlayer(); try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePowerVisual(); } catch(e) {};
     try { if (window.drawHitCoins) window.drawHitCoins(); } catch (e) {}
     try { if (typeof drawRingFronts === "function") drawRingFronts(); else if (window.__airborneDrawRingFronts) window.__airborneDrawRingFronts(); } catch (e) {}
-    // Soft clouds in FRONT of mountains + blimp (50% alpha) — fly-through like L3
-    drawClouds();
+    // Soft clouds FRONT layer OFF for now
+    // drawClouds();
     // R.U.F.F. on top of world (not under strip/mountains)
     if (typeof window.__airborneDrawRuff === "function") window.__airborneDrawRuff();
     drawWindParticlesFront();

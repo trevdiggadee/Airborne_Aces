@@ -1321,33 +1321,32 @@
     var keys = window.__airborneBackCloudKeys || [];
     if (window.__airborneBackCloudSpawnT <= 0 && keys.length && typeof W !== "undefined") {
       // Sporadic interval 1.8s–4.5s
-      window.__airborneBackCloudSpawnT = 1.8 + Math.random() * 2.7;
+      // Fewer on screen: longer gaps
+      if ((window.__airborneBackClouds || []).length >= 3) {
+        window.__airborneBackCloudSpawnT = 1.2;
+      } else {
+        window.__airborneBackCloudSpawnT = 3.2 + Math.random() * 3.5;
+      }
       // Cycle through all assets over the level
       if (window.__airborneBackCloudIdx == null) window.__airborneBackCloudIdx = 0;
       var key = keys[window.__airborneBackCloudIdx % keys.length];
       window.__airborneBackCloudIdx++;
       // Occasional second different cloud
-      var picks = [key];
-      if (Math.random() < 0.28) {
-        picks.push(keys[Math.floor(Math.random() * keys.length)]);
-      }
-      picks.forEach(function(k, i) {
-        var img = window.__airborneBackCloudImgs && window.__airborneBackCloudImgs[k];
-        var isLarge = /large/.test(k);
-        var isTiny = /tiny|wisp/.test(k);
-        var scale = isTiny ? (0.55 + Math.random() * 0.35)
-                  : isLarge ? (0.28 + Math.random() * 0.18)
-                  : (0.35 + Math.random() * 0.25);
-        var speed = 0.06 + Math.random() * 0.08; // slow, behind mountains
-        var yMax = (typeof H !== "undefined" ? H : 600) * 0.48;
-        window.__airborneBackClouds.push({
-          key: k,
-          x: W + 40 + i * 90,
-          y: 20 + Math.random() * yMax,
-          scale: scale,
-          speed: speed,
-          alpha: 0.7 + Math.random() * 0.25
-        });
+      var img = window.__airborneBackCloudImgs && window.__airborneBackCloudImgs[key];
+      var isLarge = /large/.test(key);
+      var isTiny = /tiny|wisp/.test(key);
+      var scale = isTiny ? (0.55 + Math.random() * 0.35)
+                : isLarge ? (0.28 + Math.random() * 0.18)
+                : (0.35 + Math.random() * 0.25);
+      var speed = 0.06 + Math.random() * 0.08;
+      var yMax = (typeof H !== "undefined" ? H : 600) * 0.48;
+      window.__airborneBackClouds.push({
+        key: key,
+        x: W + 40,
+        y: 20 + Math.random() * yMax,
+        scale: scale,
+        speed: speed,
+        alpha: 0.75 // 25% transparent
       });
     }
     var list = window.__airborneBackClouds;
@@ -1390,7 +1389,7 @@
       if (!img || !img.complete || !img.naturalWidth) return;
       var w = img.naturalWidth * c.scale;
       var h = img.naturalHeight * c.scale;
-      ctx.globalAlpha = c.alpha || 0.8;
+      ctx.globalAlpha = c.alpha != null ? c.alpha : 0.75;
       ctx.drawImage(img, c.x, c.y, w, h);
     });
     ctx.restore();
