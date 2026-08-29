@@ -1316,18 +1316,18 @@
     hotairImgs = {};
     HOTAIR_KEYS.forEach(function(k) {
       var im = new Image();
-      im.src = k + ".webp?v=ruff329";
+      im.src = k + ".webp?v=ruff332";
       hotairImgs[k] = im;
     });
   }
 
   // 4 parallax layers — far → near (speed / scale / alpha)
-  // 4 layers: 0–1 behind clouds (far, darker), 2–3 in front of far clouds
+  // Far layers only — behind mountains / behind clouds, very slow
   var HOTAIR_LAYERS = [
-    { id: 0, speed: 6,  scale: 0.12, dark: 0.55, y0: 0.04, y1: 0.26, behindClouds: true },
-    { id: 1, speed: 12, scale: 0.16, dark: 0.70, y0: 0.08, y1: 0.34, behindClouds: true },
-    { id: 2, speed: 20, scale: 0.21, dark: 0.88, y0: 0.12, y1: 0.42, behindClouds: false },
-    { id: 3, speed: 30, scale: 0.27, dark: 1.00, y0: 0.16, y1: 0.48, behindClouds: false }
+    { id: 0, speed: 2.5, scale: 0.10, dark: 0.48, y0: 0.05, y1: 0.22, behindMountains: true, behindClouds: false },
+    { id: 1, speed: 4.0, scale: 0.12, dark: 0.58, y0: 0.08, y1: 0.28, behindMountains: true, behindClouds: false },
+    { id: 2, speed: 5.5, scale: 0.14, dark: 0.68, y0: 0.10, y1: 0.32, behindMountains: false, behindClouds: true },
+    { id: 3, speed: 7.0, scale: 0.16, dark: 0.78, y0: 0.12, y1: 0.36, behindMountains: false, behindClouds: true }
   ];
 
   function spawnTrainingBgBalloons() {
@@ -1335,28 +1335,28 @@
     ruffBgBalloons = [];
     var W0 = (typeof W !== "undefined") ? W : 400;
     var H0 = (typeof H !== "undefined") ? H : 600;
-    // Exactly 2 of each asset for the whole level
-    var slot = 0;
-    HOTAIR_KEYS.forEach(function(key) {
-      for (var copy = 0; copy < 2; copy++) {
-        var layer = HOTAIR_LAYERS[slot % HOTAIR_LAYERS.length];
-        slot++;
-        var ly = layer.y0 + Math.random() * (layer.y1 - layer.y0);
-        ruffBgBalloons.push({
-          key: key,
-          layer: layer,
-          layerId: layer.id,
-          behindClouds: !!layer.behindClouds,
-          x: Math.random() * (W0 + 280) - 40,
-          y: H0 * ly,
-          s: layer.scale * (0.92 + Math.random() * 0.16),
-          speed: layer.speed * (0.9 + Math.random() * 0.2),
-          bob: Math.random() * Math.PI * 2,
-          bobSpd: 0.4 + Math.random() * 0.45,
-          dark: layer.dark
-        });
-      }
-    });
+    // 75% fewer: only 3 balloons total, mostly far layers, unique assets
+    var picks = HOTAIR_KEYS.slice().sort(function() { return Math.random() - 0.5; }).slice(0, 3);
+    for (var i = 0; i < picks.length; i++) {
+      var layer = HOTAIR_LAYERS[i % HOTAIR_LAYERS.length];
+      // Bias toward further layers (0–1)
+      if (Math.random() < 0.55) layer = HOTAIR_LAYERS[i % 2];
+      var ly = layer.y0 + Math.random() * (layer.y1 - layer.y0);
+      ruffBgBalloons.push({
+        key: picks[i],
+        layer: layer,
+        layerId: layer.id,
+        behindMountains: !!layer.behindMountains,
+        behindClouds: !!layer.behindClouds,
+        x: (i / 3) * (W0 + 160) + Math.random() * 40,
+        y: H0 * ly,
+        s: layer.scale * (0.95 + Math.random() * 0.1),
+        speed: layer.speed * (0.9 + Math.random() * 0.15),
+        bob: Math.random() * Math.PI * 2,
+        bobSpd: 0.25 + Math.random() * 0.25,
+        dark: layer.dark
+      });
+    }
     ruffBgBalloons.sort(function(a, b) {
       return (a.layerId || 0) - (b.layerId || 0);
     });
@@ -1380,13 +1380,20 @@
     }
   }
 
-  function drawHotairBalloonList(behind) {
+  function drawHotairBalloonList(mode) {
+    // mode: "mountains" | "clouds" | "front"
     if (!ruffBgBalloons || !ruffBgBalloons.length || typeof ctx === "undefined") return;
     ensureHotairImgs();
     var W0 = (typeof W !== "undefined") ? W : 400;
     for (var i = 0; i < ruffBgBalloons.length; i++) {
       var b = ruffBgBalloons[i];
-      if (!!b.behindClouds !== !!behind) continue;
+      if (mode === "mountains") {
+        if (!b.behindMountains) continue;
+      } else if (mode === "clouds") {
+        if (!b.behindClouds || b.behindMountains) continue;
+      } else {
+        if (b.behindClouds || b.behindMountains) continue;
+      }
       var img = hotairImgs && hotairImgs[b.key];
       if (!img || !img.complete || !img.naturalWidth) continue;
       var bw = W0 * b.s;
@@ -1402,14 +1409,18 @@
     }
   }
 
+  function drawTrainingBgBalloonsBehindMountains() {
+    drawHotairBalloonList("mountains");
+  }
   function drawTrainingBgBalloonsBehindClouds() {
-    drawHotairBalloonList(true);
+    drawHotairBalloonList("clouds");
   }
   function drawTrainingBgBalloons() {
     try { drawSpecialBalloon(); } catch (e) {}
-    drawHotairBalloonList(false);
+    drawHotairBalloonList("front");
   }
 
+  window.__airborneDrawTrainingBgBalloonsBehindMountains = drawTrainingBgBalloonsBehindMountains;
   window.__airborneDrawTrainingBgBalloonsBehind = drawTrainingBgBalloonsBehindClouds;
   window.__airborneDrawTrainingBgBalloons = drawTrainingBgBalloons;
   window.__airborneUpdateTrainingBgBalloons = updateTrainingBgBalloons;

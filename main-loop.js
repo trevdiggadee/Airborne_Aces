@@ -12,7 +12,7 @@
     if (cam.phase && cam.phase !== "idle") return;
     cam.phase = "zoomOut";
     cam.t = 0;
-    cam.tz = 0.72; // zoom out
+    cam.tz = 0.75; // zoom out ~25%
     cam.hold = 5.0;
     cam.paused = true;
     window.__airborneBossCamPause = true;
@@ -39,11 +39,11 @@
     if (cam.phase === "zoomOut") {
       var u = Math.min(1, cam.t / 0.85);
       var e = 1 - Math.pow(1 - u, 3);
-      cam.z = 1 + (0.72 - 1) * e;
+      cam.z = 1 + (0.75 - 1) * e;
       if (u >= 1) {
         cam.phase = "hold";
         cam.t = 0;
-        cam.z = 0.72;
+        cam.z = 0.75;
         // Laugh during hold
         try {
           if (typeof sfxTrainingBossWarn === "function") sfxTrainingBossWarn();
@@ -55,9 +55,9 @@
         } catch (e) {}
       }
     } else if (cam.phase === "hold") {
-      cam.z = 0.72;
+      cam.z = 0.75;
       // subtle breathing zoom
-      cam.z = 0.72 + Math.sin(cam.t * 1.2) * 0.008;
+      cam.z = 0.75 + Math.sin(cam.t * 1.2) * 0.006;
       if (cam.t >= cam.hold) {
         cam.phase = "zoomIn";
         cam.t = 0;
@@ -65,7 +65,7 @@
     } else if (cam.phase === "zoomIn") {
       var u2 = Math.min(1, cam.t / 0.9);
       var e2 = 1 - Math.pow(1 - u2, 3);
-      cam.z = 0.72 + (1 - 0.72) * e2;
+      cam.z = 0.75 + (1 - 0.75) * e2;
       if (u2 >= 1) {
         cam.z = 1;
         cam.phase = "idle";
@@ -224,6 +224,8 @@
     try { if (window.__airborneDrawTrainingBgBalloonsBehind) window.__airborneDrawTrainingBgBalloonsBehind(); } catch (e) {}
     // Mid cloud band BEHIND mountains (separate from soft front clouds)
     try { if (window.__airborneDrawArtDecoCloudBand) window.__airborneDrawArtDecoCloudBand(); } catch (e) {}
+    // Far balloons behind mountains
+    try { if (window.__airborneDrawTrainingBgBalloonsBehindMountains) window.__airborneDrawTrainingBgBalloonsBehindMountains(); } catch (e) {}
     // Mountains BEHIND landing strip / world (soft clouds drawn later, in front)
     if (typeof drawMountainParallax === "function") drawMountainParallax();
     drawBirdFlocks();
