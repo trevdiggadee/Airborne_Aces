@@ -219,7 +219,7 @@
     // Dramatic slow-mo while boss 1 sinks
     if (typeof defeatSlowMo !== "undefined" && defeatSlowMo &&
         typeof defeatSlowMoUntil !== "undefined" && performance.now() < defeatSlowMoUntil) {
-      dt *= 0.2625; // slo-mo 5% faster (was 0.25)
+      dt *= 0.2756; // slo-mo +5% again (faster than 0.2625)
     } else if (typeof defeatSlowMo !== "undefined" && defeatSlowMo &&
                typeof defeatSlowMoUntil !== "undefined" && performance.now() >= defeatSlowMoUntil) {
       defeatSlowMo = false;
@@ -254,14 +254,12 @@
     // Front cloud layer OFF for now
     // updateClouds(dtScale);
     updateBirdFlocks(dt);
-    // Far hot-air balloons behind cloud band
-    try { if (window.__airborneDrawTrainingBgBalloonsBehind) window.__airborneDrawTrainingBgBalloonsBehind(); } catch (e) {}
-    // Mid cloud band BEHIND mountains (separate from soft front clouds)
-    try { if (window.__airborneDrawArtDecoCloudBand) window.__airborneDrawArtDecoCloudBand(); } catch (e) {}
-    // Far balloons behind mountains
+    // Balloons behind mountains only (no balloons behind clouds)
     try { if (window.__airborneDrawTrainingBgBalloonsBehindMountains) window.__airborneDrawTrainingBgBalloonsBehindMountains(); } catch (e) {}
-    // Mountains BEHIND landing strip / world (soft clouds drawn later, in front)
+    // Mountains — no clouds behind mountains
     if (typeof drawMountainParallax === "function") drawMountainParallax();
+    // Art deco cloud band AFTER mountains (not behind)
+    try { if (window.__airborneDrawArtDecoCloudBand) window.__airborneDrawArtDecoCloudBand(); } catch (e) {}
     drawBirdFlocks();
     if (typeof drawAirfieldStrip === "function") drawAirfieldStrip();
     

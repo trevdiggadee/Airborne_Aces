@@ -446,7 +446,7 @@
       c.vx *= (1 - 0.35 * dt);
       c.vy += 420 * dt; // fall hard
       if (c.vy > 520) c.vy = 520;
-      c.spin += dt * 7.5;
+      // static coin — no spin anim
       c.bob += dt * 2.5;
       // No player re-collection — spent coins leave the run
       if (c.y > H0 + 40 || c.x < -80 || c.x > W0 + 80 || c.age >= c.life) {
@@ -475,8 +475,7 @@
       var fade = c.y > (typeof H !== "undefined" ? H : 600) - 40
         ? Math.max(0.15, 1 - (c.y - ((typeof H !== "undefined" ? H : 600) - 40)) / 80)
         : 1;
-      var frame = Math.floor(((c.spin % (Math.PI * 2)) / (Math.PI * 2)) * nFrames) % nFrames;
-      if (frame < 0) frame += nFrames;
+      var frame = 0; // single static image, no animation
       var size = (c.r || 12) * 2.4;
       ctx.save();
       ctx.translate(c.x, by);

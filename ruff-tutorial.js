@@ -1363,10 +1363,11 @@
   // 4 parallax layers — far → near (speed / scale / alpha)
   // Far layers only — behind mountains / behind clouds, very slow
   var HOTAIR_LAYERS = [
-    { id: 0, speed: 2.5, scale: 0.07, dark: 1, y0: 0.08, y1: 0.42, behindMountains: true, behindClouds: false },
-    { id: 1, speed: 4.0, scale: 0.09, dark: 1, y0: 0.18, y1: 0.55, behindMountains: true, behindClouds: false },
-    { id: 2, speed: 5.5, scale: 0.12, dark: 1, y0: 0.12, y1: 0.48, behindMountains: false, behindClouds: true },
-    { id: 3, speed: 7.0, scale: 0.16, dark: 1, y0: 0.22, y1: 0.58, behindMountains: false, behindClouds: true }
+    // No balloons behind clouds — mountains + front only
+    { id: 0, speed: 2.5, scale: 0.08, dark: 1, y0: 0.10, y1: 0.45, behindMountains: true, behindClouds: false },
+    { id: 1, speed: 4.0, scale: 0.10, dark: 1, y0: 0.20, y1: 0.55, behindMountains: true, behindClouds: false },
+    { id: 2, speed: 6.0, scale: 0.13, dark: 1, y0: 0.15, y1: 0.50, behindMountains: false, behindClouds: false },
+    { id: 3, speed: 8.0, scale: 0.16, dark: 1, y0: 0.25, y1: 0.58, behindMountains: false, behindClouds: false }
   ];
 
   function spawnTrainingBgBalloons() {
@@ -1376,7 +1377,7 @@
     var H0 = (typeof H !== "undefined") ? H : 600;
     // 4 balloons (+25%) spread across height bands so not all top-clustered
     var picks = HOTAIR_KEYS.slice().sort(function() { return Math.random() - 0.5; }).slice(0, 4);
-    var layerOrder = [0, 2, 1, 3];
+    var layerOrder = [0, 1, 2, 3]; // mountains + front only
     // Forced height slots across sky (spread top → mid-low)
     var heightSlots = [0.12, 0.28, 0.42, 0.55];
     for (var i = 0; i < picks.length; i++) {
@@ -1655,8 +1656,8 @@
     ruffCoins.forEach(function (c) {
       if (c.collected) return;
       c.x -= spd * dt;
-      // Smooth continuous spin (not stepped)
-      c.spin += dt * 9.5;
+      // Static coin — no spin animation
+      // c.spin left unchanged
       c.bob += dt * 3.2;
       c.glow = (c.glow || 0) + dt * 4;
       c.sparkT = (c.sparkT || 0) - dt;
@@ -1736,10 +1737,8 @@
     ruffCoins.forEach(function (c) {
       if (c.collected) return;
       const by = c.y + Math.sin(c.bob) * 5;
-      // Smooth continuous spin → frame (higher effective FPS via fractional spin)
-      var spinN = ((c.spin % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-      var frameF = (spinN / (Math.PI * 2)) * nFrames;
-      var frame = Math.floor(frameF + 0.0001) % nFrames;
+      // Single static frame — no animation
+      var frame = 0;
       const size = c.r * 2.5;
       var pulse = 0.75 + 0.25 * Math.sin((c.glow || c.bob) * 1.2);
       ctx.save();

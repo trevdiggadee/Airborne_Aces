@@ -678,10 +678,10 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
       try { ensureDefeatSprites(); } catch (e) {}
       var fi = Math.min(35, Math.max(0, s.frame | 0));
       var simg = __defeatSpriteImgs && __defeatSpriteImgs[fi];
-      // Fixed footprint: match live boss width, aspect always 480/864 from sheet
+      // Exact same size as live boss (no shrink)
       if (!s._fitW) {
-        s._fitW = Math.max(40, Math.min(s.w || 90, (typeof W !== "undefined" ? W : 400) * 0.28));
-        s._fitH = s._fitW * (864 / 480); // sheet aspect — never changes
+        s._fitW = Math.max(s.w || 100, 60);
+        s._fitH = Math.max(s.h || (s._fitW * 864 / 480), s._fitW * 864 / 480);
       }
       if (simg && simg.complete && simg.naturalWidth > 0) {
         ctx.globalAlpha = 1;
@@ -762,6 +762,8 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         h: bh,
         _dw: bw,
         _dh: bh,
+        _fitW: bw,
+        _fitH: Math.max(bh, bw * (864 / 480)),
         img: img,
         age: 0,
         duration: isTrain ? 2.25 : ((mode === "heli_spin" ? 2.2 : (mode === "ink_dissolve" ? 2.5 : 2.6)) * 0.75),
