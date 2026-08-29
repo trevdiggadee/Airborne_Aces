@@ -1592,30 +1592,34 @@
       var frameF = (spinN / (Math.PI * 2)) * nFrames;
       var frame = Math.floor(frameF) % nFrames;
       const size = c.r * 2.5;
-      var pulse = 0.85 + 0.15 * Math.sin(c.glow || c.bob);
+      var pulse = 0.75 + 0.25 * Math.sin((c.glow || c.bob) * 1.2);
       ctx.save();
       ctx.translate(c.x, by);
-      // Special aura rings
+      // Soft pulsing gold glow behind + around (no ring stroke)
       ctx.globalCompositeOperation = "lighter";
-      ctx.globalAlpha = 0.25 * pulse;
-      ctx.strokeStyle = "rgba(255,220,100,0.9)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(0, 0, c.r * 1.55 + Math.sin((c.glow || 0) * 2) * 2, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.globalAlpha = 0.4 * pulse;
-      var ag = ctx.createRadialGradient(0, 0, c.r * 0.3, 0, 0, c.r * 1.8);
-      ag.addColorStop(0, "rgba(255,240,180,0.55)");
-      ag.addColorStop(0.5, "rgba(255,200,60,0.25)");
-      ag.addColorStop(1, "rgba(255,150,0,0)");
+      ctx.globalAlpha = 0.55 * pulse;
+      var ag = ctx.createRadialGradient(0, 0, c.r * 0.15, 0, 0, c.r * 2.4);
+      ag.addColorStop(0, "rgba(255,250,200,0.85)");
+      ag.addColorStop(0.35, "rgba(255,210,80,0.45)");
+      ag.addColorStop(0.7, "rgba(255,170,40,0.15)");
+      ag.addColorStop(1, "rgba(255,140,0,0)");
       ctx.fillStyle = ag;
       ctx.beginPath();
-      ctx.arc(0, 0, c.r * 1.8, 0, Math.PI * 2);
+      ctx.arc(0, 0, c.r * 2.4, 0, Math.PI * 2);
       ctx.fill();
-      // Sparkles around coin
+      // Outer soft halo pulse
+      ctx.globalAlpha = 0.22 * pulse;
+      var ag2 = ctx.createRadialGradient(0, 0, c.r * 0.8, 0, 0, c.r * 3.0);
+      ag2.addColorStop(0, "rgba(255,220,100,0.35)");
+      ag2.addColorStop(1, "rgba(255,180,40,0)");
+      ctx.fillStyle = ag2;
+      ctx.beginPath();
+      ctx.arc(0, 0, c.r * 3.0, 0, Math.PI * 2);
+      ctx.fill();
+      // Gold sparkles
       (c.sparks || []).forEach(function(sp) {
         var t = 1 - sp.age / sp.life;
-        ctx.globalAlpha = t * 0.9;
+        ctx.globalAlpha = t * 0.95;
         ctx.fillStyle = Math.random() > 0.5 ? "#fff6c8" : "#ffd700";
         ctx.beginPath();
         ctx.arc(sp.x, sp.y, sp.r * t, 0, Math.PI * 2);
@@ -1646,21 +1650,74 @@
 
   function drawCrystals() {
     if (!ruffCrystals.length || typeof ctx === "undefined") return;
+    var tnow = performance.now() * 0.001;
     ruffCrystals.forEach(function (c) {
       if (c.collected) return;
       const key = "blue_crystal_" + String(c.frame + 1).padStart(2, "0");
       const img = (typeof images !== "undefined") ? images[key] : null;
       const s = c.r * 2.2;
+      c.fxT = (c.fxT || 0) + 0.016;
+      var pulse = 0.7 + 0.3 * Math.sin(tnow * 2.2 + (c.x || 0) * 0.01);
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      // Splash-style blue aura
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = 0.35 * pulse;
+      var aura = ctx.createRadialGradient(0, 0, s * 0.1, 0, 0, s * 1.15);
+      aura.addColorStop(0, "rgba(120,220,255,0.5)");
+      aura.addColorStop(0.45, "rgba(40,140,255,0.2)");
+      aura.addColorStop(1, "rgba(40,100,220,0)");
+      ctx.fillStyle = aura;
+      ctx.beginPath();
+      ctx.arc(0, 0, s * 1.15, 0, Math.PI * 2);
+      ctx.fill();
+      // Soft core glow
+      ctx.globalAlpha = 0.55 * pulse;
+      var core = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 0.55);
+      core.addColorStop(0, "rgba(200,250,255,0.7)");
+      core.addColorStop(0.5, "rgba(100,200,255,0.35)");
+      core.addColorStop(1, "rgba(40,120,255,0)");
+      ctx.fillStyle = core;
+      ctx.beginPath();
+      ctx.arc(0, 0, s * 0.55, 0, Math.PI * 2);
+      ctx.fill();
+      // Rising blue sparkles
+      if (!c.sparkles) c.sparkles = [];
+      if (Math.random() < 0.12) {
+        c.sparkles.push({
+          x: (Math.random() - 0.5) * s * 0.6,
+          y: s * 0.2,
+          life: 0.8 + Math.random() * 0.4,
+          age: 0,
+          r: 1.5 + Math.random() * 2
+        });
+      }
+      for (var si = (c.sparkles || []).length - 1; si >= 0; si--) {
+        var sp = c.sparkles[si];
+        sp.age += 0.016;
+        sp.y -= 18 * 0.016;
+        var st = 1 - sp.age / sp.life;
+        if (st <= 0) { c.sparkles.splice(si, 1); continue; }
+        ctx.globalAlpha = st * 0.95;
+        ctx.fillStyle = "rgba(220,250,255,1)";
+        ctx.shadowColor = "rgba(180,240,255,0.9)";
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, sp.r * st, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 1;
       if (img && img.naturalWidth) {
-        ctx.drawImage(img, c.x - s / 2, c.y - s / 2, s, s);
+        ctx.drawImage(img, -s / 2, -s / 2, s, s);
       } else {
-        ctx.save();
         ctx.fillStyle = "#4fc3f7";
         ctx.beginPath();
-        ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+        ctx.arc(0, 0, c.r, 0, Math.PI * 2);
         ctx.fill();
-        ctx.restore();
       }
+      ctx.restore();
     });
   }
 

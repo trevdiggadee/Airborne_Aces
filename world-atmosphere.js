@@ -1335,7 +1335,7 @@
         y: 20 + Math.random() * yMax,
         scale: scale,
         speed: 0.06 + Math.random() * 0.08,
-        alpha: 0.75
+        alpha: 0.65
       };
     }
 
@@ -1407,7 +1407,7 @@
       if (!img || !img.complete || !img.naturalWidth) return;
       var w = img.naturalWidth * c.scale;
       var h = img.naturalHeight * c.scale;
-      ctx.globalAlpha = c.alpha != null ? c.alpha : 0.75;
+      ctx.globalAlpha = c.alpha != null ? c.alpha : 0.65;
       ctx.drawImage(img, c.x, c.y, w, h);
     });
     ctx.restore();
@@ -1416,6 +1416,47 @@
   window.__airborneUpdateArtDecoLayers = updateArtDecoLayers;
   window.__airborneDrawArtDecoSky = drawArtDecoSky;
   window.__airborneDrawArtDecoCloudBand = drawArtDecoCloudBand;
+
+  // Subtle floating sky dust / distant motes
+  var skyDust = [];
+  function ensureSkyDust() {
+    if (skyDust.length || typeof W === "undefined") return;
+    for (var i = 0; i < 28; i++) {
+      skyDust.push({
+        x: Math.random() * W,
+        y: Math.random() * H * 0.55,
+        r: 0.6 + Math.random() * 1.4,
+        sp: 0.008 + Math.random() * 0.02,
+        bob: Math.random() * Math.PI * 2,
+        a: 0.08 + Math.random() * 0.12
+      });
+    }
+  }
+  function updateSkyDust(dtScale) {
+    ensureSkyDust();
+    skyDust.forEach(function(d) {
+      d.x -= d.sp * dtScale;
+      d.bob += 0.01 * dtScale;
+      d.y += Math.sin(d.bob) * 0.04 * dtScale;
+      if (d.x < -4) { d.x = W + 4; d.y = Math.random() * H * 0.55; }
+    });
+  }
+  function drawSkyDust() {
+    if (typeof ctx === "undefined" || !skyDust.length) return;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    skyDust.forEach(function(d) {
+      ctx.globalAlpha = d.a;
+      ctx.fillStyle = "rgba(255,250,230,1)";
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+  }
+  window.__airborneUpdateSkyDust = updateSkyDust;
+  window.__airborneDrawSkyDust = drawSkyDust;
+
   window.__airborneResetBackClouds = function() {
     window.__airborneBackClouds = [];
     window.__airborneBackCloudsSeeded = false;

@@ -477,13 +477,19 @@
       if (frame < 0) frame += nFrames;
       var size = (c.r || 12) * 2.4;
       ctx.save();
-      ctx.globalAlpha = fade;
       ctx.translate(c.x, by);
-      ctx.globalAlpha = fade * 0.35;
-      ctx.fillStyle = "#ffd700";
+      var pulse = 0.75 + 0.25 * Math.sin((c.spin || 0) * 2);
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = fade * 0.5 * pulse;
+      var hg = ctx.createRadialGradient(0, 0, 0, 0, 0, (c.r || 12) * 2.4);
+      hg.addColorStop(0, "rgba(255,250,200,0.8)");
+      hg.addColorStop(0.4, "rgba(255,200,60,0.35)");
+      hg.addColorStop(1, "rgba(255,150,0,0)");
+      ctx.fillStyle = hg;
       ctx.beginPath();
-      ctx.arc(0, 0, (c.r || 12) * 1.35, 0, Math.PI * 2);
+      ctx.arc(0, 0, (c.r || 12) * 2.4, 0, Math.PI * 2);
       ctx.fill();
+      ctx.globalCompositeOperation = "source-over";
       ctx.globalAlpha = fade;
       if (sheetReady) {
         ctx.drawImage(sheet, frame * fw, 0, fw, fw, -size / 2, -size / 2, size, size);

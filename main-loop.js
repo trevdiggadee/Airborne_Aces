@@ -121,6 +121,8 @@
     try {
       if (window.__airborneUpdateArtDecoLayers) window.__airborneUpdateArtDecoLayers(dtScale);
       if (window.__airborneDrawArtDecoSky) window.__airborneDrawArtDecoSky();
+      if (window.__airborneUpdateSkyDust) window.__airborneUpdateSkyDust(dtScale);
+      if (window.__airborneDrawSkyDust) window.__airborneDrawSkyDust();
     } catch (e) {}
 
     updateParallaxLayers(dtScale);
