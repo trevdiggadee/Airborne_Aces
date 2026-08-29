@@ -3,6 +3,89 @@
   // ---------- Main loop ----------
   let lastTime = null;
 
+  // ---------- Cinematic camera (boss intro zoom) ----------
+  window.__airborneCam = window.__airborneCam || {
+    z: 1, tz: 1, phase: "idle", t: 0, hold: 5, paused: false
+  };
+  function startBossCamCinematic() {
+    var cam = window.__airborneCam;
+    if (cam.phase && cam.phase !== "idle") return;
+    cam.phase = "zoomOut";
+    cam.t = 0;
+    cam.tz = 0.72; // zoom out
+    cam.hold = 5.0;
+    cam.paused = true;
+    window.__airborneBossCamPause = true;
+    try {
+      // Boss laugh / tension sting
+      if (typeof sfxThunder === "function") sfxThunder();
+      if (typeof trainBeep === "function") {
+        trainBeep(90, 0.5, 0.25, "sawtooth");
+        setTimeout(function() { try { trainBeep(70, 0.7, 0.28, "sawtooth"); } catch (e) {} }, 400);
+        setTimeout(function() { try { trainBeep(55, 0.9, 0.3, "sawtooth"); } catch (e) {} }, 900);
+      }
+      if (typeof playTrainingBossMusic === "function") playTrainingBossMusic();
+    } catch (e) {}
+  }
+  window.__airborneStartBossCam = startBossCamCinematic;
+
+  function updateBossCam(dt) {
+    var cam = window.__airborneCam;
+    if (!cam || cam.phase === "idle") {
+      cam.z += (1 - cam.z) * Math.min(1, dt * 4);
+      return;
+    }
+    cam.t += dt;
+    if (cam.phase === "zoomOut") {
+      var u = Math.min(1, cam.t / 0.85);
+      var e = 1 - Math.pow(1 - u, 3);
+      cam.z = 1 + (0.72 - 1) * e;
+      if (u >= 1) {
+        cam.phase = "hold";
+        cam.t = 0;
+        cam.z = 0.72;
+        // Laugh during hold
+        try {
+          if (typeof sfxTrainingBossWarn === "function") sfxTrainingBossWarn();
+          if (typeof trainBeep === "function") {
+            trainBeep(100, 0.35, 0.22, "square");
+            setTimeout(function(){ try { trainBeep(80, 0.5, 0.25, "sawtooth"); } catch(e){} }, 350);
+            setTimeout(function(){ try { trainBeep(60, 0.65, 0.28, "sawtooth"); } catch(e){} }, 750);
+          }
+        } catch (e) {}
+      }
+    } else if (cam.phase === "hold") {
+      cam.z = 0.72;
+      // subtle breathing zoom
+      cam.z = 0.72 + Math.sin(cam.t * 1.2) * 0.008;
+      if (cam.t >= cam.hold) {
+        cam.phase = "zoomIn";
+        cam.t = 0;
+      }
+    } else if (cam.phase === "zoomIn") {
+      var u2 = Math.min(1, cam.t / 0.9);
+      var e2 = 1 - Math.pow(1 - u2, 3);
+      cam.z = 0.72 + (1 - 0.72) * e2;
+      if (u2 >= 1) {
+        cam.z = 1;
+        cam.phase = "idle";
+        cam.t = 0;
+        cam.paused = false;
+        window.__airborneBossCamPause = false;
+      }
+    }
+  }
+  function applyBossCam() {
+    var cam = window.__airborneCam;
+    if (!cam || Math.abs(cam.z - 1) < 0.002) return false;
+    ctx.save();
+    ctx.translate(W * 0.5, H * 0.5);
+    ctx.scale(cam.z, cam.z);
+    ctx.translate(-W * 0.5, -H * 0.5);
+    return true;
+  }
+
+
   // ---------- Day/night sky cycle — tied to gameplayScore so it advances with real dodging skill ----------
   function getSkyColors(gpScore) {
     // Longer day stretch so brightness stays consistent through early bosses
@@ -107,6 +190,8 @@
     }
     lastTime = ts;
 
+    try { updateBossCam(dt); } catch (e) {}
+
     // background — slowly cycles day → dusk → night → dawn as gameplayScore climbs
     const sky = getSkyColors(gameplayScore);
     const grad = ctx.createLinearGradient(0, 0, 0, H);
@@ -116,6 +201,8 @@
     ctx.fillRect(0, 0, W, H);
 
     const dtScale = dt * 60; // normalize movement speeds tuned at 60fps baseline
+    var _camApplied = false;
+    try { _camApplied = applyBossCam(); } catch (e) {}
 
     // Art Deco sky layer (very slow continuous scroll, always on screen)
     try {
@@ -133,6 +220,8 @@
     // Front cloud layer OFF for now
     // updateClouds(dtScale);
     updateBirdFlocks(dt);
+    // Far hot-air balloons behind cloud band
+    try { if (window.__airborneDrawTrainingBgBalloonsBehind) window.__airborneDrawTrainingBgBalloonsBehind(); } catch (e) {}
     // Mid cloud band BEHIND mountains (separate from soft front clouds)
     try { if (window.__airborneDrawArtDecoCloudBand) window.__airborneDrawArtDecoCloudBand(); } catch (e) {}
     // Mountains BEHIND landing strip / world (soft clouds drawn later, in front)
@@ -295,6 +384,7 @@
     drawShockwaves();
     drawBonusHUD();
     drawComboPopups();
+    try { if (_camApplied) ctx.restore(); } catch (e) {}
     // Vignette + film grain removed — were causing uneven dimming and lag
     } catch (err) {
       if (!loopErrorShown) {

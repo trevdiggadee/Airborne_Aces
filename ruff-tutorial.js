@@ -1322,11 +1322,12 @@
   }
 
   // 4 parallax layers — far → near (speed / scale / alpha)
+  // 4 layers: 0–1 behind clouds (far, darker), 2–3 in front of far clouds
   var HOTAIR_LAYERS = [
-    { speed: 6,  scale: 0.11, alpha: 0.45, y0: 0.04, y1: 0.28 },
-    { speed: 11, scale: 0.15, alpha: 0.55, y0: 0.08, y1: 0.36 },
-    { speed: 18, scale: 0.20, alpha: 0.65, y0: 0.12, y1: 0.42 },
-    { speed: 28, scale: 0.26, alpha: 0.75, y0: 0.16, y1: 0.48 }
+    { id: 0, speed: 6,  scale: 0.12, dark: 0.55, y0: 0.04, y1: 0.26, behindClouds: true },
+    { id: 1, speed: 12, scale: 0.16, dark: 0.70, y0: 0.08, y1: 0.34, behindClouds: true },
+    { id: 2, speed: 20, scale: 0.21, dark: 0.88, y0: 0.12, y1: 0.42, behindClouds: false },
+    { id: 3, speed: 30, scale: 0.27, dark: 1.00, y0: 0.16, y1: 0.48, behindClouds: false }
   ];
 
   function spawnTrainingBgBalloons() {
@@ -1334,7 +1335,7 @@
     ruffBgBalloons = [];
     var W0 = (typeof W !== "undefined") ? W : 400;
     var H0 = (typeof H !== "undefined") ? H : 600;
-    // At least 2 of each design, spread across 4 layers
+    // Exactly 2 of each asset for the whole level
     var slot = 0;
     HOTAIR_KEYS.forEach(function(key) {
       for (var copy = 0; copy < 2; copy++) {
@@ -1344,35 +1345,20 @@
         ruffBgBalloons.push({
           key: key,
           layer: layer,
+          layerId: layer.id,
+          behindClouds: !!layer.behindClouds,
           x: Math.random() * (W0 + 280) - 40,
           y: H0 * ly,
-          s: layer.scale * (0.9 + Math.random() * 0.25),
-          speed: layer.speed * (0.85 + Math.random() * 0.3),
+          s: layer.scale * (0.92 + Math.random() * 0.16),
+          speed: layer.speed * (0.9 + Math.random() * 0.2),
           bob: Math.random() * Math.PI * 2,
-          bobSpd: 0.4 + Math.random() * 0.5,
-          alpha: layer.alpha * (0.85 + Math.random() * 0.2)
+          bobSpd: 0.4 + Math.random() * 0.45,
+          dark: layer.dark
         });
       }
     });
-    // Extra filler on far layers for sky density
-    for (var e = 0; e < 4; e++) {
-      var layer = HOTAIR_LAYERS[e % 2];
-      var key = HOTAIR_KEYS[e % HOTAIR_KEYS.length];
-      ruffBgBalloons.push({
-        key: key,
-        layer: layer,
-        x: Math.random() * (W0 + 200),
-        y: H0 * (layer.y0 + Math.random() * (layer.y1 - layer.y0)),
-        s: layer.scale * (0.85 + Math.random() * 0.2),
-        speed: layer.speed * (0.9 + Math.random() * 0.2),
-        bob: Math.random() * Math.PI * 2,
-        bobSpd: 0.35 + Math.random() * 0.4,
-        alpha: layer.alpha * 0.8
-      });
-    }
-    // Draw far layers first
     ruffBgBalloons.sort(function(a, b) {
-      return (a.speed || 0) - (b.speed || 0);
+      return (a.layerId || 0) - (b.layerId || 0);
     });
   }
 
@@ -1385,38 +1371,46 @@
       var b = ruffBgBalloons[i];
       b.x -= b.speed * dt;
       b.bob += dt * (b.bobSpd || 0.5);
-      if (b.x < -120) {
-        b.x = W0 + 40 + Math.random() * 100;
+      // Same instance recycles off left — still only 2 of each type total
+      if (b.x < -140) {
+        b.x = W0 + 50 + Math.random() * 80;
         var layer = b.layer || HOTAIR_LAYERS[0];
         b.y = H0 * (layer.y0 + Math.random() * (layer.y1 - layer.y0));
       }
     }
   }
 
-  window.__airborneDrawTrainingBgBalloons = drawTrainingBgBalloons;
-  window.__airborneUpdateTrainingBgBalloons = updateTrainingBgBalloons;
-  function drawTrainingBgBalloons() {
-    try { drawSpecialBalloon(); } catch (e) {}
+  function drawHotairBalloonList(behind) {
     if (!ruffBgBalloons || !ruffBgBalloons.length || typeof ctx === "undefined") return;
     ensureHotairImgs();
     var W0 = (typeof W !== "undefined") ? W : 400;
     for (var i = 0; i < ruffBgBalloons.length; i++) {
       var b = ruffBgBalloons[i];
+      if (!!b.behindClouds !== !!behind) continue;
       var img = hotairImgs && hotairImgs[b.key];
+      if (!img || !img.complete || !img.naturalWidth) continue;
       var bw = W0 * b.s;
-      var bh = img && img.naturalWidth
-        ? bw * (img.naturalHeight / img.naturalWidth)
-        : bw * 1.5;
+      var bh = bw * (img.naturalHeight / img.naturalWidth);
       var by = b.y + Math.sin(b.bob) * (4 + b.s * 12);
       ctx.save();
-      ctx.globalAlpha = b.alpha;
-      if (img && img.complete && img.naturalWidth) {
-        ctx.drawImage(img, b.x, by, bw, bh);
-      }
+      ctx.globalAlpha = 1; // no transparency
+      var d = (b.dark != null) ? b.dark : 1;
+      try { if (d < 0.99) ctx.filter = "brightness(" + d + ")"; } catch (e) {}
+      ctx.drawImage(img, b.x, by, bw, bh);
+      try { ctx.filter = "none"; } catch (e) {}
       ctx.restore();
     }
   }
 
+  function drawTrainingBgBalloonsBehindClouds() {
+    drawHotairBalloonList(true);
+  }
+  function drawTrainingBgBalloons() {
+    try { drawSpecialBalloon(); } catch (e) {}
+    drawHotairBalloonList(false);
+  }
+
+  window.__airborneDrawTrainingBgBalloonsBehind = drawTrainingBgBalloonsBehindClouds;
   window.__airborneDrawTrainingBgBalloons = drawTrainingBgBalloons;
   window.__airborneUpdateTrainingBgBalloons = updateTrainingBgBalloons;
 
@@ -2863,13 +2857,17 @@ function finishToMap() {
               boss.maxHealth = 30;
               boss.health = 30;
             }
+            try {
+              if (typeof window.__airborneStartBossCam === "function") window.__airborneStartBossCam();
+            } catch (eCam) {}
           }
           try { bossBanner = null; } catch (e1) {}
         } catch (e) {}
       }
-      if (!ruffLessonPendingNext) {
+      if (!ruffLessonPendingNext && !window.__airborneBossCamPause) {
+        // Account for ~7s cinematic (zoom + 5s hold + zoom in)
         if (window.__airborneTrainingBossDone ||
-            (ruffStageT > 6 && window.__airborneTrainingBossTried &&
+            (ruffStageT > 14 && window.__airborneTrainingBossTried &&
              typeof bossActive !== "undefined" && !bossActive && !bossSinking)) {
           window.__airborneTrainingBoss = false;
           updateTrainingBossDark(dt, 0);
