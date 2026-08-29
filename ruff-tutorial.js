@@ -1365,12 +1365,11 @@
     ruffBgBalloons = [];
     var W0 = (typeof W !== "undefined") ? W : 400;
     var H0 = (typeof H !== "undefined") ? H : 600;
-    // 75% fewer: only 3 balloons total, mostly far layers, unique assets
+    // 3 balloons: one behind mountains, one behind clouds, one mid — always visible variety
     var picks = HOTAIR_KEYS.slice().sort(function() { return Math.random() - 0.5; }).slice(0, 3);
+    var layerOrder = [0, 2, 1]; // mountains, clouds, far-mid
     for (var i = 0; i < picks.length; i++) {
-      var layer = HOTAIR_LAYERS[i % HOTAIR_LAYERS.length];
-      // Bias toward further layers (0–1)
-      if (Math.random() < 0.55) layer = HOTAIR_LAYERS[i % 2];
+      var layer = HOTAIR_LAYERS[layerOrder[i] % HOTAIR_LAYERS.length];
       var ly = layer.y0 + Math.random() * (layer.y1 - layer.y0);
       ruffBgBalloons.push({
         key: picks[i],
@@ -1378,7 +1377,7 @@
         layerId: layer.id,
         behindMountains: !!layer.behindMountains,
         behindClouds: !!layer.behindClouds,
-        x: (i / 3) * (W0 + 160) + Math.random() * 40,
+        x: (i + 0.3) * (W0 / 3) + Math.random() * 30,
         y: H0 * ly,
         s: layer.scale * (0.95 + Math.random() * 0.1),
         speed: layer.speed * (0.9 + Math.random() * 0.15),

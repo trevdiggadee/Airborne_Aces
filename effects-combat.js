@@ -381,8 +381,8 @@
 
   function spawnTrainHoleSmoke(s, burst) {
     // Big puffs from the two balloon holes (relative to sprite center)
-    var dw = Math.min(s.w * 1.35, (typeof W !== "undefined" ? W : 400) * 0.55);
-    var dh = dw * 1.8;
+    var dw = s._dw || s.w || 120;
+    var dh = s._dh || s.h || dw * 1.7;
     var cx = s.x + s.w * 0.5;
     var cy = s.y + s.h * 0.5;
     // Hole anchors in balloon envelope (upper half of sprite)
@@ -540,21 +540,16 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     const mode = s.mode || "fire_sink";
 
     if (mode === "train_sprite") {
-      s.frameT = (s.frameT || 0) + dt;
-      var fdur = 2.25 / 36;
-      while (s.frameT >= fdur) {
-        s.frameT -= fdur;
-        s.frame = Math.min(35, (s.frame || 0) + 1);
-      }
-      s.vy = 40 + t * 90;
-      s.y += (s.vy || 40) * dt;
-      s.x += (s.vx || -15) * dt + Math.sin(s.age * 1.2) * 12 * dt;
-      s.tilt = Math.sin(s.age * 0.9) * 0.12 - t * 0.08;
-      s.alpha = Math.max(0.2, 1 - t * 0.45);
-      // Continuous big smoke from holes
+      // Age-locked frame index (no drift / double-step glitches)
+      s.frame = Math.min(35, Math.floor((s.age / Math.max(0.01, s.duration)) * 36));
+      s.vy = 25 + t * 50;
+      s.y += (s.vy || 25) * dt;
+      s.x += (s.vx || -8) * dt;
+      s.tilt = Math.sin(s.age * 0.7) * 0.06;
+      s.alpha = Math.max(0.35, 1 - t * 0.3);
       s.fxTimer = (s.fxTimer || 0) + dt;
-      while (s.fxTimer > 0.055) {
-        s.fxTimer -= 0.055;
+      while (s.fxTimer > 0.07) {
+        s.fxTimer -= 0.07;
         spawnTrainHoleSmoke(s, false);
       }
     } else if (mode === "fire_sink") {
@@ -665,23 +660,24 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     ctx.globalAlpha = alpha;
     if (s.mode === "train_sprite") {
       try { ensureDefeatSprites(); } catch (e) {}
-      var fi = Math.min(35, Math.max(0, s.frame || 0));
+      var fi = Math.min(35, Math.max(0, s.frame | 0));
       var simg = __defeatSpriteImgs && __defeatSpriteImgs[fi];
-      // Large readable defeat sprite centered on boss position
-      var dw = Math.min(W * 0.62, Math.max(s.w * 1.6, 180));
-      var dh = dw * 1.9;
+      // Lock draw size once to original boss footprint (no expansion / frame jitter)
+      if (!s._dw) {
+        s._dw = Math.max(40, s.w || 120);
+        s._dh = Math.max(40, s.h || s._dw * 1.7);
+      }
+      var dw = s._dw;
+      var dh = s._dh;
       if (simg && simg.complete && simg.naturalWidth > 0) {
-        dh = dw * (simg.naturalHeight / simg.naturalWidth);
-        ctx.globalAlpha = Math.max(0.35, alpha);
-        ctx.drawImage(simg, -dw / 2, -dh / 2, dw, dh);
+        // Fit sprite inside fixed box, preserve aspect, no growth
+        var aspect = simg.naturalHeight / simg.naturalWidth;
+        var fitW = dw, fitH = dw * aspect;
+        if (fitH > dh) { fitH = dh; fitW = dh / aspect; }
+        ctx.globalAlpha = Math.max(0.4, alpha);
+        ctx.drawImage(simg, -fitW / 2, -fitH / 2, fitW, fitH);
       } else if (img && img.naturalWidth) {
-        ctx.drawImage(img, -s.w / 2, -s.h / 2, s.w, s.h);
-      } else {
-        // Fallback silhouette so defeat is never invisible
-        ctx.fillStyle = "rgba(180,80,60,0.85)";
-        ctx.beginPath();
-        ctx.ellipse(0, -dh * 0.15, dw * 0.35, dh * 0.28, 0, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
       }
     } else if (img && img.naturalWidth) {
       ctx.drawImage(img, -s.w / 2, -s.h / 2, s.w, s.h);
@@ -745,20 +741,15 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         mode = "train_sprite";
       }
       var bx = boss.x, by = boss.y, bw = boss.w, bh = boss.h;
-      if (isTrain) {
-        // Keep on-screen and sizable for the sprite sequence
-        bw = Math.max(bw || 0, (typeof W !== "undefined" ? W : 400) * 0.35);
-        bh = Math.max(bh || 0, bw * 1.6);
-        if (bx + bw * 0.5 > W) bx = W * 0.55 - bw * 0.5;
-        if (bx < 0) bx = W * 0.2;
-        if (by < H * 0.05) by = H * 0.12;
-      }
+      // Keep original boss size — do not expand
       bossSinking = {
         mode: mode,
         x: bx,
         y: by,
         w: bw,
         h: bh,
+        _dw: bw,
+        _dh: bh,
         img: img,
         age: 0,
         duration: isTrain ? 2.25 : ((mode === "heli_spin" ? 2.2 : (mode === "ink_dissolve" ? 2.5 : 2.6)) * 0.75),
