@@ -3225,17 +3225,17 @@ body.pause-open #unifiedDock {
 /* Score sits between parchment and map */
 #ruffFinalScore {
   position: absolute;
-  left: 18%;
-  right: 18%;
-  top: 43.5%; /* raised 25% from 58% */
-  height: 18%;
+  left: 14%;
+  right: 14%;
+  top: 50%; /* lowered ~15% from 43.5% */
+  height: 20%;
   margin: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  font-size: clamp(0.85rem, 3.5vw, 1.05rem);
+  font-size: clamp(1.275rem, 5.25vw, 1.575rem); /* +50% */
   font-weight: 800;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   color: #f0d878;
@@ -3253,8 +3253,8 @@ body.pause-open #unifiedDock {
 }
 #ruffFinalScore .fsValue {
   display: block;
-  margin-top: 0.15em;
-  font-size: 1.35em;
+  margin-top: 0.12em;
+  font-size: 1.4em;
   font-weight: 900;
   letter-spacing: 0.04em;
 }
@@ -3266,10 +3266,10 @@ body.pause-open #unifiedDock {
 /* Rank-up over the map section */
 #ruffRankBanner {
   position: absolute;
-  left: 8%;
-  right: 8%;
-  top: 41.3%; /* raised ~15% */
-  height: 34%;
+  left: 6%;
+  right: 6%;
+  top: 53.7%; /* lowered ~30% */
+  height: 36%;
   margin: 0;
   opacity: 0;
   display: flex;
@@ -3324,8 +3324,8 @@ body.pause-open #unifiedDock {
   100% { opacity: 0; transform: translate(-50%, -70%) scale(1.4); filter: blur(4px); }
 }
 #ruffMedalImg {
-  width: clamp(115px, 38.4vw, 180px);
-  height: clamp(115px, 38.4vw, 180px);
+  width: clamp(172px, 57.6vw, 270px); /* +50% */
+  height: clamp(172px, 57.6vw, 270px);
   object-fit: contain;
   margin: 0 auto;
   display: block;
@@ -3345,12 +3345,12 @@ body.pause-open #unifiedDock {
   transform: scale(1);
 }
 #ruffRankBanner .rankName {
-  font-size: clamp(1.21rem, 4.83vw, 1.67rem);
+  font-size: clamp(1.45rem, 5.8vw, 2.0rem); /* +20% */
   font-weight: 900;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   color: #ffe9a8;
   text-shadow: 0 2px 8px rgba(0,0,0,0.75);
-  margin-top: 2px; /* lowered ~5% */
+  margin-top: 4px;
   letter-spacing: 0.08em;
   opacity: 0;
   transition: opacity 0.4s ease 0.2s;

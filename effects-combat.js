@@ -540,16 +540,20 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     const mode = s.mode || "fire_sink";
 
     if (mode === "train_sprite") {
-      // Age-locked frame index (no drift / double-step glitches)
-      s.frame = Math.min(35, Math.floor((s.age / Math.max(0.01, s.duration)) * 36));
-      s.vy = 25 + t * 50;
-      s.y += (s.vy || 25) * dt;
-      s.x += (s.vx || -8) * dt;
-      s.tilt = Math.sin(s.age * 0.7) * 0.06;
-      s.alpha = Math.max(0.35, 1 - t * 0.3);
+      // Smooth frame from age (36 frames over duration)
+      var prog = Math.min(1, s.age / Math.max(0.01, s.duration));
+      s.frame = Math.min(35, Math.floor(prog * 36));
+      // Gentle float down — ease in
+      var sink = prog * prog;
+      s.vy = 18 + sink * 55;
+      s.y += s.vy * dt;
+      s.x += (s.vx || -6) * dt;
+      s.tilt = Math.sin(s.age * 0.55) * 0.05 * (1 - prog * 0.5);
+      // Fade only in last 25%
+      s.alpha = prog < 0.75 ? 1 : Math.max(0.2, 1 - (prog - 0.75) / 0.25);
       s.fxTimer = (s.fxTimer || 0) + dt;
-      while (s.fxTimer > 0.07) {
-        s.fxTimer -= 0.07;
+      while (s.fxTimer > 0.08) {
+        s.fxTimer -= 0.08;
         spawnTrainHoleSmoke(s, false);
       }
     } else if (mode === "fire_sink") {
@@ -639,8 +643,8 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     ctx.save();
     let veil = Math.min(0.32, s.age * 0.1);
     if (mode === "train_sprite") {
-      veil = Math.min(0.12, s.age * 0.05); // keep sprite readable
-      ctx.fillStyle = "rgba(20,10,8," + veil + ")";
+      veil = Math.min(0.1, s.age * 0.04);
+      ctx.fillStyle = "rgba(18,12,10," + veil + ")";
     } else if (mode === "ink_dissolve") {
       ctx.fillStyle = "rgba(12,8,28," + Math.min(0.4, s.age * 0.14) + ")";
     } else if (mode === "rocket_blast") {
@@ -674,7 +678,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         var aspect = simg.naturalHeight / simg.naturalWidth;
         var fitW = dw, fitH = dw * aspect;
         if (fitH > dh) { fitH = dh; fitW = dh / aspect; }
-        ctx.globalAlpha = Math.max(0.4, alpha);
+        ctx.globalAlpha = Math.max(0.25, alpha);
         ctx.drawImage(simg, -fitW / 2, -fitH / 2, fitW, fitH);
       } else if (img && img.naturalWidth) {
         ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
@@ -752,9 +756,9 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         _dh: bh,
         img: img,
         age: 0,
-        duration: isTrain ? 2.25 : ((mode === "heli_spin" ? 2.2 : (mode === "ink_dissolve" ? 2.5 : 2.6)) * 0.75),
-        vy: isTrain ? 35 : 40,
-        vx: mode === "heli_spin" ? 70 : (isTrain ? -12 : 0),
+        duration: isTrain ? 2.4 : ((mode === "heli_spin" ? 2.2 : (mode === "ink_dissolve" ? 2.5 : 2.6)) * 0.75),
+        vy: isTrain ? 20 : 40,
+        vx: mode === "heli_spin" ? 70 : (isTrain ? -6 : 0),
         tilt: 0,
         spin: 0,
         squash: 1,

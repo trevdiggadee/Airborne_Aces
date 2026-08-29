@@ -1354,10 +1354,10 @@
   // 4 parallax layers — far → near (speed / scale / alpha)
   // Far layers only — behind mountains / behind clouds, very slow
   var HOTAIR_LAYERS = [
-    { id: 0, speed: 2.5, scale: 0.10, dark: 0.48, y0: 0.05, y1: 0.22, behindMountains: true, behindClouds: false },
-    { id: 1, speed: 4.0, scale: 0.12, dark: 0.58, y0: 0.08, y1: 0.28, behindMountains: true, behindClouds: false },
-    { id: 2, speed: 5.5, scale: 0.14, dark: 0.68, y0: 0.10, y1: 0.32, behindMountains: false, behindClouds: true },
-    { id: 3, speed: 7.0, scale: 0.16, dark: 0.78, y0: 0.12, y1: 0.36, behindMountains: false, behindClouds: true }
+    { id: 0, speed: 2.5, scale: 0.10, dark: 0.48, y0: 0.08, y1: 0.42, behindMountains: true, behindClouds: false },
+    { id: 1, speed: 4.0, scale: 0.12, dark: 0.58, y0: 0.18, y1: 0.55, behindMountains: true, behindClouds: false },
+    { id: 2, speed: 5.5, scale: 0.14, dark: 0.68, y0: 0.12, y1: 0.48, behindMountains: false, behindClouds: true },
+    { id: 3, speed: 7.0, scale: 0.16, dark: 0.78, y0: 0.22, y1: 0.58, behindMountains: false, behindClouds: true }
   ];
 
   function spawnTrainingBgBalloons() {
@@ -1365,22 +1365,26 @@
     ruffBgBalloons = [];
     var W0 = (typeof W !== "undefined") ? W : 400;
     var H0 = (typeof H !== "undefined") ? H : 600;
-    // 3 balloons: one behind mountains, one behind clouds, one mid — always visible variety
-    var picks = HOTAIR_KEYS.slice().sort(function() { return Math.random() - 0.5; }).slice(0, 3);
-    var layerOrder = [0, 2, 1]; // mountains, clouds, far-mid
+    // 4 balloons (+25%) spread across height bands so not all top-clustered
+    var picks = HOTAIR_KEYS.slice().sort(function() { return Math.random() - 0.5; }).slice(0, 4);
+    var layerOrder = [0, 2, 1, 3];
+    // Forced height slots across sky (spread top → mid-low)
+    var heightSlots = [0.12, 0.28, 0.42, 0.55];
     for (var i = 0; i < picks.length; i++) {
       var layer = HOTAIR_LAYERS[layerOrder[i] % HOTAIR_LAYERS.length];
-      var ly = layer.y0 + Math.random() * (layer.y1 - layer.y0);
+      // Use distinct height slot + small jitter so heights always differ
+      var ly = heightSlots[i % heightSlots.length] + (Math.random() - 0.5) * 0.06;
+      ly = Math.max(0.08, Math.min(0.62, ly));
       ruffBgBalloons.push({
         key: picks[i],
         layer: layer,
         layerId: layer.id,
         behindMountains: !!layer.behindMountains,
         behindClouds: !!layer.behindClouds,
-        x: (i + 0.3) * (W0 / 3) + Math.random() * 30,
+        x: (i + 0.25) * (W0 / 4) + Math.random() * 40,
         y: H0 * ly,
-        s: layer.scale * (0.95 + Math.random() * 0.1),
-        speed: layer.speed * (0.9 + Math.random() * 0.15),
+        s: layer.scale * (0.95 + Math.random() * 0.12),
+        speed: layer.speed * (0.88 + Math.random() * 0.2),
         bob: Math.random() * Math.PI * 2,
         bobSpd: 0.25 + Math.random() * 0.25,
         dark: layer.dark
@@ -1404,7 +1408,8 @@
       if (b.x < -140) {
         b.x = W0 + 50 + Math.random() * 80;
         var layer = b.layer || HOTAIR_LAYERS[0];
-        b.y = H0 * (layer.y0 + Math.random() * (layer.y1 - layer.y0));
+        // Full vertical spread on recycle
+        b.y = H0 * (0.10 + Math.random() * 0.50);
       }
     }
   }
