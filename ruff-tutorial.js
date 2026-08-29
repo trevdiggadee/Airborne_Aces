@@ -1306,23 +1306,74 @@
   }
 
 
+  var HOTAIR_KEYS = [
+    "hotair_red_cream", "hotair_night_stars", "hotair_floral_teal",
+    "hotair_steampunk", "hotair_mosaic", "hotair_compass"
+  ];
+  var hotairImgs = null;
+  function ensureHotairImgs() {
+    if (hotairImgs) return;
+    hotairImgs = {};
+    HOTAIR_KEYS.forEach(function(k) {
+      var im = new Image();
+      im.src = k + ".webp?v=ruff329";
+      hotairImgs[k] = im;
+    });
+  }
+
+  // 4 parallax layers — far → near (speed / scale / alpha)
+  var HOTAIR_LAYERS = [
+    { speed: 6,  scale: 0.11, alpha: 0.45, y0: 0.04, y1: 0.28 },
+    { speed: 11, scale: 0.15, alpha: 0.55, y0: 0.08, y1: 0.36 },
+    { speed: 18, scale: 0.20, alpha: 0.65, y0: 0.12, y1: 0.42 },
+    { speed: 28, scale: 0.26, alpha: 0.75, y0: 0.16, y1: 0.48 }
+  ];
+
   function spawnTrainingBgBalloons() {
+    ensureHotairImgs();
     ruffBgBalloons = [];
     var W0 = (typeof W !== "undefined") ? W : 400;
     var H0 = (typeof H !== "undefined") ? H : 600;
-    var n = 5; // fewer far-sky balloons
-    for (var i = 0; i < n; i++) {
+    // At least 2 of each design, spread across 4 layers
+    var slot = 0;
+    HOTAIR_KEYS.forEach(function(key) {
+      for (var copy = 0; copy < 2; copy++) {
+        var layer = HOTAIR_LAYERS[slot % HOTAIR_LAYERS.length];
+        slot++;
+        var ly = layer.y0 + Math.random() * (layer.y1 - layer.y0);
+        ruffBgBalloons.push({
+          key: key,
+          layer: layer,
+          x: Math.random() * (W0 + 280) - 40,
+          y: H0 * ly,
+          s: layer.scale * (0.9 + Math.random() * 0.25),
+          speed: layer.speed * (0.85 + Math.random() * 0.3),
+          bob: Math.random() * Math.PI * 2,
+          bobSpd: 0.4 + Math.random() * 0.5,
+          alpha: layer.alpha * (0.85 + Math.random() * 0.2)
+        });
+      }
+    });
+    // Extra filler on far layers for sky density
+    for (var e = 0; e < 4; e++) {
+      var layer = HOTAIR_LAYERS[e % 2];
+      var key = HOTAIR_KEYS[e % HOTAIR_KEYS.length];
       ruffBgBalloons.push({
-        x: (i / n) * (W0 + 220) + Math.random() * 50,
-        y: H0 * (0.06 + Math.random() * 0.48),
-        s: 0.32 + Math.random() * 0.37, // ~15% larger scale range
-        speed: 5 + Math.random() * 8, // slower drift
-        frame: (Math.random() * 36) | 0,
-        frameT: Math.random(),
+        key: key,
+        layer: layer,
+        x: Math.random() * (W0 + 200),
+        y: H0 * (layer.y0 + Math.random() * (layer.y1 - layer.y0)),
+        s: layer.scale * (0.85 + Math.random() * 0.2),
+        speed: layer.speed * (0.9 + Math.random() * 0.2),
         bob: Math.random() * Math.PI * 2,
-        alpha: 0.22 + Math.random() * 0.22
+        bobSpd: 0.35 + Math.random() * 0.4,
+        alpha: layer.alpha * 0.8
       });
     }
+    // Draw far layers first
+    ruffBgBalloons.sort(function(a, b) {
+      return (a.speed || 0) - (b.speed || 0);
+    });
   }
 
   function updateTrainingBgBalloons(dt) {
@@ -1333,15 +1384,11 @@
     for (var i = 0; i < ruffBgBalloons.length; i++) {
       var b = ruffBgBalloons[i];
       b.x -= b.speed * dt;
-      b.bob += dt * (0.6 + b.s * 0.4);
-      b.frameT += dt;
-      if (b.frameT >= 1 / 7) { // slightly slower anim = less sheet thrash
-        b.frameT = 0;
-        b.frame = ((b.frame || 0) + 1) % 36;
-      }
-      if (b.x < -80) {
-        b.x = W0 + 40 + Math.random() * 80;
-        b.y = H0 * (0.08 + Math.random() * 0.55);
+      b.bob += dt * (b.bobSpd || 0.5);
+      if (b.x < -120) {
+        b.x = W0 + 40 + Math.random() * 100;
+        var layer = b.layer || HOTAIR_LAYERS[0];
+        b.y = H0 * (layer.y0 + Math.random() * (layer.y1 - layer.y0));
       }
     }
   }
@@ -1351,22 +1398,20 @@
   function drawTrainingBgBalloons() {
     try { drawSpecialBalloon(); } catch (e) {}
     if (!ruffBgBalloons || !ruffBgBalloons.length || typeof ctx === "undefined") return;
+    ensureHotairImgs();
+    var W0 = (typeof W !== "undefined") ? W : 400;
     for (var i = 0; i < ruffBgBalloons.length; i++) {
       var b = ruffBgBalloons[i];
-      var key = "balloon_anim_" + String((b.frame % 36) + 1).padStart(2, "0");
-      var img = (typeof images !== "undefined" && images) ? images[key] : null;
-      var bw = ((typeof W !== "undefined") ? W : 400) * 0.1035 * b.s; // 15% larger
-      var bh = bw * 1.35;
-      var by = b.y + Math.sin(b.bob) * 5;
+      var img = hotairImgs && hotairImgs[b.key];
+      var bw = W0 * b.s;
+      var bh = img && img.naturalWidth
+        ? bw * (img.naturalHeight / img.naturalWidth)
+        : bw * 1.5;
+      var by = b.y + Math.sin(b.bob) * (4 + b.s * 12);
       ctx.save();
       ctx.globalAlpha = b.alpha;
-      if (img && img.naturalWidth) {
+      if (img && img.complete && img.naturalWidth) {
         ctx.drawImage(img, b.x, by, bw, bh);
-      } else {
-        ctx.fillStyle = "rgba(200,80,80,0.7)";
-        ctx.beginPath();
-        ctx.ellipse(b.x + bw / 2, by + bh * 0.4, bw * 0.4, bh * 0.4, 0, 0, Math.PI * 2);
-        ctx.fill();
       }
       ctx.restore();
     }
@@ -2085,7 +2130,7 @@
       rankBanner.style.opacity = "0";
     }
     if (rankNameEl) rankNameEl.textContent = (pilotRank.name || "Cadet").toUpperCase();
-    if (rankTitleEl) rankTitleEl.textContent = pilotRank.title || "Starting pilot";
+    if (rankTitleEl) { rankTitleEl.textContent = ""; rankTitleEl.style.display = "none"; }
     // Rank-up reveal: was Rookie during flight
     try {
       if (typeof updateHudRank === "function") updateHudRank(pilotRank.name || "Cadet");
@@ -2131,16 +2176,28 @@
         requestAnimationFrame(tick);
       } else {
         if (final) final.textContent = "FINAL SCORE  " + sc;
-        // Fade score away, then bounce rank in
-        if (final) final.classList.add("fadeOut");
-        setTimeout(function () {
-          if (rankBanner) {
-            rankBanner.classList.add("visible", "bounceIn");
-            rankBanner.style.opacity = "1";
+        // RANK UP pops big over medal area first, then fades; medal + rank name reveal
+        if (rankBanner) {
+          rankBanner.classList.add("visible");
+          rankBanner.classList.remove("bounceIn", "medalShow", "rankNameShow");
+          rankBanner.style.opacity = "1";
+          var rankUpEl = rankBanner.querySelector(".rankUp");
+          if (rankUpEl) {
+            rankUpEl.classList.remove("popIn");
+            void rankUpEl.offsetWidth;
+            rankUpEl.classList.add("popIn");
           }
           playRankUpSfx();
-          showRadio("Not bad for a first flight, " + (pilotRank.name || "Cadet") + ".", 3.2);
-        }, 480);
+          // After RANK UP peaks, reveal medal
+          setTimeout(function () {
+            rankBanner.classList.add("medalShow");
+          }, 420);
+          // After RANK UP fades, show rank name
+          setTimeout(function () {
+            rankBanner.classList.add("rankNameShow");
+            showRadio("Not bad for a first flight, " + (pilotRank.name || "Cadet") + ".", 3.2);
+          }, 1200);
+        }
       }
     }
     requestAnimationFrame(tick);

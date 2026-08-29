@@ -45,6 +45,13 @@
     parallax_mountains: "mountains_cutout.webp",
     art_deco_sky: "art_deco_sky.webp",
     art_deco_clouds: "art_deco_clouds.webp",
+    hotair_red_cream: "hotair_red_cream.webp",
+    hotair_night_stars: "hotair_night_stars.webp",
+    hotair_floral_teal: "hotair_floral_teal.webp",
+    hotair_steampunk: "hotair_steampunk.webp",
+    hotair_mosaic: "hotair_mosaic.webp",
+    hotair_compass: "hotair_compass.webp",
+
     cloud_01_top_left_large: "cloud_01_top_left_large.webp",
     cloud_02_top_right_large: "cloud_02_top_right_large.webp",
     cloud_03_middle_center_large: "cloud_03_middle_center_large.webp",
