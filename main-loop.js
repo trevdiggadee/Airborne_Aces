@@ -4,20 +4,32 @@
   let lastTime = null;
 
   // ---------- Cinematic camera (boss intro zoom) ----------
+  // Uses CSS scale on the game canvas so perspective runway/world math stays correct.
+  // Zoom out ~25% (scale 0.75), hold 5s with tension, zoom back in.
   window.__airborneCam = window.__airborneCam || {
-    z: 1, tz: 1, phase: "idle", t: 0, hold: 5, paused: false
+    z: 1, phase: "idle", t: 0, hold: 5, paused: false
   };
+  function camCanvas() {
+    return (typeof canvas !== "undefined" && canvas) ? canvas
+      : document.getElementById("gameCanvas") || document.querySelector("canvas");
+  }
+  function applyCamCss(z) {
+    var c = camCanvas();
+    if (!c) return;
+    var zz = (z != null) ? z : 1;
+    c.style.transformOrigin = "center center";
+    c.style.transition = "none";
+    c.style.transform = (Math.abs(zz - 1) < 0.002) ? "none" : ("scale(" + zz.toFixed(4) + ")");
+  }
   function startBossCamCinematic() {
     var cam = window.__airborneCam;
     if (cam.phase && cam.phase !== "idle") return;
     cam.phase = "zoomOut";
     cam.t = 0;
-    cam.tz = 0.75; // zoom out ~25%
     cam.hold = 5.0;
     cam.paused = true;
     window.__airborneBossCamPause = true;
     try {
-      // Boss laugh / tension sting
       if (typeof sfxThunder === "function") sfxThunder();
       if (typeof trainBeep === "function") {
         trainBeep(90, 0.5, 0.25, "sawtooth");
@@ -31,20 +43,28 @@
 
   function updateBossCam(dt) {
     var cam = window.__airborneCam;
-    if (!cam || cam.phase === "idle") {
-      cam.z += (1 - cam.z) * Math.min(1, dt * 4);
+    if (!cam) return;
+    if (cam.phase === "idle") {
+      if (Math.abs(cam.z - 1) > 0.002) {
+        cam.z += (1 - cam.z) * Math.min(1, dt * 5);
+        applyCamCss(cam.z);
+      } else if (cam.z !== 1) {
+        cam.z = 1;
+        applyCamCss(1);
+      }
       return;
     }
     cam.t += dt;
     if (cam.phase === "zoomOut") {
-      var u = Math.min(1, cam.t / 0.85);
+      var u = Math.min(1, cam.t / 0.9);
       var e = 1 - Math.pow(1 - u, 3);
-      cam.z = 1 + (0.75 - 1) * e;
+      cam.z = 1 + (0.75 - 1) * e; // 25% zoom out
+      applyCamCss(cam.z);
       if (u >= 1) {
         cam.phase = "hold";
         cam.t = 0;
         cam.z = 0.75;
-        // Laugh during hold
+        applyCamCss(0.75);
         try {
           if (typeof sfxTrainingBossWarn === "function") sfxTrainingBossWarn();
           if (typeof trainBeep === "function") {
@@ -55,36 +75,29 @@
         } catch (e) {}
       }
     } else if (cam.phase === "hold") {
-      cam.z = 0.75;
-      // subtle breathing zoom
-      cam.z = 0.75 + Math.sin(cam.t * 1.2) * 0.006;
+      cam.z = 0.75 + Math.sin(cam.t * 1.2) * 0.008;
+      applyCamCss(cam.z);
       if (cam.t >= cam.hold) {
         cam.phase = "zoomIn";
         cam.t = 0;
       }
     } else if (cam.phase === "zoomIn") {
-      var u2 = Math.min(1, cam.t / 0.9);
+      var u2 = Math.min(1, cam.t / 0.95);
       var e2 = 1 - Math.pow(1 - u2, 3);
       cam.z = 0.75 + (1 - 0.75) * e2;
+      applyCamCss(cam.z);
       if (u2 >= 1) {
         cam.z = 1;
         cam.phase = "idle";
         cam.t = 0;
         cam.paused = false;
         window.__airborneBossCamPause = false;
+        applyCamCss(1);
       }
     }
   }
-  function applyBossCam() {
-    var cam = window.__airborneCam;
-    if (!cam || Math.abs(cam.z - 1) < 0.002) return false;
-    ctx.save();
-    ctx.translate(W * 0.5, H * 0.5);
-    ctx.scale(cam.z, cam.z);
-    ctx.translate(-W * 0.5, -H * 0.5);
-    return true;
-  }
-
+  // Canvas CSS zoom — no ctx transform (avoids warping runway perspective)
+  function applyBossCam() { return false; }
 
   // ---------- Day/night sky cycle — tied to gameplayScore so it advances with real dodging skill ----------
   function getSkyColors(gpScore) {
@@ -201,8 +214,6 @@
     ctx.fillRect(0, 0, W, H);
 
     const dtScale = dt * 60; // normalize movement speeds tuned at 60fps baseline
-    var _camApplied = false;
-    try { _camApplied = applyBossCam(); } catch (e) {}
 
     // Art Deco sky layer (very slow continuous scroll, always on screen)
     try {
@@ -386,7 +397,6 @@
     drawShockwaves();
     drawBonusHUD();
     drawComboPopups();
-    try { if (_camApplied) ctx.restore(); } catch (e) {}
     // Vignette + film grain removed — were causing uneven dimming and lag
     } catch (err) {
       if (!loopErrorShown) {

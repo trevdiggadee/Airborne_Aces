@@ -3172,7 +3172,7 @@ body.pause-open #unifiedDock {
   width: min(88vw, 340px);
   aspect-ratio: 1500 / 2167;
   max-height: 86vh;
-  background: url("flight_report_panel.webp?v=ruff327") center / 100% 100% no-repeat;
+  background: url("flight_report_panel.webp?v=ruff328") center / 100% 100% no-repeat;
   border: none;
   border-radius: 6px;
   box-shadow: 0 14px 40px rgba(0,0,0,0.55);
@@ -3189,8 +3189,8 @@ body.pause-open #unifiedDock {
   position: absolute;
   left: 11%;
   right: 10%;
-  top: 15.5%;
-  height: 31%;
+  top: 14.5%;
+  height: 37.2%; /* +20% vertical span for spacing */
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -3204,7 +3204,7 @@ body.pause-open #unifiedDock {
   padding: 0 2% 0 0;
   min-height: 0;
   flex: 1;
-  font-size: clamp(0.72rem, 3.2vw, 0.95rem);
+  font-size: clamp(0.79rem, 3.52vw, 1.045rem); /* +10% */
   font-weight: 700;
   color: #2c1f0e;
   letter-spacing: 0.02em;
@@ -3221,16 +3221,18 @@ body.pause-open #unifiedDock {
 /* Score sits between parchment and map */
 #ruffFinalScore {
   position: absolute;
-  left: 8%;
-  right: 8%;
-  top: 47.5%;
+  left: 0;
+  right: 0;
+  top: 57%; /* lowered ~20% from 47.5% */
   margin: 0;
-  font-size: clamp(0.85rem, 3.6vw, 1.1rem);
+  text-align: center;
+  font-size: clamp(0.935rem, 3.96vw, 1.21rem); /* +10% */
   font-weight: 800;
   color: #f0d878;
   text-shadow: 0 2px 6px rgba(0,0,0,0.65), 0 0 12px rgba(255,200,80,0.35);
   transition: opacity 0.45s ease, transform 0.45s ease;
   letter-spacing: 0.06em;
+  z-index: 3;
 }
 #ruffFinalScore.fadeOut {
   opacity: 0;
@@ -3264,12 +3266,37 @@ body.pause-open #unifiedDock {
   60% { transform: scale(1.08); opacity: 1; }
   100% { transform: scale(1); }
 }
+#ruffRankBanner .rankTitle {
+  display: none !important;
+}
 #ruffRankBanner .rankUp {
-  font-size: clamp(0.7rem, 2.8vw, 0.9rem);
-  letter-spacing: 0.22em;
-  color: #ffd24a;
-  margin-bottom: 2px;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%) scale(0.4);
+  opacity: 0;
+  z-index: 5;
+  margin: 0;
+  font-size: clamp(1.4rem, 7vw, 2.2rem);
+  font-weight: 900;
+  letter-spacing: 0.28em;
+  color: #ffe566;
+  text-shadow:
+    0 0 20px rgba(255, 200, 60, 0.9),
+    0 0 40px rgba(255, 160, 40, 0.6),
+    0 4px 12px rgba(0,0,0,0.7);
+  pointer-events: none;
+  white-space: nowrap;
+}
+#ruffRankBanner .rankUp.popIn {
+  animation: ruffRankUpPop 1.35s ease-out forwards;
+}
+@keyframes ruffRankUpPop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.25); filter: blur(6px); }
+  18% { opacity: 1; transform: translate(-50%, -50%) scale(1.35); filter: blur(0); }
+  40% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  70% { opacity: 1; transform: translate(-50%, -55%) scale(1.05); }
+  100% { opacity: 0; transform: translate(-50%, -70%) scale(1.4); filter: blur(4px); }
 }
 #ruffMedalImg {
   width: clamp(96px, 32vw, 150px);
@@ -3278,6 +3305,13 @@ body.pause-open #unifiedDock {
   margin: 0 auto;
   display: block;
   filter: drop-shadow(0 6px 14px rgba(0,0,0,0.55)) drop-shadow(0 0 16px rgba(255,200,80,0.35));
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 0.45s ease, transform 0.55s cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+#ruffRankBanner.medalShow #ruffMedalImg {
+  opacity: 1;
+  transform: scale(1);
 }
 #ruffRankBanner .rankName {
   font-size: clamp(1.05rem, 4.2vw, 1.45rem);
@@ -3285,11 +3319,11 @@ body.pause-open #unifiedDock {
   color: #ffe9a8;
   text-shadow: 0 2px 8px rgba(0,0,0,0.75);
   margin-top: 2px;
+  opacity: 0;
+  transition: opacity 0.4s ease 0.2s;
 }
-#ruffRankBanner .rankTitle {
-  font-size: clamp(0.7rem, 2.6vw, 0.85rem);
-  color: #d0c4a0;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+#ruffRankBanner.rankNameShow .rankName {
+  opacity: 1;
 }
 
 /* Invisible hit target over the art button */
@@ -3313,4 +3347,9 @@ body.pause-open #unifiedDock {
 #ruffContinueBtn:active {
   transform: scale(0.98);
   background: rgba(255, 220, 120, 0.12);
+}
+
+/* boss cam letterbox — keep scaled canvas centered */
+canvas {
+  transform-origin: center center;
 }
