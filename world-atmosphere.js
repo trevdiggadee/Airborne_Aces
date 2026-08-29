@@ -1283,7 +1283,7 @@
   function ensureArtDecoLayers() {
     if (!artDecoSkyImg) {
       artDecoSkyImg = new Image();
-      artDecoSkyImg.src = "art_deco_sky.webp?v=ruff317";
+      artDecoSkyImg.src = "art_deco_sky.webp?v=ruff319";
     }
     if (!window.__airborneBackCloudKeys) {
       window.__airborneBackCloudKeys = [
@@ -1314,48 +1314,66 @@
     // Very slow sky scroll — seamless tile, never "runs out"
     artDecoSkyX -= 0.015 * dtScale;
 
-    // Sporadic back-layer clouds (right → left, fully off-screen)
-    if (!window.__airborneBackClouds) window.__airborneBackClouds = [];
-    if (window.__airborneBackCloudSpawnT == null) window.__airborneBackCloudSpawnT = 0.8;
-    window.__airborneBackCloudSpawnT -= dtScale / 60;
+    // Back clouds: fill screen at level start (incl. right side), scroll R→L immediately
     var keys = window.__airborneBackCloudKeys || [];
-    if (window.__airborneBackCloudSpawnT <= 0 && keys.length && typeof W !== "undefined") {
-      // Sporadic interval 1.8s–4.5s
-      // Fewer on screen: longer gaps
-      if ((window.__airborneBackClouds || []).length >= 3) {
-        window.__airborneBackCloudSpawnT = 1.2;
-      } else {
-        window.__airborneBackCloudSpawnT = 3.2 + Math.random() * 3.5;
-      }
-      // Cycle through all assets over the level
+    if (!window.__airborneBackClouds) window.__airborneBackClouds = [];
+
+    function makeBackCloud(x) {
+      if (!keys.length) return null;
       if (window.__airborneBackCloudIdx == null) window.__airborneBackCloudIdx = 0;
       var key = keys[window.__airborneBackCloudIdx % keys.length];
       window.__airborneBackCloudIdx++;
-      // Occasional second different cloud
-      var img = window.__airborneBackCloudImgs && window.__airborneBackCloudImgs[key];
       var isLarge = /large/.test(key);
       var isTiny = /tiny|wisp/.test(key);
       var scale = isTiny ? (0.55 + Math.random() * 0.35)
                 : isLarge ? (0.28 + Math.random() * 0.18)
                 : (0.35 + Math.random() * 0.25);
-      var speed = 0.06 + Math.random() * 0.08;
       var yMax = (typeof H !== "undefined" ? H : 600) * 0.48;
-      window.__airborneBackClouds.push({
+      return {
         key: key,
-        x: W + 40,
+        x: x,
         y: 20 + Math.random() * yMax,
         scale: scale,
-        speed: speed,
-        alpha: 0.75 // 25% transparent
-      });
+        speed: 0.06 + Math.random() * 0.08,
+        alpha: 0.75
+      };
     }
+
+    if (!window.__airborneBackCloudsSeeded && keys.length && typeof W !== "undefined") {
+      window.__airborneBackCloudsSeeded = true;
+      window.__airborneBackClouds = [];
+      // Spread across entire screen width
+      var n = 5;
+      for (var si = 0; si < n; si++) {
+        var sx = (W / n) * si + (Math.random() * 30 - 10);
+        var c0 = makeBackCloud(sx);
+        if (c0) window.__airborneBackClouds.push(c0);
+      }
+      // Extra cloud starting on the right edge (entering)
+      var cR = makeBackCloud(W + 10 + Math.random() * 40);
+      if (cR) window.__airborneBackClouds.push(cR);
+      window.__airborneBackCloudSpawnT = 2.5 + Math.random() * 2;
+    }
+
+    if (window.__airborneBackCloudSpawnT == null) window.__airborneBackCloudSpawnT = 2.5;
+    window.__airborneBackCloudSpawnT -= dtScale / 60;
+    if (window.__airborneBackCloudSpawnT <= 0 && keys.length && typeof W !== "undefined") {
+      if ((window.__airborneBackClouds || []).length >= 5) {
+        window.__airborneBackCloudSpawnT = 1.5;
+      } else {
+        window.__airborneBackCloudSpawnT = 2.8 + Math.random() * 3.0;
+        var cNew = makeBackCloud(W + 40);
+        if (cNew) window.__airborneBackClouds.push(cNew);
+      }
+    }
+
     var list = window.__airborneBackClouds;
     for (var i = list.length - 1; i >= 0; i--) {
       var c = list[i];
-      c.x -= c.speed * dtScale;
+      c.x -= c.speed * dtScale; // scroll immediately from level start
       var img = window.__airborneBackCloudImgs && window.__airborneBackCloudImgs[c.key];
-      var w = img && img.naturalWidth ? img.naturalWidth * c.scale : 120;
-      if (c.x + w < -20) list.splice(i, 1);
+      var cw = img && img.naturalWidth ? img.naturalWidth * c.scale : 120;
+      if (c.x + cw < -20) list.splice(i, 1);
     }
   }
 
@@ -1398,4 +1416,10 @@
   window.__airborneUpdateArtDecoLayers = updateArtDecoLayers;
   window.__airborneDrawArtDecoSky = drawArtDecoSky;
   window.__airborneDrawArtDecoCloudBand = drawArtDecoCloudBand;
+  window.__airborneResetBackClouds = function() {
+    window.__airborneBackClouds = [];
+    window.__airborneBackCloudsSeeded = false;
+    window.__airborneBackCloudSpawnT = 0.3;
+    window.__airborneBackCloudIdx = 0;
+  };
 

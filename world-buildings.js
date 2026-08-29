@@ -273,6 +273,7 @@
       if (window.__airborneHardResetTraining) window.__airborneHardResetTraining({ keepAirfield: true });
     } catch (e) {}
     airfieldMode = true;
+    try { if (window.__airborneResetBackClouds) window.__airborneResetBackClouds(); } catch (e) {};
     airfieldPhase = "taxi";
     airfieldLesson = 0;
     airfieldLessonT = 0;
