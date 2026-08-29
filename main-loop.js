@@ -22,6 +22,8 @@
     c.style.transform = (Math.abs(zz - 1) < 0.002) ? "none" : ("scale(" + zz.toFixed(4) + ")");
   }
   function startBossCamCinematic() {
+    // Boss zoom disabled per design
+    return;
     var cam = window.__airborneCam;
     if (cam.phase && cam.phase !== "idle") return;
     cam.phase = "zoomOut";
@@ -44,6 +46,18 @@
   function updateBossCam(dt) {
     var cam = window.__airborneCam;
     if (!cam) return;
+    // Always clear zoom if disabled / stuck
+    if (cam.phase !== "idle" || cam.z !== 1) {
+      /* zoom disabled — force reset */
+    }
+    if (cam.phase !== "idle") {
+      cam.phase = "idle";
+      cam.z = 1;
+      cam.paused = false;
+      window.__airborneBossCamPause = false;
+      try { applyCamCss(1); } catch (e) {}
+      return;
+    }
     if (cam.phase === "idle") {
       if (Math.abs(cam.z - 1) > 0.002) {
         cam.z += (1 - cam.z) * Math.min(1, dt * 5);

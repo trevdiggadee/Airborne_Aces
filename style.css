@@ -3172,7 +3172,7 @@ body.pause-open #unifiedDock {
   width: min(88vw, 340px);
   aspect-ratio: 1500 / 2167;
   max-height: 86vh;
-  background: url("flight_report_panel.webp?v=ruff328") center / 100% 100% no-repeat;
+  background: url("flight_report_panel.webp?v=ruff334") center / 100% 100% no-repeat;
   border: none;
   border-radius: 6px;
   box-shadow: 0 14px 40px rgba(0,0,0,0.55);
@@ -3189,8 +3189,8 @@ body.pause-open #unifiedDock {
   position: absolute;
   left: 11%;
   right: 10%;
-  top: 14.5%;
-  height: 37.2%; /* +20% vertical span for spacing */
+  top: 13.05%; /* raised ~10% */
+  height: 37.2%;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -3204,10 +3204,11 @@ body.pause-open #unifiedDock {
   padding: 0 2% 0 0;
   min-height: 0;
   flex: 1;
-  font-size: clamp(0.79rem, 3.52vw, 1.045rem); /* +10% */
-  font-weight: 700;
+  font-size: clamp(0.79rem, 3.52vw, 1.045rem);
+  font-weight: 800;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   color: #2c1f0e;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   text-shadow: 0 1px 0 rgba(255,250,230,0.35);
 }
 #ruffReportRows .row span:first-child {
@@ -3223,16 +3224,30 @@ body.pause-open #unifiedDock {
   position: absolute;
   left: 0;
   right: 0;
-  top: 57%; /* lowered ~20% from 47.5% */
+  top: 51.3%; /* raised ~10% from 57% */
   margin: 0;
   text-align: center;
-  font-size: clamp(0.935rem, 3.96vw, 1.21rem); /* +10% */
+  font-size: clamp(0.85rem, 3.5vw, 1.05rem);
   font-weight: 800;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   color: #f0d878;
   text-shadow: 0 2px 6px rgba(0,0,0,0.65), 0 0 12px rgba(255,200,80,0.35);
   transition: opacity 0.45s ease, transform 0.45s ease;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   z-index: 3;
+  line-height: 1.15;
+}
+#ruffFinalScore .fsLabel {
+  display: block;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+#ruffFinalScore .fsValue {
+  display: block;
+  margin-top: 0.15em;
+  font-size: 1.35em;
+  font-weight: 900;
+  letter-spacing: 0.04em;
 }
 #ruffFinalScore.fadeOut {
   opacity: 0;
@@ -3244,8 +3259,8 @@ body.pause-open #unifiedDock {
   position: absolute;
   left: 10%;
   right: 10%;
-  top: 54%;
-  height: 28%;
+  top: 48.6%; /* raised ~10% */
+  height: 30%;
   margin: 0;
   opacity: 0;
   display: flex;
@@ -3272,13 +3287,14 @@ body.pause-open #unifiedDock {
 #ruffRankBanner .rankUp {
   position: absolute;
   left: 50%;
-  top: 42%;
+  top: 38%; /* raised with banner */
   transform: translate(-50%, -50%) scale(0.4);
   opacity: 0;
   z-index: 5;
   margin: 0;
-  font-size: clamp(1.4rem, 7vw, 2.2rem);
+  font-size: clamp(1.61rem, 8.05vw, 2.53rem); /* +15% */
   font-weight: 900;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   letter-spacing: 0.28em;
   color: #ffe566;
   text-shadow:
@@ -3314,11 +3330,13 @@ body.pause-open #unifiedDock {
   transform: scale(1);
 }
 #ruffRankBanner .rankName {
-  font-size: clamp(1.05rem, 4.2vw, 1.45rem);
-  font-weight: 800;
+  font-size: clamp(1.21rem, 4.83vw, 1.67rem); /* +15% */
+  font-weight: 900;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   color: #ffe9a8;
   text-shadow: 0 2px 8px rgba(0,0,0,0.75);
   margin-top: 2px;
+  letter-spacing: 0.08em;
   opacity: 0;
   transition: opacity 0.4s ease 0.2s;
 }

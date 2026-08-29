@@ -2149,7 +2149,7 @@
     }
 
     if (final) {
-      final.textContent = "FINAL SCORE  0";
+      final.innerHTML = '<span class="fsLabel">FINAL SCORE</span><span class="fsValue">0</span>';
       final.style.opacity = "1";
       final.style.filter = "none";
       final.style.color = "#f0d878";
@@ -2176,11 +2176,19 @@
       const u = Math.min(1, (now - t0) / duration);
       const eased = 1 - Math.pow(1 - u, 3);
       const n = Math.round(sc * eased);
-      if (final) final.textContent = "FINAL SCORE  " + n;
+      if (final) {
+        var fv = final.querySelector(".fsValue");
+        if (fv) fv.textContent = String(n);
+        else final.innerHTML = '<span class="fsLabel">FINAL SCORE</span><span class="fsValue">' + n + '</span>';
+      }
       if (u < 1) {
         requestAnimationFrame(tick);
       } else {
-        if (final) final.textContent = "FINAL SCORE  " + sc;
+        if (final) {
+          var fv2 = final.querySelector(".fsValue");
+          if (fv2) fv2.textContent = String(sc);
+          else final.innerHTML = '<span class="fsLabel">FINAL SCORE</span><span class="fsValue">' + sc + '</span>';
+        }
         // RANK UP pops big over medal area first, then fades; medal + rank name reveal
         if (rankBanner) {
           rankBanner.classList.add("visible");
