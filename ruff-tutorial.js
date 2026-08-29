@@ -867,6 +867,7 @@
       window.__airborneRuffRequestLand = true;
     } else if (name === "report") {
       hideRadio();
+      try { window.__airborneTrainingReportShown = true; } catch (e) {}
       showFlightReport();
     }
   }
@@ -1991,7 +1992,12 @@
     }
 
     // Prefer live score; if zero, derive a training score from stats so popup isn't stuck at 0
-    var sc = (typeof score === "number") ? score : 0;
+    var sc = 0;
+    try {
+      if (typeof score === "number") sc = score;
+      else if (typeof window.score === "number") sc = window.score;
+      else if (typeof gameplayScore === "number") sc = gameplayScore;
+    } catch (e) {}
     try {
       var derived = (ruffStats.crystals || 0) * 25
         + (ruffStats.coins || 0) * 10

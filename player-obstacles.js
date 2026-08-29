@@ -1956,12 +1956,12 @@
       } else {
         ctx.drawImage(img, o.x, drawY, o.w, o.h);
       }
-      // Brief sprite brighten only — no white circle halo
-      if (o.hitFlash && o.hitFlash > 0 && img && img.naturalWidth && o.type !== "balloon_anim") {
+      // Brief sprite brighten only — skip when power-sucked (white box artifact)
+      if (o.hitFlash && o.hitFlash > 0 && !o.powerAffected && img && img.naturalWidth && o.type !== "balloon_anim") {
         ctx.save();
-        ctx.globalAlpha = Math.min(0.35, o.hitFlash * 0.4);
+        ctx.globalAlpha = Math.min(0.25, o.hitFlash * 0.3);
         ctx.globalCompositeOperation = "source-atop";
-        ctx.fillStyle = "rgba(255,255,255,0.5)";
+        ctx.fillStyle = "rgba(255,240,200,0.35)";
         ctx.fillRect(o.x, drawY, o.w, o.h);
         ctx.restore();
       }

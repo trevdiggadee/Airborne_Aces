@@ -2409,8 +2409,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
           vo.y += (dy / dist) * pull * dt + oy * orbitForce * vo._vxDir * dt;
           // Power-up has this target — no player-collision coin pops
           vo.powerAffected = true;
-          // Shake + stretch feel
-          vo.hitFlash = 0.3 + prox * 0.5;
+          vo.hitFlash = 0; // no white box overlay
           vo.vortexSpin = (vo.vortexSpin || 0) + (8 + prox * 20) * vo._vxDir * dt;
           // Suction trail
           if (Math.random() < 0.35) {
@@ -2446,12 +2445,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
             try { if (typeof triggerScreenShake === "function") triggerScreenShake(5 + (sh.chainBoost || 1), 100); } catch (e) {}
             try { if (typeof sfxExplosion === "function") sfxExplosion(0.45); } catch (e) {}
             try { creditPowerKillScore(1); } catch (e) {}
-            // Little Spy — always pop free coins from this target
-            try {
-              if (typeof window.spawnHitCoinBurst === "function") {
-                window.spawnHitCoinBurst({ free: true, force: true, atX: vox, atY: voy });
-              }
-            } catch (e) {}
+            // No coin pop — power-affected suction (coins only from player collision)
             // Chain reaction intensifies pull
             sh.chainBoost = Math.min(2.2, (sh.chainBoost || 1) + 0.15);
             obstacles.splice(vi, 1);
@@ -2493,20 +2487,17 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       }
 
       if (sh.age >= life) {
-        // Short final flash then clear everything — no lingering purple circle
-        if (!window.__airbornePurpleBursts) window.__airbornePurpleBursts = [];
-        window.__airbornePurpleBursts.push({
-          kind: "shock", x: px, y: py, age: 0, life: 0.28, r: 16, maxR: Math.min(sh.maxR * 0.55, 160)
-        });
-        try { if (typeof triggerScreenShake === "function") triggerScreenShake(10, 320); } catch (e) {}
+        try { if (typeof triggerScreenShake === "function") triggerScreenShake(8, 280); } catch (e) {}
+        // Hard clear — no lingering purple ring/circle
         window.__airborneSpyShield = null;
+        window.__airborneVortex = null;
         window.__airborneActivePowerVisual = null;
         window.__airborneActivePowerUntil = 0;
         window.__airborneSuctionTrails = [];
-        // Clear long-lived purple blobs (keep only the short end shock)
-        window.__airbornePurpleBursts = (window.__airbornePurpleBursts || []).filter(function(pb) {
-          return pb && pb.kind === "shock" && pb.age < 0.05;
-        });
+        window.__airbornePurpleBursts = [];
+        try {
+          if (window.PowerFX && typeof window.PowerFX.clear === "function") window.PowerFX.clear();
+        } catch (e) {}
         stormActive = false;
         stormMode = "storm";
         stormCloud = null;

@@ -3148,3 +3148,114 @@ body.pause-open #unifiedDock {
   visibility: hidden !important;
   pointer-events: none !important;
 }
+
+
+/* ===== Training Flight Report ===== */
+#ruffReport {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 12, 24, 0.72);
+  pointer-events: none;
+}
+#ruffReport.visible {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto;
+}
+#ruffReport .panel {
+  width: min(92vw, 420px);
+  max-height: 88vh;
+  overflow-y: auto;
+  background: linear-gradient(160deg, #1a2238 0%, #0e1424 100%);
+  border: 2px solid #c9a227;
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.55), inset 0 0 30px rgba(201,162,39,0.08);
+  padding: 18px 20px 22px;
+  color: #f0e6d0;
+  text-align: center;
+  font-family: system-ui, sans-serif;
+}
+#ruffReport .panel h2 {
+  margin: 0 0 12px;
+  font-size: 1.25rem;
+  letter-spacing: 0.12em;
+  color: #ffd24a;
+}
+#ruffReportRows .row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(201,162,39,0.2);
+  font-size: 0.92rem;
+}
+#ruffFinalScore {
+  margin: 14px 0 8px;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #f0d878;
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+#ruffFinalScore.fadeOut {
+  opacity: 0;
+  transform: scale(0.92);
+}
+#ruffRankBanner {
+  opacity: 0;
+  margin: 8px 0 12px;
+  transition: opacity 0.35s ease;
+}
+#ruffRankBanner.visible {
+  opacity: 1 !important;
+}
+#ruffRankBanner.bounceIn {
+  animation: ruffRankBounce 0.55s ease-out;
+}
+@keyframes ruffRankBounce {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+#ruffRankBanner .rankUp {
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  color: #ffb347;
+  margin-bottom: 4px;
+}
+#ruffRankBanner .rankName {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #ffe9a8;
+}
+#ruffRankBanner .rankTitle {
+  font-size: 0.85rem;
+  color: #b8c0d0;
+  margin-top: 2px;
+}
+#ruffMedalImg {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+  margin: 4px auto;
+  display: block;
+}
+#ruffContinueBtn {
+  margin-top: 10px;
+  padding: 12px 18px;
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #e8c547, #b8860b);
+  color: #1a1208;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  pointer-events: auto;
+}
+#ruffContinueBtn:active {
+  transform: scale(0.98);
+}
