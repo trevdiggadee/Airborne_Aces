@@ -1283,11 +1283,29 @@
   function ensureArtDecoLayers() {
     if (!artDecoSkyImg) {
       artDecoSkyImg = new Image();
-      artDecoSkyImg.src = "art_deco_sky.webp?v=ruff316";
+      artDecoSkyImg.src = "art_deco_sky.webp?v=ruff317";
     }
-    if (!artDecoCloudImg) {
-      artDecoCloudImg = new Image();
-      artDecoCloudImg.src = "art_deco_clouds.webp?v=ruff316";
+    if (!window.__airborneBackCloudKeys) {
+      window.__airborneBackCloudKeys = [
+        "cloud_01_top_left_large",
+        "cloud_02_top_right_large",
+        "cloud_03_middle_center_large",
+        "cloud_04_middle_right_small",
+        "cloud_05_middle_left_small",
+        "cloud_06_middle_tiny_wisp",
+        "cloud_07_bottom_right_large",
+        "cloud_08_bottom_left_large",
+        "cloud_09_bottom_left_small",
+        "cloud_10_bottom_center_tiny",
+        "cloud_11_bottom_right_small",
+        "cloud_12_bottom_center_tiny2"
+      ];
+      window.__airborneBackCloudImgs = {};
+      window.__airborneBackCloudKeys.forEach(function(k) {
+        var im = new Image();
+        im.src = k + ".webp?v=ruff317";
+        window.__airborneBackCloudImgs[k] = im;
+      });
     }
   }
 
@@ -1295,8 +1313,51 @@
     ensureArtDecoLayers();
     // Very slow sky scroll — seamless tile, never "runs out"
     artDecoSkyX -= 0.015 * dtScale;
-    // Mid clouds slightly faster, still behind mountains
-    artDecoCloudX -= 0.045 * dtScale;
+
+    // Sporadic back-layer clouds (right → left, fully off-screen)
+    if (!window.__airborneBackClouds) window.__airborneBackClouds = [];
+    if (window.__airborneBackCloudSpawnT == null) window.__airborneBackCloudSpawnT = 0.8;
+    window.__airborneBackCloudSpawnT -= dtScale / 60;
+    var keys = window.__airborneBackCloudKeys || [];
+    if (window.__airborneBackCloudSpawnT <= 0 && keys.length && typeof W !== "undefined") {
+      // Sporadic interval 1.8s–4.5s
+      window.__airborneBackCloudSpawnT = 1.8 + Math.random() * 2.7;
+      // Cycle through all assets over the level
+      if (window.__airborneBackCloudIdx == null) window.__airborneBackCloudIdx = 0;
+      var key = keys[window.__airborneBackCloudIdx % keys.length];
+      window.__airborneBackCloudIdx++;
+      // Occasional second different cloud
+      var picks = [key];
+      if (Math.random() < 0.28) {
+        picks.push(keys[Math.floor(Math.random() * keys.length)]);
+      }
+      picks.forEach(function(k, i) {
+        var img = window.__airborneBackCloudImgs && window.__airborneBackCloudImgs[k];
+        var isLarge = /large/.test(k);
+        var isTiny = /tiny|wisp/.test(k);
+        var scale = isTiny ? (0.55 + Math.random() * 0.35)
+                  : isLarge ? (0.28 + Math.random() * 0.18)
+                  : (0.35 + Math.random() * 0.25);
+        var speed = 0.06 + Math.random() * 0.08; // slow, behind mountains
+        var yMax = (typeof H !== "undefined" ? H : 600) * 0.48;
+        window.__airborneBackClouds.push({
+          key: k,
+          x: W + 40 + i * 90,
+          y: 20 + Math.random() * yMax,
+          scale: scale,
+          speed: speed,
+          alpha: 0.7 + Math.random() * 0.25
+        });
+      });
+    }
+    var list = window.__airborneBackClouds;
+    for (var i = list.length - 1; i >= 0; i--) {
+      var c = list[i];
+      c.x -= c.speed * dtScale;
+      var img = window.__airborneBackCloudImgs && window.__airborneBackCloudImgs[c.key];
+      var w = img && img.naturalWidth ? img.naturalWidth * c.scale : 120;
+      if (c.x + w < -20) list.splice(i, 1);
+    }
   }
 
   function drawArtDecoSky() {
@@ -1305,11 +1366,9 @@
     var img = artDecoSkyImg;
     if (!img || !img.complete || !img.naturalWidth) return;
     var ih = img.naturalHeight, iw = img.naturalWidth;
-    // Cover full screen height, tile horizontally
     var scale = H / ih;
     var dw = iw * scale;
     var dh = H;
-    // Wrap scroll so it never goes off-screen
     var x = artDecoSkyX % dw;
     if (x > 0) x -= dw;
     ctx.save();
@@ -1321,23 +1380,19 @@
   }
 
   function drawArtDecoCloudBand() {
-    ensureArtDecoLayers();
-    if (typeof ctx === "undefined" || typeof W === "undefined") return;
-    var img = artDecoCloudImg;
-    if (!img || !img.complete || !img.naturalWidth) return;
-    var ih = img.naturalHeight, iw = img.naturalWidth;
-    // Band in upper-mid sky, behind mountains
-    var scale = (H * 0.42) / ih;
-    var dw = iw * scale;
-    var dh = ih * scale;
-    var y = H * 0.12;
-    var x = artDecoCloudX % dw;
-    if (x > 0) x -= dw;
+    // Sporadic individual back clouds (behind mountains)
+    if (typeof ctx === "undefined") return;
+    var list = window.__airborneBackClouds;
+    if (!list || !list.length) return;
     ctx.save();
-    ctx.globalAlpha = 0.85;
-    for (var sx = x; sx < W + dw; sx += dw) {
-      ctx.drawImage(img, sx, y, dw, dh);
-    }
+    list.forEach(function(c) {
+      var img = window.__airborneBackCloudImgs && window.__airborneBackCloudImgs[c.key];
+      if (!img || !img.complete || !img.naturalWidth) return;
+      var w = img.naturalWidth * c.scale;
+      var h = img.naturalHeight * c.scale;
+      ctx.globalAlpha = c.alpha || 0.8;
+      ctx.drawImage(img, c.x, c.y, w, h);
+    });
     ctx.restore();
   }
 
