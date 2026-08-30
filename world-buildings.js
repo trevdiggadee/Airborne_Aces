@@ -177,12 +177,15 @@
 
   function isAirfieldMode() { return !!airfieldMode; }
   
-  // Force flight report within 5s of touchdown (never stall)
+  // Force flight report only after full landing drive (never cut skid short)
   function forceTrainingReportIfDue() {
     if (window.__airborneTrainingReportShown) return;
+    // Never interrupt active land/skid drive
+    if (airfieldPhase === "land" || airfieldPhase === "skid") return;
     const t0 = window.__airborneLandTouchAt;
     if (!t0) return;
-    if (performance.now() - t0 < 5000) return;
+    // Only after skid should have finished (~10s+) plus small buffer
+    if (performance.now() - t0 < 12000) return;
     window.__airborneTrainingReportShown = true;
     window.__airborneTrainingReportReady = true;
     window.__airborneAirfieldDidLand = true;
@@ -1038,15 +1041,18 @@
       if (!airfieldTiles || !airfieldTiles.length) {
         try { ensureAirfieldStripVisible(); } catch (e) {}
       }
-      const skidDur = 9.5; // long drive (+3s) across landing strip
+      const skidDur = 9.5; // full runway drive before score
       const u = Math.min(1, airfieldSkidT / skidDur);
-      // Linear cruise then soft stop in last 12%
-      const ease = u < 0.88 ? (u / 0.88) * 0.94 : (0.94 + 0.06 * (1 - Math.pow(1 - (u - 0.88) / 0.12, 2)));
-      // Strip scrolls under blimp like takeoff — steady then ease out
-      const driveSpd = Math.max(airfieldTakeoffSpeed || 210, 220) * (u < 0.88 ? 1.05 : 0.28);
+      // Steady takeoff-like scroll for most of the drive, ease only at the very end
+      const driveSpd = (u < 0.9)
+        ? Math.max(airfieldTakeoffSpeed || 210, 230)
+        : Math.max(80, 230 * (1 - (u - 0.9) / 0.1));
       (airfieldTiles || []).forEach(function(tile) {
         if (!tile) return;
         tile.x -= driveSpd * dt;
+        // Loop tiles so runway never runs out visually
+        var tw = tile.w || W;
+        if (tile.x + tw < -20) tile.x += tw * Math.max(2, (airfieldTiles || []).length);
       });
       airfieldStripY = (typeof airfieldStripY === "number") ? airfieldStripY : 0;
       const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
@@ -1054,20 +1060,22 @@
       const landY = H - Math.max(40, th * 0.28) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10) + sinkS;
       if (typeof player !== "undefined" && player) {
         const sx = (typeof airfieldSkidStartX === "number") ? airfieldSkidStartX : W * 0.22;
-        // Blimp rolls forward across the runway
-        player.x = sx + ease * W * 0.58;
+        // Blimp rolls forward across the runway for the full skid duration
+        const ease = u < 0.9 ? (u / 0.9) * 0.92 : (0.92 + 0.08 * Math.min(1, (u - 0.9) / 0.1));
+        player.x = sx + ease * W * 0.55;
         player.y = landY;
         player.vy = 0;
-        player.rotation = (1 - ease) * 0.05;
+        player.rotation = (1 - ease) * 0.04;
         if (typeof blimpPersonality !== "undefined" && blimpPersonality) {
           blimpPersonality.squashX = 1;
           blimpPersonality.squashY = 1;
         }
-        // Continuous dust while skidding
-        if (u < 0.85 && Math.random() < 0.55) {
+        // Continuous dust while driving
+        if (u < 0.92 && Math.random() < 0.65) {
           if (typeof spawnLandingDust === "function") {
             try {
               spawnLandingDust(player.x - (player.w || 40) * 0.3, landY + 8);
+              if (Math.random() < 0.4) spawnLandingDust(player.x + 10, landY + 6);
             } catch (e) {}
           }
         }
@@ -1136,8 +1144,8 @@
         });
         airfieldFireworks = airfieldFireworks.filter(function(fw) { return fw.age < fw.life; });
       }
-      // Hold briefly on strip then ALWAYS show score
-      if (!window.__airborneTrainingReportShown && airfieldScoreT > 0.5) {
+      // Brief hold then score (celebration plays inside showFlightReport)
+      if (!window.__airborneTrainingReportShown && airfieldScoreT > 0.35) {
         window.__airborneTrainingReportShown = true;
         window.__airborneTrainingReportReady = true;
         window.__airborneAirfieldDidLand = true;

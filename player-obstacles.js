@@ -133,8 +133,10 @@
       return;
     }
     // lesson / training flight falls through to gravity
-    // Keep training blimp further back (left) — never drift to mid-screen
-    if (window.__airborneAirfield || window.__airborneTrainingFlight) {
+    // Keep training blimp further back — but never during land/skid drive
+    var afp = window.__airborneAirfieldPhase;
+    var landingDrive = (afp === "land" || afp === "skid" || afp === "score" || afp === "done" || afp === "rollout");
+    if (!landingDrive && (window.__airborneAirfield || window.__airborneTrainingFlight)) {
       var lockX = (typeof W !== "undefined" ? W : 400) * 0.22;
       if (Math.abs(player.x - lockX) > 2) {
         player.x += (lockX - player.x) * Math.min(1, 4 * dt);

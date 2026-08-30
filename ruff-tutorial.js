@@ -3320,8 +3320,8 @@ function finishToMap() {
       // Report when world-buildings signals ready, or failsafe
       if (window.__airborneTrainingReportReady || ph === "done" || window.__airborneTrainingReportShown) {
         nextStage(); // → report → showFlightReport
-      } else if (ruffStageT > 14) {
-        // Failsafe — force report after landing drive
+      } else if (ruffStageT > 16) {
+        // Failsafe — only after full skid drive (~9.5s) + buffer
         try {
           window.__airborneTrainingReportShown = true;
           window.__airborneTrainingReportReady = true;
