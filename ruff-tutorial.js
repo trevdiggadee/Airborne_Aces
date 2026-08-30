@@ -349,14 +349,12 @@
     "intro",
     "takeoff",
     "altitude",
-    "obstacles",
     "rings",
-    "crystals",
+    "obstacles",
     "shield",
-    "powerup",
     "airship",
-    "boss1",
     "combined",
+    "boss1",
     "landing",
     "report"
   ];
@@ -435,7 +433,7 @@
   // ---------- DOM ----------
 
   const TRACE_STAGES = [
-    "intro", "takeoff", "altitude", "crystals", "obstacles",
+    "intro", "takeoff", "altitude", "rings", "obstacles",
     "shield", "powerup", "rings", "combined", "landing"
   ];
   const TRACE_LABELS = {
@@ -816,7 +814,7 @@
       if (ft) { ft.style.display = "none"; ft.style.visibility = "hidden"; }
     } catch (e) {}
     try {
-            var stages = ["intro","takeoff","altitude","obstacles","rings","crystals","shield","powerup","airship","boss1","combined","landing","report"];
+            var stages = ["intro","takeoff","altitude","rings","obstacles","shield","airship","combined","boss1","landing","report"];
       var si = stages.indexOf(name);
       if (si < 0) si = 0;
       var pct = (name === "report" || name === "landing") ? 100 : ((si / (stages.length - 1)) * 100);
@@ -830,7 +828,7 @@
       if (ft) { ft.style.display = "none"; ft.style.visibility = "hidden"; }
     } catch (e) {}
     try {
-            var stages = ["intro","takeoff","altitude","obstacles","rings","crystals","shield","powerup","airship","boss1","combined","landing","report"];
+            var stages = ["intro","takeoff","altitude","rings","obstacles","shield","airship","combined","boss1","landing","report"];
       var si = stages.indexOf(name);
       if (si < 0) si = 0;
       var pct = (name === "report" || name === "landing") ? 100 : ((si / (stages.length - 1)) * 100);
@@ -847,7 +845,7 @@
     // Always surface first Ruff line for this stage (dialogue visibility fix)
     try {
       if (ruffLines && ruffLines.length && name !== "report") {
-        showRadio(ruffLines[0], name === "intro" ? 3.5 : 3.0);
+        showRadio(ruffLines[0], name === "intro" ? 2.2 : 3.0);
         ruffLineIdx = 0;
         ruffLineT = 0;
       }
@@ -943,11 +941,11 @@
     } else if (name === "altitude") {
       if (ruffLines.length) showRadio(ruffLines[0], 3.0);
       spawnAltitudeMarkers();
+      try { spawnTrainingCoins(12); spawnCrystals(6); } catch (e) {}
     } else if (name === "crystals") {
-      if (ruffLines.length) showRadio(ruffLines[0], 3.0);
-      spawnCrystals(10);
-      spawnTrainingCoins(18);
-      ruffWaitingCollect = 5;
+      // Removed as standalone lesson — coins/crystals run all flight
+      if (ruffLines.length) showRadio(ruffLines[0], 2.0);
+      try { spawnTrainingCoins(8); spawnCrystals(4); } catch (e) {}
     } else if (name === "obstacles") {
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
       window.__airborneAirfieldObstacles = true;
@@ -980,6 +978,7 @@
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.95; // denser rings
       ruffWaitingRing = 8;
       window.__airborneRingCollects = 0;
+      try { spawnTrainingCoins(8); spawnCrystals(4); } catch (e) {}
     } else if (name === "combined") {
       window.__airborneTrainingBoss = false;
       window.__airborneTrainingBossTried = false;
@@ -1000,6 +999,26 @@
     }
   }
 
+
+  // Coins + crystals for the whole airborne flight (not just one lesson)
+  var FLIGHT_COLLECT_STAGES = {
+    altitude: 1, rings: 1, obstacles: 1, shield: 1, airship: 1, combined: 1, boss1: 1
+  };
+  function updateFlightCollectibles(dt) {
+    var st = ruffStage || window.__airborneRuffStage || "";
+    if (!FLIGHT_COLLECT_STAGES[st]) return;
+    try { updateCrystals(dt); } catch (e) {}
+    try { updateTrainingCoins(dt); } catch (e) {}
+    try {
+      if ((ruffCrystals || []).filter(function(c){ return c && !c.collected; }).length < 3) {
+        spawnCrystals(3);
+      }
+      if ((ruffCoins || []).filter(function(c){ return c && !c.collected; }).length < 5) {
+        spawnTrainingCoins(5);
+      }
+    } catch (e) {}
+  }
+
   function syncStageFlags() {
     // Do NOT force obstacleSpeed or unpause during intro/runway
     if (ruffStage === "intro" || ruffStage === "takeoff") {
@@ -1007,7 +1026,7 @@
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       if (typeof powerup !== "undefined") powerup = null;
-    } else if (ruffStage === "altitude" || ruffStage === "crystals") {
+    } else if (ruffStage === "altitude") {
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
@@ -2940,15 +2959,15 @@ function finishToMap() {
     // Intro: advance lines on a timer, then go to takeoff (must finish before drive)
     if (ruffStage === "intro") {
       if (ruffIntroLineArmed && ruffLineIdx < ruffLines.length &&
-          ruffLineT >= Math.max(2.8, ruffLineDuration || 3)) {
+          ruffLineT >= Math.max(1.6, ruffLineDuration || 2)) {
         ruffLineIdx++;
         ruffLineT = 0;
         if (ruffLineIdx < ruffLines.length) {
           showRadio(ruffLines[ruffLineIdx], 3.2);
         }
       }
-      if ((ruffIntroLineArmed && ruffLineIdx >= ruffLines.length && ruffLineT > 1.2) ||
-          ruffStageT > 16) {
+      if ((ruffIntroLineArmed && ruffLineIdx >= ruffLines.length && ruffLineT > 0.8) ||
+          ruffStageT > 8) {
         ruffIntroFly = false;
         nextStage(); // → takeoff — runway unlocks only after this
         console.log("[R.U.F.F.] intro done → takeoff");
@@ -2965,32 +2984,21 @@ function finishToMap() {
     } else if (ruffStage === "altitude") {
       // Do NOT wipe obstacles every frame — causes random item disappear
       ruffMarkers = []; // no dashed guides
-      if (!ruffLessonPendingNext && ruffStageT > 9) requestNextStage();
-    } else if (ruffStage === "crystals") {
-      updateCrystals(dt);
-      updateTrainingCoins(dt);
-      if (!ruffLessonPendingNext) {
-        // Top-up gently — only when almost empty, never wipe mid-screen
-        var liveC = (ruffCrystals || []).filter(function (c) { return c && !c.collected && c.x > -20; }).length;
-        if (ruffStats.crystals < 8 && liveC < 2) spawnCrystals(4);
-        if ((ruffCoins || []).length < 6) spawnTrainingCoins(6);
-        // Finish when enough collected and field is clear (or long timeout)
-        if ((ruffStats.crystals >= 5 && liveC === 0 && ruffStageT > 4) || ruffStageT > 22) {
-          requestNextStage();
-        }
-      }
+      if (!ruffLessonPendingNext && ruffStageT > 28) requestNextStage();
+    } else if (ruffStage === "crystals" || ruffStage === "powerup") {
+      if (!ruffLessonPendingNext) requestNextStage();
     } else if (ruffStage === "obstacles") {
       if (ruffLessonPendingNext) {
         stopLessonSpawns();
       } else {
         window.__airborneAirfieldObstacles = true;
         if (typeof spawnInterval !== "undefined") spawnInterval = 1.35;
-        if (ruffStageT > 10) {
+        if (ruffStageT > 16) {
           window.__airborneAirfieldObstacles = false;
           if (typeof spawnInterval !== "undefined") spawnInterval = 999;
         }
         const obsCount = (typeof obstacles !== "undefined" && obstacles) ? obstacles.length : 0;
-        if ((ruffStageT > 11 && obsCount === 0) || ruffStageT > 15) {
+        if ((ruffStageT > 14 && obsCount === 0) || ruffStageT > 20) {
           ruffStats.obstaclesAvoided += 2;
           requestNextStage();
         }
@@ -3012,11 +3020,11 @@ function finishToMap() {
         if (typeof spawnInterval !== "undefined") spawnInterval = 1.3;
       }
       // Stop birds near end so stage can finish cleanly
-      if (ruffStageT > 14) {
+      if (ruffStageT > 30) {
         window.__airborneAirfieldObstacles = false;
         if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       }
-      if (!ruffLessonPendingNext && ruffStageT > 16) {
+      if (!ruffLessonPendingNext && ruffStageT > 35) {
         requestNextStage();
       }
     } else if (ruffStage === "powerup") {
@@ -3069,14 +3077,14 @@ function finishToMap() {
         ruffStats.rings = window.__airborneRingCollects;
         if (ruffStats.rings > ruffStats.bestCombo) ruffStats.bestCombo = ruffStats.rings;
       }
-      if (ruffStageT > 10) {
+      if (ruffStageT > 16) {
         window.__airborneAirfieldRings = false;
         if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       }
       const ringLeft = (typeof obstacles !== "undefined" && obstacles)
         ? obstacles.filter(function (o) { return o && (o.isRing || o.type === "gold_ring") && !o.collected; }).length
         : 0;
-      if (!ruffLessonPendingNext && ((ruffStats.rings >= 4 && ringLeft === 0 && ruffStageT > 6) || ruffStageT > 18)) {
+      if (!ruffLessonPendingNext && ((ruffStats.rings >= 4 && ringLeft === 0 && ruffStageT > 8) || ruffStageT > 20)) {
         requestNextStage();
       }
     } else if (ruffStage === "airship") {
@@ -3092,7 +3100,7 @@ function finishToMap() {
       // Wait until fully off screen, then pause gate → boss1
       if (!ruffLessonPendingNext && ruffStageT > 2 && !ruffAirship) {
         requestNextStage();
-      } else if (!ruffLessonPendingNext && ruffStageT > 28) {
+      } else if (!ruffLessonPendingNext && ruffStageT > 18) {
         ruffAirship = null;
         requestNextStage();
       }
@@ -3167,7 +3175,7 @@ function finishToMap() {
       if (ruffCrystals.length < 4 && ruffStageT > 2) spawnCrystals(5);
       // Last lesson before landing — coin rain
       if (ruffCoins.length < 10 && ruffStageT > 1.0) spawnTrainingCoins(12);
-      if (!ruffLessonPendingNext && ruffStageT > 18) {
+      if (!ruffLessonPendingNext && ruffStageT > 28) {
         requestNextStage();
       }
     } else if (ruffStage === "landing") {
