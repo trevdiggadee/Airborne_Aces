@@ -2627,6 +2627,17 @@
     window.__airborneTrainingReportReady = false;
     window.__airborneTrainingReportShown = false;
     window.__airborneForceTrainRestart = true;
+    window.__airborneEndCelebrationDone = false;
+    window.__airborneEndCelebration = null;
+    window.__airborneLandTouchAt = 0;
+    try {
+      ruffLessonPendingNext = false;
+      ruffLessonClearing = false;
+      ruffLessonPauseT = 0;
+      ruffAirship = null;
+      ruffBgBalloons = [];
+      ruffScreenDust = [];
+    } catch (e) {}
     if (!keepAirfield) {
       window.__airborneAirfield = false;
       window.__airborneTrainingFlight = false;
@@ -2642,6 +2653,30 @@
       window.__airborneOrphanTrails = [];
       window.__airborneActivePowerVisual = null;
       window.__airborneActivePowerUntil = 0;
+      window.__airborneFirePowerActive = false;
+      if (window.__airborneCam) {
+        window.__airborneCam.phase = "idle";
+        window.__airborneCam.z = 1;
+        window.__airborneCam.paused = false;
+      }
+      if (typeof applyCamCss === "function") applyCamCss(1);
+    } catch (e) {}
+    try {
+      var rep = document.getElementById("ruffReport");
+      if (rep) {
+        rep.classList.remove("visible");
+        rep.style.display = "none";
+        rep.style.opacity = "0";
+      }
+      var rb = document.getElementById("ruffRankBanner");
+      if (rb) {
+        rb.classList.remove("visible", "medalShow", "rankNameShow");
+        rb.style.opacity = "0";
+      }
+      var ftb = document.getElementById("ftBannerForce");
+      if (ftb && ftb.parentNode) ftb.parentNode.removeChild(ftb);
+      var aab = document.getElementById("aaFlightBanner");
+      if (aab && aab.parentNode) aab.parentNode.removeChild(aab);
     } catch (e) {}
     try {
       if (typeof obstacles !== "undefined") obstacles = [];
@@ -2875,6 +2910,13 @@ function finishToMap() {
     // Large centered FLIGHT TRAINING banner
     window.__airborneEndCelebrationDone = false;
     window.__airborneEndCelebration = null;
+    window.__airborneTrainingReportShown = false;
+    window.__airborneTrainingReportReady = false;
+    try {
+      ruffLessonPendingNext = false;
+      ruffLessonClearing = false;
+      ruffAirship = null;
+    } catch (e) {}
     try { showFlightTraceBanner(); } catch (e) {}
     try { setTimeout(function(){ try { showFlightTraceBanner(); } catch (e2) {} }, 120); } catch (e) {}
     try { setTimeout(function(){ try { showFlightTraceBanner(); } catch (e2) {} }, 600); } catch (e) {}

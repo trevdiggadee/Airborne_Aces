@@ -3506,7 +3506,7 @@ canvas {
 #hudFrame { overflow: visible !important; }
 .altGauge {
   position: absolute;
-  top: 92%;
+  top: 97%; /* lowered ~5% more */
   width: 26px;
   height: 72px;
   min-height: 72px;
@@ -3537,6 +3537,7 @@ canvas {
   box-shadow: inset 0 0 6px rgba(0,0,0,0.55), 0 0 0 1px rgba(80,50,15,0.4);
   overflow: hidden;
 }
+/* Blue at bottom → amber → red at top as altitude rises */
 .altGaugeFill {
   position: absolute;
   left: 1px;
@@ -3544,8 +3545,14 @@ canvas {
   bottom: 0;
   height: 50%;
   border-radius: 4px;
-  background: linear-gradient(180deg, rgba(120,200,255,0.95), rgba(40,120,200,0.85));
-  box-shadow: 0 0 8px rgba(80,180,255,0.45);
+  background: linear-gradient(to top,
+    #2b7fd4 0%,
+    #3ec6ff 22%,
+    #7dffb0 45%,
+    #ffd24a 68%,
+    #ff7a3a 88%,
+    #ff2d4a 100%);
+  box-shadow: 0 0 8px rgba(255, 120, 60, 0.35);
   transition: height 0.08s linear;
 }
 .altGaugeNeedle {

@@ -315,6 +315,8 @@
     airfieldLandT = 0;
     airfieldScoreT = 0;
     airfieldDidLand = false;
+    airfieldSkidT = 0;
+    airfieldSkidDriveDist = 0;
     // Full reset so re-entry always starts at the beginning
     airfieldPhaseT = 0;
     airfieldRunwayT = 0;
@@ -1078,17 +1080,14 @@
       if (!airfieldTiles || !airfieldTiles.length) {
         try { ensureAirfieldStripVisible(); } catch (e) {}
       }
-      // TAKEOFF-STYLE drive: blimp stays put, runway scrolls underneath
+      // HOLD to drive to end of runway (like takeoff), then score
       window.__airborneAirfieldPaused = false;
       window.__airborneAirfieldInvuln = true;
-      const skidDur = 5.5;
-      const u = Math.min(1, airfieldSkidT / skidDur);
-      const driveSpd = (u < 0.9)
-        ? Math.max(airfieldTakeoffSpeed || 240, 260)
-        : Math.max(70, 260 * (1 - (u - 0.9) / 0.1));
+      var holdingLand = !!window.__airborneAirfieldHold;
+      airfieldSkidDriveDist = airfieldSkidDriveDist || 0;
+      var runwayEnd = Math.max(W * 2.8, 1100); // distance to "end of runway"
       try {
         if (!airfieldTiles || airfieldTiles.length < 3) ensureAirfieldStripVisible();
-        // Pad to 4 looping tiles
         if (airfieldTiles && airfieldTiles.length && airfieldTiles.length < 4) {
           var b0 = airfieldTiles[0];
           var tw0 = b0.w || W;
@@ -1100,13 +1099,24 @@
           }
         }
       } catch (e) {}
-      (airfieldTiles || []).forEach(function(tile) {
-        if (!tile) return;
-        tile.x -= driveSpd * dt;
-        var tw = tile.w || W;
-        while (tile.x + tw < -10) tile.x += tw * Math.max(2, (airfieldTiles || []).length || 2);
-      });
-      // Keep strip visible at bottom
+      var driveSpd = 0;
+      if (holdingLand) {
+        airfieldTakeoffSpeed = Math.min(320, (airfieldTakeoffSpeed || 180) + 90 * dt);
+        driveSpd = Math.max(160, airfieldTakeoffSpeed);
+        airfieldSkidDriveDist += driveSpd * dt;
+        (airfieldTiles || []).forEach(function(tile) {
+          if (!tile) return;
+          tile.x -= driveSpd * dt;
+          var tw = tile.w || W;
+          while (tile.x + tw < -10) tile.x += tw * Math.max(2, (airfieldTiles || []).length || 2);
+        });
+        if (typeof obstacleSpeed !== "undefined") obstacleSpeed = driveSpd;
+        airfieldTip = "HOLD to drive to the end of the runway!";
+      } else {
+        airfieldTakeoffSpeed = Math.max(50, (airfieldTakeoffSpeed || 180) - 120 * dt);
+        if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 0;
+        airfieldTip = "HOLD to drive!";
+      }
       airfieldStripY = 0;
       airfieldUseLandingArt = true;
       const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
@@ -1115,13 +1125,12 @@
         player.x = W * 0.25;
         player.y = landY;
         player.vy = 0;
-        player.rotation = -0.05;
-        if (typeof obstacleSpeed !== "undefined") obstacleSpeed = driveSpd;
+        player.rotation = holdingLand ? -0.08 : 0;
         if (typeof blimpPersonality !== "undefined" && blimpPersonality) {
           blimpPersonality.squashX = 1;
           blimpPersonality.squashY = 1;
         }
-        if (u < 0.95 && Math.random() < 0.75) {
+        if (holdingLand && Math.random() < 0.75) {
           if (typeof spawnLandingDust === "function") {
             try {
               spawnLandingDust(player.x - (player.w || 40) * 0.25, landY + 6);
@@ -1130,7 +1139,8 @@
           }
         }
       }
-      if (airfieldSkidT >= skidDur) {
+      // Reached end of runway while holding (or long failsafe)
+      if (airfieldSkidDriveDist >= runwayEnd || airfieldSkidT > 45) {
         try {
           if (typeof spawnVictoryFirework === "function") {
             spawnVictoryFirework(player.x, player.y - 30);
@@ -1215,8 +1225,8 @@
         });
         airfieldFireworks = airfieldFireworks.filter(function(fw) { return fw.age < fw.life; });
       }
-      // Show score quickly after drive ends
-      if (!window.__airborneTrainingReportShown && airfieldScoreT > 0.6) {
+      // Score pops after runway drive completes
+      if (!window.__airborneTrainingReportShown && airfieldScoreT > 0.45) {
         window.__airborneTrainingReportShown = true;
         window.__airborneTrainingReportReady = true;
         window.__airborneAirfieldDidLand = true;
