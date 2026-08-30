@@ -1421,14 +1421,14 @@
   var skyDust = [];
   function ensureSkyDust() {
     if (skyDust.length || typeof W === "undefined") return;
-    for (var i = 0; i < 28; i++) {
+    for (var i = 0; i < 48; i++) {
       skyDust.push({
         x: Math.random() * W,
-        y: Math.random() * H * 0.55,
-        r: 0.35 + Math.random() * 0.7,
-        sp: 0.004 + Math.random() * 0.01,
+        y: Math.random() * H * 0.62,
+        r: 0.9 + Math.random() * 1.6,
+        sp: 0.006 + Math.random() * 0.014,
         bob: Math.random() * Math.PI * 2,
-        a: 0.06 + Math.random() * 0.08
+        a: 0.18 + Math.random() * 0.22
       });
     }
   }
@@ -1447,9 +1447,13 @@
     ctx.globalCompositeOperation = "lighter";
     skyDust.forEach(function(d) {
       ctx.globalAlpha = d.a;
-      ctx.fillStyle = "rgba(255,250,230,1)";
+      var g = ctx.createRadialGradient(d.x, d.y, 0, d.x, d.y, d.r * 2.2);
+      g.addColorStop(0, "rgba(255,252,235,1)");
+      g.addColorStop(0.45, "rgba(255,240,200,0.75)");
+      g.addColorStop(1, "rgba(255,220,160,0)");
+      ctx.fillStyle = g;
       ctx.beginPath();
-      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+      ctx.arc(d.x, d.y, d.r * 2.2, 0, Math.PI * 2);
       ctx.fill();
     });
     ctx.restore();

@@ -2903,7 +2903,7 @@ body.pause-open #unifiedDock {
   inset: 0 !important;
   background:
     conic-gradient(
-      from -90deg,
+      from 225deg,
       rgba(120, 200, 255, 0.95) var(--ud-progress, 0%),
       rgba(30, 40, 55, 0.55) var(--ud-progress, 0%)
     ) !important;
@@ -2914,7 +2914,7 @@ body.pause-open #unifiedDock {
   inset: 13px !important;
   background:
     conic-gradient(
-      from -90deg,
+      from 225deg,
       rgba(255, 190, 60, 0.95) var(--ud-power, 0%),
       rgba(40, 28, 12, 0.5) var(--ud-power, 0%)
     ) !important;

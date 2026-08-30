@@ -350,6 +350,10 @@
   }
 
   function pickObstacleType() {
+    // Flight training: birds only (no hot-air balloon obstacles)
+    if (window.__airborneAirfield || window.__airborneTrainingFlight) {
+      return Math.random() < 0.5 ? "bird_a" : "bird_b";
+    }
     const next = nextBossConfig();
     if (next && !bossActive) {
       const leadInStart = next.threshold - 25;
@@ -651,13 +655,15 @@
       if (sheetImg && sheetImg.naturalWidth) {
         var sc = birdSpecies.cols || 6, sr = birdSpecies.rows || 6;
         aspect = (sheetImg.naturalHeight / sr) / (sheetImg.naturalWidth / sc);
-        dispW = Math.min(78, W * 0.16);
+        dispW = Math.min(86, W * 0.176); // +10% bird size
         // rebuild h
+      } else {
+        dispW = Math.min(86, W * 0.176);
       }
     }
     const dispH2 = (type === "bird_a" || type === "bird_b") ? dispW * aspect : dispH;
     if (type === "bird_a" || type === "bird_b") {
-      // use recomputed size
+      // use recomputed size (+10%)
     }
     obstacles.push({
       type,
@@ -694,6 +700,9 @@
     window.__airborneFireTrail = [];
 
     window.__airborneSpawnFirePickup = function (x, y) {
+      // Fire floating pickup removed
+      window.__airborneFirePickup = null;
+      return;
       window.__airborneFirePickup = {
         x: (typeof x === "number") ? x : ((typeof W !== "undefined" ? W : 400) + 60),
         y: (typeof y === "number") ? y : ((typeof H !== "undefined" ? H : 600) * (0.28 + Math.random() * 0.32)),

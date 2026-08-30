@@ -1267,22 +1267,40 @@
       for (var ti = 0; ti < d.trail.length; ti++) d.trail[ti].a *= 0.88;
       if (d.age >= d.life || d.x < -40) ruffAirship.drones.splice(di, 1);
     }
-    // Soft collision — costs a heart if hit (unless invuln/shield)
-    if (!ruffAirship.passed && typeof player !== "undefined" && player) {
+    // Solid hull — blimp cannot pass through airship
+    if (typeof player !== "undefined" && player) {
       var cy = ruffAirship.y + Math.sin(ruffAirship.bob) * 6;
-      var dx = Math.abs(player.x - (ruffAirship.x + ruffAirship.w * 0.5));
-      var dy = Math.abs(player.y - (cy + ruffAirship.h * 0.5));
-      if (dx < player.w * 0.35 + ruffAirship.w * 0.35 && dy < player.h * 0.35 + ruffAirship.h * 0.3) {
-        ruffAirship.passed = true; // one hit only
-        try {
-          if (!(typeof shieldActive !== "undefined" && shieldActive) &&
-              !(window.__airborneAirfieldInvuln) &&
-              typeof takeHit === "function") {
-            takeHit();
-          }
-        } catch (e) {}
+      var ax = ruffAirship.x + ruffAirship.w * 0.08;
+      var aw = ruffAirship.w * 0.84;
+      var ay = cy + ruffAirship.h * 0.12;
+      var ah = ruffAirship.h * 0.72;
+      var px = player.x, py = player.y;
+      var hw = player.w * 0.38, hh = player.h * 0.38;
+      // AABB push-out
+      var overlapX = (hw + aw * 0.5) - Math.abs(px - (ax + aw * 0.5));
+      var overlapY = (hh + ah * 0.5) - Math.abs(py - (ay + ah * 0.5));
+      if (overlapX > 0 && overlapY > 0) {
+        if (overlapX < overlapY) {
+          player.x += (px < ax + aw * 0.5) ? -overlapX : overlapX;
+        } else {
+          player.y += (py < ay + ah * 0.5) ? -overlapY : overlapY;
+        }
+        if (!ruffAirship.hitCd || ruffAirship.hitCd <= 0) {
+          ruffAirship.hitCd = 0.85;
+          try {
+            if (!(typeof shieldActive !== "undefined" && shieldActive) &&
+                !(window.__airborneAirfieldInvuln) &&
+                typeof takeHit === "function") {
+              takeHit();
+            }
+          } catch (e) {}
+        }
       }
+      if (ruffAirship.hitCd > 0) ruffAirship.hitCd -= dt;
     }
+    // Propeller spin state
+    ruffAirship.propAngle = (ruffAirship.propAngle || 0) + dt * 18;
+    ruffAirship.propBlur = 0.55 + 0.45 * Math.abs(Math.sin(ruffAirship.propAngle * 0.5));
     if (ruffAirship.x + ruffAirship.w < -40) {
       ruffAirship = null;
     }
@@ -1331,6 +1349,42 @@
       ctx.fillRect(a.x, cy, a.w, a.h * 0.7);
     }
     ctx.restore();
+
+    // Propeller disc at nose (left side of airship facing leftward travel)
+    var propX = a.x + a.w * 0.06;
+    var propY = cy + a.h * 0.48;
+    var propR = a.h * 0.22;
+    ctx.save();
+    ctx.translate(propX, propY);
+    ctx.rotate(a.propAngle || 0);
+    ctx.globalAlpha = 0.55 * (a.propBlur || 1);
+    ctx.strokeStyle = "rgba(220,230,240,0.85)";
+    ctx.lineWidth = 3;
+    for (var pi = 0; pi < 4; pi++) {
+      ctx.rotate(Math.PI / 2);
+      ctx.beginPath();
+      ctx.ellipse(propR * 0.55, 0, propR * 0.55, propR * 0.12, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(180,200,220,0.35)";
+      ctx.fill();
+    }
+    ctx.restore();
+    // Motion blur ring
+    ctx.save();
+    ctx.globalAlpha = 0.25;
+    ctx.strokeStyle = "rgba(200,220,240,0.8)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(propX, propY, propR * 0.95, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    // Hull sway highlight
+    ctx.save();
+    ctx.globalAlpha = 0.12 + 0.08 * Math.sin((a.bob || 0) * 2);
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(a.x + a.w * 0.2, cy + a.h * 0.18, a.w * 0.45, a.h * 0.08);
+    ctx.restore();
+
     // Drones + trails in front
     if (a.drones && a.drones.length) {
       for (var di = 0; di < a.drones.length; di++) {
@@ -1720,12 +1774,15 @@
     n = n || 4;
     const groundY = (typeof groundLevelY === "function") ? groundLevelY() : (typeof H !== "undefined" ? H * 0.78 : 400);
     for (let i = 0; i < n; i++) {
+      var cy = (typeof H !== "undefined" ? H : 600) * (0.22 + Math.random() * 0.42);
       ruffCoins.push({
         x: (typeof W !== "undefined" ? W : 400) + 40 + i * (70 + Math.random() * 50),
-        y: (typeof H !== "undefined" ? H : 600) * (0.22 + Math.random() * 0.42),
+        y: cy,
+        yBase: cy,
         r: 14,
         spin: Math.random() * Math.PI * 2,
         bob: Math.random() * Math.PI * 2,
+        speed: 95,
         collected: false,
         spark: 0
       });
@@ -1734,18 +1791,21 @@
 
   function updateTrainingCoins(dt) {
     if (!ruffCoins.length) return;
-    // Constant coin speed all training stages (never tied to obstacleSpeed)
+    // Fixed constant scroll speed — never changes mid-float
     const spd = 95;
+    // Force every coin to the same horizontal speed (no per-coin variance)
     const px = (typeof player !== "undefined" && player) ? player.x : 0;
     const py = (typeof player !== "undefined" && player) ? player.y : 0;
     const pw = (typeof player !== "undefined" && player) ? player.w * 0.42 : 20;
     const ph = (typeof player !== "undefined" && player) ? player.h * 0.42 : 16;
     ruffCoins.forEach(function (c) {
       if (c.collected) return;
+      c.speed = spd;
       c.x -= spd * dt;
-      // Static coin — no spin animation
-      // c.spin left unchanged
-      c.bob += dt * 3.2;
+      // Gentle bob only on Y — does not affect horizontal speed
+      c.bob += dt * 2.4;
+      c.yBase = (c.yBase != null) ? c.yBase : c.y;
+      c.y = c.yBase + Math.sin(c.bob) * 3.5;
       c.glow = (c.glow || 0) + dt * 4;
       c.sparkT = (c.sparkT || 0) - dt;
       if (c.sparkT <= 0) {
@@ -3071,14 +3131,8 @@ function finishToMap() {
       } catch (e) {}
       updateCrystals(dt);
       updateTrainingCoins(dt);
-      if (ruffStageT > 4 && !window.__airborneFireSpawned2) {
-        window.__airborneFireSpawned2 = true;
-        try {
-          if (typeof window.__airborneSpawnFirePickup === "function") {
-            window.__airborneSpawnFirePickup();
-          }
-        } catch (e) {}
-      }
+      // Fire floating power-up removed
+      window.__airborneFirePickup = null;
       if (ruffCrystals.length < 4 && ruffStageT > 2) spawnCrystals(5);
       // Last lesson before landing — coin rain
       if (ruffCoins.length < 10 && ruffStageT > 1.0) spawnTrainingCoins(12);

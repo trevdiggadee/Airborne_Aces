@@ -106,8 +106,9 @@
         const dy = Math.abs(b.y - (boss.y + boss.h / 2));
         if (dx < boss.w * 0.38 && dy < boss.h * 0.42) {
           boss.health--;
-          bossHitFlashUntil = performance.now() + 300;
+          bossHitFlashUntil = performance.now() + 220;
           bossShakeUntil = performance.now() + 420;
+          try { spawnBossDamageNum(1, b.x, b.y); } catch (e) {}
           spawnHitParticles(b.x, b.y);
           triggerBigExplosion(b.x, b.y, 42, 42);
           try { if (typeof triggerShockwave === "function") triggerShockwave(b.x, b.y, 55, "255,170,50"); } catch (e) {}
@@ -328,36 +329,75 @@
     drawMotionBlur(img, boss.x + boss.w / 2 + shakeX, boss.y + boss.h / 2, boss.w, boss.h, 0, 80, 0);
     ctx.drawImage(img, boss.x + shakeX, boss.y, boss.w, boss.h);
 
-    // Hit flash — soft white on sprite only (no outline box)
-    if (performance.now() < bossHitFlashUntil) {
-      const flashT = Math.max(0, (bossHitFlashUntil - performance.now()) / 300);
-      drawSpriteFlash(img, boss.x + shakeX, boss.y, boss.w, boss.h, 0.45 + 0.4 * flashT);
-    }
+    // Hit feedback without white flash (shake + particles + damage nums only)
 
-    // health bar above the boss
-    const barW = boss.w * 0.9;
-    const barH = 10;
+    // Premium boss health bar
+    const barW = boss.w * 0.95;
+    const barH = 14;
     const barX = boss.x + (boss.w - barW) / 2;
-    const barY = boss.y - 20;
-    ctx.fillStyle = "rgba(20,12,5,0.6)";
-    ctx.fillRect(barX - 2, barY - 2, barW + 4, barH + 4);
-    ctx.fillStyle = "#3a1f14";
+    const barY = boss.y - 28;
+    const pct = Math.max(0, Math.min(1, boss.health / boss.maxHealth));
+    // Outer frame
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.beginPath();
+    var rr=5,rx=barX-3,ry=barY-3,rw=barW+6,rh=barH+6;
+    ctx.moveTo(rx+rr,ry); ctx.arcTo(rx+rw,ry,rx+rw,ry+rh,rr); ctx.arcTo(rx+rw,ry+rh,rx,ry+rh,rr);
+    ctx.arcTo(rx,ry+rh,rx,ry,rr); ctx.arcTo(rx,ry,rx+rw,ry,rr); ctx.closePath();
+    ctx.fill();
+    // Brass border
+    const frameG = ctx.createLinearGradient(barX, barY, barX, barY + barH);
+    frameG.addColorStop(0, "rgba(255,210,120,0.95)");
+    frameG.addColorStop(0.5, "rgba(180,120,40,0.9)");
+    frameG.addColorStop(1, "rgba(120,70,20,0.95)");
+    ctx.strokeStyle = frameG;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    var rr2=4,rx2=barX-1.5,ry2=barY-1.5,rw2=barW+3,rh2=barH+3;
+    ctx.moveTo(rx2+rr2,ry2); ctx.arcTo(rx2+rw2,ry2,rx2+rw2,ry2+rh2,rr2);
+    ctx.arcTo(rx2+rw2,ry2+rh2,rx2,ry2+rh2,rr2); ctx.arcTo(rx2,ry2+rh2,rx2,ry2,rr2);
+    ctx.arcTo(rx2,ry2,rx2+rw2,ry2,rr2); ctx.closePath();
+    ctx.stroke();
+    // Track
+    ctx.fillStyle = "rgba(25,12,8,0.92)";
     ctx.fillRect(barX, barY, barW, barH);
-    const pct = Math.max(0, boss.health / boss.maxHealth);
-    const fillGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
-    fillGrad.addColorStop(0, "#c0392b");
-    fillGrad.addColorStop(1, "#e74c3c");
-    ctx.fillStyle = fillGrad;
-    ctx.fillRect(barX, barY, barW * pct, barH);
-    if (pct > 0 && pct < 0.25) {
-      // low-health warning pulse
-      const pulse = 0.4 + 0.5 * Math.abs(Math.sin(performance.now() / 130));
-      ctx.fillStyle = "rgba(255,255,255," + pulse.toFixed(2) + ")";
+    // Fill
+    if (pct > 0) {
+      const fillGrad = ctx.createLinearGradient(barX, barY, barX + barW, barY);
+      if (pct > 0.5) {
+        fillGrad.addColorStop(0, "#2ecc71");
+        fillGrad.addColorStop(0.5, "#27ae60");
+        fillGrad.addColorStop(1, "#1e8449");
+      } else if (pct > 0.25) {
+        fillGrad.addColorStop(0, "#f39c12");
+        fillGrad.addColorStop(1, "#e67e22");
+      } else {
+        fillGrad.addColorStop(0, "#e74c3c");
+        fillGrad.addColorStop(1, "#c0392b");
+      }
+      ctx.fillStyle = fillGrad;
       ctx.fillRect(barX, barY, barW * pct, barH);
+      // Shine
+      ctx.fillStyle = "rgba(255,255,255,0.28)";
+      ctx.fillRect(barX, barY, barW * pct, barH * 0.35);
+      if (pct < 0.25) {
+        const pulse = 0.25 + 0.35 * Math.abs(Math.sin(performance.now() / 120));
+        ctx.fillStyle = "rgba(255,80,40," + pulse.toFixed(2) + ")";
+        ctx.fillRect(barX, barY, barW * pct, barH);
+      }
     }
-    ctx.strokeStyle = "rgba(0,0,0,0.5)";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(barX, barY, barW, barH);
+    // HP numbers
+    ctx.font = "900 13px Rockwell, Georgia, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(0,0,0,0.75)";
+    ctx.fillStyle = "#fff6d0";
+    const hpLabel = Math.max(0, Math.ceil(boss.health)) + " / " + Math.ceil(boss.maxHealth);
+    ctx.strokeText(hpLabel, barX + barW / 2, barY + barH / 2 + 0.5);
+    ctx.fillText(hpLabel, barX + barW / 2, barY + barH / 2 + 0.5);
+    ctx.restore();
+    try { drawBossDamageNums(); } catch (e) {}
   }
 
   // Dramatic sinking death for boss 1 (balloon) — slo-mo fall with fire/smoke
@@ -1308,6 +1348,57 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
 
   // ---------- Boss hit-feedback (flash + spark particles) ----------
   let bossHitFlashUntil = 0;
+  let bossDamageNums = [];
+  function spawnBossDamageNum(amount, x, y) {
+    bossDamageNums.push({
+      x: x + (Math.random() - 0.5) * 30,
+      y: y - 10,
+      vy: -55 - Math.random() * 40,
+      vx: (Math.random() - 0.5) * 40,
+      life: 0.9,
+      age: 0,
+      amount: amount || 1,
+      scale: 1 + Math.random() * 0.25
+    });
+  }
+  function updateBossDamageNums(dt) {
+    for (var i = bossDamageNums.length - 1; i >= 0; i--) {
+      var n = bossDamageNums[i];
+      n.age += dt;
+      n.x += n.vx * dt;
+      n.y += n.vy * dt;
+      n.vy += 90 * dt;
+      if (n.age >= n.life) bossDamageNums.splice(i, 1);
+    }
+  }
+  function drawBossDamageNums() {
+    if (!bossDamageNums.length || typeof ctx === "undefined") return;
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (var i = 0; i < bossDamageNums.length; i++) {
+      var n = bossDamageNums[i];
+      var u = n.age / n.life;
+      var a = u < 0.15 ? (u / 0.15) : Math.max(0, 1 - (u - 0.15) / 0.85);
+      var sc = n.scale * (1.15 - u * 0.35);
+      ctx.globalAlpha = a;
+      ctx.font = "900 " + Math.round(22 * sc) + "px Rockwell, Georgia, sans-serif";
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "rgba(40,10,0,0.85)";
+      ctx.fillStyle = u < 0.3 ? "#fff5c8" : "#ff6b3d";
+      var label = "-" + String(n.amount);
+      ctx.strokeText(label, n.x, n.y);
+      ctx.fillText(label, n.x, n.y);
+      // sparkle
+      ctx.globalAlpha = a * 0.6;
+      ctx.fillStyle = "#ffe566";
+      ctx.beginPath();
+      ctx.arc(n.x + 12, n.y - 8, 2.2 * (1 - u), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
   let bossShakeUntil = 0;
   let hitParticles = [];
   let explosionBursts = [];

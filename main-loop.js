@@ -420,6 +420,7 @@
     drawComboPopups();
     try { if (window.updateFlightTrainingBanner) window.updateFlightTrainingBanner(dt); } catch (e) {}
     try { if (window.drawFlightTrainingBanner) window.drawFlightTrainingBanner(); } catch (e) {}
+    try { if (window.updateBossDamageNums) window.updateBossDamageNums(dt); } catch (e) {}
     // Vignette + film grain removed — were causing uneven dimming and lag
     } catch (err) {
       if (!loopErrorShown) {

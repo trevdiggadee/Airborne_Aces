@@ -1781,6 +1781,10 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       if (!(typeof bossActive !== "undefined" && bossActive && boss)) return false;
       var dmg = amount || Math.max(2, Math.ceil((boss.maxHealth || 30) * 0.08));
       boss.health -= dmg;
+      try {
+        if (typeof spawnBossDamageNum === "function") spawnBossDamageNum(dmg, x || (boss.x + boss.w * 0.5), y || (boss.y + boss.h * 0.3));
+        else if (window.spawnBossDamageNum) window.spawnBossDamageNum(dmg, x || (boss.x + boss.w * 0.5), y || (boss.y + boss.h * 0.3));
+      } catch (eN) {}
       bossHitFlashUntil = performance.now() + 180;
       bossShakeUntil = performance.now() + 250;
       try {
