@@ -1298,9 +1298,18 @@
       }
       if (ruffAirship.hitCd > 0) ruffAirship.hitCd -= dt;
     }
-    // Propeller spin state
-    ruffAirship.propAngle = (ruffAirship.propAngle || 0) + dt * 18;
+    // Propeller spin state (slightly slower)
+    ruffAirship.propAngle = (ruffAirship.propAngle || 0) + dt * 12;
     ruffAirship.propBlur = 0.55 + 0.45 * Math.abs(Math.sin(ruffAirship.propAngle * 0.5));
+    // Wind streaks along whole vessel (slower / softer than birds)
+    try {
+      if (typeof maybeEmitWind === "function") {
+        var cyW = ruffAirship.y + Math.sin(ruffAirship.bob || 0) * 6;
+        maybeEmitWind(ruffAirship.x + ruffAirship.w * 0.55, cyW + ruffAirship.h * 0.45, ruffAirship.w * 0.7, ruffAirship.h * 0.55, 4.2, dt, "obstacle");
+        maybeEmitWind(ruffAirship.x + ruffAirship.w * 0.25, cyW + ruffAirship.h * 0.35, ruffAirship.w * 0.4, ruffAirship.h * 0.4, 2.8, dt, "obstacle");
+        maybeEmitWind(ruffAirship.x + ruffAirship.w * 0.75, cyW + ruffAirship.h * 0.5, ruffAirship.w * 0.35, ruffAirship.h * 0.35, 3.0, dt, "obstacle");
+      }
+    } catch (eW) {}
     if (ruffAirship.x + ruffAirship.w < -40) {
       ruffAirship = null;
     }
@@ -1336,6 +1345,7 @@
     }
     var sheet = (typeof images !== "undefined" && images) ? images.training_airship : null;
     ctx.save();
+    ctx.globalCompositeOperation = "source-over";
     if (sheet && sheet.naturalWidth) {
       var cols = 5, rows = 5;
       var fw = sheet.naturalWidth / cols;
@@ -1343,7 +1353,9 @@
       var fr = (a.frame || 0) % 25;
       var col = fr % cols;
       var row = Math.floor(fr / cols) % rows;
-      ctx.drawImage(sheet, col * fw, row * fh, fw, fh, a.x, cy, a.w, a.h);
+      // Inset slightly to crop cell padding / white edges
+      var pad = Math.min(fw, fh) * 0.04;
+      ctx.drawImage(sheet, col * fw + pad, row * fh + pad, fw - pad * 2, fh - pad * 2, a.x, cy, a.w, a.h);
     } else {
       ctx.fillStyle = "rgba(80,60,40,0.85)";
       ctx.fillRect(a.x, cy, a.w, a.h * 0.7);
@@ -1357,15 +1369,15 @@
     ctx.save();
     ctx.translate(propX, propY);
     ctx.rotate(a.propAngle || 0);
-    ctx.globalAlpha = 0.55 * (a.propBlur || 1);
-    ctx.strokeStyle = "rgba(220,230,240,0.85)";
-    ctx.lineWidth = 3;
+    ctx.globalAlpha = 0.4 * (a.propBlur || 1);
+    ctx.strokeStyle = "rgba(160,170,180,0.7)";
+    ctx.lineWidth = 2.5;
     for (var pi = 0; pi < 4; pi++) {
       ctx.rotate(Math.PI / 2);
       ctx.beginPath();
       ctx.ellipse(propR * 0.55, 0, propR * 0.55, propR * 0.12, 0, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.fillStyle = "rgba(180,200,220,0.35)";
+      ctx.fillStyle = "rgba(120,130,140,0.25)";
       ctx.fill();
     }
     ctx.restore();
@@ -1378,12 +1390,7 @@
     ctx.arc(propX, propY, propR * 0.95, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
-    // Hull sway highlight
-    ctx.save();
-    ctx.globalAlpha = 0.12 + 0.08 * Math.sin((a.bob || 0) * 2);
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(a.x + a.w * 0.2, cy + a.h * 0.18, a.w * 0.45, a.h * 0.08);
-    ctx.restore();
+    // (no white highlight — avoids box artifact)
 
     // Drones + trails in front
     if (a.drones && a.drones.length) {
@@ -1488,7 +1495,7 @@
 
   var HOTAIR_KEYS = [
     "hotair_red_cream", "hotair_night_stars", "hotair_floral_teal",
-    "hotair_steampunk", "hotair_mosaic", "hotair_compass"
+    "hotair_mosaic", "hotair_compass"
   ];
   var hotairImgs = null;
   function ensureHotairImgs() {
@@ -1511,43 +1518,62 @@
     { id: 3, speed: 8.0, scale: 0.16, dark: 1, y0: 0.25, y1: 0.58, behindMountains: false, behindClouds: false }
   ];
 
-  function spawnTrainingBgBalloons() {
+  var ruffBgBalloonSpawnT = 0;
+  var ruffBgBalloonSpawned = 0;
+  var RUFF_BG_BALLOON_MAX = 4;
+  var RUFF_BG_BALLOON_GAP = 7.5; // seconds between new balloons
+
+  function pushOneBgBalloon(forceX) {
     ensureHotairImgs();
-    ruffBgBalloons = [];
+    if (!ruffBgBalloons) ruffBgBalloons = [];
     var W0 = (typeof W !== "undefined") ? W : 400;
     var H0 = (typeof H !== "undefined") ? H : 600;
-    // 4 balloons (+25%) spread across height bands so not all top-clustered
-    var picks = HOTAIR_KEYS.slice().sort(function() { return Math.random() - 0.5; }).slice(0, 4);
-    var layerOrder = [0, 1, 2, 3]; // mountains + front only
-    // Forced height slots across sky (spread top → mid-low)
-    var heightSlots = [0.12, 0.28, 0.42, 0.55];
-    for (var i = 0; i < picks.length; i++) {
-      var layer = HOTAIR_LAYERS[layerOrder[i] % HOTAIR_LAYERS.length];
-      // Use distinct height slot + small jitter so heights always differ
-      var ly = heightSlots[i % heightSlots.length] + (Math.random() - 0.5) * 0.06;
-      ly = Math.max(0.08, Math.min(0.62, ly));
-      ruffBgBalloons.push({
-        key: picks[i],
-        layer: layer,
-        layerId: layer.id,
-        behindMountains: !!layer.behindMountains,
-        behindClouds: !!layer.behindClouds,
-        x: (i + 0.25) * (W0 / 4) + Math.random() * 40,
-        y: H0 * ly,
-        s: layer.scale * (0.95 + Math.random() * 0.12),
-        speed: layer.speed * (0.88 + Math.random() * 0.2),
-        bob: Math.random() * Math.PI * 2,
-        bobSpd: 0.25 + Math.random() * 0.25,
-        dark: layer.dark
-      });
-    }
+    var keys = HOTAIR_KEYS.slice().sort(function() { return Math.random() - 0.5; });
+    var key = keys[ruffBgBalloonSpawned % keys.length];
+    var layer = HOTAIR_LAYERS[ruffBgBalloonSpawned % HOTAIR_LAYERS.length];
+    var heightSlots = [0.14, 0.30, 0.44, 0.56];
+    var ly = heightSlots[ruffBgBalloonSpawned % heightSlots.length] + (Math.random() - 0.5) * 0.05;
+    ly = Math.max(0.08, Math.min(0.62, ly));
+    ruffBgBalloons.push({
+      key: key,
+      layer: layer,
+      layerId: layer.id,
+      behindMountains: !!layer.behindMountains,
+      behindClouds: !!layer.behindClouds,
+      x: (typeof forceX === "number") ? forceX : (W0 + 40 + Math.random() * 80),
+      y: H0 * ly,
+      s: layer.scale * (0.95 + Math.random() * 0.12),
+      speed: layer.speed * (0.88 + Math.random() * 0.2),
+      bob: Math.random() * Math.PI * 2,
+      bobSpd: 0.25 + Math.random() * 0.25,
+      dark: layer.dark
+    });
+    ruffBgBalloonSpawned++;
     ruffBgBalloons.sort(function(a, b) {
       return (a.layerId || 0) - (b.layerId || 0);
     });
   }
 
+  function spawnTrainingBgBalloons() {
+    ensureHotairImgs();
+    ruffBgBalloons = [];
+    ruffBgBalloonSpawnT = 2.5; // first balloon after a short delay
+    ruffBgBalloonSpawned = 0;
+    // Only seed ONE far balloon so the sky isn't full at start
+    var W0 = (typeof W !== "undefined") ? W : 400;
+    pushOneBgBalloon(W0 * 0.75);
+  }
+
   function updateTrainingBgBalloons(dt) {
     try { updateSpecialBalloon(dt); } catch (e) {}
+    // Stagger remaining balloons across the level
+    if (ruffBgBalloonSpawned < RUFF_BG_BALLOON_MAX) {
+      ruffBgBalloonSpawnT -= dt;
+      if (ruffBgBalloonSpawnT <= 0) {
+        pushOneBgBalloon();
+        ruffBgBalloonSpawnT = RUFF_BG_BALLOON_GAP + Math.random() * 3;
+      }
+    }
     if (!ruffBgBalloons || !ruffBgBalloons.length) return;
     var W0 = (typeof W !== "undefined") ? W : 400;
     var H0 = (typeof H !== "undefined") ? H : 600;

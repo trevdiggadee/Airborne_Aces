@@ -1421,14 +1421,14 @@
   var skyDust = [];
   function ensureSkyDust() {
     if (skyDust.length || typeof W === "undefined") return;
-    for (var i = 0; i < 48; i++) {
+    for (var i = 0; i < 55; i++) {
       skyDust.push({
         x: Math.random() * W,
-        y: Math.random() * H * 0.62,
-        r: 0.9 + Math.random() * 1.6,
-        sp: 0.006 + Math.random() * 0.014,
+        y: Math.random() * H * 0.7,
+        r: 0.25 + Math.random() * 0.55,
+        sp: 0.008 + Math.random() * 0.018,
         bob: Math.random() * Math.PI * 2,
-        a: 0.18 + Math.random() * 0.22
+        a: 0.22 + Math.random() * 0.28
       });
     }
   }
@@ -1444,16 +1444,12 @@
   function drawSkyDust() {
     if (typeof ctx === "undefined" || !skyDust.length) return;
     ctx.save();
-    ctx.globalCompositeOperation = "lighter";
+    ctx.globalCompositeOperation = "source-over";
     skyDust.forEach(function(d) {
       ctx.globalAlpha = d.a;
-      var g = ctx.createRadialGradient(d.x, d.y, 0, d.x, d.y, d.r * 2.2);
-      g.addColorStop(0, "rgba(255,252,235,1)");
-      g.addColorStop(0.45, "rgba(255,240,200,0.75)");
-      g.addColorStop(1, "rgba(255,220,160,0)");
-      ctx.fillStyle = g;
+      ctx.fillStyle = "rgba(18,16,14,1)";
       ctx.beginPath();
-      ctx.arc(d.x, d.y, d.r * 2.2, 0, Math.PI * 2);
+      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
       ctx.fill();
     });
     ctx.restore();

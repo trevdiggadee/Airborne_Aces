@@ -404,9 +404,16 @@
     var row = Math.floor(fr / cols) % rows;
     var fw = img.naturalWidth / cols;
     var fh = img.naturalHeight / rows;
-    var speed = (typeof obstacleSpeed !== "undefined" ? obstacleSpeed : 120) * (o.speedMult || 1);
-    try { drawMotionBlur(img, o.x + o.w / 2, drawY + o.h / 2, o.w, o.h, 0, speed, 0); } catch (e) {}
-    ctx.drawImage(img, col * fw, row * fh, fw, fh, o.x, drawY, o.w, o.h);
+    ctx.save();
+    if (o.powerAffected || o.onFire || o.rot) {
+      ctx.translate(o.x + o.w / 2, drawY + o.h / 2);
+      ctx.rotate(o.rot || 0);
+      ctx.drawImage(img, col * fw, row * fh, fw, fh, -o.w / 2, -o.h / 2, o.w, o.h);
+    } else {
+      // No motion-blur on sheets (avoids white box artifacts)
+      ctx.drawImage(img, col * fw, row * fh, fw, fh, o.x, drawY, o.w, o.h);
+    }
+    ctx.restore();
     return true;
   }
 
@@ -648,18 +655,19 @@
     var birdSpecies = null;
     var birdFrameCount = OBSTACLE_ANIM_FRAME_COUNT;
     if (type === "bird_a" || type === "bird_b") {
-      birdSpecies = pickTrainingBirdSpecies();
-      birdFrameCount = birdSpecies.frames || 36;
-      // Prefer sheet aspect when available
-      var sheetImg = (typeof images !== "undefined" && images) ? images[birdSpecies.key] : null;
-      if (sheetImg && sheetImg.naturalWidth) {
-        var sc = birdSpecies.cols || 6, sr = birdSpecies.rows || 6;
-        aspect = (sheetImg.naturalHeight / sr) / (sheetImg.naturalWidth / sc);
-        dispW = Math.min(86, W * 0.176); // +10% bird size
-        // rebuild h
+      // Mix original frame birds with new spritesheet species
+      if (Math.random() < 0.55) {
+        birdSpecies = pickTrainingBirdSpecies();
+        birdFrameCount = birdSpecies.frames || 36;
+        var sheetImg = (typeof images !== "undefined" && images) ? images[birdSpecies.key] : null;
+        if (sheetImg && sheetImg.naturalWidth) {
+          var sc = birdSpecies.cols || 6, sr = birdSpecies.rows || 6;
+          aspect = (sheetImg.naturalHeight / sr) / (sheetImg.naturalWidth / sc);
+        }
       } else {
-        dispW = Math.min(86, W * 0.176);
+        birdSpecies = null; // classic bird_a / bird_b animation frames
       }
+      dispW = Math.min(86, W * 0.176); // +10% bird size
     }
     const dispH2 = (type === "bird_a" || type === "bird_b") ? dispW * aspect : dispH;
     if (type === "bird_a" || type === "bird_b") {
@@ -674,7 +682,7 @@
       bobPhase: Math.random() * Math.PI * 2,
       bobSpeed: 1.5 + Math.random() * 1.2,
       bobAmount: 8 + Math.random() * 10,
-      speedMult: type === "balloon_anim" ? 0.72 : 1,
+      speedMult: type === "balloon_anim" ? 0.72 : ((type === "bird_a" || type === "bird_b") ? 0.9 : 1),
       animFrame: Math.floor(Math.random() * birdFrameCount),
       animTimer: Math.random() / OBSTACLE_ANIM_FPS,
       birdSpecies: birdSpecies,
@@ -1461,14 +1469,14 @@
     obstacles.forEach(o => {
       if (o.shockFall) {
         // handled in bosses.js sonic fall update — skip normal scroll
-      } else if (o.onFire) {
+      } else if (o.onFire || o.powerAffected) {
         o.vy = (typeof o.vy === "number" ? o.vy : 60) + 480 * dt;
         if (o.vy > 560) o.vy = 560;
         o.y += o.vy * dt;
         o.x -= Math.max(40, obstacleSpeed * 0.3) * dt;
         o.rot = (o.rot || 0) + dt * 3.5;
         try {
-          if (typeof window.__airborneEmitFireTrail === "function") {
+          if (o.onFire && typeof window.__airborneEmitFireTrail === "function") {
             window.__airborneEmitFireTrail(o.x + o.w * 0.5, o.y + o.h * 0.3, o.blueFire ? "blue" : (o.greenFire ? "green" : "orange"));
           }
         } catch (e) {}
@@ -1576,8 +1584,8 @@
         o.animFrame = (o.animFrame + 1) % nFr;
       }
       // Wind streaks on ALL obstacles (birds, balloons, mini-blimps, etc.)
-      maybeEmitWind(o.x + o.w * 0.65, o.y + o.h / 2, o.w * 0.35, o.h, 11.4, dt, "obstacle"); // +10% right, -5% rate
-      maybeEmitWind(o.x + o.w * 0.5, o.y + o.h * 0.35, o.w * 0.25, o.h * 0.5, 5.7, dt, "obstacle");
+      maybeEmitWind(o.x + o.w * 0.70, o.y + o.h / 2, o.w * 0.35, o.h, 11.4, dt, "obstacle"); // +5% further right
+      maybeEmitWind(o.x + o.w * 0.55, o.y + o.h * 0.35, o.w * 0.25, o.h * 0.5, 5.7, dt, "obstacle");
       // Wake turbulence when the player slices close past this flyer
       const wakeDx = Math.abs(player.x - (o.x + o.w * 0.5));
       const wakeDy = Math.abs(player.y - (o.y + o.h * 0.5));
