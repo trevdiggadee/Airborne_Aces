@@ -1022,6 +1022,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
       });
     }
   }
+  window.maybeEmitWind = maybeEmitWind;
 
   function updateWindParticles(dt) {
     windParticles.forEach(p => {

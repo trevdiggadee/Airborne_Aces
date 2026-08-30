@@ -816,10 +816,11 @@
       if (ft) { ft.style.display = "none"; ft.style.visibility = "hidden"; }
     } catch (e) {}
     try {
-      var stages = ["intro","altitude","obstacles","rings","crystals","shield","powerup","airship","boss1","combined","landing"];
+            var stages = ["intro","takeoff","altitude","obstacles","rings","crystals","shield","powerup","airship","boss1","combined","landing","report"];
       var si = stages.indexOf(name);
       if (si < 0) si = 0;
-      if (typeof window.updateUnifiedProgress === "function") window.updateUnifiedProgress(((si + 1) / stages.length) * 100);
+      var pct = (name === "report" || name === "landing") ? 100 : ((si / (stages.length - 1)) * 100);
+      if (typeof window.updateUnifiedProgress === "function") window.updateUnifiedProgress(pct);
     } catch (e) {}
     if (name !== "powerup") ruffPowerOrb = null;
     if (typeof powerup !== "undefined" && name !== "powerup" && name !== "combined") powerup = null;
@@ -829,10 +830,11 @@
       if (ft) { ft.style.display = "none"; ft.style.visibility = "hidden"; }
     } catch (e) {}
     try {
-      var stages = ["intro","altitude","obstacles","rings","crystals","shield","powerup","airship","boss1","combined","landing"];
+            var stages = ["intro","takeoff","altitude","obstacles","rings","crystals","shield","powerup","airship","boss1","combined","landing","report"];
       var si = stages.indexOf(name);
       if (si < 0) si = 0;
-      if (typeof window.updateUnifiedProgress === "function") window.updateUnifiedProgress(((si + 1) / stages.length) * 100);
+      var pct = (name === "report" || name === "landing") ? 100 : ((si / (stages.length - 1)) * 100);
+      if (typeof window.updateUnifiedProgress === "function") window.updateUnifiedProgress(pct);
     } catch (e) {}
     syncStageFlags();
     // Ensure far-sky balloons stay present for the whole training
@@ -1280,10 +1282,11 @@
       var overlapX = (hw + aw * 0.5) - Math.abs(px - (ax + aw * 0.5));
       var overlapY = (hh + ah * 0.5) - Math.abs(py - (ay + ah * 0.5));
       if (overlapX > 0 && overlapY > 0) {
-        if (overlapX < overlapY) {
-          player.x += (px < ax + aw * 0.5) ? -overlapX : overlapX;
-        } else {
-          player.y += (py < ay + ah * 0.5) ? -overlapY : overlapY;
+        // Horizontal-only separation — never launch player top/bottom
+        player.x += (px < ax + aw * 0.5) ? -overlapX : overlapX;
+        // Soft vertical clamp only if deeply embedded (small nudge, not full push)
+        if (overlapY > hh * 0.85) {
+          player.y += (py < ay + ah * 0.5) ? -Math.min(overlapY * 0.15, 6) : Math.min(overlapY * 0.15, 6);
         }
         if (!ruffAirship.hitCd || ruffAirship.hitCd <= 0) {
           ruffAirship.hitCd = 0.85;
@@ -1301,13 +1304,15 @@
     // Propeller spin state (slightly slower)
     ruffAirship.propAngle = (ruffAirship.propAngle || 0) + dt * 12;
     ruffAirship.propBlur = 0.55 + 0.45 * Math.abs(Math.sin(ruffAirship.propAngle * 0.5));
-    // Wind streaks along whole vessel (slower / softer than birds)
+    // Wind streaks across entire vessel
     try {
-      if (typeof maybeEmitWind === "function") {
+      var emit = (typeof maybeEmitWind === "function") ? maybeEmitWind : window.maybeEmitWind;
+      if (emit) {
         var cyW = ruffAirship.y + Math.sin(ruffAirship.bob || 0) * 6;
-        maybeEmitWind(ruffAirship.x + ruffAirship.w * 0.55, cyW + ruffAirship.h * 0.45, ruffAirship.w * 0.7, ruffAirship.h * 0.55, 4.2, dt, "obstacle");
-        maybeEmitWind(ruffAirship.x + ruffAirship.w * 0.25, cyW + ruffAirship.h * 0.35, ruffAirship.w * 0.4, ruffAirship.h * 0.4, 2.8, dt, "obstacle");
-        maybeEmitWind(ruffAirship.x + ruffAirship.w * 0.75, cyW + ruffAirship.h * 0.5, ruffAirship.w * 0.35, ruffAirship.h * 0.35, 3.0, dt, "obstacle");
+        emit(ruffAirship.x + ruffAirship.w * 0.5, cyW + ruffAirship.h * 0.4, ruffAirship.w * 0.85, ruffAirship.h * 0.7, 14, dt, "obstacle");
+        emit(ruffAirship.x + ruffAirship.w * 0.2, cyW + ruffAirship.h * 0.35, ruffAirship.w * 0.4, ruffAirship.h * 0.5, 9, dt, "obstacle");
+        emit(ruffAirship.x + ruffAirship.w * 0.75, cyW + ruffAirship.h * 0.45, ruffAirship.w * 0.4, ruffAirship.h * 0.5, 9, dt, "obstacle");
+        emit(ruffAirship.x + ruffAirship.w * 0.4, cyW + ruffAirship.h * 0.55, ruffAirship.w * 0.5, ruffAirship.h * 0.35, 7, dt, "obstacle");
       }
     } catch (eW) {}
     if (ruffAirship.x + ruffAirship.w < -40) {
@@ -1345,6 +1350,7 @@
     }
     var sheet = (typeof images !== "undefined" && images) ? images.training_airship : null;
     ctx.save();
+    ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = "source-over";
     if (sheet && sheet.naturalWidth) {
       var cols = 5, rows = 5;
@@ -1353,11 +1359,14 @@
       var fr = (a.frame || 0) % 25;
       var col = fr % cols;
       var row = Math.floor(fr / cols) % rows;
-      // Inset slightly to crop cell padding / white edges
-      var pad = Math.min(fw, fh) * 0.04;
+      var pad = Math.min(fw, fh) * 0.03;
+      // Double-draw for solid presence
       ctx.drawImage(sheet, col * fw + pad, row * fh + pad, fw - pad * 2, fh - pad * 2, a.x, cy, a.w, a.h);
+      ctx.globalAlpha = 0.55;
+      ctx.drawImage(sheet, col * fw + pad, row * fh + pad, fw - pad * 2, fh - pad * 2, a.x, cy, a.w, a.h);
+      ctx.globalAlpha = 1;
     } else {
-      ctx.fillStyle = "rgba(80,60,40,0.85)";
+      ctx.fillStyle = "rgba(80,60,40,1)";
       ctx.fillRect(a.x, cy, a.w, a.h * 0.7);
     }
     ctx.restore();
@@ -1708,13 +1717,8 @@
 
   function updateCrystals(dt) {
     if (!ruffCrystals.length) return;
-    // Always scroll — never freeze when birds/obstacles appear
-    let spd = (typeof obstacleSpeed === "number" && obstacleSpeed > 40) ? obstacleSpeed : 210;
-    spd = Math.max(180, spd);
-    // Last lesson (combined): slower crystals
-    if (ruffStage === "combined" || window.__airborneRuffStage === "combined") {
-      spd = Math.min(spd, 95);
-    }
+    // Fixed crystal scroll speed — independent of obstacleSpeed / lesson
+    let spd = 95;
     const px = (typeof player !== "undefined" && player) ? player.x : 0;
     const py = (typeof player !== "undefined" && player) ? player.y : 0;
     const pw = (typeof player !== "undefined" && player) ? player.w * 0.4 : 20;
@@ -1817,9 +1821,8 @@
 
   function updateTrainingCoins(dt) {
     if (!ruffCoins.length) return;
-    // Fixed constant scroll speed — never changes mid-float
+    // Fixed constant scroll speed — independent of stage / obstacleSpeed
     const spd = 95;
-    // Force every coin to the same horizontal speed (no per-coin variance)
     const px = (typeof player !== "undefined" && player) ? player.x : 0;
     const py = (typeof player !== "undefined" && player) ? player.y : 0;
     const pw = (typeof player !== "undefined" && player) ? player.w * 0.42 : 20;
@@ -2311,6 +2314,8 @@
 
   // ---------- Flight report ----------
   function showFlightReport() {
+    try { if (window.updateUnifiedProgress) window.updateUnifiedProgress(100); } catch (e) {}
+
     const el = reportEl();
     if (!el) return;
     try {

@@ -4,7 +4,7 @@
   const ASSET_SOURCES = {
     fireball_sheet: "fireball_sheet.webp",
     shield_sheet: "shield_sheet.webp",
-    training_airship: "training_airship.webp?v=ruff352",
+    training_airship: "training_airship.webp?v=ruff353",
     blimp:   "blimp.webp?cb=2",
     pirate_bomb: "pirate_bomb.webp",
     power_icon_blimp3: "power_icon_blimp3.webp",

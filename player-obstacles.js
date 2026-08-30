@@ -682,7 +682,7 @@
       bobPhase: Math.random() * Math.PI * 2,
       bobSpeed: 1.5 + Math.random() * 1.2,
       bobAmount: 8 + Math.random() * 10,
-      speedMult: type === "balloon_anim" ? 0.72 : ((type === "bird_a" || type === "bird_b") ? 0.9 : 1),
+      speedMult: type === "balloon_anim" ? 0.72 : ((type === "bird_a" || type === "bird_b") ? 0.855 : 1),
       animFrame: Math.floor(Math.random() * birdFrameCount),
       animTimer: Math.random() / OBSTACLE_ANIM_FPS,
       birdSpecies: birdSpecies,
