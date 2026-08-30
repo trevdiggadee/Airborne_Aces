@@ -106,10 +106,11 @@
         const dy = Math.abs(b.y - (boss.y + boss.h / 2));
         if (dx < boss.w * 0.38 && dy < boss.h * 0.42) {
           boss.health--;
-          bossHitFlashUntil = performance.now() + 200;
-          bossShakeUntil = performance.now() + 320;
+          bossHitFlashUntil = performance.now() + 300;
+          bossShakeUntil = performance.now() + 420;
           spawnHitParticles(b.x, b.y);
-          triggerBigExplosion(b.x, b.y, 36, 36);
+          triggerBigExplosion(b.x, b.y, 42, 42);
+          try { if (typeof triggerShockwave === "function") triggerShockwave(b.x, b.y, 55, "255,170,50"); } catch (e) {}
           try { if (typeof spawnPirateBlast === "function") spawnPirateBlast(b.x, b.y, 0.45); } catch (e) {}
           try { if (typeof triggerScreenShake === "function") triggerScreenShake(4, 140); } catch (e) {}
           if (boss.health <= 0) defeatBoss();
@@ -327,9 +328,18 @@
     drawMotionBlur(img, boss.x + boss.w / 2 + shakeX, boss.y + boss.h / 2, boss.w, boss.h, 0, 80, 0);
     ctx.drawImage(img, boss.x + shakeX, boss.y, boss.w, boss.h);
 
-    // white flash overlay, clipped to the sprite's own opaque pixels
+    // Hit flash — white core + warm orange rim
     if (performance.now() < bossHitFlashUntil) {
-      drawSpriteFlash(img, boss.x + shakeX, boss.y, boss.w, boss.h, 0.7);
+      const flashT = Math.max(0, (bossHitFlashUntil - performance.now()) / 300);
+      drawSpriteFlash(img, boss.x + shakeX, boss.y, boss.w, boss.h, 0.5 + 0.4 * flashT);
+      ctx.save();
+      ctx.globalAlpha = 0.4 * flashT;
+      ctx.strokeStyle = "rgba(255,160,40,0.95)";
+      ctx.lineWidth = 4;
+      ctx.shadowColor = "rgba(255,120,20,0.85)";
+      ctx.shadowBlur = 16;
+      ctx.strokeRect(boss.x + shakeX - 2, boss.y - 2, boss.w + 4, boss.h + 4);
+      ctx.restore();
     }
 
     // health bar above the boss
@@ -867,88 +877,99 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
   function drawPowerup() {
     if (typeof levelEndPhase === "string" && levelEndPhase === "fadeOut") return;
     if (!powerup || powerup.collected) return;
-    const drawY = powerup.y + Math.sin(powerup.bobPhase) * 6;
-    const pulse = 1 + Math.sin(performance.now() / 140) * 0.08;
-    const r = powerup.r * pulse;
-    // motion blur trail
-    for (let i = 1; i <= 3; i++) {
-      ctx.save();
-      ctx.globalAlpha = 0.06 * (4 - i) / 3;
-      ctx.translate(powerup.x + i * 5, drawY);
-      const blurGlow = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r * 1.6);
-      blurGlow.addColorStop(0, "rgba(255,214,120,0.4)");
-      blurGlow.addColorStop(1, "rgba(255,180,40,0)");
-      ctx.fillStyle = blurGlow;
-      ctx.beginPath();
-      ctx.arc(0, 0, r * 1.6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
+    const tnow = performance.now() * 0.001;
+    const drawY = powerup.y + Math.sin(powerup.bobPhase) * 8;
+    const pulse = 1 + Math.sin(tnow * 5.5) * 0.1;
+    const r = powerup.r * pulse * 1.15;
     const isBlue = powerup.kind === "blue";
     const isArc = powerup.kind === "arcbomb";
-    const coreFill = isArc ? "#5aa85e" : (isBlue ? "#3fa0e0" : "#f5c542");
-    const strokeCol = isArc ? "#1f4a21" : (isBlue ? "#123a5e" : "#7a4a12");
-    const glowStart = isArc ? "rgba(110,200,120,0.9)" : (isBlue ? "rgba(90,180,240,0.9)" : "rgba(255,221,120,0.9)");
-    const glowEnd = isArc ? "rgba(110,200,120,0)" : (isBlue ? "rgba(90,180,240,0)" : "rgba(255,221,120,0)");
+    // Palette
+    const c0 = isArc ? [100, 220, 120] : (isBlue ? [100, 190, 255] : [255, 210, 80]);
+    const c1 = isArc ? [40, 120, 60] : (isBlue ? [30, 90, 180] : [180, 120, 20]);
 
     ctx.save();
     ctx.translate(powerup.x, drawY);
-    const glow = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r * 1.8);
-    glow.addColorStop(0, glowStart);
-    glow.addColorStop(1, glowEnd);
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 1.8, 0, Math.PI * 2);
-    ctx.fill();
 
-    ctx.fillStyle = coreFill;
-    ctx.strokeStyle = strokeCol;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    if (isArc) {
-      // small bomb-drop glyph — a dark bomb with a dashed arc trail
-      ctx.strokeStyle = strokeCol;
-      ctx.lineWidth = 2;
-      ctx.setLineDash([3, 3]);
+    // Soft outer aura
+    ctx.globalCompositeOperation = "lighter";
+    for (let i = 3; i >= 1; i--) {
+      const ar = r * (1.6 + i * 0.45);
+      const ag = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, ar);
+      ag.addColorStop(0, "rgba(" + c0[0] + "," + c0[1] + "," + c0[2] + "," + (0.35 / i) + ")");
+      ag.addColorStop(1, "rgba(" + c0[0] + "," + c0[1] + "," + c0[2] + ",0)");
+      ctx.fillStyle = ag;
       ctx.beginPath();
-      ctx.moveTo(-r * 0.4, -r * 0.3);
-      ctx.quadraticCurveTo(0, -r * 0.75, r * 0.4, -r * 0.1);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = strokeCol;
-      ctx.beginPath();
-      ctx.arc(r * 0.4, r * 0.2, r * 0.26, 0, Math.PI * 2);
+      ctx.arc(0, 0, ar, 0, Math.PI * 2);
       ctx.fill();
-      ctx.restore();
-      return;
     }
 
-    // lightning bolt glyph (doubled for the dual-cannon blue variant)
-    ctx.fillStyle = strokeCol;
-    const drawBolt = (offsetX) => {
-      ctx.save();
-      ctx.translate(offsetX, 0);
+    // Orbiting energy motes
+    for (let i = 0; i < 5; i++) {
+      const ang = tnow * 2.2 + (i / 5) * Math.PI * 2;
+      const or = r * 1.55;
+      const ox = Math.cos(ang) * or;
+      const oy = Math.sin(ang) * or * 0.55;
+      ctx.globalAlpha = 0.55 + 0.35 * Math.sin(tnow * 6 + i);
+      ctx.fillStyle = "rgba(255,255,240,0.95)";
       ctx.beginPath();
-      ctx.moveTo(-r * 0.12, -r * 0.55);
-      ctx.lineTo(r * 0.32, -r * 0.1);
-      ctx.lineTo(r * 0.02, -r * 0.05);
-      ctx.lineTo(r * 0.22, r * 0.55);
-      ctx.lineTo(-r * 0.32, r * 0.02);
-      ctx.lineTo(-r * 0.02, -r * 0.02);
+      ctx.arc(ox, oy, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Crystal / gem body
+    ctx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = 1;
+    // Faceted gem shape
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 1.1);
+    ctx.lineTo(r * 0.75, -r * 0.25);
+    ctx.lineTo(r * 0.55, r * 0.85);
+    ctx.lineTo(-r * 0.55, r * 0.85);
+    ctx.lineTo(-r * 0.75, -r * 0.25);
+    ctx.closePath();
+    const gem = ctx.createLinearGradient(-r, -r, r, r);
+    gem.addColorStop(0, "rgb(255,255,245)");
+    gem.addColorStop(0.35, "rgb(" + c0[0] + "," + c0[1] + "," + c0[2] + ")");
+    gem.addColorStop(1, "rgb(" + c1[0] + "," + c1[1] + "," + c1[2] + ")");
+    ctx.fillStyle = gem;
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.7)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // Highlight facet
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 0.95);
+    ctx.lineTo(r * 0.35, -r * 0.15);
+    ctx.lineTo(0, r * 0.2);
+    ctx.lineTo(-r * 0.2, -r * 0.2);
+    ctx.closePath();
+    ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.fill();
+
+    // Inner icon (bolt / bomb)
+    ctx.fillStyle = "rgba(20,15,10,0.75)";
+    if (isArc) {
+      ctx.beginPath();
+      ctx.arc(0, r * 0.1, r * 0.28, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.12, -r * 0.4);
+      ctx.lineTo(r * 0.28, 0);
+      ctx.lineTo(r * 0.02, 0.05 * r);
+      ctx.lineTo(r * 0.18, r * 0.45);
+      ctx.lineTo(-r * 0.28, r * 0.05);
+      ctx.lineTo(-r * 0.02, -0.02 * r);
       ctx.closePath();
       ctx.fill();
-      ctx.restore();
-    };
-    if (isBlue) {
-      drawBolt(-r * 0.28);
-      drawBolt(r * 0.28);
-    } else {
-      drawBolt(0);
     }
+
+    // Ground shadow / float indicator
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.beginPath();
+    ctx.ellipse(0, r * 1.35, r * 0.7, r * 0.18, 0, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
   }
 
@@ -1346,42 +1367,71 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
   }
 
   function spawnHitParticles(x, y) {
-    // sparks — quick, bright, scatter in all directions (boosted for boss weapon hits)
-    const sparkCount = 14;
-    for (let i = 0; i < sparkCount; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 110 + Math.random() * 200;
+    // Dual impact flashes
+    explosionBursts.push({ x: x, y: y, age: 0, delay: 0, life: 0.22, maxR: 34 + Math.random() * 14 });
+    explosionBursts.push({ x: x, y: y, age: 0, delay: 0.04, life: 0.32, maxR: 48 + Math.random() * 16 });
+
+    // Hot radial sparks
+    for (let i = 0; i < 22; i++) {
+      const angle = (i / 22) * Math.PI * 2 + (Math.random() - 0.5) * 0.35;
+      const speed = 140 + Math.random() * 260;
       hitParticles.push({
         type: "spark",
-        x, y,
+        x: x, y: y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        life: 0.3 + Math.random() * 0.15,
+        life: 0.28 + Math.random() * 0.22,
         age: 0,
-        r: 2 + Math.random() * 2.5
+        r: 2.2 + Math.random() * 3.2,
+        color: Math.random() > 0.4 ? "#ffe566" : "#ff9944"
       });
     }
-
-    // smoke — slower, larger, drifts up and fades out over a longer life
-    const smokeCount = 5;
-    for (let i = 0; i < smokeCount; i++) {
-      const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.6;
-      const speed = 25 + Math.random() * 45;
+    // Ember glows
+    for (let i = 0; i < 8; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 60 + Math.random() * 120;
+      hitParticles.push({
+        type: "ember",
+        x: x + (Math.random() - 0.5) * 8,
+        y: y + (Math.random() - 0.5) * 8,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 20,
+        life: 0.45 + Math.random() * 0.3,
+        age: 0,
+        r: 3 + Math.random() * 4
+      });
+    }
+    // Smoke puffs
+    for (let i = 0; i < 7; i++) {
+      const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.8;
+      const speed = 30 + Math.random() * 50;
       hitParticles.push({
         type: "smoke",
-        x: x + (Math.random() - 0.5) * 10,
-        y: y + (Math.random() - 0.5) * 10,
+        x: x + (Math.random() - 0.5) * 14,
+        y: y + (Math.random() - 0.5) * 14,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        life: 0.55 + Math.random() * 0.35,
+        life: 0.6 + Math.random() * 0.4,
         age: 0,
-        r: 6 + Math.random() * 6,
-        growth: 1.4 + Math.random() * 0.8
+        r: 7 + Math.random() * 8,
+        growth: 1.5 + Math.random() * 1.0
       });
     }
-
-    // one quick explosion flash burst (expanding ring)
-    explosionBursts.push({ x, y, age: 0, delay: 0, life: 0.28, maxR: 26 + Math.random() * 10 });
+    // Debris chips
+    for (let i = 0; i < 6; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 80 + Math.random() * 140;
+      hitParticles.push({
+        type: "dust",
+        x: x, y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 0.35 + Math.random() * 0.25,
+        age: 0,
+        r: 1.5 + Math.random() * 2.5,
+        color: Math.random() > 0.5 ? "#c4a574" : "#8a6a40"
+      });
+    }
   }
 
   function spawnFeathers(x, y) {
@@ -1435,6 +1485,10 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         p.vy += 70 * dt; // gentle gravity
         p.vy *= (1 - 0.4 * dt);
         p.rot += p.rotSpd * dt;
+      } else if (p.type === "ember") {
+        p.vy += 180 * dt;
+        p.vx *= 0.98;
+        p.r = Math.max(0.5, (p.r || 3) * (1 - 0.6 * dt));
       } else {
         p.vy += 260 * dt; // sparks fall with gravity
       }
@@ -1563,9 +1617,20 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         ctx.moveTo(0, -len * 0.85);
         ctx.lineTo(0, len * 0.85);
         ctx.stroke();
+      } else if (p.type === "ember") {
+        ctx.globalAlpha = Math.max(0, t) * 0.95;
+        const er = Math.max(0.5, p.r || 3);
+        const eg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, er * 2.2);
+        eg.addColorStop(0, "rgba(255,250,200,0.95)");
+        eg.addColorStop(0.35, "rgba(255,140,40,0.85)");
+        eg.addColorStop(1, "rgba(180,40,0,0)");
+        ctx.fillStyle = eg;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, er * 2.2, 0, Math.PI * 2);
+        ctx.fill();
       } else {
         ctx.globalAlpha = Math.max(0, t);
-        ctx.fillStyle = "#ffdd66";
+        ctx.fillStyle = p.color || "#ffdd66";
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r * t, 0, Math.PI * 2);
         ctx.fill();
@@ -1600,13 +1665,13 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         const dy = Math.abs(b.y - (boss.y + boss.h / 2));
         if (dx < boss.w * 0.38 && dy < boss.h * 0.42) {
           boss.health--;
-          bossHitFlashUntil = performance.now() + 180;
-          bossShakeUntil = performance.now() + 280;
+          bossHitFlashUntil = performance.now() + 280;
+          bossShakeUntil = performance.now() + 380;
           spawnHitParticles(b.x, b.y);
-          // Extra weapon impact FX on boss
-          try { triggerBigExplosion(b.x, b.y, 18, 18); } catch (e) {}
-          try { if (typeof spawnPirateBlast === "function") spawnPirateBlast(b.x, b.y, 0.25); } catch (e) {}
-          try { if (typeof triggerScreenShake === "function") triggerScreenShake(2.5, 90); } catch (e) {}
+          try { triggerBigExplosion(b.x, b.y, 22, 22); } catch (e) {}
+          try { if (typeof triggerShockwave === "function") triggerShockwave(b.x, b.y, 38, "255,180,60"); } catch (e) {}
+          try { if (typeof spawnPirateBlast === "function") spawnPirateBlast(b.x, b.y, 0.28); } catch (e) {}
+          try { if (typeof triggerScreenShake === "function") triggerScreenShake(3, 100); } catch (e) {}
           if (boss.health <= 0) defeatBoss();
           return false;
         }
@@ -1683,26 +1748,49 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     bullets.forEach(b => {
       ctx.save();
       ctx.translate(b.x, b.y);
-      // motion blur trail for bullets
-      const blurCount = 3;
-      for (let i = 1; i <= blurCount; i++) {
-        ctx.globalAlpha = 0.15 * (blurCount - i + 1) / blurCount;
-        ctx.fillStyle = "#ffdd66";
+      // Long glowing energy trail
+      ctx.globalCompositeOperation = "lighter";
+      for (let i = 1; i <= 6; i++) {
+        ctx.globalAlpha = 0.12 * (7 - i) / 6;
+        const tg = ctx.createRadialGradient(-i * 7, 0, 0, -i * 7, 0, 10);
+        tg.addColorStop(0, "rgba(255,240,160,0.9)");
+        tg.addColorStop(0.5, "rgba(255,160,40,0.5)");
+        tg.addColorStop(1, "rgba(255,80,0,0)");
+        ctx.fillStyle = tg;
         ctx.beginPath();
-        ctx.ellipse(-i * 5, 0, 8 - i, 2.5, 0, 0, Math.PI * 2);
+        ctx.ellipse(-i * 7, 0, 11 - i * 0.8, 3.2 - i * 0.25, 0, 0, Math.PI * 2);
         ctx.fill();
       }
+      // Brass shell body
+      ctx.globalCompositeOperation = "source-over";
       ctx.globalAlpha = 1;
-      const grad = ctx.createLinearGradient(-14, 0, 6, 0);
-      grad.addColorStop(0, "rgba(255,200,80,0)");
-      grad.addColorStop(1, "#fff3c4");
-      ctx.fillStyle = grad;
+      const body = ctx.createLinearGradient(-12, -4, 10, 4);
+      body.addColorStop(0, "#8a5a18");
+      body.addColorStop(0.35, "#f0d070");
+      body.addColorStop(0.7, "#ffe9a0");
+      body.addColorStop(1, "#fff8d0");
+      ctx.fillStyle = body;
       ctx.beginPath();
-      ctx.ellipse(0, 0, 10, 3.5, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, 12, 4.2, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = "#ffdd66";
+      // Hot tip
+      const tip = ctx.createRadialGradient(8, 0, 0, 8, 0, 5);
+      tip.addColorStop(0, "#ffffff");
+      tip.addColorStop(0.4, "#ffe080");
+      tip.addColorStop(1, "rgba(255,140,40,0)");
+      ctx.fillStyle = tip;
       ctx.beginPath();
-      ctx.arc(4, 0, 3.5, 0, Math.PI * 2);
+      ctx.arc(9, 0, 5, 0, Math.PI * 2);
+      ctx.fill();
+      // Outer glow
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = 0.45;
+      const og = ctx.createRadialGradient(2, 0, 0, 2, 0, 14);
+      og.addColorStop(0, "rgba(255,220,100,0.5)");
+      og.addColorStop(1, "rgba(255,120,20,0)");
+      ctx.fillStyle = og;
+      ctx.beginPath();
+      ctx.arc(2, 0, 14, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     });

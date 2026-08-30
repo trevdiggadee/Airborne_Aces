@@ -1662,15 +1662,16 @@
       c.glow = (c.glow || 0) + dt * 4;
       c.sparkT = (c.sparkT || 0) - dt;
       if (c.sparkT <= 0) {
-        c.sparkT = 0.12 + Math.random() * 0.15;
+        c.sparkT = 0.07 + Math.random() * 0.1;
         if (!c.sparks) c.sparks = [];
         var sa = Math.random() * Math.PI * 2;
+        var dist = c.r * (0.7 + Math.random() * 0.6);
         c.sparks.push({
-          x: Math.cos(sa) * c.r * 0.85,
-          y: Math.sin(sa) * c.r * 0.85,
-          vx: Math.cos(sa) * (8 + Math.random() * 12),
-          vy: Math.sin(sa) * (8 + Math.random() * 12) - 6,
-          life: 0.55 + Math.random() * 0.3, age: 0, r: 0.7 + Math.random() * 1.0
+          x: Math.cos(sa) * dist,
+          y: Math.sin(sa) * dist,
+          vx: Math.cos(sa) * (6 + Math.random() * 14),
+          vy: Math.sin(sa) * (6 + Math.random() * 14) - 10,
+          life: 0.4 + Math.random() * 0.35, age: 0, r: 0.9 + Math.random() * 1.2
         });
       }
       if (c.sparks) {
@@ -1780,13 +1781,28 @@
       ctx.beginPath();
       ctx.arc(0, 0, coreR * 1.25, 0, Math.PI * 2);
       ctx.stroke();
-      // Gold sparkles
+      // Glimmer sparkles around floating coin
       (c.sparks || []).forEach(function(sp) {
         var t = 1 - sp.age / sp.life;
+        var sr = Math.max(0.4, sp.r * t * 1.4);
         ctx.globalAlpha = t * 0.95;
-        ctx.fillStyle = Math.random() > 0.5 ? "#fff6c8" : "#ffd700";
+        ctx.fillStyle = "#fffef0";
+        // 4-point star glimmer
         ctx.beginPath();
-        ctx.arc(sp.x, sp.y, sp.r * t, 0, Math.PI * 2);
+        ctx.moveTo(sp.x, sp.y - sr * 2.2);
+        ctx.lineTo(sp.x + sr * 0.35, sp.y - sr * 0.35);
+        ctx.lineTo(sp.x + sr * 2.2, sp.y);
+        ctx.lineTo(sp.x + sr * 0.35, sp.y + sr * 0.35);
+        ctx.lineTo(sp.x, sp.y + sr * 2.2);
+        ctx.lineTo(sp.x - sr * 0.35, sp.y + sr * 0.35);
+        ctx.lineTo(sp.x - sr * 2.2, sp.y);
+        ctx.lineTo(sp.x - sr * 0.35, sp.y - sr * 0.35);
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = t * 0.55;
+        ctx.fillStyle = "#ffd700";
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, sr * 0.55, 0, Math.PI * 2);
         ctx.fill();
       });
       ctx.globalCompositeOperation = "source-over";
