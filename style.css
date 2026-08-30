@@ -3331,7 +3331,7 @@ body.pause-open #unifiedDock {
   display: block;
   filter: drop-shadow(0 6px 14px rgba(0,0,0,0.55)) drop-shadow(0 0 16px rgba(255,200,80,0.35));
   opacity: 0;
-  transform: scale(0.7);
+  transform: scale(0.7) translateY(15%); /* lowered 15% */
   transition: opacity 0.45s ease, transform 0.55s cubic-bezier(0.2, 1.2, 0.4, 1);
   position: relative;
   z-index: 1;
@@ -3342,7 +3342,7 @@ body.pause-open #unifiedDock {
 }
 #ruffRankBanner.medalShow #ruffMedalImg {
   opacity: 1;
-  transform: scale(1);
+  transform: scale(1) translateY(15%); /* lowered 15% */
 }
 #ruffRankBanner .rankName {
   font-size: clamp(1.45rem, 5.8vw, 2.0rem);
@@ -3505,25 +3505,25 @@ canvas {
 #hudFrame { position: relative; }
 .altGauge {
   position: absolute;
-  top: 72%;
-  width: 18px;
-  height: 42%;
-  min-height: 56px;
-  max-height: 110px;
+  top: 68%;
+  width: 28px;
+  height: 55%;
+  min-height: 90px;
+  max-height: 160px;
   pointer-events: none;
   z-index: 6;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.45));
 }
-#altGaugeLeft { left: 6%; }
-#altGaugeRight { right: 6%; }
+#altGaugeLeft { display: none !important; }
+#altGaugeRight { right: 4%; left: auto; }
 .altGaugeTrack {
   position: relative;
   flex: 1;
-  width: 10px;
+  width: 16px;
   border-radius: 6px;
   background: linear-gradient(180deg, rgba(20,16,10,0.92), rgba(40,30,18,0.88));
   border: 1.5px solid rgba(212, 168, 75, 0.85);
@@ -3553,7 +3553,7 @@ canvas {
   transition: bottom 0.08s linear;
 }
 .altGaugeLabel {
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.12em;
   color: rgba(255, 220, 140, 0.9);

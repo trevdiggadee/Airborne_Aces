@@ -774,9 +774,10 @@
         window.__airborneTrainingFlight = true;
         // Move Ruff into altitude lesson
         if (window.__airborneRuffStage === "takeoff" || window.__airborneRuffStage === "intro") {
-          window.__airborneRuffStage = "altitude";
+          window.__airborneRuffStage = "cruise";
           try {
-            if (typeof window.__airborneForceRuffAltitude === "function") window.__airborneForceRuffAltitude();
+            if (typeof window.__airborneForceRuffCruise === "function") window.__airborneForceRuffCruise();
+            else if (typeof window.__airborneBeginRuff === "function") { /* nextStage handles */ }
           } catch (e) {}
         }
         syncAirfieldGlobals();
@@ -986,7 +987,7 @@
           player.y = landY;
           player.vy = 0;
           player.rotation = 0;
-          // Brief screeching stop — skid + dust, no long rollout
+          // Touchdown → long runway drive like takeoff until strip ends
           airfieldPhase = "skid";
           airfieldSkidT = 0;
           airfieldSkidStartX = player.x;
@@ -995,9 +996,30 @@
             if (typeof sfxAirfieldScreech === "function") sfxAirfieldScreech();
             if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop();
             if (typeof spawnLandingDust === "function") {
-              spawnLandingDust(player.x, landY + ph * 0.3);
-              spawnLandingDust(player.x - 20, landY + ph * 0.25);
+              // Big smoke pop on touchdown
+              for (var si = 0; si < 8; si++) {
+                spawnLandingDust(player.x + (Math.random() - 0.5) * 50, landY + ph * 0.25 + Math.random() * 12);
+              }
+              spawnLandingDust(player.x - 25, landY + ph * 0.3);
+              spawnLandingDust(player.x + 20, landY + ph * 0.28);
             }
+            // Extra particle puff if available
+            try {
+              if (typeof particles !== "undefined" && particles) {
+                for (var pi = 0; pi < 24; pi++) {
+                  var ang = -Math.PI * 0.15 + Math.random() * Math.PI * 0.3;
+                  var sp = 40 + Math.random() * 120;
+                  particles.push({
+                    x: player.x, y: landY,
+                    vx: Math.cos(ang) * sp * (Math.random() < 0.5 ? -1 : 1),
+                    vy: -Math.abs(Math.sin(ang)) * sp - 20,
+                    life: 0.7 + Math.random() * 0.6,
+                    color: ["#c8c0b0", "#a09080", "#ddd8d0", "#8a8070"][pi % 4],
+                    size: 4 + Math.random() * 8
+                  });
+                }
+              }
+            } catch (eP) {}
           } catch (e) {}
         }
       }
@@ -1016,12 +1038,12 @@
       if (!airfieldTiles || !airfieldTiles.length) {
         try { ensureAirfieldStripVisible(); } catch (e) {}
       }
-      const skidDur = 3.0; // auto-drive then quick score
+      const skidDur = 6.5; // long drive across landing strip (like takeoff)
       const u = Math.min(1, airfieldSkidT / skidDur);
-      // Linear then soft stop in last 15%
-      const ease = u < 0.85 ? (u / 0.85) * 0.92 : (0.92 + 0.08 * (1 - Math.pow(1 - (u - 0.85) / 0.15, 2)));
-      // Auto-drive: strip scrolls under blimp like takeoff
-      const driveSpd = Math.max(airfieldTakeoffSpeed || 210, 240) * (u < 0.88 ? 1.2 : 0.35);
+      // Linear cruise then soft stop in last 12%
+      const ease = u < 0.88 ? (u / 0.88) * 0.94 : (0.94 + 0.06 * (1 - Math.pow(1 - (u - 0.88) / 0.12, 2)));
+      // Strip scrolls under blimp like takeoff — steady then ease out
+      const driveSpd = Math.max(airfieldTakeoffSpeed || 210, 220) * (u < 0.88 ? 1.05 : 0.28);
       (airfieldTiles || []).forEach(function(tile) {
         if (!tile) return;
         tile.x -= driveSpd * dt;

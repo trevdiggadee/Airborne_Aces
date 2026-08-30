@@ -348,6 +348,7 @@
   const STAGE_ORDER = [
     "intro",
     "takeoff",
+    "cruise",
     "altitude",
     "rings",
     "obstacles",
@@ -371,6 +372,9 @@
       "First lesson: getting off the ground.",
       "HOLD the screen to accelerate down the runway.",
       "There we go! Easy does it — you're flying now."
+    ],
+    cruise: [
+      "Nice lift. Feel the air under her — steady as she goes."
     ],
     altitude: [
       "Your blimp doesn't just go up. You control how high she flies.",
@@ -458,7 +462,7 @@
     // Canvas overlay — always visible over gameplay
     window.__airborneFtBanner = {
       t: 0,
-      life: 3.6,
+      life: 3.0,
       text: "FLIGHT TRAINING"
     };
     // DOM fallback too
@@ -479,7 +483,7 @@
         el.classList.remove("visible", "ft-banner");
         el.innerHTML = "";
         el.style.cssText = "display:none";
-      }, 3600);
+      }, 3000);
     }
   }
 
@@ -814,7 +818,7 @@
       if (ft) { ft.style.display = "none"; ft.style.visibility = "hidden"; }
     } catch (e) {}
     try {
-            var stages = ["intro","takeoff","altitude","rings","obstacles","shield","airship","combined","boss1","landing","report"];
+            var stages = ["intro","takeoff","cruise","altitude","rings","obstacles","shield","airship","combined","boss1","landing","report"];
       var si = stages.indexOf(name);
       if (si < 0) si = 0;
       var pct = (name === "report" || name === "landing") ? 100 : ((si / (stages.length - 1)) * 100);
@@ -828,7 +832,7 @@
       if (ft) { ft.style.display = "none"; ft.style.visibility = "hidden"; }
     } catch (e) {}
     try {
-            var stages = ["intro","takeoff","altitude","rings","obstacles","shield","airship","combined","boss1","landing","report"];
+            var stages = ["intro","takeoff","cruise","altitude","rings","obstacles","shield","airship","combined","boss1","landing","report"];
       var si = stages.indexOf(name);
       if (si < 0) si = 0;
       var pct = (name === "report" || name === "landing") ? 100 : ((si / (stages.length - 1)) * 100);
@@ -938,6 +942,13 @@
       window.__airborneAirfieldPhase = "taxi";
       window.__airborneResetRunway = true;
       try { trainEngineStart(); trainWindStart(); } catch (e) {}
+    } else if (name === "cruise") {
+      if (ruffLines.length) showRadio(ruffLines[0], 3.0);
+      window.__airborneAirfieldObstacles = false;
+      window.__airborneAirfieldRings = false;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      // Clear any early collectibles during free-fly
+      try { ruffCoins = []; ruffCrystals = []; } catch (e) {}
     } else if (name === "altitude") {
       if (ruffLines.length) showRadio(ruffLines[0], 3.0);
       spawnAltitudeMarkers();
@@ -1002,7 +1013,7 @@
 
   // Coins + crystals for the whole airborne flight (not just one lesson)
   var FLIGHT_COLLECT_STAGES = {
-    takeoff: 1, altitude: 1, rings: 1, obstacles: 1, shield: 1,
+    altitude: 1, rings: 1, obstacles: 1, shield: 1,
     airship: 1, combined: 1, boss1: 1, landing: 1
   };
   function updateFlightCollectibles(dt) {
@@ -2980,7 +2991,16 @@ function finishToMap() {
       const ph = window.__airborneAirfieldPhase;
       // Only advance after actual climb/lesson — never skip runway on a timer
       if (ph === "lesson" || (ph === "climb" && ruffStageT > 3)) {
-        nextStage();
+        nextStage(); // → cruise free-fly
+      }
+    } else if (ruffStage === "cruise") {
+      // Free flight after takeoff — no lessons, coins, or crystals yet
+      window.__airborneAirfieldObstacles = false;
+      window.__airborneAirfieldRings = false;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      window.__airborneFirePickup = null;
+      if (!ruffLessonPendingNext && ruffStageT > 10) {
+        requestNextStage(); // → altitude after 10s
       }
     } else if (ruffStage === "altitude") {
       // Do NOT wipe obstacles every frame — causes random item disappear
@@ -3232,8 +3252,8 @@ function finishToMap() {
       // Report when world-buildings signals ready, or failsafe
       if (window.__airborneTrainingReportReady || ph === "done" || window.__airborneTrainingReportShown) {
         nextStage(); // → report → showFlightReport
-      } else if (ruffStageT > 8) {
-        // Failsafe — force report after 8s in landing stage
+      } else if (ruffStageT > 14) {
+        // Failsafe — force report after landing drive
         try {
           window.__airborneTrainingReportShown = true;
           window.__airborneTrainingReportReady = true;
@@ -3338,10 +3358,12 @@ function finishToMap() {
       ruffActive = true;
       window.__airborneRuffActive = true;
     }
+    // After takeoff → free-fly cruise (10s) before lessons/coins
     if (ruffStage === "intro" || ruffStage === "takeoff" || ruffStage === "idle") {
-      setStage("altitude");
+      setStage("cruise");
     }
   };
+  window.__airborneForceRuffCruise = window.__airborneForceRuffAltitude;
   window.__airborneBeginRuff = beginRuffTraining;
   window.drawFlightTrainingBanner = drawFlightTrainingBanner;
   window.updateFlightTrainingBanner = updateFlightTrainingBanner;
