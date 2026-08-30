@@ -68,20 +68,21 @@
     if (state !== "playing") return;
     // Don't flap-react while docked on the pad
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) return;
-    // Airfield runway: every tap/hold accelerates (never flap on runway)
-    if (window.__airborneAirfield || window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel") {
-      if (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel" || !window.__airborneAirfieldPhase) {
-        window.__airborneAirfield = true;
-        window.__airborneAirfieldHold = true;
+    // Airfield runway / landing drive: hold accelerates (never flap)
+    var afp = window.__airborneAirfieldPhase;
+    if (window.__airborneAirfield && (afp === "taxi" || afp === "accel" || afp === "skid" || !afp)) {
+      window.__airborneAirfield = true;
+      window.__airborneAirfieldHold = true;
+      if (afp === "taxi" || afp === "accel" || !afp) {
         window.__airborneAirfieldBoostPending = true;
-        return;
       }
+      return;
     }
-    if (window.__airborneAirfield && window.__airborneAirfieldPhase === "climb") {
+    if (window.__airborneAirfield && afp === "climb") {
       return;
     }
     // land: allow flap (vy set here; position integrated in updateAirfield)
-    if (window.__airborneAirfieldPaused) {
+    if (window.__airborneAirfieldPaused && afp !== "skid") {
       return;
     }
     // Stronger flare authority during training landing

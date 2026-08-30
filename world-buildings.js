@@ -1072,17 +1072,14 @@
     // ---- SKID (drive like takeoff: strip scrolls under blimp + blimp rolls forward) ----
     } else if (airfieldPhase === "skid") {
       window.__airborneAirfieldInvuln = true;
-      window.__airborneAirfieldPaused = true;
+      window.__airborneAirfieldPaused = false; // must be false so hold input works
       airfieldPhase = "skid";
       syncAirfieldGlobals();
       airfieldSkidT = (airfieldSkidT || 0) + dt;
-      // Ensure landing strip tiles exist so scroll is visible
       if (!airfieldTiles || !airfieldTiles.length) {
         try { ensureAirfieldStripVisible(); } catch (e) {}
       }
       // HOLD to drive to end of runway (like takeoff), then score
-      window.__airborneAirfieldPaused = false;
-      window.__airborneAirfieldInvuln = true;
       var holdingLand = !!window.__airborneAirfieldHold;
       airfieldSkidDriveDist = airfieldSkidDriveDist || 0;
       var runwayEnd = Math.max(W * 2.8, 1100); // distance to "end of runway"

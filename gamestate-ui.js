@@ -945,9 +945,10 @@
   function handleInput(e) {
     if (e.cancelable) e.preventDefault();
     ensureAudio();
-    // Mark hold immediately so takeoff accel responds same frame
+    // Mark hold immediately for takeoff OR landing runway drive
+    var afp = window.__airborneAirfieldPhase;
     if (state === "playing" && window.__airborneAirfield &&
-        (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel") &&
+        (afp === "taxi" || afp === "accel" || afp === "skid") &&
         window.__airborneRuffStage !== "intro") {
       window.__airborneAirfieldHold = true;
     }
@@ -963,10 +964,13 @@
   canvas.addEventListener("pointerdown", handleInput);
   // Capture holds even if a HUD element is under the finger
   document.addEventListener("pointerdown", function(e) {
+    var afp = window.__airborneAirfieldPhase;
     if (state === "playing" && window.__airborneAirfield &&
-        (window.__airborneAirfieldPhase === "taxi" || window.__airborneAirfieldPhase === "accel")) {
+        (afp === "taxi" || afp === "accel" || afp === "skid")) {
       window.__airborneAirfieldHold = true;
-      if (typeof window.__airborneAirfieldBoost === "function") window.__airborneAirfieldBoost();
+      if (afp === "taxi" || afp === "accel") {
+        if (typeof window.__airborneAirfieldBoost === "function") window.__airborneAirfieldBoost();
+      }
     }
   }, true);
   canvas.addEventListener("touchend", handleInputUp, { passive: true });
