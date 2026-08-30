@@ -176,6 +176,37 @@
   let airfieldUseLandingArt = false;
 
   function isAirfieldMode() { return !!airfieldMode; }
+
+  window.__airborneForceLandingSkid = function () {
+    try {
+      if (airfieldPhase === "skid" || airfieldPhase === "score" || airfieldPhase === "done") return;
+      airfieldPhase = "skid";
+      airfieldSkidT = 0;
+      airfieldDidLand = true;
+      window.__airborneAirfieldDidLand = true;
+      window.__airborneLandTouchAt = performance.now();
+      if (typeof player !== "undefined" && player) {
+        airfieldSkidStartX = player.x;
+        player.vy = 0;
+      }
+      airfieldUseLandingArt = true;
+      try { ensureAirfieldStripVisible(); } catch (e) {}
+      // Seed multiple runway tiles for continuous scroll
+      try {
+        if (airfieldTiles && airfieldTiles.length) {
+          var base = airfieldTiles[0];
+          var tw = base.w || (typeof W !== "undefined" ? W : 400);
+          while (airfieldTiles.length < 4) {
+            airfieldTiles.push({
+              x: base.x + airfieldTiles.length * tw * 0.95,
+              y: base.y, w: tw, h: base.h, img: base.img
+            });
+          }
+        }
+      } catch (e2) {}
+      syncAirfieldGlobals();
+    } catch (e) {}
+  };
   
   // Force flight report only after full landing drive (never cut skid short)
   function forceTrainingReportIfDue() {
@@ -983,14 +1014,14 @@
           airfieldLandContact = 0;
         }
 
-        if (!airfieldDidLand && ((fieldReady && airfieldLandContact >= 0.12) || airfieldLandT > 48)) {
+        if (!airfieldDidLand && ((fieldReady && airfieldLandContact >= 0.08) || airfieldLandT > 2.2)) {
           airfieldDidLand = true;
           window.__airborneAirfieldDidLand = true;
           window.__airborneLandTouchAt = performance.now();
           player.y = landY;
           player.vy = 0;
           player.rotation = 0;
-          // Touchdown → long runway drive like takeoff until strip ends
+          // Touchdown → long runway drive like takeoff
           airfieldPhase = "skid";
           airfieldSkidT = 0;
           airfieldSkidStartX = player.x;
@@ -1085,12 +1116,33 @@
         try {
           if (typeof spawnVictoryFirework === "function") {
             spawnVictoryFirework(player.x, player.y - 30);
-            spawnVictoryFirework(W * 0.5, H * 0.3);
-            spawnVictoryFirework(W * 0.7, H * 0.35);
+            spawnVictoryFirework(W * 0.5, H * 0.28);
+            spawnVictoryFirework(W * 0.35, H * 0.32);
+            spawnVictoryFirework(W * 0.7, H * 0.3);
+          }
+          if (typeof spawnFirework === "function") {
+            spawnFirework(W * 0.5, H * 0.35);
+            spawnFirework(W * 0.4, H * 0.4);
+          }
+          if (typeof particles !== "undefined" && particles) {
+            for (var ci = 0; ci < 60; ci++) {
+              var ang = Math.random() * Math.PI * 2;
+              var sp = 40 + Math.random() * 200;
+              particles.push({
+                x: W * 0.5, y: H * 0.4,
+                vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 50,
+                life: 1.0 + Math.random() * 0.8,
+                color: ["#ffd24a","#ff6b3d","#7ecbff","#ffe9a8","#ff4d6d","#fff"][ci % 6],
+                size: 2 + Math.random() * 5
+              });
+            }
           }
           if (typeof spawnLandingDust === "function" && player) {
             spawnLandingDust(player.x, landY + 10);
           }
+          // Start celebration overlay before score UI
+          window.__airborneEndCelebrationDone = false;
+          window.__airborneEndCelebration = { t: 0, life: 3.2 };
         } catch (e) {}
         airfieldPhase = "score";
         airfieldScoreT = 0;
@@ -1145,8 +1197,8 @@
         });
         airfieldFireworks = airfieldFireworks.filter(function(fw) { return fw.age < fw.life; });
       }
-      // Brief hold then score (celebration plays inside showFlightReport)
-      if (!window.__airborneTrainingReportShown && airfieldScoreT > 0.35) {
+      // Wait for celebration, then score
+      if (!window.__airborneTrainingReportShown && airfieldScoreT > 3.2) {
         window.__airborneTrainingReportShown = true;
         window.__airborneTrainingReportReady = true;
         window.__airborneAirfieldDidLand = true;

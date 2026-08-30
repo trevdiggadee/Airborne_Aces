@@ -915,19 +915,32 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       window.__airborneHeatseekers = [];
       window.__airborneWarBullets = [];
       var bi = new Image();
-      bi.src = "pirate_barrel_bomb.png?v=ruff200";
+      bi.crossOrigin = "anonymous";
+      bi.src = "pirate_barrel_bomb.png?v=ruff359";
       window.__airborneBarrelBombImg = bi;
+      // Fallback to pirate_bomb if barrel art fails
+      bi.onerror = function () {
+        try {
+          if (typeof images !== "undefined" && images.pirate_bomb) {
+            window.__airborneBarrelBombImg = images.pirate_bomb;
+          } else {
+            var b2 = new Image();
+            b2.src = "pirate_bomb.webp?v=ruff359";
+            window.__airborneBarrelBombImg = b2;
+          }
+        } catch (e) {}
+      };
       // Fire 5 barrel bombs at once in a spread
       if (typeof player !== "undefined" && player) {
         for (var bi5 = 0; bi5 < 5; bi5++) {
           var ang5 = -0.55 + (bi5 / 4) * 1.1;
-          var sp5 = 160 + Math.random() * 40;
+          var sp5 = 180 + Math.random() * 50;
           window.__airborneHeatseekers.push({
-            x: player.x + (player.w || 40) * 0.25,
-            y: player.y + (bi5 - 2) * 10,
+            x: player.x + (player.w || 40) * 0.35,
+            y: player.y + (bi5 - 2) * 14,
             vx: Math.cos(ang5) * sp5,
-            vy: Math.sin(ang5) * sp5 * 0.55 - 40,
-            life: 3.2, age: 0, rot: ang5, spin: Math.random() * 6,
+            vy: Math.sin(ang5) * sp5 * 0.5 - 35,
+            life: 3.2, age: 0, rot: ang5, spin: 4 + Math.random() * 4,
             kind: "barrelbomb", fused: false, trail: []
           });
         }
@@ -4555,7 +4568,7 @@ if (window.__airbornePlasmaIgnite) {
         var tN = pred ? (pred.age / pred.life) : 0.5;
         var spawnGap = (stormMode === "warshark")
           ? (tN < 0.2 ? 0.44 : (tN < 0.6 ? 0.35 : (tN < 0.9 ? 0.22 : 0.12))) // ~25% fewer
-          : (stormMode === "barrelbomb") ? 99 : 0.45;
+          : (stormMode === "barrelbomb") ? 0.75 : 0.45;
         window.__airborneHeatseekSpawnT = spawnGap;
         if (stormMode === "jollybomb") {
           // Handled by Dead Man's Broadside brain below

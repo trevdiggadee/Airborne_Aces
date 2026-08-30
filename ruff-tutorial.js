@@ -2960,36 +2960,18 @@ function finishToMap() {
     }
     updateRuffCompanion(dt);
     updateSparkles(dt);
-    // Scroll leftover coins/crystals only when the active stage is NOT already updating them
-    // (prevents double-dt movement + extra work on busy lessons)
+    // Always keep coins/crystals flowing during flight training
+    try { updateFlightCollectibles(dt); } catch (eCol) {}
     try {
-      var _st = ruffStage || window.__airborneRuffStage || "";
-      var _stageOwnsItems = (_st === "crystals" || _st === "combined" || _st === "obstacles");
-      if (!_stageOwnsItems) {
-        if (ruffCoins && ruffCoins.length) {
-          updateTrainingCoins(dt);
-          ruffCoins = ruffCoins.filter(function (c) {
-            return c && !c.collected && c.x > -80;
-          });
-        }
-        if (ruffCrystals && ruffCrystals.length) {
-          updateCrystals(dt);
-          ruffCrystals = ruffCrystals.filter(function (c) {
-            return c && !c.collected && c.x > -80;
-          });
-        }
-      } else {
-        // Still prune collected/off-screen without double-moving
-        if (ruffCoins && ruffCoins.length) {
-          ruffCoins = ruffCoins.filter(function (c) {
-            return c && !c.collected && c.x > -80;
-          });
-        }
-        if (ruffCrystals && ruffCrystals.length) {
-          ruffCrystals = ruffCrystals.filter(function (c) {
-            return c && !c.collected && c.x > -80;
-          });
-        }
+      if (ruffCoins && ruffCoins.length) {
+        ruffCoins = ruffCoins.filter(function (c) {
+          return c && !c.collected && c.x > -80;
+        });
+      }
+      if (ruffCrystals && ruffCrystals.length) {
+        ruffCrystals = ruffCrystals.filter(function (c) {
+          return c && !c.collected && c.x > -80;
+        });
       }
     } catch (e) {}
 
@@ -3245,6 +3227,17 @@ function finishToMap() {
     } else if (ruffStage === "landing") {
       // Stay in training airfield — never campaign pad/score
       window.__airborneTrainingFlight = true;
+      // Force land → skid drive sequence
+      try {
+        if (ruffStageT < 0.5 && window.__airborneAirfieldPhase !== "land" &&
+            window.__airborneAirfieldPhase !== "skid" && window.__airborneAirfieldPhase !== "score") {
+          window.__airborneRuffRequestLand = true;
+        }
+        // Auto-start skid drive if still in land after 2.5s (touchdown assist)
+        if (window.__airborneAirfieldPhase === "land" && ruffStageT > 2.5) {
+          if (typeof window.__airborneForceLandingSkid === "function") window.__airborneForceLandingSkid();
+        }
+      } catch (eLd) {}
       try {
         if (typeof levelEndActive !== "undefined") levelEndActive = false;
         if (typeof levelEndPhase !== "undefined") levelEndPhase = null;
