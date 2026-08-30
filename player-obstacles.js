@@ -381,9 +381,9 @@
     list.forEach(function(sp) {
       if (window.__trainingBirdSheetImgs[sp.key]) return;
       var im = new Image();
-      im.src = sp.key.replace("bird_", "bird_") + ".webp?v=ruff347";
+      im.src = sp.key.replace("bird_", "bird_") + ".webp?v=ruff348";
       // key is bird_gull_sheet -> file bird_gull_sheet.webp
-      im.src = sp.key + ".webp?v=ruff347";
+      im.src = sp.key + ".webp?v=ruff348";
       window.__trainingBirdSheetImgs[sp.key] = im;
       try { if (typeof images !== "undefined" && images) images[sp.key] = im; } catch (e) {}
     });
