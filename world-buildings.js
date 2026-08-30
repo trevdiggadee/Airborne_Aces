@@ -1041,41 +1041,42 @@
       if (!airfieldTiles || !airfieldTiles.length) {
         try { ensureAirfieldStripVisible(); } catch (e) {}
       }
-      const skidDur = 9.5; // full runway drive before score
+      // TAKEOFF-STYLE drive: blimp stays put, runway scrolls underneath for full duration
+      const skidDur = 9.5;
       const u = Math.min(1, airfieldSkidT / skidDur);
-      // Steady takeoff-like scroll for most of the drive, ease only at the very end
-      const driveSpd = (u < 0.9)
-        ? Math.max(airfieldTakeoffSpeed || 210, 230)
-        : Math.max(80, 230 * (1 - (u - 0.9) / 0.1));
+      const driveSpd = (u < 0.88)
+        ? Math.max(airfieldTakeoffSpeed || 220, 240)
+        : Math.max(60, 240 * (1 - (u - 0.88) / 0.12));
+      // Ensure enough tiles to scroll
+      try {
+        if (!airfieldTiles || airfieldTiles.length < 3) ensureAirfieldStripVisible();
+      } catch (e) {}
       (airfieldTiles || []).forEach(function(tile) {
         if (!tile) return;
         tile.x -= driveSpd * dt;
-        // Loop tiles so runway never runs out visually
         var tw = tile.w || W;
-        if (tile.x + tw < -20) tile.x += tw * Math.max(2, (airfieldTiles || []).length);
+        // Continuous loop like takeoff runway
+        while (tile.x + tw < 0) tile.x += tw * Math.max(2, (airfieldTiles || []).length || 2);
       });
-      airfieldStripY = (typeof airfieldStripY === "number") ? airfieldStripY : 0;
+      airfieldStripY = 0;
       const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
-      const sinkS = airfieldStripY || 0;
-      const landY = H - Math.max(40, th * 0.28) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10) + sinkS;
+      const landY = H - Math.max(40, th * 0.28) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10);
       if (typeof player !== "undefined" && player) {
-        const sx = (typeof airfieldSkidStartX === "number") ? airfieldSkidStartX : W * 0.22;
-        // Blimp rolls forward across the runway for the full skid duration
-        const ease = u < 0.9 ? (u / 0.9) * 0.92 : (0.92 + 0.08 * Math.min(1, (u - 0.9) / 0.1));
-        player.x = sx + ease * W * 0.55;
+        // Fixed X like takeoff taxi/accel — strip moves, blimp drives in place
+        player.x = W * 0.25;
         player.y = landY;
         player.vy = 0;
-        player.rotation = (1 - ease) * 0.04;
+        player.rotation = -0.04;
         if (typeof blimpPersonality !== "undefined" && blimpPersonality) {
           blimpPersonality.squashX = 1;
           blimpPersonality.squashY = 1;
         }
-        // Continuous dust while driving
-        if (u < 0.92 && Math.random() < 0.65) {
+        // Wheel dust the whole drive
+        if (u < 0.95 && Math.random() < 0.7) {
           if (typeof spawnLandingDust === "function") {
             try {
-              spawnLandingDust(player.x - (player.w || 40) * 0.3, landY + 8);
-              if (Math.random() < 0.4) spawnLandingDust(player.x + 10, landY + 6);
+              spawnLandingDust(player.x - (player.w || 40) * 0.25, landY + 6);
+              spawnLandingDust(player.x + (player.w || 40) * 0.15, landY + 5);
             } catch (e) {}
           }
         }

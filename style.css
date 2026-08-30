@@ -3505,7 +3505,7 @@ canvas {
 #hudFrame { position: relative; }
 .altGauge {
   position: absolute;
-  top: 82%; /* lowered ~20% */
+  top: 88%; /* lowered ~20% more */
   width: 28px;
   height: 55%;
   min-height: 90px;

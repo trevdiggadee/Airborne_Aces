@@ -4484,6 +4484,28 @@ if (window.__airbornePlasmaIgnite) {
     }
 
     // ---- Sky Rocket heat-seekers ----
+    // Pirate Rocket continuous volleys
+    if (stormMode === "barrelbomb" && window.__airborneHeatseekUntil && performance.now() < window.__airborneHeatseekUntil) {
+      window.__airborneBarrelReload = (window.__airborneBarrelReload || 0) + dt;
+      if (window.__airborneBarrelReload >= 0.85) {
+        window.__airborneBarrelReload = 0;
+        if (typeof player !== "undefined" && player) {
+          if (!window.__airborneHeatseekers) window.__airborneHeatseekers = [];
+          for (var bi5 = 0; bi5 < 3; bi5++) {
+            var ang5 = -0.4 + (bi5 / 2) * 0.8;
+            var sp5 = 170 + Math.random() * 50;
+            window.__airborneHeatseekers.push({
+              x: player.x + (player.w || 40) * 0.3,
+              y: player.y + (bi5 - 1) * 12,
+              vx: Math.cos(ang5) * sp5,
+              vy: Math.sin(ang5) * sp5 * 0.5 - 30,
+              life: 3.0, age: 0, rot: ang5, spin: Math.random() * 6,
+              kind: "barrelbomb", fused: false, trail: []
+            });
+          }
+        }
+      }
+    }
     if (stormMode === "heatseek" || stormMode === "warshark" || stormMode === "barrelbomb" || stormMode === "jollybomb") {
       var nowHs = performance.now();
       var untilHs = window.__airborneHeatseekUntil || 0;

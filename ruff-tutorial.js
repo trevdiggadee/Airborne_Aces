@@ -459,60 +459,30 @@
   }
 
   function showFlightTraceBanner() {
-    // Canvas overlay (primary) — always drawn on top of game
-    window.__airborneFtBanner = {
-      t: 0,
-      life: 3.0,
-      text: "FLIGHT TRAINING"
-    };
-    // Dedicated fixed DOM node appended to body (survives HUD stacking)
+    window.__airborneFtBanner = { t: 0, life: 3.2, text: "FLIGHT TRAINING" };
+    // Also paint a high-z fixed element (independent of game HUD)
     try {
-      var old = document.getElementById("ftBannerForce");
-      if (old && old.parentNode) old.parentNode.removeChild(old);
-      var el = document.createElement("div");
-      el.id = "ftBannerForce";
-      el.textContent = "FLIGHT TRAINING";
-      el.style.cssText = [
-        "position:fixed",
-        "left:50%",
-        "top:36%",
-        "transform:translate(-50%,-50%) scale(0.85)",
-        "z-index:2147483647",
-        "display:block",
-        "padding:0.75em 1.35em",
-        "opacity:0",
-        "visibility:visible",
-        "pointer-events:none",
-        "background:linear-gradient(180deg,rgba(30,18,8,0.95),rgba(18,10,5,0.96))",
-        "border:3px solid #ffc84a",
-        "border-radius:18px",
-        "font-family:Rockwell,Georgia,serif",
-        "font-weight:900",
-        "font-size:clamp(1.7rem,9vw,3.4rem)",
-        "color:#ffe566",
-        "letter-spacing:0.14em",
-        "text-shadow:0 2px 10px #000,0 0 24px rgba(255,180,40,0.55)",
-        "box-shadow:0 0 0 3px rgba(100,55,15,0.4),0 18px 50px rgba(0,0,0,0.55)",
-        "transition:opacity 0.45s ease, transform 0.45s cubic-bezier(0.2,1.2,0.4,1)",
-        "white-space:nowrap"
-      ].join(";");
-      document.body.appendChild(el);
-      requestAnimationFrame(function () {
-        el.style.opacity = "1";
-        el.style.transform = "translate(-50%,-50%) scale(1)";
-      });
-      clearTimeout(showFlightTraceBanner._t1);
-      clearTimeout(showFlightTraceBanner._t2);
-      showFlightTraceBanner._t1 = setTimeout(function () {
-        el.style.opacity = "0";
-        el.style.transform = "translate(-50%,-50%) scale(1.05)";
-        showFlightTraceBanner._t2 = setTimeout(function () {
-          if (el.parentNode) el.parentNode.removeChild(el);
-        }, 500);
-      }, 2500);
+      var n = document.getElementById("aaFlightBanner");
+      if (!n) {
+        n = document.createElement("div");
+        n.id = "aaFlightBanner";
+        document.body.appendChild(n);
+      }
+      n.textContent = "FLIGHT TRAINING";
+      n.style.cssText = "position:fixed;left:50%;top:34%;transform:translate(-50%,-50%);z-index:999999;"
+        + "padding:14px 28px;border-radius:16px;pointer-events:none;"
+        + "background:rgba(18,10,4,0.94);border:3px solid #ffc84a;"
+        + "color:#ffe566;font:900 clamp(22px,8vw,42px) Rockwell,Georgia,serif;"
+        + "letter-spacing:0.12em;text-shadow:0 2px 8px #000;opacity:0;"
+        + "transition:opacity 0.4s ease;white-space:nowrap;";
+      requestAnimationFrame(function(){ n.style.opacity = "1"; });
+      clearTimeout(showFlightTraceBanner._hide);
+      showFlightTraceBanner._hide = setTimeout(function(){
+        n.style.opacity = "0";
+        setTimeout(function(){ if (n.parentNode) n.parentNode.removeChild(n); }, 450);
+      }, 2800);
     } catch (e) {}
   }
-
   function updateFlightTrainingBanner(dt) {
     var b = window.__airborneFtBanner;
     if (!b) return;
@@ -1040,21 +1010,24 @@
 
   // Coins + crystals for the whole airborne flight (not just one lesson)
   var FLIGHT_COLLECT_STAGES = {
-    altitude: 1, rings: 1, obstacles: 1, shield: 1,
+    altitude: 1, rings: 1, obstacles: 1, shield: 1, powerup: 1,
     airship: 1, combined: 1, boss1: 1, landing: 1
   };
   function updateFlightCollectibles(dt) {
     var st = ruffStage || window.__airborneRuffStage || "";
-    if (!FLIGHT_COLLECT_STAGES[st]) return;
+    // Entire airborne training after free-fly cruise
+    if (!FLIGHT_COLLECT_STAGES[st] && st !== "cruise" && st !== "intro" && st !== "takeoff") {
+      // still allow if ruffActive mid-flight
+      if (!(ruffActive && st && st !== "report" && st !== "idle")) return;
+    }
+    if (st === "intro" || st === "takeoff" || st === "cruise" || st === "report" || st === "idle") return;
     try { updateCrystals(dt); } catch (e) {}
     try { updateTrainingCoins(dt); } catch (e) {}
     try {
-      if ((ruffCrystals || []).filter(function(c){ return c && !c.collected; }).length < 3) {
-        spawnCrystals(3);
-      }
-      if ((ruffCoins || []).filter(function(c){ return c && !c.collected; }).length < 5) {
-        spawnTrainingCoins(5);
-      }
+      var liveCr = (ruffCrystals || []).filter(function(c){ return c && !c.collected && c.x > -40; }).length;
+      var liveCo = (ruffCoins || []).filter(function(c){ return c && !c.collected && c.x > -40; }).length;
+      if (liveCr < 4) spawnCrystals(4);
+      if (liveCo < 6) spawnTrainingCoins(6);
     } catch (e) {}
   }
 
@@ -1340,21 +1313,22 @@
       var overlapX = (hw + aw * 0.5) - Math.abs(px - (ax + aw * 0.5));
       var overlapY = (hh + ah * 0.5) - Math.abs(py - (ay + ah * 0.5));
       if (overlapX > 0 && overlapY > 0) {
-        // Horizontal-only separation — never launch player top/bottom
-        player.x += (px < ax + aw * 0.5) ? -overlapX : overlapX;
-        // Soft vertical clamp only if deeply embedded (small nudge, not full push)
-        if (overlapY > hh * 0.85) {
-          player.y += (py < ay + ah * 0.5) ? -Math.min(overlapY * 0.15, 6) : Math.min(overlapY * 0.15, 6);
+        // Always push player LEFT of airship — never vertical launch (prevents crash)
+        player.x = Math.min(player.x, ax - hw - 4);
+        // Clamp Y inside playable band
+        if (typeof H !== "undefined") {
+          player.y = Math.max(player.h * 0.5, Math.min(H * 0.82, player.y));
         }
+        player.vy = Math.min(player.vy || 0, 0);
         if (!ruffAirship.hitCd || ruffAirship.hitCd <= 0) {
-          ruffAirship.hitCd = 0.85;
+          ruffAirship.hitCd = 1.0;
           try {
             if (!(typeof shieldActive !== "undefined" && shieldActive) &&
                 !(window.__airborneAirfieldInvuln) &&
                 typeof takeHit === "function") {
               takeHit();
             }
-          } catch (e) {}
+          } catch (eHit) { console.warn("airship hit", eHit); }
         }
       }
       if (ruffAirship.hitCd > 0) ruffAirship.hitCd -= dt;
