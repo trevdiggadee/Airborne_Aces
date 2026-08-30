@@ -465,7 +465,7 @@
       '<span class="ft-gear ft-gear-r" aria-hidden="true"></span>';
     el.classList.remove("ft-out");
     el.classList.add("visible", "ft-banner");
-    // Fade in, hold, fade out
+    // Fade in, hold large, fade out
     clearTimeout(showFlightTraceBanner._t1);
     clearTimeout(showFlightTraceBanner._t2);
     showFlightTraceBanner._t1 = setTimeout(function () {
@@ -474,8 +474,8 @@
       showFlightTraceBanner._t2 = setTimeout(function () {
         el.classList.remove("ft-banner", "ft-out");
         el.innerHTML = "";
-      }, 550);
-    }, 2600);
+      }, 700);
+    }, 3400);
   }
 
   function showFlightTrace() {
@@ -2625,6 +2625,8 @@ function finishToMap() {
       var ft = document.getElementById("ruffFlightTrace");
       if (ft) { ft.style.display = "none"; ft.style.visibility = "hidden"; }
     } catch (e) {}
+    // Large centered FLIGHT TRAINING banner
+    try { showFlightTraceBanner(); } catch (e) {}
 
     // Use setStage for full intro wiring (does not clear ruffActive)
     try {

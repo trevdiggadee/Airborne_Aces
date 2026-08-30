@@ -360,6 +360,54 @@
     return Math.random() < 0.5 ? "bird_a" : "bird_b";
   }
 
+  // Training bird spritesheets (new aviator birds)
+  window.__TRAINING_BIRD_SHEETS = [
+    { key: "bird_gull_sheet", cols: 6, rows: 6, frames: 36 },
+    { key: "bird_bluebird_sheet", cols: 5, rows: 5, frames: 25 },
+    { key: "bird_owl_sheet", cols: 6, rows: 6, frames: 36 },
+    { key: "bird_toucan_sheet", cols: 5, rows: 5, frames: 25 },
+    { key: "bird_cardinal_sheet", cols: 5, rows: 5, frames: 25 },
+    { key: "bird_eagle_sheet", cols: 5, rows: 5, frames: 25 },
+    { key: "bird_sparrow_sheet", cols: 6, rows: 6, frames: 36 },
+    { key: "bird_flamingo_sheet", cols: 6, rows: 6, frames: 36 }
+  ];
+  function pickTrainingBirdSpecies() {
+    var list = window.__TRAINING_BIRD_SHEETS;
+    return list[Math.floor(Math.random() * list.length)];
+  }
+  window.__trainingBirdSheetImgs = window.__trainingBirdSheetImgs || {};
+  function ensureTrainingBirdSheets() {
+    var list = window.__TRAINING_BIRD_SHEETS || [];
+    list.forEach(function(sp) {
+      if (window.__trainingBirdSheetImgs[sp.key]) return;
+      var im = new Image();
+      im.src = sp.key.replace("bird_", "bird_") + ".webp?v=ruff346";
+      // key is bird_gull_sheet -> file bird_gull_sheet.webp
+      im.src = sp.key + ".webp?v=ruff346";
+      window.__trainingBirdSheetImgs[sp.key] = im;
+      try { if (typeof images !== "undefined" && images) images[sp.key] = im; } catch (e) {}
+    });
+  }
+  function drawBirdFromSheet(o, drawY) {
+    var sp = o.birdSpecies;
+    if (!sp) return false;
+    ensureTrainingBirdSheets();
+    var img = (typeof images !== "undefined" && images && images[sp.key]) || window.__trainingBirdSheetImgs[sp.key];
+    if (!img || !img.complete || !img.naturalWidth) return false;
+    var cols = sp.cols || 6, rows = sp.rows || 6, n = sp.frames || (cols * rows);
+    var fr = (o.animFrame || 0) % n;
+    var col = fr % cols;
+    var row = Math.floor(fr / cols) % rows;
+    var fw = img.naturalWidth / cols;
+    var fh = img.naturalHeight / rows;
+    var speed = (typeof obstacleSpeed !== "undefined" ? obstacleSpeed : 120) * (o.speedMult || 1);
+    try { drawMotionBlur(img, o.x + o.w / 2, drawY + o.h / 2, o.w, o.h, 0, speed, 0); } catch (e) {}
+    ctx.drawImage(img, col * fw, row * fh, fw, fh, o.x, drawY, o.w, o.h);
+    return true;
+  }
+
+
+
 
   // Spend 5 collected coins on hit — they burst out, arc, and fall off-screen
   if (!window.__airborneHitCoins) window.__airborneHitCoins = [];
@@ -593,18 +641,38 @@
     }
     const y = minY + Math.random() * Math.max(20, (maxY - minY));
 
+    var birdSpecies = null;
+    var birdFrameCount = OBSTACLE_ANIM_FRAME_COUNT;
+    if (type === "bird_a" || type === "bird_b") {
+      birdSpecies = pickTrainingBirdSpecies();
+      birdFrameCount = birdSpecies.frames || 36;
+      // Prefer sheet aspect when available
+      var sheetImg = (typeof images !== "undefined" && images) ? images[birdSpecies.key] : null;
+      if (sheetImg && sheetImg.naturalWidth) {
+        var sc = birdSpecies.cols || 6, sr = birdSpecies.rows || 6;
+        aspect = (sheetImg.naturalHeight / sr) / (sheetImg.naturalWidth / sc);
+        dispW = Math.min(78, W * 0.16);
+        // rebuild h
+      }
+    }
+    const dispH2 = (type === "bird_a" || type === "bird_b") ? dispW * aspect : dispH;
+    if (type === "bird_a" || type === "bird_b") {
+      // use recomputed size
+    }
     obstacles.push({
       type,
       x: W + dispW,
       y,
       w: dispW,
-      h: dispH,
+      h: (type === "bird_a" || type === "bird_b") ? (dispW * aspect) : dispH,
       bobPhase: Math.random() * Math.PI * 2,
       bobSpeed: 1.5 + Math.random() * 1.2,
       bobAmount: 8 + Math.random() * 10,
       speedMult: type === "balloon_anim" ? 0.72 : 1,
-      animFrame: Math.floor(Math.random() * OBSTACLE_ANIM_FRAME_COUNT),
+      animFrame: Math.floor(Math.random() * birdFrameCount),
       animTimer: Math.random() / OBSTACLE_ANIM_FPS,
+      birdSpecies: birdSpecies,
+      birdFrameCount: birdFrameCount,
       scored: false,
       // jet engine flame + smoke trail for mini blimps
       flameTimer: (type === "mini_blimp") ? 0 : null,
@@ -1495,7 +1563,8 @@
       o.animTimer += dt;
       while (o.animTimer >= frameDuration) {
         o.animTimer -= frameDuration;
-        o.animFrame = (o.animFrame + 1) % OBSTACLE_ANIM_FRAME_COUNT;
+        var nFr = o.birdFrameCount || OBSTACLE_ANIM_FRAME_COUNT;
+        o.animFrame = (o.animFrame + 1) % nFr;
       }
       // Wind streaks on ALL obstacles (birds, balloons, mini-blimps, etc.)
       maybeEmitWind(o.x + o.w * 0.65, o.y + o.h / 2, o.w * 0.35, o.h, 11.4, dt, "obstacle"); // +10% right, -5% rate
@@ -1708,7 +1777,7 @@
       }
 
       if (dx < collideX && dy < collideY) {
-        const isBird = (o.type === "bird_a" || o.type === "bird_b");
+        const isBird = (o.type === "bird_a" || o.type === "bird_b" || !!o.birdSpecies);
         const shielded = !!(shieldActive || window.__airborneShieldActive);
 
         // 1) SHIELD — bounce only. No coins. No takeHit.
@@ -1857,10 +1926,14 @@
         o._ringFront = { cx: cx, cy: cy, rx: rx, ry: ry, rad: rad, passed: passed };
         return;
       }
-      const frames = OBSTACLE_ANIM_SETS[o.type];
-      const img = images[frames[o.animFrame]];
-      if (!img || !img.naturalWidth) return;
       const drawY = o.y + Math.sin(o.bobPhase) * o.bobAmount;
+      if (o.birdSpecies && typeof drawBirdFromSheet === "function" && drawBirdFromSheet(o, drawY)) {
+        return;
+      }
+      const frames = OBSTACLE_ANIM_SETS[o.type];
+      if (!frames) return;
+      const img = images[frames[o.animFrame % frames.length]];
+      if (!img || !img.naturalWidth) return;
       const speed = obstacleSpeed * (o.speedMult || 1);
       drawMotionBlur(img, o.x + o.w / 2, drawY + o.h / 2, o.w, o.h, 0, speed, 0);
       if (o.electrified || o.shockFall) {
