@@ -1000,8 +1000,13 @@
           player.vy += 160 * dt;
         }
         player.y += player.vy * dt;
-        player.x = W * 0.28;
+        player.x = W * 0.25;
+        // Keep blimp on-screen during descent
         if (player.y < ph * 0.4) { player.y = ph * 0.4; player.vy = Math.min(0, player.vy); }
+        if (typeof H !== "undefined" && player.y > H * 0.92) {
+          player.y = H * 0.92;
+          player.vy = Math.min(player.vy, 0);
+        }
         // HARD FLOOR — never fall through the strip
         if (player.y > landY) {
           player.y = landY;
@@ -1074,9 +1079,9 @@
         try { ensureAirfieldStripVisible(); } catch (e) {}
       }
       // TAKEOFF-STYLE drive: blimp stays put, runway scrolls underneath
-      window.__airborneAirfieldPaused = false; // allow strip motion
-      const skidDur = 8.0;
-      airfieldSkidT = (airfieldSkidT || 0); // already incremented above
+      window.__airborneAirfieldPaused = false;
+      window.__airborneAirfieldInvuln = true;
+      const skidDur = 5.5;
       const u = Math.min(1, airfieldSkidT / skidDur);
       const driveSpd = (u < 0.9)
         ? Math.max(airfieldTakeoffSpeed || 240, 260)
@@ -1155,7 +1160,7 @@
           }
           // Start celebration overlay before score UI
           window.__airborneEndCelebrationDone = false;
-          window.__airborneEndCelebration = { t: 0, life: 3.2 };
+          window.__airborneEndCelebration = { t: 0, life: 2.0 };
         } catch (e) {}
         airfieldPhase = "score";
         airfieldScoreT = 0;
@@ -1210,8 +1215,8 @@
         });
         airfieldFireworks = airfieldFireworks.filter(function(fw) { return fw.age < fw.life; });
       }
-      // Short hold after drive while celebration plays, then score
-      if (!window.__airborneTrainingReportShown && airfieldScoreT > 1.8) {
+      // Show score quickly after drive ends
+      if (!window.__airborneTrainingReportShown && airfieldScoreT > 0.6) {
         window.__airborneTrainingReportShown = true;
         window.__airborneTrainingReportReady = true;
         window.__airborneAirfieldDidLand = true;

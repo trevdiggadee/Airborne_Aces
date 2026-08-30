@@ -1191,15 +1191,15 @@
   function spawnTrainingAirship() {
     var H0 = (typeof H !== "undefined") ? H : 600;
     var W0 = (typeof W !== "undefined") ? W : 400;
-    // 500% of prior ~25% width → ~125% screen width, centered vertically
-    var aw = Math.max(120, W0 * 0.25 * 5);
+    // Large but fully clearable — ~90% screen width, faster transit
+    var aw = Math.max(120, W0 * 0.9);
     var ah = aw * 0.42;
     ruffAirship = {
-      x: W0 + aw * 0.08,
+      x: W0 + aw * 0.05,
       y: H0 * 0.5 - ah * 0.5,
       w: aw,
       h: ah,
-      speed: 42,
+      speed: 95,
       frame: 0,
       frameT: 0,
       bob: Math.random() * Math.PI * 2,
@@ -1345,7 +1345,8 @@
         emit(ruffAirship.x + ruffAirship.w * 0.4, cyW + ruffAirship.h * 0.55, ruffAirship.w * 0.5, ruffAirship.h * 0.35, 7, dt, "obstacle");
       }
     } catch (eW) {}
-    if (ruffAirship.x + ruffAirship.w < -40) {
+    // Fully off left edge (entire hull past screen)
+    if (ruffAirship.x + ruffAirship.w < -20) {
       ruffAirship = null;
     }
   }
@@ -1747,9 +1748,8 @@
 
   function updateCrystals(dt) {
     if (!ruffCrystals.length) return;
-    // Match world/lesson scroll speed (never double-step)
-    let spd = (typeof obstacleSpeed === "number" && obstacleSpeed > 40) ? obstacleSpeed : 210;
-    spd = Math.max(180, Math.min(255, spd));
+    // Stable scroll — same every lesson (combined included)
+    let spd = 210;
     const px = (typeof player !== "undefined" && player) ? player.x : 0;
     const py = (typeof player !== "undefined" && player) ? player.y : 0;
     const pw = (typeof player !== "undefined" && player) ? player.w * 0.4 : 20;
@@ -1852,9 +1852,8 @@
 
   function updateTrainingCoins(dt) {
     if (!ruffCoins.length) return;
-    // Match world/lesson scroll speed (same during lessons and inter-lesson delays)
-    var spd = (typeof obstacleSpeed === "number" && obstacleSpeed > 40) ? obstacleSpeed : 210;
-    spd = Math.max(180, Math.min(255, spd));
+    // Stable scroll — same every lesson (combined included)
+    var spd = 210;
     const px = (typeof player !== "undefined" && player) ? player.x : 0;
     const py = (typeof player !== "undefined" && player) ? player.y : 0;
     const pw = (typeof player !== "undefined" && player) ? player.w * 0.42 : 20;
@@ -2379,10 +2378,10 @@
         }
         try { trainChord([523, 659, 784, 1046, 1318], 0.3, 0.22); } catch (e) {}
       } catch (e) {}
-      // Defer actual report UI until celebration plays
+      // Short celebration then show report (avoid 10s dead air)
       setTimeout(function () {
         try { showFlightReport(); } catch (e) {}
-      }, 3400);
+      }, 1600);
       return;
     }
 
@@ -3143,10 +3142,11 @@ function finishToMap() {
       updateTrainingAirship(dt);
       ensureScreenDust();
       updateScreenDust(dt);
-      // Wait until fully off screen, then pause gate → boss1
+      // Wait until airship fully cleared the left edge
       if (!ruffLessonPendingNext && ruffStageT > 2 && !ruffAirship) {
         requestNextStage();
-      } else if (!ruffLessonPendingNext && ruffStageT > 18) {
+      } else if (!ruffLessonPendingNext && ruffStageT > 28) {
+        // Failsafe only after long wait
         ruffAirship = null;
         requestNextStage();
       }
@@ -3214,13 +3214,10 @@ function finishToMap() {
           boss = null;
         }
       } catch (e) {}
-      updateCrystals(dt);
-      updateTrainingCoins(dt);
-      // Fire floating power-up removed
+      // Coins/crystals handled only by updateFlightCollectibles (no double-speed)
       window.__airborneFirePickup = null;
-      if (ruffCrystals.length < 4 && ruffStageT > 2) spawnCrystals(5);
-      // Last lesson before landing — coin rain
-      if (ruffCoins.length < 10 && ruffStageT > 1.0) spawnTrainingCoins(12);
+      if ((ruffCrystals || []).length < 4 && ruffStageT > 2) spawnCrystals(5);
+      if ((ruffCoins || []).length < 10 && ruffStageT > 1.0) spawnTrainingCoins(12);
       if (!ruffLessonPendingNext && ruffStageT > 28) {
         requestNextStage();
       }
@@ -3281,8 +3278,8 @@ function finishToMap() {
       // Report when world-buildings signals ready, or failsafe
       if (window.__airborneTrainingReportReady || ph === "done" || window.__airborneTrainingReportShown) {
         nextStage(); // → report → showFlightReport
-      } else if (ruffStageT > 22) {
-        // Failsafe — only after full skid drive (~9.5s) + buffer
+      } else if (ruffStageT > 14) {
+        // Failsafe after land+drive window
         try {
           window.__airborneTrainingReportShown = true;
           window.__airborneTrainingReportReady = true;
