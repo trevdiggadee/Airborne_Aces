@@ -1038,7 +1038,7 @@
       if (!airfieldTiles || !airfieldTiles.length) {
         try { ensureAirfieldStripVisible(); } catch (e) {}
       }
-      const skidDur = 6.5; // long drive across landing strip (like takeoff)
+      const skidDur = 9.5; // long drive (+3s) across landing strip
       const u = Math.min(1, airfieldSkidT / skidDur);
       // Linear cruise then soft stop in last 12%
       const ease = u < 0.88 ? (u / 0.88) * 0.94 : (0.94 + 0.06 * (1 - Math.pow(1 - (u - 0.88) / 0.12, 2)));

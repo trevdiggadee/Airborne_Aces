@@ -459,32 +459,58 @@
   }
 
   function showFlightTraceBanner() {
-    // Canvas overlay — always visible over gameplay
+    // Canvas overlay (primary) — always drawn on top of game
     window.__airborneFtBanner = {
       t: 0,
       life: 3.0,
       text: "FLIGHT TRAINING"
     };
-    // DOM fallback too
-    const el = titleEl() || document.getElementById("ruffTitleBanner");
-    if (el) {
-      el.innerHTML =
-        '<span class="ft-banner-text">FLIGHT TRAINING</span>';
-      el.classList.add("visible", "ft-banner");
-      el.style.cssText = "position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);" +
-        "z-index:2147483647;display:flex;align-items:center;justify-content:center;" +
-        "padding:0.85em 1.4em;opacity:1;visibility:visible;pointer-events:none;" +
-        "background:rgba(20,12,6,0.92);border:3px solid #ffc84a;border-radius:18px;" +
-        "font-family:Rockwell,Georgia,serif;font-weight:900;font-size:clamp(1.6rem,8vw,3.2rem);" +
-        "color:#ffe566;letter-spacing:0.14em;text-shadow:0 2px 8px #000;" +
-        "width:auto;max-width:94vw;";
+    // Dedicated fixed DOM node appended to body (survives HUD stacking)
+    try {
+      var old = document.getElementById("ftBannerForce");
+      if (old && old.parentNode) old.parentNode.removeChild(old);
+      var el = document.createElement("div");
+      el.id = "ftBannerForce";
+      el.textContent = "FLIGHT TRAINING";
+      el.style.cssText = [
+        "position:fixed",
+        "left:50%",
+        "top:36%",
+        "transform:translate(-50%,-50%) scale(0.85)",
+        "z-index:2147483647",
+        "display:block",
+        "padding:0.75em 1.35em",
+        "opacity:0",
+        "visibility:visible",
+        "pointer-events:none",
+        "background:linear-gradient(180deg,rgba(30,18,8,0.95),rgba(18,10,5,0.96))",
+        "border:3px solid #ffc84a",
+        "border-radius:18px",
+        "font-family:Rockwell,Georgia,serif",
+        "font-weight:900",
+        "font-size:clamp(1.7rem,9vw,3.4rem)",
+        "color:#ffe566",
+        "letter-spacing:0.14em",
+        "text-shadow:0 2px 10px #000,0 0 24px rgba(255,180,40,0.55)",
+        "box-shadow:0 0 0 3px rgba(100,55,15,0.4),0 18px 50px rgba(0,0,0,0.55)",
+        "transition:opacity 0.45s ease, transform 0.45s cubic-bezier(0.2,1.2,0.4,1)",
+        "white-space:nowrap"
+      ].join(";");
+      document.body.appendChild(el);
+      requestAnimationFrame(function () {
+        el.style.opacity = "1";
+        el.style.transform = "translate(-50%,-50%) scale(1)";
+      });
       clearTimeout(showFlightTraceBanner._t1);
+      clearTimeout(showFlightTraceBanner._t2);
       showFlightTraceBanner._t1 = setTimeout(function () {
-        el.classList.remove("visible", "ft-banner");
-        el.innerHTML = "";
-        el.style.cssText = "display:none";
-      }, 3000);
-    }
+        el.style.opacity = "0";
+        el.style.transform = "translate(-50%,-50%) scale(1.05)";
+        showFlightTraceBanner._t2 = setTimeout(function () {
+          if (el.parentNode) el.parentNode.removeChild(el);
+        }, 500);
+      }, 2500);
+    } catch (e) {}
   }
 
   function updateFlightTrainingBanner(dt) {
@@ -501,14 +527,15 @@
     var H0 = (typeof H !== "undefined") ? H : 700;
     var u = b.t / b.life;
     var alpha = 1;
-    if (u < 0.12) alpha = u / 0.12;
-    else if (u > 0.78) alpha = Math.max(0, 1 - (u - 0.78) / 0.22);
-    var scale = (u < 0.15) ? (0.7 + 0.3 * (u / 0.15)) : 1;
-    if (u > 0.85) scale = 1 + 0.06 * ((u - 0.85) / 0.15);
+    if (u < 0.15) alpha = u / 0.15;
+    else if (u > 0.75) alpha = Math.max(0, 1 - (u - 0.75) / 0.25);
+    var scale = (u < 0.15) ? (0.75 + 0.25 * (u / 0.15)) : 1;
+    if (u > 0.85) scale = 1 + 0.05 * ((u - 0.85) / 0.15);
 
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.translate(W0 * 0.5, H0 * 0.38);
+    ctx.globalCompositeOperation = "source-over";
+    ctx.translate(W0 * 0.5, H0 * 0.36);
     ctx.scale(scale, scale);
 
     // Panel
@@ -2346,6 +2373,44 @@
   // ---------- Flight report ----------
   function showFlightReport() {
     try { if (window.updateUnifiedProgress) window.updateUnifiedProgress(100); } catch (e) {}
+    // Epic celebration before score UI
+    if (!window.__airborneEndCelebrationDone) {
+      window.__airborneEndCelebrationDone = true;
+      window.__airborneEndCelebration = { t: 0, life: 3.4 };
+      try {
+        // Burst fireworks + confetti
+        if (typeof spawnVictoryFirework === "function") {
+          spawnVictoryFirework((typeof W !== "undefined" ? W : 400) * 0.3, (typeof H !== "undefined" ? H : 600) * 0.28);
+          spawnVictoryFirework((typeof W !== "undefined" ? W : 400) * 0.5, (typeof H !== "undefined" ? H : 600) * 0.22);
+          spawnVictoryFirework((typeof W !== "undefined" ? W : 400) * 0.7, (typeof H !== "undefined" ? H : 600) * 0.3);
+        }
+        if (typeof spawnFirework === "function") {
+          spawnFirework((typeof W !== "undefined" ? W : 400) * 0.4, (typeof H !== "undefined" ? H : 600) * 0.35);
+          spawnFirework((typeof W !== "undefined" ? W : 400) * 0.6, (typeof H !== "undefined" ? H : 600) * 0.32);
+        }
+        if (typeof particles !== "undefined" && particles) {
+          var W0 = (typeof W !== "undefined") ? W : 400;
+          var H0 = (typeof H !== "undefined") ? H : 600;
+          for (var i = 0; i < 80; i++) {
+            var ang = Math.random() * Math.PI * 2;
+            var sp = 50 + Math.random() * 220;
+            particles.push({
+              x: W0 * 0.5, y: H0 * 0.4,
+              vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 40,
+              life: 1.2 + Math.random() * 1.0,
+              color: ["#ffd24a","#ff6b3d","#7ecbff","#ffe9a8","#ff4d6d","#7ef0ff","#fff"][i % 7],
+              size: 2 + Math.random() * 5
+            });
+          }
+        }
+        try { trainChord([523, 659, 784, 1046, 1318], 0.3, 0.22); } catch (e) {}
+      } catch (e) {}
+      // Defer actual report UI until celebration plays
+      setTimeout(function () {
+        try { showFlightReport(); } catch (e) {}
+      }, 3400);
+      return;
+    }
 
     const el = reportEl();
     if (!el) return;
@@ -2835,8 +2900,11 @@ function finishToMap() {
       if (ft) { ft.style.display = "none"; ft.style.visibility = "hidden"; }
     } catch (e) {}
     // Large centered FLIGHT TRAINING banner
+    window.__airborneEndCelebrationDone = false;
+    window.__airborneEndCelebration = null;
     try { showFlightTraceBanner(); } catch (e) {}
-    try { setTimeout(function(){ try { showFlightTraceBanner(); } catch (e2) {} }, 200); } catch (e) {}
+    try { setTimeout(function(){ try { showFlightTraceBanner(); } catch (e2) {} }, 120); } catch (e) {}
+    try { setTimeout(function(){ try { showFlightTraceBanner(); } catch (e2) {} }, 600); } catch (e) {}
 
     // Use setStage for full intro wiring (does not clear ruffActive)
     try {
@@ -3365,9 +3433,56 @@ function finishToMap() {
   };
   window.__airborneForceRuffCruise = window.__airborneForceRuffAltitude;
   window.__airborneBeginRuff = beginRuffTraining;
+  function updateEndCelebration(dt) {
+    var c = window.__airborneEndCelebration;
+    if (!c) return;
+    c.t += dt;
+    if (c.t < c.life && Math.random() < 0.12) {
+      try {
+        if (typeof spawnFirework === "function") {
+          spawnFirework((typeof W !== "undefined" ? W : 400) * (0.2 + Math.random() * 0.6),
+                        (typeof H !== "undefined" ? H : 600) * (0.15 + Math.random() * 0.35));
+        }
+      } catch (e) {}
+    }
+    if (c.t >= c.life) window.__airborneEndCelebration = null;
+  }
+  function drawEndCelebration() {
+    var c = window.__airborneEndCelebration;
+    if (!c || typeof ctx === "undefined") return;
+    var W0 = (typeof W !== "undefined") ? W : 400;
+    var H0 = (typeof H !== "undefined") ? H : 700;
+    var u = c.t / c.life;
+    var alpha = u < 0.12 ? (u / 0.12) : (u > 0.8 ? Math.max(0, 1 - (u - 0.8) / 0.2) : 1);
+    ctx.save();
+    ctx.globalAlpha = alpha * 0.35;
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, W0, H0);
+    ctx.globalAlpha = alpha;
+    ctx.translate(W0 * 0.5, H0 * 0.34);
+    var sc = u < 0.2 ? (0.6 + 0.4 * (u / 0.2)) : 1;
+    ctx.scale(sc, sc);
+    ctx.font = "900 " + Math.max(20, Math.min(40, W0 * 0.08)) + "px Rockwell, Georgia, serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = "rgba(0,0,0,0.75)";
+    ctx.fillStyle = "#ffe566";
+    ctx.shadowColor = "rgba(255,180,40,0.8)";
+    ctx.shadowBlur = 22;
+    ctx.strokeText("TRAINING COMPLETE", 0, 0);
+    ctx.fillText("TRAINING COMPLETE", 0, 0);
+    ctx.font = "700 " + Math.max(12, Math.min(18, W0 * 0.04)) + "px system-ui, sans-serif";
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = "#fff6c8";
+    ctx.fillText("Outstanding work, pilot!", 0, Math.max(28, H0 * 0.05));
+    ctx.restore();
+  }
   window.drawFlightTrainingBanner = drawFlightTrainingBanner;
   window.updateFlightTrainingBanner = updateFlightTrainingBanner;
   window.showFlightTraceBanner = showFlightTraceBanner;
+  window.drawEndCelebration = drawEndCelebration;
+  window.updateEndCelebration = updateEndCelebration;
   window.__airborneUpdateRuff = updateRuff;
   window.__airborneDrawRuff = drawRuff;
   window.__airborneRuffActive = false;
