@@ -376,6 +376,7 @@
     window.__airborneAirfieldPhase = "taxi";
     if (typeof window.__airborneBeginRuff === "function") {
       try { window.__airborneBeginRuff(); } catch (e) { console.warn(e); }
+    try { if (window.showFlightTraceBanner) window.showFlightTraceBanner(); } catch (e) {}
     }
     // Re-assert after begin (hardReset soft may have toggled)
     window.__airborneRuffActive = true;
