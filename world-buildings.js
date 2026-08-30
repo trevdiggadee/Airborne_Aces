@@ -829,7 +829,8 @@
       // R.U.F.F. may request landing
       if (window.__airborneRuffRequestLand) {
         window.__airborneRuffRequestLand = false;
-        if (airfieldPhase !== "land" && airfieldPhase !== "score") {
+        // Never interrupt an active skid/score drive
+        if (airfieldPhase !== "land" && airfieldPhase !== "skid" && airfieldPhase !== "score" && airfieldPhase !== "done") {
           airfieldPhase = "land";
           airfieldPhaseT = 0;
           airfieldLandT = 0;
@@ -1072,38 +1073,50 @@
       if (!airfieldTiles || !airfieldTiles.length) {
         try { ensureAirfieldStripVisible(); } catch (e) {}
       }
-      // TAKEOFF-STYLE drive: blimp stays put, runway scrolls underneath for full duration
-      const skidDur = 9.5;
+      // TAKEOFF-STYLE drive: blimp stays put, runway scrolls underneath
+      window.__airborneAirfieldPaused = false; // allow strip motion
+      const skidDur = 8.0;
+      airfieldSkidT = (airfieldSkidT || 0); // already incremented above
       const u = Math.min(1, airfieldSkidT / skidDur);
-      const driveSpd = (u < 0.88)
-        ? Math.max(airfieldTakeoffSpeed || 220, 240)
-        : Math.max(60, 240 * (1 - (u - 0.88) / 0.12));
-      // Ensure enough tiles to scroll
+      const driveSpd = (u < 0.9)
+        ? Math.max(airfieldTakeoffSpeed || 240, 260)
+        : Math.max(70, 260 * (1 - (u - 0.9) / 0.1));
       try {
         if (!airfieldTiles || airfieldTiles.length < 3) ensureAirfieldStripVisible();
+        // Pad to 4 looping tiles
+        if (airfieldTiles && airfieldTiles.length && airfieldTiles.length < 4) {
+          var b0 = airfieldTiles[0];
+          var tw0 = b0.w || W;
+          while (airfieldTiles.length < 4) {
+            airfieldTiles.push({
+              x: (airfieldTiles[airfieldTiles.length - 1].x || 0) + tw0 * 0.98,
+              y: b0.y, w: tw0, h: b0.h, img: b0.img, startX: 0
+            });
+          }
+        }
       } catch (e) {}
       (airfieldTiles || []).forEach(function(tile) {
         if (!tile) return;
         tile.x -= driveSpd * dt;
         var tw = tile.w || W;
-        // Continuous loop like takeoff runway
-        while (tile.x + tw < 0) tile.x += tw * Math.max(2, (airfieldTiles || []).length || 2);
+        while (tile.x + tw < -10) tile.x += tw * Math.max(2, (airfieldTiles || []).length || 2);
       });
+      // Keep strip visible at bottom
       airfieldStripY = 0;
+      airfieldUseLandingArt = true;
       const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
       const landY = H - Math.max(40, th * 0.28) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10);
       if (typeof player !== "undefined" && player) {
-        // Fixed X like takeoff taxi/accel — strip moves, blimp drives in place
         player.x = W * 0.25;
         player.y = landY;
         player.vy = 0;
-        player.rotation = -0.04;
+        player.rotation = -0.05;
+        if (typeof obstacleSpeed !== "undefined") obstacleSpeed = driveSpd;
         if (typeof blimpPersonality !== "undefined" && blimpPersonality) {
           blimpPersonality.squashX = 1;
           blimpPersonality.squashY = 1;
         }
-        // Wheel dust the whole drive
-        if (u < 0.95 && Math.random() < 0.7) {
+        if (u < 0.95 && Math.random() < 0.75) {
           if (typeof spawnLandingDust === "function") {
             try {
               spawnLandingDust(player.x - (player.w || 40) * 0.25, landY + 6);
@@ -1197,8 +1210,8 @@
         });
         airfieldFireworks = airfieldFireworks.filter(function(fw) { return fw.age < fw.life; });
       }
-      // Wait for celebration, then score
-      if (!window.__airborneTrainingReportShown && airfieldScoreT > 3.2) {
+      // Short hold after drive while celebration plays, then score
+      if (!window.__airborneTrainingReportShown && airfieldScoreT > 1.8) {
         window.__airborneTrainingReportShown = true;
         window.__airborneTrainingReportReady = true;
         window.__airborneAirfieldDidLand = true;

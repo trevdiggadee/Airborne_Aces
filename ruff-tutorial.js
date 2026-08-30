@@ -1122,10 +1122,8 @@
       stopLessonSpawns();
       ruffLessonPauseT += dt;
       // Force-clear after 6s so we never soft-lock on a stuck item
+      // Coins/crystals already scroll via updateFlightCollectibles — do not double-update
       if (lessonItemsPending() > 0 && ruffLessonPauseT < 6.0) {
-        // keep items scrolling
-        try { updateCrystals(dt); } catch (e) {}
-        try { updateTrainingCoins(dt); } catch (e) {}
         return;
       }
       // Items gone (or timeout) — begin 2s pause
@@ -1749,8 +1747,9 @@
 
   function updateCrystals(dt) {
     if (!ruffCrystals.length) return;
-    // Fixed crystal scroll speed — independent of obstacleSpeed / lesson
-    let spd = 95;
+    // Match world/lesson scroll speed (never double-step)
+    let spd = (typeof obstacleSpeed === "number" && obstacleSpeed > 40) ? obstacleSpeed : 210;
+    spd = Math.max(180, Math.min(255, spd));
     const px = (typeof player !== "undefined" && player) ? player.x : 0;
     const py = (typeof player !== "undefined" && player) ? player.y : 0;
     const pw = (typeof player !== "undefined" && player) ? player.w * 0.4 : 20;
@@ -1853,8 +1852,9 @@
 
   function updateTrainingCoins(dt) {
     if (!ruffCoins.length) return;
-    // Fixed constant scroll speed — independent of stage / obstacleSpeed
-    const spd = 95;
+    // Match world/lesson scroll speed (same during lessons and inter-lesson delays)
+    var spd = (typeof obstacleSpeed === "number" && obstacleSpeed > 40) ? obstacleSpeed : 210;
+    spd = Math.max(180, Math.min(255, spd));
     const px = (typeof player !== "undefined" && player) ? player.x : 0;
     const py = (typeof player !== "undefined" && player) ? player.y : 0;
     const pw = (typeof player !== "undefined" && player) ? player.w * 0.42 : 20;
@@ -3227,32 +3227,26 @@ function finishToMap() {
     } else if (ruffStage === "landing") {
       // Stay in training airfield — never campaign pad/score
       window.__airborneTrainingFlight = true;
-      // Force land → skid drive sequence
-      try {
-        if (ruffStageT < 0.5 && window.__airborneAirfieldPhase !== "land" &&
-            window.__airborneAirfieldPhase !== "skid" && window.__airborneAirfieldPhase !== "score") {
-          window.__airborneRuffRequestLand = true;
-        }
-        // Auto-start skid drive if still in land after 2.5s (touchdown assist)
-        if (window.__airborneAirfieldPhase === "land" && ruffStageT > 2.5) {
-          if (typeof window.__airborneForceLandingSkid === "function") window.__airborneForceLandingSkid();
-        }
-      } catch (eLd) {}
       try {
         if (typeof levelEndActive !== "undefined") levelEndActive = false;
         if (typeof levelEndPhase !== "undefined") levelEndPhase = null;
       } catch (e) {}
-      // Request land once — do not spam every frame (causes land/score glitches)
+      // Request land once — player flares down, then skid drive runs in world-buildings
       if (!window.__airborneRuffLandArmed) {
         window.__airborneRuffLandArmed = true;
         window.__airborneRuffRequestLand = true;
         ruffLandingCelebrated = false;
-        // Force training landing_field art
         try {
           if (typeof ensureAirfieldStripVisible === "function") ensureAirfieldStripVisible();
           if (typeof airfieldUseLandingArt !== "undefined") airfieldUseLandingArt = true;
         } catch (e2) {}
       }
+      // Only assist skid after a real land phase has been running (not instant force)
+      try {
+        if (window.__airborneAirfieldPhase === "land" && ruffStageT > 6.0) {
+          if (typeof window.__airborneForceLandingSkid === "function") window.__airborneForceLandingSkid();
+        }
+      } catch (eLd) {}
       const ph = window.__airborneAirfieldPhase;
       // Celebration when touchdown / drive complete
       if (!ruffLandingCelebrated && (ph === "land_drive" || ph === "landed" || ph === "done" || window.__airborneTrainingReportReady)) {
@@ -3287,7 +3281,7 @@ function finishToMap() {
       // Report when world-buildings signals ready, or failsafe
       if (window.__airborneTrainingReportReady || ph === "done" || window.__airborneTrainingReportShown) {
         nextStage(); // → report → showFlightReport
-      } else if (ruffStageT > 16) {
+      } else if (ruffStageT > 22) {
         // Failsafe — only after full skid drive (~9.5s) + buffer
         try {
           window.__airborneTrainingReportShown = true;
