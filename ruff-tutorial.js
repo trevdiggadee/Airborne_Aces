@@ -1002,7 +1002,8 @@
 
   // Coins + crystals for the whole airborne flight (not just one lesson)
   var FLIGHT_COLLECT_STAGES = {
-    altitude: 1, rings: 1, obstacles: 1, shield: 1, airship: 1, combined: 1, boss1: 1
+    takeoff: 1, altitude: 1, rings: 1, obstacles: 1, shield: 1,
+    airship: 1, combined: 1, boss1: 1, landing: 1
   };
   function updateFlightCollectibles(dt) {
     var st = ruffStage || window.__airborneRuffStage || "";
@@ -3077,14 +3078,15 @@ function finishToMap() {
         ruffStats.rings = window.__airborneRingCollects;
         if (ruffStats.rings > ruffStats.bestCombo) ruffStats.bestCombo = ruffStats.rings;
       }
-      if (ruffStageT > 16) {
+      if (ruffStageT > 30) {
         window.__airborneAirfieldRings = false;
         if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       }
       const ringLeft = (typeof obstacles !== "undefined" && obstacles)
         ? obstacles.filter(function (o) { return o && (o.isRing || o.type === "gold_ring") && !o.collected; }).length
         : 0;
-      if (!ruffLessonPendingNext && ((ruffStats.rings >= 4 && ringLeft === 0 && ruffStageT > 8) || ruffStageT > 20)) {
+      // Rings lesson ~35s (+15s longer)
+      if (!ruffLessonPendingNext && ((ruffStats.rings >= 4 && ringLeft === 0 && ruffStageT > 18) || ruffStageT > 35)) {
         requestNextStage();
       }
     } else if (ruffStage === "airship") {

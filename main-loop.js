@@ -267,8 +267,8 @@
     
     updatePlayerBlimpAnimation(dt);
 
-    // Always tick airfield/Ruff when training is active (even if state glitched)
-    if (window.__airborneAirfield || window.__airborneRuffActive) {
+    // Training systems only while not paused
+    if (state !== "paused" && (window.__airborneAirfield || window.__airborneRuffActive)) {
       const _updAf0 = (typeof window.updateAirfield === "function") ? window.updateAirfield
         : (typeof updateAirfield === "function") ? updateAirfield : null;
       if (_updAf0) { try { _updAf0(dt); } catch (e) { console.warn("updAf", e); } }
@@ -276,7 +276,9 @@
         try { window.__airborneUpdateRuff(dt); } catch (e) { console.warn("updRuff", e); }
       }
     }
-    if (state === "playing" || window.__airbornePlaying || window.__airborneAirfield) {
+    if (state === "paused") {
+      // Fully frozen — still render current frame below
+    } else if (state === "playing" || window.__airbornePlaying || (window.__airborneAirfield && state !== "paused")) {
       elapsedMs = performance.now() - runStartTime;
       updateFlipClock(elapsedMs);
       try {
@@ -333,15 +335,13 @@
       updateShockwaves(dt);
       updateBossWarning(dt);
       updateScreenEffects(dt);
-    } else if (state === "paused") {
-      // Freeze world — still draw below, no simulation advance
     } else if (state === "start" && buildings.length === 0) {
       initBuildings();
       initClouds();
       initParallaxLayers();
       
       resetPlayer();
-    } else if (state !== "playing") {
+    } else if (state !== "playing" && state !== "paused") {
       updateBuildings(dtScale * 0.4);
       updatePowerlines(dtScale * 0.4);
       updateSketchSkyline(dtScale * 0.4);
@@ -355,6 +355,23 @@
       
       updateScreenEffects(dt);
     }
+    // Altitude gauges (left + right under HUD)
+    try {
+      if (typeof player !== "undefined" && player && typeof H !== "undefined") {
+        var gy = (typeof groundLevelY === "function") ? groundLevelY() : H * 0.85;
+        var topY = player.h * 0.5;
+        var frac = 1 - Math.max(0, Math.min(1, (player.y - topY) / Math.max(40, gy - topY)));
+        var pct = (frac * 100).toFixed(1) + "%";
+        var lf = document.getElementById("altGaugeLeftFill");
+        var rf = document.getElementById("altGaugeRightFill");
+        var ln = document.getElementById("altGaugeLeftNeedle");
+        var rn = document.getElementById("altGaugeRightNeedle");
+        if (lf) lf.style.height = pct;
+        if (rf) rf.style.height = pct;
+        if (ln) ln.style.bottom = pct;
+        if (rn) rn.style.bottom = pct;
+      }
+    } catch (eAlt) {}
 
     // City parallax only off-airfield (mountains already drawn behind strip above)
     if (!(typeof isAirfieldMode === "function" && isAirfieldMode()) && !window.__airborneAirfield) {

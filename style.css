@@ -3499,3 +3499,64 @@ canvas {
   visibility: visible !important;
 }
 #ruffTitleBanner:not(.visible) { opacity: 0; pointer-events: none; display: none; }
+
+
+/* ===== Altitude gauges (paired under top HUD) ===== */
+#hudFrame { position: relative; }
+.altGauge {
+  position: absolute;
+  top: 72%;
+  width: 18px;
+  height: 42%;
+  min-height: 56px;
+  max-height: 110px;
+  pointer-events: none;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.45));
+}
+#altGaugeLeft { left: 6%; }
+#altGaugeRight { right: 6%; }
+.altGaugeTrack {
+  position: relative;
+  flex: 1;
+  width: 10px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(20,16,10,0.92), rgba(40,30,18,0.88));
+  border: 1.5px solid rgba(212, 168, 75, 0.85);
+  box-shadow: inset 0 0 6px rgba(0,0,0,0.55), 0 0 0 1px rgba(80,50,15,0.4);
+  overflow: hidden;
+}
+.altGaugeFill {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  bottom: 0;
+  height: 50%;
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(120,200,255,0.95), rgba(40,120,200,0.85));
+  box-shadow: 0 0 8px rgba(80,180,255,0.45);
+  transition: height 0.08s linear;
+}
+.altGaugeNeedle {
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  height: 3px;
+  bottom: 50%;
+  background: linear-gradient(90deg, #ffe566, #d4a84b);
+  border-radius: 1px;
+  box-shadow: 0 0 4px rgba(255,200,80,0.8);
+  transition: bottom 0.08s linear;
+}
+.altGaugeLabel {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: rgba(255, 220, 140, 0.9);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  font-family: system-ui, sans-serif;
+}

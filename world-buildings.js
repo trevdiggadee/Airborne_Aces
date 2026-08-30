@@ -434,7 +434,7 @@
     if (typeof player !== "undefined" && player) {
       const gy = (typeof groundLevelY === "function") ? groundLevelY() : (H - 40);
       const ph = player.h > 0 ? player.h : 40;
-      player.x = W * 0.25;
+      player.x = W * 0.22;
       player.y = gy - ph * 0.15;
       player.vy = 0;
       player.rotation = 0;
@@ -669,7 +669,7 @@
         if (typeof player !== "undefined" && player) {
           const gy = groundLevelY();
           const ph = player.h > 0 ? player.h : 40;
-          player.x = W * 0.25;
+          player.x = W * 0.22;
           player.y = gy - ph * 0.15;
           player.vy = 0;
           player.rotation = 0;
@@ -699,7 +699,7 @@
         if (typeof player !== "undefined" && player) {
           const gy = groundLevelY();
           const ph = player.h > 0 ? player.h : 40;
-          player.x = W * 0.25;
+          player.x = W * 0.22;
           player.y = gy - ph * 0.15;
           player.vy = 0;
           player.rotation = holding ? -0.1 : 0;
@@ -737,7 +737,7 @@
 
       if (typeof player !== "undefined" && player) {
         player.y = startY + (endY - startY) * e;
-        player.x = W * 0.25 + (W * 0.28 - W * 0.25) * e;
+        player.x = W * 0.20 + (W * 0.22 - W * 0.20) * e;
         player.vy = 0;
         player.rotation = -0.2 * Math.sin(tClimb * Math.PI);
       }
@@ -753,7 +753,7 @@
         airfieldLessonT = 0;
         airfieldSub = "practice";
         if (typeof player !== "undefined" && player) {
-          player.x = W * 0.28;
+          player.x = W * 0.22;
           player.y = H * 0.4;
           player.vy = 0;
           player.rotation = 0;
@@ -1156,7 +1156,7 @@
         const gy = groundLevelY();
         const ph = player.h > 0 ? player.h : 40;
         player.y = gy - ph * 0.15;
-        player.x = W * 0.25;
+        player.x = W * 0.22;
         player.vy = 0;
       }
     } catch (err) {

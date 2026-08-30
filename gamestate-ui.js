@@ -800,6 +800,7 @@
   function closePauseMenu() {
     if (state !== "paused") return;
     state = pausedFromState || "playing";
+    window.__airbornePaused = false;
     if (pauseOverlay) {
       pauseOverlay.classList.add("hidden");
       pauseOverlay.setAttribute("aria-hidden", "true");

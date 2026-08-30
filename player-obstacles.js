@@ -44,7 +44,7 @@
 
   function resetPlayer() {
     applyPlayerBlimpSize();
-    player.x = W * 0.28;
+    player.x = W * 0.22;
     player.y = H * 0.4;
     player.vy = 0;
     player.rotation = 0;
@@ -133,7 +133,15 @@
       return;
     }
     // lesson / training flight falls through to gravity
-
+    // Keep training blimp further back (left) — never drift to mid-screen
+    if (window.__airborneAirfield || window.__airborneTrainingFlight) {
+      var lockX = (typeof W !== "undefined" ? W : 400) * 0.22;
+      if (Math.abs(player.x - lockX) > 2) {
+        player.x += (lockX - player.x) * Math.min(1, 4 * dt);
+      } else {
+        player.x = lockX;
+      }
+    }
 
     player.vy += GRAVITY * dt;
     if (player.vy > MAX_FALL_SPEED) player.vy = MAX_FALL_SPEED;
