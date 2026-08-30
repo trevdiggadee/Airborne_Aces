@@ -428,22 +428,56 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
 
   function updatePowerFade(untilMs) {
     var fadeMs = (typeof POWER_FADE_MS === "number") ? POWER_FADE_MS : 750;
-    // Only fade while a power is actually active
-    if (typeof stormActive !== "undefined" && !stormActive) {
+    var now = performance.now();
+    // Post-end fade window — effects alpha → 0
+    if (window.__airbornePowerFadeOutUntil) {
+      var rem = window.__airbornePowerFadeOutUntil - now;
+      if (rem <= 0) {
+        window.__airbornePowerFade = 0;
+        return 0;
+      }
+      window.__airbornePowerFade = Math.max(0, Math.min(1, rem / fadeMs));
+      return window.__airbornePowerFade;
+    }
+    if (!untilMs) { window.__airbornePowerFade = 1; return 1; }
+    var left = untilMs - now;
+    // Last portion of active window: ease out
+    if (left > 0 && left < fadeMs) {
+      window.__airbornePowerFade = Math.max(0.05, left / fadeMs);
+      return window.__airbornePowerFade;
+    }
+    if (left <= 0) {
+      // Start fade-out if not already
+      window.__airbornePowerFadeOutUntil = now + fadeMs;
       window.__airbornePowerFade = 1;
       return 1;
     }
-    if (!untilMs) { window.__airbornePowerFade = 1; return 1; }
-    var left = untilMs - performance.now();
-    // Power fully ended — full opacity for the world (effects are gone)
-    if (left <= 0) { window.__airbornePowerFade = 1; return 1; }
-    if (left < fadeMs) {
-      window.__airbornePowerFade = Math.max(0.05, left / fadeMs);
-    } else {
-      window.__airbornePowerFade = 1;
-    }
-    return window.__airbornePowerFade;
+    window.__airbornePowerFade = 1;
+    return 1;
   }
+  /** Call instead of instantly killing a power — keeps drawing for fadeMs */
+  function beginPowerFadeOut(clearFn) {
+    var fadeMs = (typeof POWER_FADE_MS === "number") ? POWER_FADE_MS : 750;
+    if (window.__airbornePowerFadeOutUntil && performance.now() < window.__airbornePowerFadeOutUntil) {
+      return; // already fading
+    }
+    window.__airbornePowerFadeOutUntil = performance.now() + fadeMs;
+    window.__airborneActivePowerUntil = performance.now();
+    window.__airbornePowerEnding = true;
+    setTimeout(function () {
+      try { if (typeof clearFn === "function") clearFn(); } catch (e) {}
+      try {
+        stormActive = false;
+        stormMode = "storm";
+        stormTimer = 0;
+        window.__airborneActivePowerVisual = null;
+        window.__airbornePowerEnding = false;
+        window.__airbornePowerFadeOutUntil = 0;
+        window.__airbornePowerFade = 0;
+      } catch (e2) {}
+    }, fadeMs + 30);
+  }
+  window.beginPowerFadeOut = beginPowerFadeOut;
   window.updatePowerFade = updatePowerFade;
 
   function activateStorm() {
@@ -1769,6 +1803,11 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
     try { updateBombBlasts(dt); } catch (e) {}
     if (typeof W === "undefined") var W = 400;
     if (typeof H === "undefined") var H = 700;
+    // Keep power visually alive during fade-out
+    if (window.__airbornePowerEnding && window.__airbornePowerFadeOutUntil &&
+        performance.now() < window.__airbornePowerFadeOutUntil) {
+      stormActive = true;
+    }
 
     // Iron Lattice — Missile Grid
     if (stormMode === "lattice" || (window.__airborneLatticeTorps && window.__airborneLatticeTorps.length)) {
@@ -4460,11 +4499,20 @@ if (window.__airbornePlasmaIgnite) {
           (window.__airborneWarBullets && window.__airborneWarBullets.length) ||
           (window.__airborneSkyJets && window.__airborneSkyJets.length);
         if (!stillFlying) {
-          window.__airbornePredator = null;
-          window.__airborneJolly = null;
-          stormActive = false;
-          stormMode = "storm";
-          stormTimer = 0;
+          if (typeof beginPowerFadeOut === "function") {
+            beginPowerFadeOut(function () {
+              window.__airbornePredator = null;
+              window.__airborneJolly = null;
+              window.__airborneHeatseekers = [];
+              window.__airborneSkyJets = [];
+            });
+          } else {
+            window.__airbornePredator = null;
+            window.__airborneJolly = null;
+            stormActive = false;
+            stormMode = "storm";
+            stormTimer = 0;
+          }
           return;
         }
         // Keep updating existing rockets until gone

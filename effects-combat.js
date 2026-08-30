@@ -328,18 +328,10 @@
     drawMotionBlur(img, boss.x + boss.w / 2 + shakeX, boss.y + boss.h / 2, boss.w, boss.h, 0, 80, 0);
     ctx.drawImage(img, boss.x + shakeX, boss.y, boss.w, boss.h);
 
-    // Hit flash — white core + warm orange rim
+    // Hit flash — soft white on sprite only (no outline box)
     if (performance.now() < bossHitFlashUntil) {
       const flashT = Math.max(0, (bossHitFlashUntil - performance.now()) / 300);
-      drawSpriteFlash(img, boss.x + shakeX, boss.y, boss.w, boss.h, 0.5 + 0.4 * flashT);
-      ctx.save();
-      ctx.globalAlpha = 0.4 * flashT;
-      ctx.strokeStyle = "rgba(255,160,40,0.95)";
-      ctx.lineWidth = 4;
-      ctx.shadowColor = "rgba(255,120,20,0.85)";
-      ctx.shadowBlur = 16;
-      ctx.strokeRect(boss.x + shakeX - 2, boss.y - 2, boss.w + 4, boss.h + 4);
-      ctx.restore();
+      drawSpriteFlash(img, boss.x + shakeX, boss.y, boss.w, boss.h, 0.45 + 0.4 * flashT);
     }
 
     // health bar above the boss

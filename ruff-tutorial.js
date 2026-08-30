@@ -457,7 +457,7 @@
   }
 
   function showFlightTraceBanner() {
-    const el = titleEl();
+    const el = titleEl() || document.getElementById("ruffTitleBanner");
     if (!el) return;
     el.innerHTML =
       '<span class="ft-gear ft-gear-l" aria-hidden="true"></span>' +
@@ -465,15 +465,24 @@
       '<span class="ft-gear ft-gear-r" aria-hidden="true"></span>';
     el.classList.remove("ft-out");
     el.classList.add("visible", "ft-banner");
-    // Fade in, hold large, fade out
+    // Force visibility (override any parent/CSS conflicts)
+    el.style.cssText = "position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);" +
+      "z-index:10000;display:flex;align-items:center;justify-content:center;gap:0.75em;" +
+      "padding:0.7em 1.25em;opacity:1;visibility:visible;pointer-events:none;" +
+      "background:linear-gradient(180deg,rgba(25,16,8,0.92),rgba(50,28,10,0.94));" +
+      "border:3px solid rgba(255,205,90,0.9);border-radius:20px;" +
+      "box-shadow:0 0 0 3px rgba(100,55,15,0.45),0 16px 50px rgba(0,0,0,0.6),0 0 70px rgba(255,180,40,0.4);" +
+      "width:min(94vw,680px);";
     clearTimeout(showFlightTraceBanner._t1);
     clearTimeout(showFlightTraceBanner._t2);
     showFlightTraceBanner._t1 = setTimeout(function () {
       el.classList.add("ft-out");
       el.classList.remove("visible");
+      el.style.opacity = "0";
       showFlightTraceBanner._t2 = setTimeout(function () {
         el.classList.remove("ft-banner", "ft-out");
         el.innerHTML = "";
+        el.style.cssText = "";
       }, 700);
     }, 3400);
   }
@@ -2627,6 +2636,7 @@ function finishToMap() {
     } catch (e) {}
     // Large centered FLIGHT TRAINING banner
     try { showFlightTraceBanner(); } catch (e) {}
+    try { setTimeout(function(){ try { showFlightTraceBanner(); } catch (e2) {} }, 200); } catch (e) {}
 
     // Use setStage for full intro wiring (does not clear ruffActive)
     try {
