@@ -3577,18 +3577,10 @@ canvas {
 
 
 /* Boss weapon unlock medal — neon red fire aura */
+/* Boss weapon neon is canvas-drawn on floating powerup — not on score medal */
 #ruffMedalImg.weaponUnlockMedal,
-.weaponUnlockMedal,
-#ruffMedalImg {
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  filter:
-    drop-shadow(0 0 8px rgba(255, 40, 40, 1))
-    drop-shadow(0 0 20px rgba(255, 60, 20, 0.95))
-    drop-shadow(0 0 40px rgba(255, 20, 0, 0.8))
-    drop-shadow(0 6px 14px rgba(0,0,0,0.55)) !important;
-  animation: weaponFirePulse 1.1s ease-in-out infinite alternate;
+.weaponUnlockMedal {
+  /* unused on report medal */
 }
 @keyframes weaponFirePulse {
   0% {

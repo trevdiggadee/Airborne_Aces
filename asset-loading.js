@@ -616,6 +616,7 @@
     ship_petro:     "ship_petro.png",
     landing_pad:    "landing_pad.webp",
     medal_badge:   "medal_badge.webp",
+    boss_weapon_unlock_medal: "boss_weapon_unlock_medal.webp",
     ship_pirate_rocket: "ship_pirate_rocket.webp",
     ship_military_shark: "ship_military_shark.webp",
     ship_steel_industrial: "ship_steel_industrial.webp",

@@ -854,7 +854,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     powerup = {
       x: W + 60,
       y: H * 0.1 + Math.random() * H * 0.14,
-      r: Math.min(26, W * 0.065),
+      r: Math.min(36, W * 0.09),
       bobPhase: Math.random() * Math.PI * 2,
       collected: false,
       vx: 130,
@@ -911,99 +911,81 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     if (!powerup || powerup.collected) return;
     const tnow = performance.now() * 0.001;
     const drawY = powerup.y + Math.sin(powerup.bobPhase) * 8;
-    const pulse = 1 + Math.sin(tnow * 5.5) * 0.1;
-    const r = powerup.r * pulse * 1.15;
-    const isBlue = powerup.kind === "blue";
-    const isArc = powerup.kind === "arcbomb";
-    // Palette
-    const c0 = isArc ? [100, 220, 120] : (isBlue ? [100, 190, 255] : [255, 210, 80]);
-    const c1 = isArc ? [40, 120, 60] : (isBlue ? [30, 90, 180] : [180, 120, 20]);
+    const pulse = 1 + Math.sin(tnow * 5.5) * 0.08;
+    const r = powerup.r * pulse * 1.35;
+
+    // Ensure unlock medal image loaded once
+    if (!window.__bossWeaponMedalImg) {
+      var im = new Image();
+      im.src = "boss_weapon_unlock_medal.webp";
+      im.onerror = function () { this.src = "boss_weapon_unlock_medal.png"; };
+      window.__bossWeaponMedalImg = im;
+    }
+    var medal = window.__bossWeaponMedalImg;
+    var hasMedal = medal && medal.complete && medal.naturalWidth > 0;
 
     ctx.save();
     ctx.translate(powerup.x, drawY);
 
-    // Soft outer aura
+    // Neon RED fire aura layers
     ctx.globalCompositeOperation = "lighter";
-    for (let i = 3; i >= 1; i--) {
-      const ar = r * (1.6 + i * 0.45);
-      const ag = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, ar);
-      ag.addColorStop(0, "rgba(" + c0[0] + "," + c0[1] + "," + c0[2] + "," + (0.35 / i) + ")");
-      ag.addColorStop(1, "rgba(" + c0[0] + "," + c0[1] + "," + c0[2] + ",0)");
+    for (var i = 4; i >= 1; i--) {
+      var ar = r * (1.3 + i * 0.55);
+      var ag = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, ar);
+      ag.addColorStop(0, "rgba(255, 80, 40, " + (0.55 / i) + ")");
+      ag.addColorStop(0.45, "rgba(255, 20, 0, " + (0.28 / i) + ")");
+      ag.addColorStop(1, "rgba(180, 0, 0, 0)");
       ctx.fillStyle = ag;
       ctx.beginPath();
       ctx.arc(0, 0, ar, 0, Math.PI * 2);
       ctx.fill();
     }
-
-    // Orbiting energy motes
-    for (let i = 0; i < 5; i++) {
-      const ang = tnow * 2.2 + (i / 5) * Math.PI * 2;
-      const or = r * 1.55;
-      const ox = Math.cos(ang) * or;
-      const oy = Math.sin(ang) * or * 0.55;
-      ctx.globalAlpha = 0.55 + 0.35 * Math.sin(tnow * 6 + i);
-      ctx.fillStyle = "rgba(255,255,240,0.95)";
+    // Flickering outer sparks
+    for (var s = 0; s < 10; s++) {
+      var ang = tnow * 2.2 + s * (Math.PI * 2 / 10);
+      var rad = r * (1.7 + 0.35 * Math.sin(tnow * 7 + s));
+      var sx = Math.cos(ang) * rad;
+      var sy = Math.sin(ang) * rad * 0.85;
+      ctx.globalAlpha = 0.45 + 0.4 * Math.sin(tnow * 9 + s);
+      ctx.fillStyle = s % 2 ? "rgba(255,120,40,0.95)" : "rgba(255,40,20,0.9)";
       ctx.beginPath();
-      ctx.arc(ox, oy, 2.2, 0, Math.PI * 2);
+      ctx.arc(sx, sy, 2.5 + (s % 3), 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Crystal / gem body
+    // Medal asset (or fallback gem if image missing)
     ctx.globalCompositeOperation = "source-over";
     ctx.globalAlpha = 1;
-    // Faceted gem shape
-    ctx.beginPath();
-    ctx.moveTo(0, -r * 1.1);
-    ctx.lineTo(r * 0.75, -r * 0.25);
-    ctx.lineTo(r * 0.55, r * 0.85);
-    ctx.lineTo(-r * 0.55, r * 0.85);
-    ctx.lineTo(-r * 0.75, -r * 0.25);
-    ctx.closePath();
-    const gem = ctx.createLinearGradient(-r, -r, r, r);
-    gem.addColorStop(0, "rgb(255,255,245)");
-    gem.addColorStop(0.35, "rgb(" + c0[0] + "," + c0[1] + "," + c0[2] + ")");
-    gem.addColorStop(1, "rgb(" + c1[0] + "," + c1[1] + "," + c1[2] + ")");
-    ctx.fillStyle = gem;
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.7)";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    // Highlight facet
-    ctx.beginPath();
-    ctx.moveTo(0, -r * 0.95);
-    ctx.lineTo(r * 0.35, -r * 0.15);
-    ctx.lineTo(0, r * 0.2);
-    ctx.lineTo(-r * 0.2, -r * 0.2);
-    ctx.closePath();
-    ctx.fillStyle = "rgba(255,255,255,0.45)";
-    ctx.fill();
-
-    // Inner icon (bolt / bomb)
-    ctx.fillStyle = "rgba(20,15,10,0.75)";
-    if (isArc) {
-      ctx.beginPath();
-      ctx.arc(0, r * 0.1, r * 0.28, 0, Math.PI * 2);
-      ctx.fill();
+    if (hasMedal) {
+      var sz = r * 2.4;
+      ctx.drawImage(medal, -sz / 2, -sz / 2, sz, sz);
     } else {
       ctx.beginPath();
-      ctx.moveTo(-r * 0.12, -r * 0.4);
-      ctx.lineTo(r * 0.28, 0);
-      ctx.lineTo(r * 0.02, 0.05 * r);
-      ctx.lineTo(r * 0.18, r * 0.45);
-      ctx.lineTo(-r * 0.28, r * 0.05);
-      ctx.lineTo(-r * 0.02, -0.02 * r);
-      ctx.closePath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      var g = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 0, 0, 0, r);
+      g.addColorStop(0, "#fff5e0");
+      g.addColorStop(0.5, "#d4a84b");
+      g.addColorStop(1, "#6b3a10");
+      ctx.fillStyle = g;
       ctx.fill();
     }
 
-    // Ground shadow / float indicator
-    ctx.globalAlpha = 0.25;
-    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    // Extra neon rim
+    ctx.globalCompositeOperation = "lighter";
+    ctx.strokeStyle = "rgba(255, 60, 30, 0.85)";
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.ellipse(0, r * 1.35, r * 0.7, r * 0.18, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.arc(0, 0, r * 1.15, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(255, 20, 0, 0.45)";
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.35, 0, Math.PI * 2);
+    ctx.stroke();
+
     ctx.restore();
   }
+
 
   // ---------- Wind streaks — trailing motion lines for flying entities ----------
   let windParticles = [];

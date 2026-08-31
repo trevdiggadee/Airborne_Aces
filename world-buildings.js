@@ -996,7 +996,7 @@
         // Player-controlled landing: mild gravity so taps (flap) have clear effect
         player.vy += 680 * dt;
         if (player.vy > 420) player.vy = 420;
-        const fieldReady = airfieldLandT > 1.6;
+        const fieldReady = airfieldLandT > 0.35;
         // assist toward deck once strip is ready
         if (fieldReady && player.y < landY - 70) {
           player.vy += 160 * dt;
@@ -1022,7 +1022,7 @@
           airfieldLandContact = 0;
         }
 
-        if (!airfieldDidLand && ((fieldReady && airfieldLandContact >= 0.08) || airfieldLandT > 2.2)) {
+        if (!airfieldDidLand && ((fieldReady && airfieldLandContact >= 0.05) || airfieldLandT > 1.0)) {
           airfieldDidLand = true;
           window.__airborneAirfieldDidLand = true;
           window.__airborneLandTouchAt = performance.now();
@@ -1032,7 +1032,11 @@
           // Touchdown → long runway drive like takeoff
           airfieldPhase = "skid";
           airfieldSkidT = 0;
+          airfieldSkidDriveDist = 0;
+          airfieldTakeoffSpeed = 180;
           airfieldSkidStartX = player.x;
+          window.__airborneAirfieldHold = false;
+          window.__airbornePointerDown = false;
           try {
             if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
             if (typeof sfxAirfieldScreech === "function") sfxAirfieldScreech();
@@ -1080,18 +1084,24 @@
         try { ensureAirfieldStripVisible(); } catch (e) {}
       }
       // HOLD to drive to end of runway (like takeoff), then score
-      // NUCLEAR HOLD: any recent press within 120ms OR flags
+      // Hold detection: pointer flag, recent press, or mouse buttons still down
       var nowH = performance.now();
+      try {
+        if (typeof window !== "undefined" && window.event && window.event.buttons) {
+          window.__airbornePointerDown = true;
+          window.__airborneLastHoldAt = nowH;
+        }
+      } catch (eB) {}
       if (window.__airbornePointerDown) {
         window.__airborneAirfieldHold = true;
         window.__airborneLastHoldAt = nowH;
       }
-      var recentHold = (window.__airborneLastHoldAt && (nowH - window.__airborneLastHoldAt) < 120);
+      var recentHold = (window.__airborneLastHoldAt && (nowH - window.__airborneLastHoldAt) < 200);
       var holdingLand = !!(window.__airborneAirfieldHold || window.__airbornePointerDown || recentHold);
-      // Failsafe: if stuck > 1.5s with no hold, still crawl slowly so player isn't soft-locked
-      var crawl = (!holdingLand && airfieldSkidT > 1.5);
+      // After 0.4s always crawl so landing is never a long idle
+      var crawl = (!holdingLand && airfieldSkidT > 0.4);
       airfieldSkidDriveDist = airfieldSkidDriveDist || 0;
-      var runwayEnd = Math.max(W * 2.2, 900); // end of runway distance
+      var runwayEnd = Math.max(W * 1.6, 650); // end of runway distance
       try {
         if (!airfieldTiles || airfieldTiles.length < 3) ensureAirfieldStripVisible();
         if (airfieldTiles && airfieldTiles.length && airfieldTiles.length < 4) {

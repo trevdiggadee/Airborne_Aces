@@ -2421,17 +2421,7 @@
     const rankNameEl = document.getElementById("ruffRankName");
     const rankTitleEl = document.getElementById("ruffRankTitle");
     const medalImg = document.getElementById("ruffMedalImg");
-    if (medalImg) {
-      medalImg.src = "boss_weapon_unlock_medal.webp?v=ruff367";
-      medalImg.onerror = function() { this.src = "boss_weapon_unlock_medal.png?v=ruff367"; };
-      medalImg.classList.add("weaponUnlockMedal");
-      medalImg.style.display = "block";
-      medalImg.style.visibility = "visible";
-      medalImg.style.opacity = "1";
-      medalImg.style.zIndex = "12";
-    }
-    // Always treat training report as weapon-unlock presentation
-    window.__airborneBossWeaponUnlock = true;
+    // Score report keeps rank medal (medal_badge) — NOT boss weapon asset
 
     if (rows) {
       rows.innerHTML =
@@ -2483,6 +2473,8 @@
       if (typeof updateHudRank === "function") updateHudRank(pilotRank.name || "Cadet");
     } catch (e) {}
     if (medalImg) {
+      medalImg.classList.remove("weaponUnlockMedal");
+      medalImg.style.filter = "";
       const src = (typeof images !== "undefined" && images.medal_badge && images.medal_badge.src)
         ? images.medal_badge.src
         : "medal_badge.webp";
@@ -2546,17 +2538,6 @@
           // After RANK UP peaks, reveal medal
           setTimeout(function () {
             rankBanner.classList.add("medalShow");
-            if (window.__airborneBossWeaponUnlock) {
-              rankBanner.classList.add("weaponUnlockFire");
-              var unlockLbl = rankBanner.querySelector(".weaponUnlockLabel");
-              if (!unlockLbl) {
-                unlockLbl = document.createElement("div");
-                unlockLbl.className = "weaponUnlockLabel";
-                unlockLbl.textContent = "BOSS WEAPON UNLOCKED";
-                rankBanner.appendChild(unlockLbl);
-              }
-              unlockLbl.style.opacity = "1";
-            }
           }, 420);
           // After RANK UP fades, show rank name
           setTimeout(function () {
@@ -3316,7 +3297,7 @@ function finishToMap() {
       }
       // Only assist skid after a real land phase has been running (not instant force)
       try {
-        if (window.__airborneAirfieldPhase === "land" && ruffStageT > 6.0) {
+        if (window.__airborneAirfieldPhase === "land" && ruffStageT > 1.2) {
           if (typeof window.__airborneForceLandingSkid === "function") window.__airborneForceLandingSkid();
         }
       } catch (eLd) {}
