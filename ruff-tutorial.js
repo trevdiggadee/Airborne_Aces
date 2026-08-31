@@ -3279,7 +3279,7 @@ function finishToMap() {
         requestNextStage();
       }
     } else if (ruffStage === "landing") {
-      // Full landing sequence: descend → touchdown → hold-to-drive → score
+      // Clean landing: request once, force taxi if stuck in land too long
       window.__airborneTrainingFlight = true;
       window.__airborneAirfield = true;
       try {
@@ -3287,26 +3287,21 @@ function finishToMap() {
         if (typeof levelEndPhase !== "undefined") levelEndPhase = null;
         if (typeof bossActive !== "undefined") bossActive = false;
       } catch (e) {}
-      // Request land once (processed at top of updateAirfield)
       if (!window.__airborneRuffLandArmed) {
         window.__airborneRuffLandArmed = true;
         window.__airborneRuffRequestLand = true;
         ruffLandingCelebrated = false;
-        try {
-          if (typeof ensureAirfieldStripVisible === "function") ensureAirfieldStripVisible();
-        } catch (e2) {}
       }
-      // Re-assert request if somehow still not in land/skid after a beat
       var ph0 = window.__airborneAirfieldPhase;
-      if (ruffStageT > 0.5 && ph0 !== "land" && ph0 !== "skid" && ph0 !== "score" && ph0 !== "done") {
+      if (ruffStageT > 0.4 && ph0 !== "land" && ph0 !== "skid" && ph0 !== "score" && ph0 !== "done") {
         window.__airborneRuffRequestLand = true;
       }
-      // Assist skid ONLY after player has had time to descend (strip rise + approach)
-      try {
-        if (window.__airborneAirfieldPhase === "land" && ruffStageT > 7.0) {
+      // If still descending after 5s, force taxi
+      if (ph0 === "land" && ruffStageT > 5.0) {
+        try {
           if (typeof window.__airborneForceLandingSkid === "function") window.__airborneForceLandingSkid();
-        }
-      } catch (eLd) {}
+        } catch (eLd) {}
+      }
       const ph = window.__airborneAirfieldPhase;
       // Celebration when touchdown / drive complete
       if (!ruffLandingCelebrated && (ph === "land_drive" || ph === "landed" || ph === "done" || window.__airborneTrainingReportReady)) {
