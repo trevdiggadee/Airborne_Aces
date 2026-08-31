@@ -64,8 +64,8 @@
   }
 
   function flap() {
-    // Allow runway hold even during brief intro (tip tells player to HOLD)
-    if (state !== "playing") return;
+    // Allow runway hold during training even if state glitched
+    if (state !== "playing" && !window.__airborneAirfield) return;
     // Don't flap-react while docked on the pad
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) return;
     // Airfield runway / landing drive: hold accelerates (never flap)

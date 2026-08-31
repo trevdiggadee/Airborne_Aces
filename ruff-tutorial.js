@@ -2423,7 +2423,7 @@
     const rankTitleEl = document.getElementById("ruffRankTitle");
     const medalImg = document.getElementById("ruffMedalImg");
     if (medalImg) {
-      medalImg.src = "boss_weapon_unlock_medal.webp?v=ruff365";
+      medalImg.src = "boss_weapon_unlock_medal.webp?v=ruff366";
       medalImg.classList.add("weaponUnlockMedal");
     }
 

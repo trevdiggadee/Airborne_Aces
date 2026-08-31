@@ -949,12 +949,12 @@
     ensureAudio();
     window.__airbornePointerDown = true;
     var afp = window.__airborneAirfieldPhase;
-    if (state === "playing" && window.__airborneAirfield &&
-        (afp === "taxi" || afp === "accel" || afp === "skid" || afp === "land") &&
-        window.__airborneRuffStage !== "intro") {
+    // Any active airfield runway/drive — do not require state==playing
+    if (window.__airborneAirfield &&
+        (afp === "taxi" || afp === "accel" || afp === "skid" || afp === "land")) {
       window.__airborneAirfieldHold = true;
     }
-    if (state === "playing") flap();
+    if (state === "playing" || window.__airborneAirfield) flap();
   }
   function handleInputUp(e) {
     if (e && e.touches && e.touches.length > 0) return;
@@ -967,7 +967,7 @@
   document.addEventListener("pointerdown", function(e) {
     window.__airbornePointerDown = true;
     var afp = window.__airborneAirfieldPhase;
-    if (state === "playing" && window.__airborneAirfield &&
+    if (window.__airborneAirfield &&
         (afp === "taxi" || afp === "accel" || afp === "skid" || afp === "land")) {
       window.__airborneAirfieldHold = true;
       if (afp === "taxi" || afp === "accel") {
@@ -991,11 +991,11 @@
       ensureAudio();
       window.__airbornePointerDown = true;
       var afp = window.__airborneAirfieldPhase;
-      if (state === "playing" && window.__airborneAirfield &&
-          (afp === "taxi" || afp === "accel" || afp === "skid")) {
+      if (window.__airborneAirfield &&
+          (afp === "taxi" || afp === "accel" || afp === "skid" || afp === "land")) {
         window.__airborneAirfieldHold = true;
       }
-      if (state === "playing") flap();
+      if (state === "playing" || window.__airborneAirfield) flap();
     }
   });
   window.addEventListener("keyup", (e) => {
