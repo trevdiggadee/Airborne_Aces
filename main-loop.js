@@ -381,12 +381,15 @@
       drawParallaxLayers();
       drawSketchSkyline();
     }
-    drawPowerlines();
-    drawBuildings();
-    drawBuildingSmoke();
-    drawStreet();
-    drawStreetlamps();
-    drawGroundVehicles();
+    // Campaign city ground only off airfield / training
+    if (!(typeof isAirfieldMode === "function" && isAirfieldMode()) && !window.__airborneAirfield) {
+      drawPowerlines();
+      drawBuildings();
+      drawBuildingSmoke();
+      drawStreet();
+      drawStreetlamps();
+      drawGroundVehicles();
+    }
     drawBossShadow();
     drawWindParticlesBack();
     // Training background balloons — behind blimps and clouds
