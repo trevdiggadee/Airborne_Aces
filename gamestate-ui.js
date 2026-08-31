@@ -944,6 +944,23 @@
 
   // Global hold tracking (survives phase checks; required for landing drive)
   window.__airbornePointerDown = false;
+  window.__airborneLastHoldAt = 0;
+  function __aaMarkHold() {
+    window.__airbornePointerDown = true;
+    window.__airborneLastHoldAt = performance.now();
+    window.__airborneAirfieldHold = true;
+  }
+  function __aaClearHold() {
+    window.__airbornePointerDown = false;
+    window.__airborneAirfieldHold = false;
+  }
+  // Capture phase — always mark hold regardless of UI overlays
+  window.addEventListener("pointerdown", __aaMarkHold, true);
+  window.addEventListener("touchstart", __aaMarkHold, true);
+  window.addEventListener("mousedown", __aaMarkHold, true);
+  window.addEventListener("pointerup", __aaClearHold, true);
+  window.addEventListener("touchend", __aaClearHold, true);
+  window.addEventListener("mouseup", __aaClearHold, true);
   function handleInput(e) {
     if (e.cancelable) e.preventDefault();
     ensureAudio();

@@ -908,7 +908,7 @@
       window.__airborneAirfieldRings = true;
       window.__airborneAirfieldObstacles = true;
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.85; // denser combined
-      try { spawnTrainingCoins(12); } catch (e) {}
+      try { spawnTrainingCoins(6); } catch (e) {}
     }
 
     if (name === "intro") {
@@ -949,11 +949,11 @@
     } else if (name === "altitude") {
       if (ruffLines.length) showRadio(ruffLines[0], 3.0);
       spawnAltitudeMarkers();
-      try { spawnTrainingCoins(12); spawnCrystals(6); } catch (e) {}
+      try { spawnTrainingCoins(6); spawnCrystals(3); } catch (e) {}
     } else if (name === "crystals") {
       // Removed as standalone lesson — coins/crystals run all flight
       if (ruffLines.length) showRadio(ruffLines[0], 2.0);
-      try { spawnTrainingCoins(8); spawnCrystals(4); } catch (e) {}
+      try { spawnTrainingCoins(4); spawnCrystals(2); } catch (e) {}
     } else if (name === "obstacles") {
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
       window.__airborneAirfieldObstacles = true;
@@ -977,7 +977,7 @@
       window.__airborneTrainingPowerWait = 0;
       // Coins charge the meter — start empty, spawn lots of coins
       if (typeof stormCharge === "number") stormCharge = 0;
-      try { spawnTrainingCoins(16); } catch (e) {}
+      try { spawnTrainingCoins(4); } catch (e) {}
       if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay(false);
     } else if (name === "rings") {
       if (ruffLines.length) showRadio(ruffLines[0], 2.8);
@@ -986,7 +986,7 @@
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.95; // denser rings
       ruffWaitingRing = 8;
       window.__airborneRingCollects = 0;
-      try { spawnTrainingCoins(8); spawnCrystals(4); } catch (e) {}
+      try { spawnTrainingCoins(4); spawnCrystals(2); } catch (e) {}
     } else if (name === "combined") {
       window.__airborneTrainingBoss = false;
       window.__airborneTrainingBossTried = false;
@@ -1026,8 +1026,8 @@
     try {
       var liveCr = (ruffCrystals || []).filter(function(c){ return c && !c.collected && c.x > -40; }).length;
       var liveCo = (ruffCoins || []).filter(function(c){ return c && !c.collected && c.x > -40; }).length;
-      if (liveCr < 4) spawnCrystals(4);
-      if (liveCo < 6) spawnTrainingCoins(6);
+      if (liveCr < 2) spawnCrystals(2);
+      if (liveCo < 3) spawnTrainingCoins(3);
     } catch (e) {}
   }
 
@@ -1136,7 +1136,7 @@
       } catch (e) {}
     }
     ruffLessonPauseT += dt;
-    if (ruffLessonPauseT >= 2.0) {
+    if (ruffLessonPauseT >= 1.0) {
       ruffLessonPendingNext = false;
       ruffLessonClearing = false;
       ruffLessonPauseT = 0;
@@ -1533,9 +1533,13 @@
   }
 
 
+  // Each asset is dedicated to exactly one layer (far → near, fixed sizes)
   var HOTAIR_KEYS = [
-    "hotair_red_cream", "hotair_night_stars", "hotair_floral_teal",
-    "hotair_mosaic", "hotair_compass"
+    "hotair_night_stars",   // layer 0 farthest
+    "hotair_floral_teal",   // layer 1
+    "hotair_mosaic",        // layer 2
+    "hotair_compass",       // layer 3
+    "hotair_red_cream"      // layer 4 nearest (if used)
   ];
   var hotairImgs = null;
   function ensureHotairImgs() {
@@ -1543,19 +1547,17 @@
     hotairImgs = {};
     HOTAIR_KEYS.forEach(function(k) {
       var im = new Image();
-      im.src = k + ".webp?v=ruff338";
+      im.src = k + ".webp?v=ruff367";
       hotairImgs[k] = im;
     });
   }
 
-  // 4 parallax layers — far → near (speed / scale / alpha)
-  // Far layers only — behind mountains / behind clouds, very slow
+  // Fixed scales: farther = smaller (no random size)
   var HOTAIR_LAYERS = [
-    // No balloons behind clouds — mountains + front only
-    { id: 0, speed: 2.5, scale: 0.08, dark: 1, y0: 0.10, y1: 0.45, behindMountains: true, behindClouds: false },
-    { id: 1, speed: 4.0, scale: 0.10, dark: 1, y0: 0.20, y1: 0.55, behindMountains: true, behindClouds: false },
-    { id: 2, speed: 6.0, scale: 0.13, dark: 1, y0: 0.15, y1: 0.50, behindMountains: false, behindClouds: false },
-    { id: 3, speed: 8.0, scale: 0.16, dark: 1, y0: 0.25, y1: 0.58, behindMountains: false, behindClouds: false }
+    { id: 0, key: "hotair_night_stars", speed: 2.5, scale: 0.07, dark: 1, y0: 0.12, y1: 0.12, behindMountains: true, behindClouds: false },
+    { id: 1, key: "hotair_floral_teal", speed: 4.0, scale: 0.10, dark: 1, y0: 0.28, y1: 0.28, behindMountains: true, behindClouds: false },
+    { id: 2, key: "hotair_mosaic",      speed: 6.0, scale: 0.13, dark: 1, y0: 0.40, y1: 0.40, behindMountains: false, behindClouds: false },
+    { id: 3, key: "hotair_compass",     speed: 8.0, scale: 0.17, dark: 1, y0: 0.52, y1: 0.52, behindMountains: false, behindClouds: false }
   ];
 
   var ruffBgBalloonSpawnT = 0;
@@ -1580,24 +1582,21 @@
       if (!occupied[HOTAIR_LAYERS[li].id]) freeLayers.push(HOTAIR_LAYERS[li]);
     }
     if (!freeLayers.length) return; // all layers already have a balloon
-    var layer = freeLayers[ruffBgBalloonSpawned % freeLayers.length];
-    var keys = HOTAIR_KEYS.slice().sort(function() { return Math.random() - 0.5; });
-    var key = keys[ruffBgBalloonSpawned % keys.length];
-    var heightSlots = [0.14, 0.30, 0.44, 0.56];
-    var ly = heightSlots[layer.id % heightSlots.length] + (Math.random() - 0.5) * 0.05;
-    ly = Math.max(0.08, Math.min(0.62, ly));
+    var layer = freeLayers[0]; // next free layer only
+    var key = layer.key || HOTAIR_KEYS[layer.id % HOTAIR_KEYS.length];
+    var ly = layer.y0; // fixed height per layer
     ruffBgBalloons.push({
       key: key,
       layer: layer,
       layerId: layer.id,
       behindMountains: !!layer.behindMountains,
       behindClouds: !!layer.behindClouds,
-      x: (typeof forceX === "number") ? forceX : (W0 + 40 + Math.random() * 80),
+      x: (typeof forceX === "number") ? forceX : (W0 + 40),
       y: H0 * ly,
-      s: layer.scale * (0.95 + Math.random() * 0.12),
-      speed: layer.speed * (0.88 + Math.random() * 0.2),
-      bob: Math.random() * Math.PI * 2,
-      bobSpd: 0.25 + Math.random() * 0.25,
+      s: layer.scale, // fixed size — no random
+      speed: layer.speed, // fixed speed — no random
+      bob: layer.id * 1.7,
+      bobSpd: 0.3,
       dark: layer.dark
     });
     ruffBgBalloonSpawned++;
@@ -2423,9 +2422,16 @@
     const rankTitleEl = document.getElementById("ruffRankTitle");
     const medalImg = document.getElementById("ruffMedalImg");
     if (medalImg) {
-      medalImg.src = "boss_weapon_unlock_medal.webp?v=ruff366";
+      medalImg.src = "boss_weapon_unlock_medal.webp?v=ruff367";
+      medalImg.onerror = function() { this.src = "boss_weapon_unlock_medal.png?v=ruff367"; };
       medalImg.classList.add("weaponUnlockMedal");
+      medalImg.style.display = "block";
+      medalImg.style.visibility = "visible";
+      medalImg.style.opacity = "1";
+      medalImg.style.zIndex = "12";
     }
+    // Always treat training report as weapon-unlock presentation
+    window.__airborneBossWeaponUnlock = true;
 
     if (rows) {
       rows.innerHTML =
@@ -3137,7 +3143,7 @@ function finishToMap() {
         window.__airborneAirfieldObstacles = false;
         if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       }
-      if (!ruffLessonPendingNext && ruffStageT > 35) {
+      if (!ruffLessonPendingNext && ruffStageT > 30) {
         requestNextStage();
       }
     } else if (ruffStage === "powerup") {
@@ -3153,7 +3159,7 @@ function finishToMap() {
       try { placeTrainingPowerIcon(); } catch (e) {}
       // Keep coins flowing so player can reach 25
       try {
-        if ((ruffCoins || []).length < 8) spawnTrainingCoins(10);
+        if ((ruffCoins || []).length < 8) spawnTrainingCoins(5);
       } catch (e) {}
       // Charge meter from coins (1 coin = full)
       try {
@@ -3198,7 +3204,7 @@ function finishToMap() {
         ? obstacles.filter(function (o) { return o && (o.isRing || o.type === "gold_ring") && !o.collected; }).length
         : 0;
       // Rings lesson ~35s (+15s longer)
-      if (!ruffLessonPendingNext && ((ruffStats.rings >= 4 && ringLeft === 0 && ruffStageT > 18) || ruffStageT > 35)) {
+      if (!ruffLessonPendingNext && ((ruffStats.rings >= 4 && ringLeft === 0 && ruffStageT > 18) || ruffStageT > 30)) {
         requestNextStage();
       }
     } else if (ruffStage === "airship") {
@@ -3286,9 +3292,9 @@ function finishToMap() {
       } catch (e) {}
       // Coins/crystals handled only by updateFlightCollectibles (no double-speed)
       window.__airborneFirePickup = null;
-      if ((ruffCrystals || []).length < 4 && ruffStageT > 2) spawnCrystals(5);
-      if ((ruffCoins || []).length < 10 && ruffStageT > 1.0) spawnTrainingCoins(12);
-      if (!ruffLessonPendingNext && ruffStageT > 28) {
+      if ((ruffCrystals || []).length < 4 && ruffStageT > 2) spawnCrystals(2);
+      if ((ruffCoins || []).length < 10 && ruffStageT > 1.0) spawnTrainingCoins(6);
+      if (!ruffLessonPendingNext && ruffStageT > 30) {
         requestNextStage();
       }
     } else if (ruffStage === "landing") {

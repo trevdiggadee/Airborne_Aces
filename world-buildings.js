@@ -1080,9 +1080,16 @@
         try { ensureAirfieldStripVisible(); } catch (e) {}
       }
       // HOLD to drive to end of runway (like takeoff), then score
-      // Hold = flag OR pointer/space still down (re-assert each frame)
-      if (window.__airbornePointerDown) window.__airborneAirfieldHold = true;
-      var holdingLand = !!(window.__airborneAirfieldHold || window.__airbornePointerDown);
+      // NUCLEAR HOLD: any recent press within 120ms OR flags
+      var nowH = performance.now();
+      if (window.__airbornePointerDown) {
+        window.__airborneAirfieldHold = true;
+        window.__airborneLastHoldAt = nowH;
+      }
+      var recentHold = (window.__airborneLastHoldAt && (nowH - window.__airborneLastHoldAt) < 120);
+      var holdingLand = !!(window.__airborneAirfieldHold || window.__airbornePointerDown || recentHold);
+      // Failsafe: if stuck > 1.5s with no hold, still crawl slowly so player isn't soft-locked
+      var crawl = (!holdingLand && airfieldSkidT > 1.5);
       airfieldSkidDriveDist = airfieldSkidDriveDist || 0;
       var runwayEnd = Math.max(W * 2.2, 900); // end of runway distance
       try {
@@ -1100,8 +1107,18 @@
       } catch (e) {}
       var driveSpd = 0;
       if (holdingLand) {
-        airfieldTakeoffSpeed = Math.min(320, (airfieldTakeoffSpeed || 180) + 90 * dt);
-        driveSpd = Math.max(160, airfieldTakeoffSpeed);
+        airfieldTakeoffSpeed = Math.min(340, (airfieldTakeoffSpeed || 200) + 140 * dt);
+        driveSpd = Math.max(200, airfieldTakeoffSpeed);
+        airfieldTip = "Driving… keep HOLDing!";
+      } else if (crawl) {
+        driveSpd = 70; // slow crawl failsafe
+        airfieldTip = "HOLD screen to drive faster!";
+      } else {
+        airfieldTakeoffSpeed = Math.max(60, (airfieldTakeoffSpeed || 180) - 100 * dt);
+        driveSpd = 0;
+        airfieldTip = "HOLD to drive to the end!";
+      }
+      if (driveSpd > 0) {
         airfieldSkidDriveDist += driveSpd * dt;
         (airfieldTiles || []).forEach(function(tile) {
           if (!tile) return;
@@ -1110,11 +1127,8 @@
           while (tile.x + tw < -10) tile.x += tw * Math.max(2, (airfieldTiles || []).length || 2);
         });
         if (typeof obstacleSpeed !== "undefined") obstacleSpeed = driveSpd;
-        airfieldTip = "HOLD to drive to the end of the runway!";
       } else {
-        airfieldTakeoffSpeed = Math.max(50, (airfieldTakeoffSpeed || 180) - 120 * dt);
         if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 0;
-        airfieldTip = "HOLD to drive!";
       }
       airfieldStripY = 0;
       airfieldUseLandingArt = true;
