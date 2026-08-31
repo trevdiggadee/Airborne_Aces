@@ -238,14 +238,6 @@
 
     const dtScale = dt * 60; // normalize movement speeds tuned at 60fps baseline
 
-    // LANDING/TAXI MUST UPDATE FIRST. The skid publishes __airborneTaxiSpeed,
-    // which the runway, city, street and parallax systems consume this frame.
-    if (state !== "paused" && (window.__airborneAirfield || window.__airborneRuffActive)) {
-      const _updAfFirst = (typeof window.updateAirfield === "function") ? window.updateAirfield
-        : (typeof updateAirfield === "function") ? updateAirfield : null;
-      if (_updAfFirst) { try { _updAfFirst(dt); } catch (e) { console.warn("updAf", e); } }
-    }
-
     // Art Deco sky layer (very slow continuous scroll, always on screen)
     try {
       if (window.__airborneUpdateArtDecoLayers) window.__airborneUpdateArtDecoLayers(dtScale);
@@ -277,6 +269,9 @@
 
     // Training systems only while not paused
     if (state !== "paused" && (window.__airborneAirfield || window.__airborneRuffActive)) {
+      const _updAf0 = (typeof window.updateAirfield === "function") ? window.updateAirfield
+        : (typeof updateAirfield === "function") ? updateAirfield : null;
+      if (_updAf0) { try { _updAf0(dt); } catch (e) { console.warn("updAf", e); } }
       if (typeof window.__airborneUpdateRuff === "function") {
         try { window.__airborneUpdateRuff(dt); } catch (e) { console.warn("updRuff", e); }
       }
@@ -381,21 +376,20 @@
       }
     } catch (eAlt) {}
 
-    // City parallax is hidden during flight/approach, but intentionally returns
-    // during the 4s taxi. updateAirfield() already published taxi speed.
-    if (!(typeof isAirfieldMode === "function" && isAirfieldMode()) || 
-        (window.__airborneAirfield && window.__airborneAirfieldPhase === "skid")) {
+    // City parallax only off-airfield (mountains already drawn behind strip above)
+    if (!(typeof isAirfieldMode === "function" && isAirfieldMode()) && !window.__airborneAirfield) {
       drawParallaxLayers();
       drawSketchSkyline();
     }
-    drawPowerlines();
-    drawBuildings();
-    drawBuildingSmoke();
-    drawStreet();
-    drawStreetlamps();
-    drawGroundVehicles();
-    // Foreground runway: the world/city moves behind it during taxi.
-    if (typeof drawAirfieldStrip === "function") drawAirfieldStrip();
+    // Campaign city ground only off airfield / training
+    if (!(typeof isAirfieldMode === "function" && isAirfieldMode()) && !window.__airborneAirfield) {
+      drawPowerlines();
+      drawBuildings();
+      drawBuildingSmoke();
+      drawStreet();
+      drawStreetlamps();
+      drawGroundVehicles();
+    }
     drawBossShadow();
     drawWindParticlesBack();
     // Training background balloons — behind blimps and clouds

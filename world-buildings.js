@@ -310,6 +310,23 @@
     // seedAirfieldLightsForTile(landTile, true);
   }
 
+  // Post-landing taxi: looping runway strip (airfield_strip) so scroll is obvious
+  function ensureTaxiRunwayStrip() {
+    airfieldUseLandingArt = false; // draw airfield_strip.webp (runway arrows)
+    airfieldStripGone = false;
+    airfieldStripY = 0;
+    const img = (typeof images !== "undefined" && images) ? images.airfield_strip : null;
+    const aspect = (img && img.naturalWidth && img.naturalHeight)
+      ? (img.naturalWidth / img.naturalHeight) : 5;
+    let h = Math.max(60, Math.min(H * 0.32, 140));
+    let w = Math.max(W * 0.9, h * aspect);
+    airfieldTiles = [];
+    // 3 looping tiles covering the bottom band
+    for (var i = 0; i < 3; i++) {
+      airfieldTiles.push({ x: i * w * 0.98 - w * 0.15, w: w, h: h, startX: 0 });
+    }
+  }
+
   function beginAirfieldTraining() {
     try { if (window.resetUnifiedProgress) window.resetUnifiedProgress(); } catch (e) {}
     try {
@@ -1086,7 +1103,8 @@
           player.vy = 0;
           player.rotation = 0;
           airfieldTip = "Taxiing…";
-          // Sync phase NOW so taps don't flap (window phase was still "land")
+          airfieldUseLandingArt = false; // will rebuild runway strip in skid
+          airfieldTiles = []; // force ensureTaxiRunwayStrip on first skid frame
           try { syncAirfieldGlobals(); } catch (eSync) {}
           try {
             if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
@@ -1126,95 +1144,64 @@
     forceTrainingReportIfDue();
     // ---- SKID (drive like takeoff: strip scrolls under blimp + blimp rolls forward) ----
     } else if (airfieldPhase === "skid") {
-      // Simple effect: keep blimp on deck, scroll runway image 3.5s, then score
+      // ONLY effect: scroll the runway image under the blimp for ~3.75s
+      airfieldMode = true;
+      window.__airborneAirfield = true;
       window.__airborneAirfieldInvuln = true;
       window.__airborneAirfieldPaused = false;
-      window.__airborneAirfield = true;
-      airfieldMode = true;
-      airfieldUseLandingArt = true;
+      airfieldPhase = "skid";
       airfieldStripGone = false;
       airfieldStripY = 0;
-      airfieldPhase = "skid";
       airfieldSkidT = (airfieldSkidT || 0) + dt;
-      syncAirfieldGlobals();
 
-      try {
-        if (!airfieldTiles || !airfieldTiles.length) ensureAirfieldStripVisible();
-      } catch (e) {}
+      // First frame of skid: swap to looping runway strip (not hangar landing_field)
+      if (airfieldSkidT < 0.05 || !airfieldTiles || airfieldTiles.length < 2 || airfieldUseLandingArt) {
+        try { ensureTaxiRunwayStrip(); } catch (eTr) {
+          try { ensureAirfieldStripVisible(); } catch (e2) {}
+        }
+      }
 
-      // Build 2–3 wide tiles so scroll is obvious
-      try {
-        var img = (typeof images !== "undefined" && images)
-          ? (images.landing_field || images.airfield_strip) : null;
-        var aspect = (img && img.naturalWidth && img.naturalHeight)
-          ? (img.naturalWidth / img.naturalHeight) : 5.3;
-        var th = Math.max(70, Math.min(H * 0.36, 160));
-        var tw = th * aspect;
-        if (!airfieldTiles || !airfieldTiles.length) {
-          airfieldTiles = [{ x: 0, w: tw, h: th }];
-        }
-        // Normalize sizes
-        for (var si = 0; si < airfieldTiles.length; si++) {
-          airfieldTiles[si].w = tw;
-          airfieldTiles[si].h = th;
-        }
-        while (airfieldTiles.length < 3) {
-          var last = airfieldTiles[airfieldTiles.length - 1];
-          airfieldTiles.push({ x: last.x + tw * 0.98, w: tw, h: th });
-        }
-      } catch (e2) {}
-
-      var scrollSec = 3.75; // 3–4 seconds of runway scroll
-      var spd = 220; // px/sec — visible slide under blimp
+      var scrollSec = 3.75;
+      var spd = 240;
       if (airfieldSkidT < scrollSec) {
         (airfieldTiles || []).forEach(function (tile) {
           if (!tile) return;
           tile.x -= spd * dt;
           var tw = tile.w || W;
-          // loop when fully off left
-          if (tile.x + tw < -10) {
+          if (tile.x + tw < -20) {
             var right = -Infinity;
             for (var j = 0; j < airfieldTiles.length; j++) {
               if (airfieldTiles[j]) {
                 right = Math.max(right, airfieldTiles[j].x + (airfieldTiles[j].w || tw));
               }
             }
-            tile.x = right - tw * 0.02;
+            if (!isFinite(right)) right = W;
+            tile.x = right - 2;
           }
         });
         airfieldTip = "Taxiing…";
+        if (typeof obstacleSpeed !== "undefined") obstacleSpeed = spd * 0.35;
       } else {
         airfieldTip = "";
+        if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 0;
       }
 
-      // Pin blimp on the runway
+      // Pin blimp on runway
       var thPin = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
-      var landY = H - Math.max(40, thPin * 0.28) - ((player && player.h) ? player.h * 0.22 : 10);
+      var landY = H - Math.max(36, thPin * 0.22) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10);
       if (typeof player !== "undefined" && player) {
         player.x = W * 0.25;
         player.y = landY;
         player.vy = 0;
         player.rotation = -0.04;
-        if (typeof blimpPersonality !== "undefined" && blimpPersonality) {
-          blimpPersonality.flapKickY = 0;
-        }
       }
-      if (typeof obstacleSpeed !== "undefined") {
-        obstacleSpeed = (airfieldSkidT < scrollSec) ? spd : 0;
-      }
+      syncAirfieldGlobals();
 
-      // After scroll window → score
       if (airfieldSkidT >= scrollSec) {
         airfieldPhase = "score";
         airfieldScoreT = 0;
         airfieldFireworkT = 0;
-        try {
-          if (typeof spawnLandingDust === "function" && player) {
-            spawnLandingDust(player.x, landY + 8);
-          }
-        } catch (e3) {}
       }
-      syncAirfieldGlobals();
 
     // ---- SCORE ----
     } else if (airfieldPhase === "score") {
