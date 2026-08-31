@@ -1127,46 +1127,58 @@
     // ---- SKID (drive like takeoff: strip scrolls under blimp + blimp rolls forward) ----
     } else if (airfieldPhase === "skid") {
       window.__airborneAirfieldInvuln = true;
-      window.__airborneAirfieldPaused = false; // must be false so hold input works
+      window.__airborneAirfieldPaused = false;
+      window.__airborneAirfield = true;
+      airfieldMode = true;
       airfieldPhase = "skid";
+      airfieldUseLandingArt = true;
+      airfieldStripGone = false;
+      airfieldStripY = 0;
       syncAirfieldGlobals();
       airfieldSkidT = (airfieldSkidT || 0) + dt;
-      if (!airfieldTiles || !airfieldTiles.length) {
-        try { ensureAirfieldStripVisible(); } catch (e) {}
-      }
-      // HOLD to drive to end of runway (like takeoff), then score
-      // AUTO runway drive after landing (reliable) — ~4 seconds then score
+      // AUTO taxi 4s — always scrolls (no hold)
       var skidDur = 4.0;
       airfieldSkidDriveDist = airfieldSkidDriveDist || 0;
       try {
+        // Ensure looping runway tiles exist (landing art)
         if (!airfieldTiles || !airfieldTiles.length) ensureAirfieldStripVisible();
-        if (airfieldTiles && airfieldTiles.length && airfieldTiles.length < 3) {
-          var b0 = airfieldTiles[0];
-          var tw0 = b0.w || W;
-          while (airfieldTiles.length < 3) {
-            airfieldTiles.push({
-              x: (airfieldTiles[airfieldTiles.length - 1].x || 0) + tw0 * 0.98,
-              y: b0.y, w: tw0, h: b0.h, img: b0.img, startX: 0
-            });
-          }
+        var base = airfieldTiles[0];
+        var tw0 = (base && base.w) ? base.w : Math.max(W * 1.2, 400);
+        var th0 = (base && base.h) ? base.h : Math.max(70, H * 0.3);
+        // Place first tile so runway is under the blimp
+        if (airfieldSkidT < 0.05 && base) {
+          base.x = W * 0.05 - tw0 * 0.15;
+          base.w = tw0; base.h = th0;
+        }
+        while (airfieldTiles.length < 3) {
+          var last = airfieldTiles[airfieldTiles.length - 1];
+          airfieldTiles.push({
+            x: (last.x || 0) + tw0 * 0.98,
+            w: tw0, h: th0, startX: 0
+          });
         }
       } catch (e) {}
-      // Constant scroll like takeoff — always moving, no hold required
       var uDrive = Math.min(1, airfieldSkidT / skidDur);
-      var driveSpd = (uDrive < 0.85)
-        ? Math.max(200, airfieldTakeoffSpeed || 240)
-        : Math.max(40, 240 * (1 - (uDrive - 0.85) / 0.15)); // ease to stop
+      var driveSpd = (uDrive < 0.88)
+        ? 260
+        : Math.max(50, 260 * (1 - (uDrive - 0.88) / 0.12));
       airfieldSkidDriveDist += driveSpd * dt;
       (airfieldTiles || []).forEach(function(tile) {
         if (!tile) return;
         tile.x -= driveSpd * dt;
         var tw = tile.w || W;
-        while (tile.x + tw < -10) tile.x += tw * Math.max(2, (airfieldTiles || []).length || 2);
+        // Loop tiles so runway never disappears mid-taxi
+        while (tile.x + tw < -20) {
+          var maxR = -Infinity;
+          for (var ti = 0; ti < airfieldTiles.length; ti++) {
+            if (airfieldTiles[ti]) maxR = Math.max(maxR, airfieldTiles[ti].x + (airfieldTiles[ti].w || tw));
+          }
+          tile.x = maxR + tw * -0.02;
+        }
       });
+      // Move world parallax so motion is obvious
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = driveSpd;
-      airfieldStripY = 0;
-      airfieldUseLandingArt = true;
-      airfieldTip = (uDrive < 0.85) ? "Taxiing to the hangar…" : "Coming to a stop…";
+      airfieldTip = (uDrive < 0.88) ? "Taxiing to the hangar…" : "Coming to a stop…";
       const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
       const landY = H - Math.max(40, th * 0.28) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10);
       if (typeof player !== "undefined" && player) {

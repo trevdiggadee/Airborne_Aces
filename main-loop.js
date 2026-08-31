@@ -238,6 +238,15 @@
 
     const dtScale = dt * 60; // normalize movement speeds tuned at 60fps baseline
 
+    // Update the scripted airfield BEFORE rendering the frame. During landing
+    // taxi, updateAirfield() assigns the current taxi speed; parallax/world
+    // layers below must see that speed in the same frame.
+    if (state !== "paused" && (window.__airborneAirfield || window.__airborneRuffActive)) {
+      const _updAfPreRender = (typeof window.updateAirfield === "function") ? window.updateAirfield
+        : (typeof updateAirfield === "function") ? updateAirfield : null;
+      if (_updAfPreRender) { try { _updAfPreRender(dt); } catch (e) { console.warn("updAf", e); } }
+    }
+
     // Art Deco sky layer (very slow continuous scroll, always on screen)
     try {
       if (window.__airborneUpdateArtDecoLayers) window.__airborneUpdateArtDecoLayers(dtScale);
@@ -267,11 +276,9 @@
     
     updatePlayerBlimpAnimation(dt);
 
-    // Training systems only while not paused
+    // R.U.F.F. stage/UI update runs after the airfield update. Landing requests
+    // raised here are consumed by updateAirfield() on the next frame.
     if (state !== "paused" && (window.__airborneAirfield || window.__airborneRuffActive)) {
-      const _updAf0 = (typeof window.updateAirfield === "function") ? window.updateAirfield
-        : (typeof updateAirfield === "function") ? updateAirfield : null;
-      if (_updAf0) { try { _updAf0(dt); } catch (e) { console.warn("updAf", e); } }
       if (typeof window.__airborneUpdateRuff === "function") {
         try { window.__airborneUpdateRuff(dt); } catch (e) { console.warn("updRuff", e); }
       }
@@ -292,7 +299,8 @@
       } catch (e) {}
       if (typeof ensureCollectDock === "function") ensureCollectDock();
       else if (typeof updateCollectDock === "function") updateCollectDock();
-      // Playing-path updates (skip duplicate airfield if already ticked above)
+      // Airfield was already updated before rendering so parallax/world layers
+      // can use its current taxi speed. Keep the normal gameplay path unchanged.
       if (!(window.__airborneAirfield || window.__airborneRuffActive)) {
         const _updAf = (typeof window.updateAirfield === "function") ? window.updateAirfield
           : (typeof updateAirfield === "function") ? updateAirfield : null;
