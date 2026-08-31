@@ -2392,7 +2392,7 @@
       // Short celebration then show report (avoid 10s dead air)
       setTimeout(function () {
         try { showFlightReport(); } catch (e) {}
-      }, 1600);
+      }, 700);
       return;
     }
 
@@ -3303,7 +3303,7 @@ function finishToMap() {
       }
       // Assist skid ONLY after player has had time to descend (strip rise + approach)
       try {
-        if (window.__airborneAirfieldPhase === "land" && ruffStageT > 5.5) {
+        if (window.__airborneAirfieldPhase === "land" && ruffStageT > 7.0) {
           if (typeof window.__airborneForceLandingSkid === "function") window.__airborneForceLandingSkid();
         }
       } catch (eLd) {}

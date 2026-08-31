@@ -180,7 +180,6 @@
   window.__airborneForceLandingSkid = function () {
     try {
       if (airfieldPhase === "skid" || airfieldPhase === "score" || airfieldPhase === "done") return;
-      // Only force after a real land sequence has begun
       if (airfieldPhase !== "land") return;
       airfieldPhase = "skid";
       airfieldSkidT = 0;
@@ -189,6 +188,7 @@
       window.__airborneAirfieldDidLand = true;
       window.__airborneLandTouchAt = performance.now();
       airfieldUseLandingArt = true;
+      // Keep strip at rest height — no jump of deck
       airfieldStripY = 0;
       try { ensureAirfieldStripVisible(); } catch (e) {}
       try {
@@ -206,13 +206,15 @@
       if (typeof player !== "undefined" && player && typeof H !== "undefined") {
         var th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
         var landY = H - Math.max(40, th * 0.28) - (player.h ? player.h * 0.22 : 10);
+        // Smooth settle — store start Y for lerp (no teleport jump)
+        window.__airborneSkidLerpFrom = player.y;
+        window.__airborneSkidLerpT = 0;
         player.x = (typeof W !== "undefined" ? W : 400) * 0.25;
-        player.y = landY;
         player.vy = 0;
-        player.rotation = 0;
+        // Do NOT snap player.y here — skid update lerps to landY
         airfieldSkidStartX = player.x;
       }
-      airfieldTip = "HOLD to drive to the end of the runway!";
+      airfieldTip = "HOLD to drive!";
       syncAirfieldGlobals();
     } catch (e) {}
   };
@@ -1071,12 +1073,16 @@
           player.y = landY;
           player.vy = 0;
           player.rotation = 0;
-          // Touchdown → long runway drive like takeoff
+          // Touchdown → runway drive (smooth — no y jump)
           airfieldPhase = "skid";
           airfieldSkidT = 0;
           airfieldSkidDriveDist = 0;
-          airfieldTakeoffSpeed = 180;
+          airfieldTakeoffSpeed = 200;
           airfieldSkidStartX = player.x;
+          window.__airborneSkidLerpFrom = player.y;
+          window.__airborneSkidLerpT = 0;
+          player.y = landY; // already on deck this frame
+          player.vy = 0;
           window.__airborneAirfieldHold = false;
           window.__airbornePointerDown = false;
           try {
@@ -1126,30 +1132,23 @@
         try { ensureAirfieldStripVisible(); } catch (e) {}
       }
       // HOLD to drive to end of runway (like takeoff), then score
-      // Hold detection: pointer flag, recent press, or mouse buttons still down
+      // HOLD required to drive (pointer / touch / space)
       var nowH = performance.now();
-      try {
-        if (typeof window !== "undefined" && window.event && window.event.buttons) {
-          window.__airbornePointerDown = true;
-          window.__airborneLastHoldAt = nowH;
-        }
-      } catch (eB) {}
       if (window.__airbornePointerDown) {
         window.__airborneAirfieldHold = true;
         window.__airborneLastHoldAt = nowH;
       }
-      var recentHold = (window.__airborneLastHoldAt && (nowH - window.__airborneLastHoldAt) < 200);
+      var recentHold = (window.__airborneLastHoldAt && (nowH - window.__airborneLastHoldAt) < 180);
       var holdingLand = !!(window.__airborneAirfieldHold || window.__airbornePointerDown || recentHold);
-      // Crawl after 1.2s if not holding — never soft-lock
-      var crawl = (!holdingLand && airfieldSkidT > 1.2);
       airfieldSkidDriveDist = airfieldSkidDriveDist || 0;
-      var runwayEnd = Math.max(W * 2.4, 900); // full runway drive
+      // Short runway when holding — score comes soon after a real drive
+      var runwayEnd = Math.max(W * 1.35, 520);
       try {
-        if (!airfieldTiles || airfieldTiles.length < 3) ensureAirfieldStripVisible();
-        if (airfieldTiles && airfieldTiles.length && airfieldTiles.length < 4) {
+        if (!airfieldTiles || !airfieldTiles.length) ensureAirfieldStripVisible();
+        if (airfieldTiles && airfieldTiles.length && airfieldTiles.length < 3) {
           var b0 = airfieldTiles[0];
           var tw0 = b0.w || W;
-          while (airfieldTiles.length < 4) {
+          while (airfieldTiles.length < 3) {
             airfieldTiles.push({
               x: (airfieldTiles[airfieldTiles.length - 1].x || 0) + tw0 * 0.98,
               y: b0.y, w: tw0, h: b0.h, img: b0.img, startX: 0
@@ -1159,14 +1158,11 @@
       } catch (e) {}
       var driveSpd = 0;
       if (holdingLand) {
-        airfieldTakeoffSpeed = Math.min(340, (airfieldTakeoffSpeed || 200) + 140 * dt);
-        driveSpd = Math.max(200, airfieldTakeoffSpeed);
+        airfieldTakeoffSpeed = Math.min(300, (airfieldTakeoffSpeed || 200) + 160 * dt);
+        driveSpd = Math.max(220, airfieldTakeoffSpeed);
         airfieldTip = "Driving… keep HOLDing!";
-      } else if (crawl) {
-        driveSpd = 70; // slow crawl failsafe
-        airfieldTip = "HOLD screen to drive faster!";
       } else {
-        airfieldTakeoffSpeed = Math.max(60, (airfieldTakeoffSpeed || 180) - 100 * dt);
+        airfieldTakeoffSpeed = Math.max(80, (airfieldTakeoffSpeed || 200) - 150 * dt);
         driveSpd = 0;
         airfieldTip = "HOLD to drive to the end!";
       }
@@ -1182,20 +1178,29 @@
       } else {
         if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 0;
       }
+      // Deck Y — same formula as land phase (no jump)
       airfieldStripY = 0;
       airfieldUseLandingArt = true;
       const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
       const landY = H - Math.max(40, th * 0.28) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10);
       if (typeof player !== "undefined" && player) {
         player.x = W * 0.25;
-        player.y = landY;
+        // Smooth settle if forced into skid from mid-air
+        if (typeof window.__airborneSkidLerpFrom === "number" && window.__airborneSkidLerpT < 0.3) {
+          window.__airborneSkidLerpT = (window.__airborneSkidLerpT || 0) + dt;
+          var u = Math.min(1, window.__airborneSkidLerpT / 0.3);
+          u = 1 - Math.pow(1 - u, 2);
+          player.y = window.__airborneSkidLerpFrom + (landY - window.__airborneSkidLerpFrom) * u;
+        } else {
+          player.y = landY;
+        }
         player.vy = 0;
         player.rotation = holdingLand ? -0.08 : 0;
         if (typeof blimpPersonality !== "undefined" && blimpPersonality) {
           blimpPersonality.squashX = 1;
           blimpPersonality.squashY = 1;
         }
-        if (holdingLand && Math.random() < 0.75) {
+        if (holdingLand && Math.random() < 0.7) {
           if (typeof spawnLandingDust === "function") {
             try {
               spawnLandingDust(player.x - (player.w || 40) * 0.25, landY + 6);
@@ -1204,8 +1209,10 @@
           }
         }
       }
-      // Reached end of runway while holding (or long failsafe)
-      if (airfieldSkidDriveDist >= runwayEnd || airfieldSkidT > 45) {
+      // End drive: reached distance while holding, OR held for 2.5s+, OR max 8s
+      var heldEnough = holdingLand && airfieldSkidDriveDist >= runwayEnd;
+      var heldTimeOk = holdingLand && airfieldSkidDriveDist >= runwayEnd * 0.55 && airfieldSkidT > 2.2;
+      if (heldEnough || heldTimeOk || airfieldSkidT > 8.0) {
         try {
           if (typeof spawnVictoryFirework === "function") {
             spawnVictoryFirework(player.x, player.y - 30);
@@ -1290,8 +1297,8 @@
         });
         airfieldFireworks = airfieldFireworks.filter(function(fw) { return fw.age < fw.life; });
       }
-      // Score pops after runway drive completes
-      if (!window.__airborneTrainingReportShown && airfieldScoreT > 0.45) {
+      // Score pops quickly after drive
+      if (!window.__airborneTrainingReportShown && airfieldScoreT > 0.25) {
         window.__airborneTrainingReportShown = true;
         window.__airborneTrainingReportReady = true;
         window.__airborneAirfieldDidLand = true;
