@@ -355,21 +355,24 @@
       
       updateScreenEffects(dt);
     }
-    // Altitude gauges (left + right under HUD)
+    // Steampunk altitude instrument — needle + climb knob
     try {
       if (typeof player !== "undefined" && player && typeof H !== "undefined") {
         var gy = (typeof groundLevelY === "function") ? groundLevelY() : H * 0.85;
         var topY = player.h * 0.5;
+        // 0 = ground (low on scale), 1 = ceiling (high / danger)
         var frac = 1 - Math.max(0, Math.min(1, (player.y - topY) / Math.max(40, gy - topY)));
-        var pct = (frac * 100).toFixed(1) + "%";
-        var lf = document.getElementById("altGaugeLeftFill");
-        var rf = document.getElementById("altGaugeRightFill");
-        var ln = document.getElementById("altGaugeLeftNeedle");
-        var rn = document.getElementById("altGaugeRightNeedle");
-        if (lf) lf.style.height = pct;
-        if (rf) rf.style.height = pct;
-        if (ln) ln.style.bottom = pct;
-        if (rn) rn.style.bottom = pct;
+        // Scale art: ~500 at bottom → ~3000 at top — map with slight padding
+        var needlePct = (8 + frac * 84).toFixed(2) + "%";
+        var needle = document.getElementById("altHorizNeedle");
+        if (needle) needle.style.bottom = needlePct;
+
+        // Climb/descend knob: vy < 0 climb (up), vy > 0 descend (down)
+        var vy = player.vy || 0;
+        var climb = Math.max(-1, Math.min(1, -vy / 420)); // +1 climb, -1 descend
+        var knobPct = (50 + climb * 42).toFixed(2) + "%";
+        var knob = document.getElementById("altClimbKnob");
+        if (knob) knob.style.bottom = knobPct;
       }
     } catch (eAlt) {}
 

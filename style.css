@@ -3504,75 +3504,130 @@ canvas {
 /* ===== Altitude gauges (paired under top HUD) ===== */
 #hudFrame { position: relative; }
 #hudFrame { overflow: visible !important; }
-.altGauge {
+
+/* Steampunk altitude instrument (asset + live needle/knob) */
+.altGauge.altInstrument,
+#altGaugeRight.altInstrument {
   position: absolute;
-  top: 97%; /* lowered ~5% more */
-  width: 26px;
-  height: 72px;
-  min-height: 72px;
-  max-height: 90px;
-  pointer-events: none;
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.45));
-}
-#altGaugeLeft { display: none !important; }
-#altGaugeRight {
-  right: 2%;
+  top: 102%;
+  right: 1%;
   left: auto;
-  display: flex !important;
+  width: clamp(52px, 14vw, 78px);
+  height: auto;
+  aspect-ratio: 380 / 657;
+  min-height: 0;
+  max-height: none;
+  pointer-events: none;
+  z-index: 22;
+  display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.55));
 }
-.altGaugeTrack {
-  position: relative;
-  flex: 1;
-  width: 16px;
-  border-radius: 6px;
-  background: linear-gradient(180deg, rgba(20,16,10,0.92), rgba(40,30,18,0.88));
-  border: 1.5px solid rgba(212, 168, 75, 0.85);
-  box-shadow: inset 0 0 6px rgba(0,0,0,0.55), 0 0 0 1px rgba(80,50,15,0.4);
-  overflow: hidden;
-}
-/* Blue at bottom → amber → red at top as altitude rises */
-.altGaugeFill {
+#altGaugeLeft { display: none !important; }
+
+.altGaugeArt {
   position: absolute;
-  left: 1px;
-  right: 1px;
-  bottom: 0;
-  height: 50%;
-  border-radius: 4px;
-  background: linear-gradient(to top,
-    #2b7fd4 0%,
-    #3ec6ff 22%,
-    #7dffb0 45%,
-    #ffd24a 68%,
-    #ff7a3a 88%,
-    #ff2d4a 100%);
-  box-shadow: 0 0 8px rgba(255, 120, 60, 0.35);
-  transition: height 0.08s linear;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+  user-select: none;
 }
-.altGaugeNeedle {
+
+/* Altitude scale face region (right glass) — % of full instrument */
+.altScaleFace {
+  position: absolute;
+  /* Tuned to the white scale pane inside the art */
+  left: 38%;
+  right: 12%;
+  top: 18%;
+  bottom: 14%;
+  pointer-events: none;
+}
+
+/* Horizontal altitude line across the scale */
+.altHorizNeedle {
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  height: 2px;
+  bottom: 35%; /* updated by JS — 0% = low alt, 100% = high */
+  background: linear-gradient(90deg,
+    rgba(180, 20, 20, 0.0),
+    #c41e1e 8%,
+    #ff3a3a 50%,
+    #c41e1e 92%,
+    rgba(180, 20, 20, 0.0));
+  border-radius: 1px;
+  box-shadow:
+    0 0 4px rgba(255, 40, 40, 0.95),
+    0 0 8px rgba(255, 60, 20, 0.55);
+  transform: translateY(50%);
+  transition: bottom 0.07s linear;
+}
+.altHorizNeedle::before {
+  content: "";
   position: absolute;
   left: -3px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff4444;
+  box-shadow: 0 0 4px #ff2200;
+  transform: translateY(-50%);
+}
+.altHorizNeedle::after {
+  content: "";
+  position: absolute;
   right: -3px;
-  height: 3px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff4444;
+  box-shadow: 0 0 4px #ff2200;
+  transform: translateY(-50%);
+}
+
+/* Left climb/descend track + knob */
+.altClimbTrack {
+  position: absolute;
+  left: 14%;
+  width: 18%;
+  top: 28%;
+  bottom: 28%;
+  pointer-events: none;
+}
+.altClimbKnob {
+  position: absolute;
+  left: 50%;
+  width: 70%;
+  aspect-ratio: 1;
+  max-width: 14px;
+  /* 50% = neutral; 0% = descend (bottom); 100% = climb (top) */
   bottom: 50%;
-  background: linear-gradient(90deg, #ffe566, #d4a84b);
-  border-radius: 1px;
-  box-shadow: 0 0 4px rgba(255,200,80,0.8);
+  transform: translate(-50%, 50%);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, #fff6d0 0%, #d4a84b 45%, #6b3a12 100%);
+  border: 1.5px solid rgba(40, 24, 8, 0.85);
+  box-shadow:
+    0 0 0 1px rgba(255, 220, 140, 0.35),
+    0 2px 4px rgba(0,0,0,0.55),
+    inset 0 1px 2px rgba(255,255,255,0.45);
   transition: bottom 0.08s linear;
 }
-.altGaugeLabel {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  color: rgba(255, 220, 140, 0.9);
-  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-  font-family: system-ui, sans-serif;
+.altClimbKnob::after {
+  content: "";
+  position: absolute;
+  inset: 22%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #2a1a0a, #0a0604 80%);
+  box-shadow: inset 0 0 2px rgba(255,200,100,0.25);
 }
 
 
