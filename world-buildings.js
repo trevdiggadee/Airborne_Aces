@@ -192,7 +192,7 @@
       try { ensureTaxiRunwayStrip(); } catch (e) {
         try { ensureAirfieldStripVisible(); } catch (e2) {}
       }
-      window.__airborneTaxiUntil = performance.now() + 4000;
+      window.__airborneTaxiUntil = performance.now() + 3200;
       if (typeof player !== "undefined" && player && typeof H !== "undefined") {
         var th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
         var landY = H - Math.max(40, th * 0.28) - (player.h ? player.h * 0.22 : 10);
@@ -217,8 +217,8 @@
     if (airfieldPhase === "land" || airfieldPhase === "skid") return;
     const t0 = window.__airborneLandTouchAt;
     if (!t0) return;
-    // Only after skid should have finished (~10s+) plus small buffer
-    if (performance.now() - t0 < 12000) return;
+    // Only after taxi should have finished
+    if (performance.now() - t0 < 5000) return;
     window.__airborneTrainingReportShown = true;
     window.__airborneTrainingReportReady = true;
     window.__airborneAirfieldDidLand = true;
@@ -302,18 +302,19 @@
 
   // Post-landing taxi: looping runway strip (airfield_strip) so scroll is obvious
   function ensureTaxiRunwayStrip() {
-    airfieldUseLandingArt = false; // draw airfield_strip.webp (runway arrows)
+    // Keep LANDING field art for whole post-touchdown taxi (no takeoff strip swap)
+    airfieldUseLandingArt = true;
     airfieldStripGone = false;
     airfieldStripY = 0;
-    const img = (typeof images !== "undefined" && images) ? images.airfield_strip : null;
+    const img = (typeof images !== "undefined" && images)
+      ? (images.landing_field || images.airfield_strip) : null;
     const aspect = (img && img.naturalWidth && img.naturalHeight)
-      ? (img.naturalWidth / img.naturalHeight) : 5;
-    let h = Math.max(60, Math.min(H * 0.32, 140));
-    let w = Math.max(W * 0.9, h * aspect);
+      ? (img.naturalWidth / img.naturalHeight) : 5.3;
+    let h = Math.max(70, Math.min(H * 0.36, 160));
+    let w = Math.max(W * 0.85, h * aspect);
     airfieldTiles = [];
-    // 3 looping tiles covering the bottom band
     for (var i = 0; i < 3; i++) {
-      airfieldTiles.push({ x: i * w * 0.98 - w * 0.15, w: w, h: h, startX: 0 });
+      airfieldTiles.push({ x: i * w * 0.98 - w * 0.2, w: w, h: h, startX: 0 });
     }
   }
 
@@ -628,10 +629,11 @@
         window.__airborneAirfieldInvuln = true;
         airfieldStripGone = false;
         airfieldStripY = 0;
-        // Force runway strip art (not hangar landing_field)
-        if (airfieldUseLandingArt || !airfieldTiles || airfieldTiles.length < 2) {
+        // Keep landing_field tiles (loop for scroll) — never swap to takeoff strip
+        if (!airfieldTiles || airfieldTiles.length < 2) {
           try { ensureTaxiRunwayStrip(); } catch (eT) {}
         }
+        airfieldUseLandingArt = true;
         if (nowT < taxiUntil) {
           airfieldPhase = "skid";
           airfieldSkidT = (airfieldSkidT || 0) + dt;
@@ -663,14 +665,12 @@
           // Skip rest of phase machine while taxi is driving
           return;
         } else {
-          // Taxi finished → score once
+          // Taxi finished → score immediately
           window.__airborneTaxiUntil = 0;
           airfieldTip = "";
-          if (airfieldPhase !== "score" && airfieldPhase !== "done") {
-            airfieldPhase = "score";
-            airfieldScoreT = 0;
-            airfieldFireworkT = 0;
-          }
+          airfieldPhase = "score";
+          airfieldScoreT = 0.2; // skip wait — report next frames
+          airfieldFireworkT = 0;
           syncAirfieldGlobals();
         }
       }
@@ -1156,7 +1156,7 @@
           airfieldTip = "Taxiing…";
           airfieldTiles = [];
           try { ensureTaxiRunwayStrip(); } catch (eTr) {}
-          window.__airborneTaxiUntil = performance.now() + 4000;
+          window.__airborneTaxiUntil = performance.now() + 3200;
           try { syncAirfieldGlobals(); } catch (eSync) {}
           try {
             if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
@@ -1206,12 +1206,13 @@
       airfieldStripY = 0;
       airfieldSkidT = (airfieldSkidT || 0) + dt;
 
-      // First frame of skid: swap to looping runway strip (not hangar landing_field)
-      if (airfieldSkidT < 0.05 || !airfieldTiles || airfieldTiles.length < 2 || airfieldUseLandingArt) {
+      // Keep landing_field looping tiles for scroll
+      if (airfieldSkidT < 0.05 || !airfieldTiles || airfieldTiles.length < 2) {
         try { ensureTaxiRunwayStrip(); } catch (eTr) {
           try { ensureAirfieldStripVisible(); } catch (e2) {}
         }
       }
+      airfieldUseLandingArt = true;
 
       var scrollSec = 3.75;
       var spd = 240;
@@ -1302,8 +1303,8 @@
         });
         airfieldFireworks = airfieldFireworks.filter(function(fw) { return fw.age < fw.life; });
       }
-      // Score pops immediately after drive completes
-      if (!window.__airborneTrainingReportShown && airfieldScoreT > 0.15) {
+      // Score pops immediately after taxi
+      if (!window.__airborneTrainingReportShown && airfieldScoreT > 0.05) {
         window.__airborneTrainingReportShown = true;
         window.__airborneTrainingReportReady = true;
         window.__airborneAirfieldDidLand = true;
@@ -1566,12 +1567,13 @@
   function drawAirfieldStrip() {
     if (!airfieldMode && !window.__airborneAirfield) return;
     if (typeof images === "undefined" || !images) return;
-    // During taxi scroll always draw runway strip
+    // Landing / taxi always use landing_field (never glitch to takeoff strip)
     var taxiOn = (window.__airborneTaxiUntil && performance.now() < window.__airborneTaxiUntil);
-    if (airfieldStripGone && !airfieldUseLandingArt && !taxiOn && airfieldPhase !== "skid") return;
-    const imgKey = (airfieldUseLandingArt && !taxiOn && airfieldPhase !== "skid")
-      ? "landing_field" : "airfield_strip";
-    const img = images[imgKey] || images.airfield_strip || images.landing_field;
+    var landingPhase = (airfieldPhase === "land" || airfieldPhase === "skid" ||
+                        airfieldPhase === "score" || taxiOn || airfieldUseLandingArt);
+    if (airfieldStripGone && !landingPhase) return;
+    const imgKey = landingPhase ? "landing_field" : "airfield_strip";
+    const img = images[imgKey] || images.landing_field || images.airfield_strip;
     if (!img || !img.naturalWidth || !img.naturalHeight) return;
     if (!airfieldTiles || !airfieldTiles.length) {
       if (airfieldStripGone && !airfieldUseLandingArt) return;
