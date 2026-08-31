@@ -47,6 +47,21 @@
     return false;
   }
 
+  // Landing taxi is a special camera/world-scroll state. The airfield flag
+  // normally hides the city layers, but during the 4s skid we intentionally
+  // bring those layers back and move them at a clearly visible parallax rate.
+  function taxiWorldActive() {
+    return !!window.__airborneAirfield &&
+      (window.__airborneAirfieldPhase === "skid");
+  }
+
+  function taxiWorldSpeedScale() {
+    var s = (typeof window.__airborneTaxiSpeed === "number" && isFinite(window.__airborneTaxiSpeed))
+      ? window.__airborneTaxiSpeed : 260;
+    // Ground layer remains slower than the runway so depth is obvious.
+    return Math.max(0.8, s / 220 * 1.8);
+  }
+
   function currentBuildingRowKey() {
     // Keep level-1 buildings through boss-1 defeat, bonus round, and landing.
     if (bossesDefeatedCount === 1) {
@@ -88,11 +103,10 @@
   }
 
   function updateBuildings(dtScale) {
-    if (airfieldMode) return;
-    // Keep scrolling during approach; freeze only once the blimp has landed
-    if (worldScrollFrozen()) {
-      return;
-    }
+    // Normal airfield hides the city, but the post-touchdown taxi deliberately
+    // scrolls it for the full taxi sequence.
+    if (airfieldMode && !taxiWorldActive()) return;
+    if (worldScrollFrozen() && !taxiWorldActive()) return;
     const targetKey = currentBuildingRowKey();
     if (targetKey !== buildingRowKey) {
       // Don't swap strips during bonus / pre-landing; wait for wind-down or resume
@@ -105,7 +119,9 @@
         return;
       }
     }
-    const speed = 0.8 * dtScale * (obstacleSpeedScale());
+    const speed = taxiWorldActive()
+      ? 0.8 * dtScale * taxiWorldSpeedScale()
+      : 0.8 * dtScale * obstacleSpeedScale();
     buildings.forEach(b => (b.x -= speed));
     while (buildings.length && buildings[0].x + buildings[0].w < -10) {
       buildings.shift();
@@ -534,6 +550,7 @@
     window.__airborneRuffRequestLand = false;
     window.__airborneAirfield = false;
     window.__airborneAirfieldPhase = "done";
+    window.__airborneTaxiSpeed = 0;
     syncAirfieldGlobals();
     const sm = document.getElementById("stormMeter");
     if (sm) {
@@ -1162,6 +1179,9 @@
       var driveSpd = (uDrive < 0.88)
         ? 260
         : Math.max(50, 260 * (1 - (uDrive - 0.88) / 0.12));
+      // Public frame value consumed by all world/parallax layers.
+      // This is the authoritative taxi speed; no HOLD/input is involved.
+      window.__airborneTaxiSpeed = driveSpd;
       airfieldSkidDriveDist += driveSpd * dt;
       (airfieldTiles || []).forEach(function(tile) {
         if (!tile) return;
@@ -1233,6 +1253,7 @@
           window.__airborneEndCelebrationDone = false;
           window.__airborneEndCelebration = { t: 0, life: 2.0 };
         } catch (e) {}
+        window.__airborneTaxiSpeed = 0;
         airfieldPhase = "score";
         airfieldScoreT = 0;
         airfieldFireworkT = 0;
@@ -1673,7 +1694,7 @@
 
 
   function drawBuildings() {
-    if (airfieldMode) return;
+    if (airfieldMode && !taxiWorldActive()) return;
     const groundY = groundLevelY();
     const img = images[buildingRowKey];
     if (!img || !img.naturalWidth) return;
@@ -1719,7 +1740,7 @@
   }
 
   function drawSketchSkyline() {
-    if (typeof airfieldMode !== "undefined" && airfieldMode) return;
+    if (typeof airfieldMode !== "undefined" && airfieldMode && !taxiWorldActive()) return;
     const img = images.sketchSkyline;
     if (!img || !img.naturalWidth) return;
     const groundY = groundLevelY();
@@ -1773,7 +1794,7 @@
   }
 
   function drawPowerlines() {
-    if (typeof airfieldMode !== "undefined" && airfieldMode) return;
+    if (typeof airfieldMode !== "undefined" && airfieldMode && !taxiWorldActive()) return;
     const img = images.powerlines;
     if (!img || !img.naturalWidth) return;
     const groundY = groundLevelY();
@@ -1827,7 +1848,7 @@
   }
 
   function drawStreet() {
-    if (typeof airfieldMode !== "undefined" && airfieldMode) return;
+    if (typeof airfieldMode !== "undefined" && airfieldMode && !taxiWorldActive()) return;
     const img = images.streetTexture;
     if (!img || !img.naturalWidth) return;
     streetTiles.forEach(t => {
@@ -1850,7 +1871,9 @@
 
   function updateBuildingSmoke(dt) {
     const groundY = groundLevelY();
-    const worldSpeedPxPerSec = 48 * obstacleSpeedScale(); // matches the buildings' own scroll speed
+    const worldSpeedPxPerSec = taxiWorldActive()
+      ? 48 * taxiWorldSpeedScale()
+      : 48 * obstacleSpeedScale(); // matches the buildings' own scroll speed
     buildings.forEach(b => {
       const stacks = BUILDING_SMOKESTACKS[b.key];
       if (!stacks) return;
@@ -1885,7 +1908,7 @@
   }
 
   function drawBuildingSmoke() {
-    if (typeof airfieldMode !== "undefined" && airfieldMode) return;
+    if (typeof airfieldMode !== "undefined" && airfieldMode && !taxiWorldActive()) return;
     buildingSmokeParticles.forEach(p => {
       const t = p.age / p.life;
       const alpha = (1 - t) * 0.32;
@@ -1952,7 +1975,7 @@
   }
 
   function drawStreetlamps() {
-    if (typeof airfieldMode !== "undefined" && airfieldMode) return;
+    if (typeof airfieldMode !== "undefined" && airfieldMode && !taxiWorldActive()) return;
     if (!isStreetlampLevel()) return;
     const img = images.streetlamp1;
     if (!img || !img.naturalWidth) return;
@@ -2007,7 +2030,7 @@
   }
 
   function drawGroundVehicles() {
-    if (typeof airfieldMode !== "undefined" && airfieldMode) return;
+    if (typeof airfieldMode !== "undefined" && airfieldMode && !taxiWorldActive()) return;
     // anchored toward the bottom of the street band (where the road portion
     // of the texture is expected to be) rather than the top edge, which
     // sits right against the buildings/sidewalk

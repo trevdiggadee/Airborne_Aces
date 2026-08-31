@@ -238,13 +238,12 @@
 
     const dtScale = dt * 60; // normalize movement speeds tuned at 60fps baseline
 
-    // Update the scripted airfield BEFORE rendering the frame. During landing
-    // taxi, updateAirfield() assigns the current taxi speed; parallax/world
-    // layers below must see that speed in the same frame.
+    // LANDING/TAXI MUST UPDATE FIRST. The skid publishes __airborneTaxiSpeed,
+    // which the runway, city, street and parallax systems consume this frame.
     if (state !== "paused" && (window.__airborneAirfield || window.__airborneRuffActive)) {
-      const _updAfPreRender = (typeof window.updateAirfield === "function") ? window.updateAirfield
+      const _updAfFirst = (typeof window.updateAirfield === "function") ? window.updateAirfield
         : (typeof updateAirfield === "function") ? updateAirfield : null;
-      if (_updAfPreRender) { try { _updAfPreRender(dt); } catch (e) { console.warn("updAf", e); } }
+      if (_updAfFirst) { try { _updAfFirst(dt); } catch (e) { console.warn("updAf", e); } }
     }
 
     // Art Deco sky layer (very slow continuous scroll, always on screen)
@@ -276,8 +275,7 @@
     
     updatePlayerBlimpAnimation(dt);
 
-    // R.U.F.F. stage/UI update runs after the airfield update. Landing requests
-    // raised here are consumed by updateAirfield() on the next frame.
+    // Training systems only while not paused
     if (state !== "paused" && (window.__airborneAirfield || window.__airborneRuffActive)) {
       if (typeof window.__airborneUpdateRuff === "function") {
         try { window.__airborneUpdateRuff(dt); } catch (e) { console.warn("updRuff", e); }
@@ -299,8 +297,7 @@
       } catch (e) {}
       if (typeof ensureCollectDock === "function") ensureCollectDock();
       else if (typeof updateCollectDock === "function") updateCollectDock();
-      // Airfield was already updated before rendering so parallax/world layers
-      // can use its current taxi speed. Keep the normal gameplay path unchanged.
+      // Playing-path updates (skip duplicate airfield if already ticked above)
       if (!(window.__airborneAirfield || window.__airborneRuffActive)) {
         const _updAf = (typeof window.updateAirfield === "function") ? window.updateAirfield
           : (typeof updateAirfield === "function") ? updateAirfield : null;
@@ -384,8 +381,10 @@
       }
     } catch (eAlt) {}
 
-    // City parallax only off-airfield (mountains already drawn behind strip above)
-    if (!(typeof isAirfieldMode === "function" && isAirfieldMode()) && !window.__airborneAirfield) {
+    // City parallax is hidden during flight/approach, but intentionally returns
+    // during the 4s taxi. updateAirfield() already published taxi speed.
+    if (!(typeof isAirfieldMode === "function" && isAirfieldMode()) || 
+        (window.__airborneAirfield && window.__airborneAirfieldPhase === "skid")) {
       drawParallaxLayers();
       drawSketchSkyline();
     }
@@ -395,6 +394,8 @@
     drawStreet();
     drawStreetlamps();
     drawGroundVehicles();
+    // Foreground runway: the world/city moves behind it during taxi.
+    if (typeof drawAirfieldStrip === "function") drawAirfieldStrip();
     drawBossShadow();
     drawWindParticlesBack();
     // Training background balloons — behind blimps and clouds

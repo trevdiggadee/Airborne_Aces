@@ -3279,7 +3279,7 @@ function finishToMap() {
         requestNextStage();
       }
     } else if (ruffStage === "landing") {
-      // Full landing sequence: descend → touchdown → automatic 4s taxi → score
+      // Full landing sequence: descend → touchdown → hold-to-drive → score
       window.__airborneTrainingFlight = true;
       window.__airborneAirfield = true;
       try {
@@ -3301,7 +3301,7 @@ function finishToMap() {
       if (ruffStageT > 0.5 && ph0 !== "land" && ph0 !== "skid" && ph0 !== "score" && ph0 !== "done") {
         window.__airborneRuffRequestLand = true;
       }
-      // Safety assist only if the normal approach has not touched down yet
+      // Assist skid ONLY after player has had time to descend (strip rise + approach)
       try {
         if (window.__airborneAirfieldPhase === "land" && ruffStageT > 7.0) {
           if (typeof window.__airborneForceLandingSkid === "function") window.__airborneForceLandingSkid();
