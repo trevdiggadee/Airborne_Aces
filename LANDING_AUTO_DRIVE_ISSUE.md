@@ -1,65 +1,59 @@
-# Landing Auto-Drive — v376 Root-Cause Fix
+# Landing Auto-Drive — Issue Description & Expected Behavior
 
-## What v374/v375 got wrong
+## Expected behavior
+1. Player flares down and **lands** on the runway (approach already works).
+2. On touchdown, phase becomes **skid** (taxi).
+3. Blimp stays fixed on the deck (`player.x ≈ 25% width`, `y` on runway).
+4. Runway art **scrolls left under the blimp** for **~4 seconds** (same idea as takeoff).
+5. World scroll speed (`obstacleSpeed`) matches so the sky/parallax also moves.
+6. Tip shows: "Taxiing to the hangar…" then "Coming to a stop…"
+7. After ~4s, phase becomes **score** and the flight report appears quickly.
 
-The landing state machine was already entering `skid` and moving the dedicated
-landing-field tile. The visible failure came from the **render/update architecture**:
+**No hold required.** Taps after landing must **not** flap/jump the blimp.
 
-- `airfieldMode` caused the normal city/building/street layers to stop drawing.
-- `updateBuildings()` also explicitly returned while `airfieldMode` was active.
-- `updateAirfield()` ran too late in the frame, after the background/parallax
-  systems had already updated/drawn.
-- Therefore the taxi speed was not an authoritative world-scroll input for the
-  frame's visual systems.
-- The previous patch changed update order but did not re-enable the world layers
-  during `skid`, so the visible world was still effectively frozen/hidden.
+## Actual behavior (reported)
+- Landing approach works.
+- Touchdown looks correct.
+- After landing: blimp sits still (or only jumps once if tapped).
+- No clear taxi/drive motion.
+- Long wait before score (or score feels disconnected from a drive).
 
-## v376 architecture
+## Root causes identified in code
 
-### Touchdown
-`land` immediately becomes `skid`.
+### 1. Hold-based drive was unreliable (historical)
+Earlier versions required HOLD to scroll. Touchdown cleared hold flags while the finger was still down, so drive never started until an 8s timeout.  
+**Mitigation:** switched to **auto-drive** (v372+) — no hold required.
 
-### Taxi
-For exactly 4 seconds:
+### 2. Phase sync / flap jump
+`window.__airborneAirfieldPhase` could still be `"land"` for a frame after touchdown, so a tap applied flap velocity → one jump.  
+**Mitigation:** `syncAirfieldGlobals()` on touchdown; flap blocked for `skid` / `score` / `done`.
 
-- `__airborneAirfieldPhase = "skid"`
-- `__airborneTaxiSpeed` is the authoritative taxi speed.
-- Runway tiles scroll continuously at about 260 px/s, easing down near the end.
-- City/building/street/powerline/vehicle layers are allowed to render.
-- Those world layers scroll at a deliberately slower parallax rate so movement is
-  obvious but the runway still reads as the foreground motion.
-- `updateAirfield()` runs at the beginning of the frame, before parallax/world
-  update and rendering.
-- Blimp X/Y/vertical velocity are hard-locked.
-- Input flags are cleared during skid.
+### 3. Strip tiles may not loop visibly
+Landing strip is often **one** `landing_field` tile. If it scrolls off without a solid loop, motion is weak or the strip vanishes.  
+**Mitigation (v374):** force **3 looping tiles**, reposition under blimp at skid start, scroll at **260 px/s** for 4s, and set `obstacleSpeed` so the whole world moves.
 
-### Stop
-At 4 seconds the taxi speed is set to zero, taxi phase ends, and the existing
-score/report sequence begins.
+### 4. Possible deploy/cache mismatch
+If live site still serves an older `world-buildings.js`, auto-drive code is not running. Confirm `?v=ruff374` (or current) on script tags.
 
-## Expected visible result
+## Files involved
+| File | Role |
+|------|------|
+| `world-buildings.js` | `updateAirfield` land → skid → score; strip tiles; auto-drive scroll |
+| `player-obstacles.js` | `flap()` must not jump during skid/score |
+| `ruff-tutorial.js` | Landing stage requests land; advances to report when ready |
+| `gamestate-ui.js` | Input/hold flags (not required for auto-drive) |
+| `main-loop.js` | Calls `updateAirfield` / `updatePlayer` each frame |
+| `index.html` | Cache-bust query params |
 
-**Touchdown**
-→ runway starts moving immediately  
-→ buildings/street/background visibly move behind the runway  
-→ blimp stays planted in the same screen position  
-→ ~4 seconds of continuous taxi  
-→ ease to stop  
-→ score/report
+## Key functions
+- `ensureAirfieldStripVisible()` — builds landing strip tiles
+- `drawAirfieldStrip()` — draws `landing_field` / `airfield_strip`
+- `updateAirfield()` branches: `"land"` → `"skid"` → `"score"`
+- `window.__airborneForceLandingSkid` — assist if land takes too long
+- `showFlightReport()` — score UI when `__airborneTrainingReportReady`
 
-No HOLD gesture is used.
-
-## Deployment
-
-Upload these files together and hard-refresh with:
-
-`?v=ruff376`
-
-## Files
-- `world-buildings.js`
-- `player-obstacles.js`
-- `ruff-tutorial.js`
-- `gamestate-ui.js`
-- `main-loop.js`
-- `index.html`
-- `LANDING_AUTO_DRIVE_ISSUE.md`
+## How to verify
+1. Hard-refresh with new cache param.
+2. Complete training to landing.
+3. After wheels-down, tip should say **Taxiing…** and runway should slide for ~4s.
+4. Score/report should appear right after taxi ends.
