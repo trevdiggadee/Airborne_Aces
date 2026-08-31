@@ -1568,11 +1568,23 @@
     if (!ruffBgBalloons) ruffBgBalloons = [];
     var W0 = (typeof W !== "undefined") ? W : 400;
     var H0 = (typeof H !== "undefined") ? H : 600;
+    // Only ONE balloon per layer at a time
+    var occupied = {};
+    for (var oi = 0; oi < ruffBgBalloons.length; oi++) {
+      if (ruffBgBalloons[oi] && ruffBgBalloons[oi].x > -80) {
+        occupied[ruffBgBalloons[oi].layerId] = true;
+      }
+    }
+    var freeLayers = [];
+    for (var li = 0; li < HOTAIR_LAYERS.length; li++) {
+      if (!occupied[HOTAIR_LAYERS[li].id]) freeLayers.push(HOTAIR_LAYERS[li]);
+    }
+    if (!freeLayers.length) return; // all layers already have a balloon
+    var layer = freeLayers[ruffBgBalloonSpawned % freeLayers.length];
     var keys = HOTAIR_KEYS.slice().sort(function() { return Math.random() - 0.5; });
     var key = keys[ruffBgBalloonSpawned % keys.length];
-    var layer = HOTAIR_LAYERS[ruffBgBalloonSpawned % HOTAIR_LAYERS.length];
     var heightSlots = [0.14, 0.30, 0.44, 0.56];
-    var ly = heightSlots[ruffBgBalloonSpawned % heightSlots.length] + (Math.random() - 0.5) * 0.05;
+    var ly = heightSlots[layer.id % heightSlots.length] + (Math.random() - 0.5) * 0.05;
     ly = Math.max(0.08, Math.min(0.62, ly));
     ruffBgBalloons.push({
       key: key,
@@ -2410,6 +2422,10 @@
     const rankNameEl = document.getElementById("ruffRankName");
     const rankTitleEl = document.getElementById("ruffRankTitle");
     const medalImg = document.getElementById("ruffMedalImg");
+    if (medalImg) {
+      medalImg.src = "boss_weapon_unlock_medal.webp?v=ruff365";
+      medalImg.classList.add("weaponUnlockMedal");
+    }
 
     if (rows) {
       rows.innerHTML =
@@ -2524,6 +2540,17 @@
           // After RANK UP peaks, reveal medal
           setTimeout(function () {
             rankBanner.classList.add("medalShow");
+            if (window.__airborneBossWeaponUnlock) {
+              rankBanner.classList.add("weaponUnlockFire");
+              var unlockLbl = rankBanner.querySelector(".weaponUnlockLabel");
+              if (!unlockLbl) {
+                unlockLbl = document.createElement("div");
+                unlockLbl.className = "weaponUnlockLabel";
+                unlockLbl.textContent = "BOSS WEAPON UNLOCKED";
+                rankBanner.appendChild(unlockLbl);
+              }
+              unlockLbl.style.opacity = "1";
+            }
           }, 420);
           // After RANK UP fades, show rank name
           setTimeout(function () {
@@ -3244,6 +3271,7 @@ function finishToMap() {
           } catch (e) {}
           window.__airborneTrainingBoss = false;
           window.__airborneTrainingBossDone = true;
+          window.__airborneBossWeaponUnlock = true;
           requestNextStage();
         }
       }

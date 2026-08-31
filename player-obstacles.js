@@ -70,13 +70,15 @@
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) return;
     // Airfield runway / landing drive: hold accelerates (never flap)
     var afp = window.__airborneAirfieldPhase;
-    if (window.__airborneAirfield && (afp === "taxi" || afp === "accel" || afp === "skid" || !afp)) {
+    if (window.__airborneAirfield && (afp === "taxi" || afp === "accel" || afp === "skid" || afp === "land" || !afp)) {
       window.__airborneAirfield = true;
       window.__airborneAirfieldHold = true;
+      window.__airbornePointerDown = true;
       if (afp === "taxi" || afp === "accel" || !afp) {
         window.__airborneAirfieldBoostPending = true;
       }
-      return;
+      // During skid: hold only (no flap)
+      if (afp === "skid" || afp === "taxi" || afp === "accel" || !afp) return;
     }
     if (window.__airborneAirfield && afp === "climb") {
       return;

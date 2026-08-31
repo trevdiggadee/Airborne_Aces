@@ -942,31 +942,33 @@
     }
   };
 
+  // Global hold tracking (survives phase checks; required for landing drive)
+  window.__airbornePointerDown = false;
   function handleInput(e) {
     if (e.cancelable) e.preventDefault();
     ensureAudio();
-    // Mark hold immediately for takeoff OR landing runway drive
+    window.__airbornePointerDown = true;
     var afp = window.__airborneAirfieldPhase;
     if (state === "playing" && window.__airborneAirfield &&
-        (afp === "taxi" || afp === "accel" || afp === "skid") &&
+        (afp === "taxi" || afp === "accel" || afp === "skid" || afp === "land") &&
         window.__airborneRuffStage !== "intro") {
       window.__airborneAirfieldHold = true;
     }
     if (state === "playing") flap();
   }
   function handleInputUp(e) {
-    // Only clear hold when no touches remain
     if (e && e.touches && e.touches.length > 0) return;
+    window.__airbornePointerDown = false;
     window.__airborneAirfieldHold = false;
   }
   canvas.addEventListener("touchstart", handleInput, { passive: false });
   canvas.addEventListener("mousedown", handleInput);
   canvas.addEventListener("pointerdown", handleInput);
-  // Capture holds even if a HUD element is under the finger
   document.addEventListener("pointerdown", function(e) {
+    window.__airbornePointerDown = true;
     var afp = window.__airborneAirfieldPhase;
     if (state === "playing" && window.__airborneAirfield &&
-        (afp === "taxi" || afp === "accel" || afp === "skid")) {
+        (afp === "taxi" || afp === "accel" || afp === "skid" || afp === "land")) {
       window.__airborneAirfieldHold = true;
       if (afp === "taxi" || afp === "accel") {
         if (typeof window.__airborneAirfieldBoost === "function") window.__airborneAirfieldBoost();
@@ -978,11 +980,28 @@
   canvas.addEventListener("mouseup", handleInputUp);
   canvas.addEventListener("pointerup", handleInputUp);
   window.addEventListener("mouseup", handleInputUp);
+  window.addEventListener("pointerup", handleInputUp);
+  window.addEventListener("blur", function() {
+    window.__airbornePointerDown = false;
+    window.__airborneAirfieldHold = false;
+  });
   window.addEventListener("keydown", (e) => {
     if (e.code === "Space") {
       e.preventDefault();
       ensureAudio();
+      window.__airbornePointerDown = true;
+      var afp = window.__airborneAirfieldPhase;
+      if (state === "playing" && window.__airborneAirfield &&
+          (afp === "taxi" || afp === "accel" || afp === "skid")) {
+        window.__airborneAirfieldHold = true;
+      }
       if (state === "playing") flap();
+    }
+  });
+  window.addEventListener("keyup", (e) => {
+    if (e.code === "Space") {
+      window.__airbornePointerDown = false;
+      window.__airborneAirfieldHold = false;
     }
   });
 

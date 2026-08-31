@@ -3574,3 +3574,73 @@ canvas {
   text-shadow: 0 1px 2px rgba(0,0,0,0.8);
   font-family: system-ui, sans-serif;
 }
+
+
+/* Boss weapon unlock medal — neon red fire aura */
+#ruffMedalImg.weaponUnlockMedal,
+.weaponUnlockMedal {
+  filter:
+    drop-shadow(0 0 6px rgba(255, 40, 40, 0.95))
+    drop-shadow(0 0 16px rgba(255, 60, 20, 0.85))
+    drop-shadow(0 0 32px rgba(255, 20, 0, 0.65))
+    drop-shadow(0 6px 14px rgba(0,0,0,0.55));
+  animation: weaponFirePulse 1.1s ease-in-out infinite alternate;
+}
+@keyframes weaponFirePulse {
+  0% {
+    filter:
+      drop-shadow(0 0 4px rgba(255, 30, 30, 0.9))
+      drop-shadow(0 0 12px rgba(255, 50, 10, 0.75))
+      drop-shadow(0 0 24px rgba(255, 0, 0, 0.5))
+      drop-shadow(0 6px 14px rgba(0,0,0,0.55));
+    transform: scale(1) translateY(15%);
+  }
+  100% {
+    filter:
+      drop-shadow(0 0 10px rgba(255, 80, 40, 1))
+      drop-shadow(0 0 22px rgba(255, 30, 0, 0.95))
+      drop-shadow(0 0 40px rgba(255, 10, 0, 0.75))
+      drop-shadow(0 6px 14px rgba(0,0,0,0.55));
+    transform: scale(1.04) translateY(15%);
+  }
+}
+#ruffRankBanner.weaponUnlockFire::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  width: min(70vw, 280px);
+  height: min(70vw, 280px);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(255, 60, 20, 0.35) 0%,
+    rgba(255, 20, 0, 0.18) 40%,
+    transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+  animation: weaponRingPulse 1.4s ease-out infinite;
+}
+@keyframes weaponRingPulse {
+  0% { opacity: 0.85; transform: translate(-50%, -50%) scale(0.85); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.25); }
+}
+.weaponUnlockLabel {
+  position: absolute;
+  left: 50%;
+  top: 8%;
+  transform: translateX(-50%);
+  z-index: 8;
+  font-weight: 900;
+  font-size: clamp(0.75rem, 3.5vw, 1.05rem);
+  letter-spacing: 0.18em;
+  color: #ff6b4a;
+  text-shadow:
+    0 0 10px rgba(255, 40, 20, 0.95),
+    0 0 20px rgba(255, 0, 0, 0.7),
+    0 2px 6px #000;
+  pointer-events: none;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}

@@ -1080,9 +1080,11 @@
         try { ensureAirfieldStripVisible(); } catch (e) {}
       }
       // HOLD to drive to end of runway (like takeoff), then score
-      var holdingLand = !!window.__airborneAirfieldHold;
+      // Hold = explicit flag OR any pointer/space still down
+      var holdingLand = !!(window.__airborneAirfieldHold || window.__airbornePointerDown);
+      if (holdingLand) window.__airborneAirfieldHold = true;
       airfieldSkidDriveDist = airfieldSkidDriveDist || 0;
-      var runwayEnd = Math.max(W * 2.8, 1100); // distance to "end of runway"
+      var runwayEnd = Math.max(W * 2.2, 900); // end of runway distance
       try {
         if (!airfieldTiles || airfieldTiles.length < 3) ensureAirfieldStripVisible();
         if (airfieldTiles && airfieldTiles.length && airfieldTiles.length < 4) {
