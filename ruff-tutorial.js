@@ -3279,25 +3279,31 @@ function finishToMap() {
         requestNextStage();
       }
     } else if (ruffStage === "landing") {
-      // Stay in training airfield — never campaign pad/score
+      // Full landing sequence: descend → touchdown → hold-to-drive → score
       window.__airborneTrainingFlight = true;
+      window.__airborneAirfield = true;
       try {
         if (typeof levelEndActive !== "undefined") levelEndActive = false;
         if (typeof levelEndPhase !== "undefined") levelEndPhase = null;
+        if (typeof bossActive !== "undefined") bossActive = false;
       } catch (e) {}
-      // Request land once — player flares down, then skid drive runs in world-buildings
+      // Request land once (processed at top of updateAirfield)
       if (!window.__airborneRuffLandArmed) {
         window.__airborneRuffLandArmed = true;
         window.__airborneRuffRequestLand = true;
         ruffLandingCelebrated = false;
         try {
           if (typeof ensureAirfieldStripVisible === "function") ensureAirfieldStripVisible();
-          if (typeof airfieldUseLandingArt !== "undefined") airfieldUseLandingArt = true;
         } catch (e2) {}
       }
-      // Only assist skid after a real land phase has been running (not instant force)
+      // Re-assert request if somehow still not in land/skid after a beat
+      var ph0 = window.__airborneAirfieldPhase;
+      if (ruffStageT > 0.5 && ph0 !== "land" && ph0 !== "skid" && ph0 !== "score" && ph0 !== "done") {
+        window.__airborneRuffRequestLand = true;
+      }
+      // Assist skid ONLY after player has had time to descend (strip rise + approach)
       try {
-        if (window.__airborneAirfieldPhase === "land" && ruffStageT > 1.2) {
+        if (window.__airborneAirfieldPhase === "land" && ruffStageT > 5.5) {
           if (typeof window.__airborneForceLandingSkid === "function") window.__airborneForceLandingSkid();
         }
       } catch (eLd) {}
@@ -3335,8 +3341,8 @@ function finishToMap() {
       // Report when world-buildings signals ready, or failsafe
       if (window.__airborneTrainingReportReady || ph === "done" || window.__airborneTrainingReportShown) {
         nextStage(); // → report → showFlightReport
-      } else if (ruffStageT > 14) {
-        // Failsafe after land+drive window
+      } else if (ruffStageT > 35) {
+        // Failsafe only after full land + drive window
         try {
           window.__airborneTrainingReportShown = true;
           window.__airborneTrainingReportReady = true;

@@ -180,30 +180,39 @@
   window.__airborneForceLandingSkid = function () {
     try {
       if (airfieldPhase === "skid" || airfieldPhase === "score" || airfieldPhase === "done") return;
+      // Only force after a real land sequence has begun
+      if (airfieldPhase !== "land") return;
       airfieldPhase = "skid";
       airfieldSkidT = 0;
+      airfieldSkidDriveDist = 0;
       airfieldDidLand = true;
       window.__airborneAirfieldDidLand = true;
       window.__airborneLandTouchAt = performance.now();
-      if (typeof player !== "undefined" && player) {
-        airfieldSkidStartX = player.x;
-        player.vy = 0;
-      }
       airfieldUseLandingArt = true;
+      airfieldStripY = 0;
       try { ensureAirfieldStripVisible(); } catch (e) {}
-      // Seed multiple runway tiles for continuous scroll
       try {
         if (airfieldTiles && airfieldTiles.length) {
           var base = airfieldTiles[0];
           var tw = base.w || (typeof W !== "undefined" ? W : 400);
           while (airfieldTiles.length < 4) {
             airfieldTiles.push({
-              x: base.x + airfieldTiles.length * tw * 0.95,
+              x: (airfieldTiles[airfieldTiles.length - 1].x || 0) + tw * 0.95,
               y: base.y, w: tw, h: base.h, img: base.img
             });
           }
         }
       } catch (e2) {}
+      if (typeof player !== "undefined" && player && typeof H !== "undefined") {
+        var th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
+        var landY = H - Math.max(40, th * 0.28) - (player.h ? player.h * 0.22 : 10);
+        player.x = (typeof W !== "undefined" ? W : 400) * 0.25;
+        player.y = landY;
+        player.vy = 0;
+        player.rotation = 0;
+        airfieldSkidStartX = player.x;
+      }
+      airfieldTip = "HOLD to drive to the end of the runway!";
       syncAirfieldGlobals();
     } catch (e) {}
   };
@@ -597,6 +606,38 @@
 
     airfieldPhaseT = (airfieldPhaseT || 0) + dt;
     updateAirfieldFlags(dt);
+
+    // ===== LAND REQUEST (any phase) — must not depend on lesson branch =====
+    if (window.__airborneRuffRequestLand) {
+      window.__airborneRuffRequestLand = false;
+      if (airfieldPhase !== "land" && airfieldPhase !== "skid" &&
+          airfieldPhase !== "score" && airfieldPhase !== "done") {
+        airfieldMode = true;
+        window.__airborneAirfield = true;
+        airfieldPhase = "land";
+        airfieldPhaseT = 0;
+        airfieldLandT = 0;
+        airfieldDidLand = false;
+        airfieldLandContact = 0;
+        airfieldSkidT = 0;
+        airfieldSkidDriveDist = 0;
+        window.__airborneAirfieldDidLand = false;
+        window.__airborneTrainingReportShown = false;
+        window.__airborneTrainingReportReady = false;
+        window.__airborneAirfieldPaused = false;
+        window.__airborneAirfieldInvuln = true;
+        airfieldUseLandingArt = true;
+        airfieldStripGone = false;
+        try { ensureAirfieldStripVisible(); } catch (e) {}
+        if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+        try {
+          if (typeof obstacles !== "undefined") obstacles = [];
+          if (typeof bombs !== "undefined") bombs = [];
+        } catch (e2) {}
+        airfieldTip = "Tap to flare — land on the strip!";
+        syncAirfieldGlobals();
+      }
+    }
     // updateAirfieldLights(dt); // lights disabled
     syncAirfieldGlobals();
     window.__airborneAirfieldBlockBoss = true;
@@ -963,7 +1004,7 @@
         airfieldStripY = H * 0.55; // deeper start so top edge stays off-screen longer
       }
       // Rise into place, then HARD STOP — extended so landing art is visible longer
-      const riseDur = 2.8; // snappy like climb
+      const riseDur = 2.0; // strip rises into view
       const riseU = Math.min(1, airfieldLandT / riseDur);
       const riseE = 1 - Math.pow(1 - riseU, 2.4);
       // Raised another ~3%
@@ -996,7 +1037,7 @@
         // Player-controlled landing: mild gravity so taps (flap) have clear effect
         player.vy += 680 * dt;
         if (player.vy > 420) player.vy = 420;
-        const fieldReady = airfieldLandT > 0.35;
+        const fieldReady = airfieldLandT > 1.2; // strip must rise into view first
         // assist toward deck once strip is ready
         if (fieldReady && player.y < landY - 70) {
           player.vy += 160 * dt;
@@ -1022,7 +1063,8 @@
           airfieldLandContact = 0;
         }
 
-        if (!airfieldDidLand && ((fieldReady && airfieldLandContact >= 0.05) || airfieldLandT > 1.0)) {
+        // Touchdown only when on deck — hard failsafe after 5s of land phase
+        if (!airfieldDidLand && ((fieldReady && airfieldLandContact >= 0.08) || airfieldLandT > 5.0)) {
           airfieldDidLand = true;
           window.__airborneAirfieldDidLand = true;
           window.__airborneLandTouchAt = performance.now();
@@ -1098,10 +1140,10 @@
       }
       var recentHold = (window.__airborneLastHoldAt && (nowH - window.__airborneLastHoldAt) < 200);
       var holdingLand = !!(window.__airborneAirfieldHold || window.__airbornePointerDown || recentHold);
-      // After 0.4s always crawl so landing is never a long idle
-      var crawl = (!holdingLand && airfieldSkidT > 0.4);
+      // Crawl after 1.2s if not holding — never soft-lock
+      var crawl = (!holdingLand && airfieldSkidT > 1.2);
       airfieldSkidDriveDist = airfieldSkidDriveDist || 0;
-      var runwayEnd = Math.max(W * 1.6, 650); // end of runway distance
+      var runwayEnd = Math.max(W * 2.4, 900); // full runway drive
       try {
         if (!airfieldTiles || airfieldTiles.length < 3) ensureAirfieldStripVisible();
         if (airfieldTiles && airfieldTiles.length && airfieldTiles.length < 4) {

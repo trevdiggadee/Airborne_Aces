@@ -854,7 +854,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     powerup = {
       x: W + 60,
       y: H * 0.1 + Math.random() * H * 0.14,
-      r: Math.min(36, W * 0.09),
+      r: Math.min(18, W * 0.045),
       bobPhase: Math.random() * Math.PI * 2,
       collected: false,
       vx: 130,
@@ -912,7 +912,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     const tnow = performance.now() * 0.001;
     const drawY = powerup.y + Math.sin(powerup.bobPhase) * 8;
     const pulse = 1 + Math.sin(tnow * 5.5) * 0.08;
-    const r = powerup.r * pulse * 1.35;
+    const r = powerup.r * pulse * 1.0;
 
     // Ensure unlock medal image loaded once
     if (!window.__bossWeaponMedalImg) {
@@ -957,7 +957,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     ctx.globalCompositeOperation = "source-over";
     ctx.globalAlpha = 1;
     if (hasMedal) {
-      var sz = r * 2.4;
+      var sz = r * 2.0; // ~50% smaller overall vs prior large medal
       ctx.drawImage(medal, -sz / 2, -sz / 2, sz, sz);
     } else {
       ctx.beginPath();
