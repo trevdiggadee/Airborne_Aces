@@ -950,7 +950,12 @@
     window.__airborneLastHoldAt = performance.now();
     window.__airborneAirfieldHold = true;
   }
-  function __aaClearHold() {
+  function __aaClearHold(e) {
+    // Multi-touch: only clear when no fingers remain
+    try {
+      if (e && e.touches && e.touches.length > 0) return;
+      if (e && typeof e.buttons === "number" && e.buttons !== 0) return;
+    } catch (err) {}
     window.__airbornePointerDown = false;
     window.__airborneAirfieldHold = false;
   }

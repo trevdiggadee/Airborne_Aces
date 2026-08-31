@@ -1083,8 +1083,11 @@
           window.__airborneSkidLerpT = 0;
           player.y = landY; // already on deck this frame
           player.vy = 0;
-          window.__airborneAirfieldHold = false;
-          window.__airbornePointerDown = false;
+          // CRITICAL: do NOT clear hold/pointer flags here.
+          // If the finger is still down, no new pointerdown will fire — clearing
+          // would leave holdingLand false until release+repress (or 8s timeout).
+          // Preserve continuous hold from approach into the drive phase.
+          airfieldTip = "HOLD to drive!";
           try {
             if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
             if (typeof sfxAirfieldScreech === "function") sfxAirfieldScreech();
@@ -1133,12 +1136,13 @@
       }
       // HOLD to drive to end of runway (like takeoff), then score
       // HOLD required to drive (pointer / touch / space)
+      // Note: __airbornePointerDown stays true for the whole press (set on down, cleared on up).
       var nowH = performance.now();
       if (window.__airbornePointerDown) {
         window.__airborneAirfieldHold = true;
         window.__airborneLastHoldAt = nowH;
       }
-      var recentHold = (window.__airborneLastHoldAt && (nowH - window.__airborneLastHoldAt) < 180);
+      var recentHold = (window.__airborneLastHoldAt && (nowH - window.__airborneLastHoldAt) < 250);
       var holdingLand = !!(window.__airborneAirfieldHold || window.__airbornePointerDown || recentHold);
       airfieldSkidDriveDist = airfieldSkidDriveDist || 0;
       // Short runway when holding — score comes soon after a real drive
@@ -1209,10 +1213,10 @@
           }
         }
       }
-      // End drive: reached distance while holding, OR held for 2.5s+, OR max 8s
-      var heldEnough = holdingLand && airfieldSkidDriveDist >= runwayEnd;
-      var heldTimeOk = holdingLand && airfieldSkidDriveDist >= runwayEnd * 0.55 && airfieldSkidT > 2.2;
-      if (heldEnough || heldTimeOk || airfieldSkidT > 8.0) {
+      // End drive once distance covered while holding, or short failsafe if never held
+      var heldEnough = airfieldSkidDriveDist >= runwayEnd;
+      var heldTimeOk = holdingLand && airfieldSkidDriveDist >= runwayEnd * 0.5 && airfieldSkidT > 1.8;
+      if (heldEnough || heldTimeOk || airfieldSkidT > 6.0) {
         try {
           if (typeof spawnVictoryFirework === "function") {
             spawnVictoryFirework(player.x, player.y - 30);
@@ -1297,8 +1301,8 @@
         });
         airfieldFireworks = airfieldFireworks.filter(function(fw) { return fw.age < fw.life; });
       }
-      // Score pops quickly after drive
-      if (!window.__airborneTrainingReportShown && airfieldScoreT > 0.25) {
+      // Score pops immediately after drive completes
+      if (!window.__airborneTrainingReportShown && airfieldScoreT > 0.15) {
         window.__airborneTrainingReportShown = true;
         window.__airborneTrainingReportReady = true;
         window.__airborneAirfieldDidLand = true;

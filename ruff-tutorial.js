@@ -2392,7 +2392,7 @@
       // Short celebration then show report (avoid 10s dead air)
       setTimeout(function () {
         try { showFlightReport(); } catch (e) {}
-      }, 700);
+      }, 400);
       return;
     }
 
