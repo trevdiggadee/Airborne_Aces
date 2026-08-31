@@ -74,14 +74,6 @@
         (afp === "taxi" || afp === "accel" || afp === "skid" || afp === "score" ||
          afp === "done" || afp === "rollout" || afp === "climb" || !afp)) {
       window.__airborneAirfield = true;
-      // Touchdown/taxi owns the vertical state. Clear any stale pointer/hold
-      // flags so a finger that was down for the flare cannot affect taxi.
-      if (afp === "skid" || afp === "score" || afp === "done" || afp === "rollout") {
-        window.__airborneAirfieldHold = false;
-        window.__airbornePointerDown = false;
-        window.__airborneAirfieldBoostPending = false;
-        player.vy = 0;
-      }
       if (afp === "taxi" || afp === "accel") {
         window.__airborneAirfieldHold = true;
         window.__airbornePointerDown = true;
