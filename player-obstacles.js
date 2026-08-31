@@ -68,27 +68,24 @@
     if (state !== "playing" && !window.__airborneAirfield) return;
     // Don't flap-react while docked on the pad
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) return;
-    // Airfield runway / landing drive: hold accelerates (never flap)
+    // Airfield runway / post-land taxi: never flap (prevents jump)
     var afp = window.__airborneAirfieldPhase;
-    if (window.__airborneAirfield && (afp === "taxi" || afp === "accel" || afp === "skid" || afp === "land" || !afp)) {
+    if (window.__airborneAirfield &&
+        (afp === "taxi" || afp === "accel" || afp === "skid" || afp === "score" ||
+         afp === "done" || afp === "rollout" || afp === "climb" || !afp)) {
       window.__airborneAirfield = true;
-      window.__airborneAirfieldHold = true;
-      window.__airbornePointerDown = true;
-      if (afp === "taxi" || afp === "accel" || !afp) {
+      if (afp === "taxi" || afp === "accel") {
+        window.__airborneAirfieldHold = true;
+        window.__airbornePointerDown = true;
         window.__airborneAirfieldBoostPending = true;
       }
-      // During skid: hold only (no flap)
-      if (afp === "skid" || afp === "taxi" || afp === "accel" || !afp) return;
+      return; // no vertical jump
     }
-    if (window.__airborneAirfield && afp === "climb") {
+    // land approach only: allow flare
+    if (window.__airborneAirfieldPaused) {
       return;
     }
-    // land: allow flap (vy set here; position integrated in updateAirfield)
-    if (window.__airborneAirfieldPaused && afp !== "skid") {
-      return;
-    }
-    // Stronger flare authority during training landing
-    if (window.__airborneAirfield && window.__airborneAirfieldPhase === "land") {
+    if (window.__airborneAirfield && afp === "land") {
       player.vy = Math.min(player.vy, FLAP_VELOCITY * 1.15);
     } else {
       player.vy = FLAP_VELOCITY;
