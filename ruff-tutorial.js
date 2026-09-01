@@ -1220,8 +1220,36 @@
         w: w,
         h: h,
         speed: 71,
-        archCrystal: !!spec.archCrystal
+        archCrystal: !!spec.archCrystal,
+        phase: Math.random() * Math.PI * 2,
+        // Mechanical parts behind hull — varied, not frantic
+        props: [],
+        gears: []
       };
+      // 1–2 propellers (faster spin)
+      var nProp = 1 + (Math.random() < 0.55 ? 1 : 0);
+      for (var pi = 0; pi < nProp; pi++) {
+        plat.props.push({
+          ox: w * (0.18 + pi * 0.55 + Math.random() * 0.08),
+          oy: h * (0.15 + Math.random() * 0.35),
+          r: Math.min(18, h * 0.16) * (0.85 + Math.random() * 0.3),
+          ang: Math.random() * Math.PI * 2,
+          spd: 2.8 + Math.random() * 1.6, // rad/s — brisk but not frantic
+          blades: 3 + (Math.random() < 0.5 ? 1 : 0)
+        });
+      }
+      // 2–3 gears (slower)
+      var nGear = 2 + (Math.random() < 0.5 ? 1 : 0);
+      for (var gi = 0; gi < nGear; gi++) {
+        plat.gears.push({
+          ox: w * (0.2 + gi * 0.28 + Math.random() * 0.1),
+          oy: h * (0.45 + Math.random() * 0.35),
+          r: Math.min(14, h * 0.12) * (0.7 + Math.random() * 0.5),
+          ang: Math.random() * Math.PI * 2,
+          spd: (0.45 + Math.random() * 0.55) * (gi % 2 === 0 ? 1 : -1), // opposite mesh feel
+          teeth: 6 + Math.floor(Math.random() * 4)
+        });
+      }
       ruffPlatforms.push(plat);
       // Coins along top surface
       placeCoinsOnPlatform(plat);
@@ -1280,6 +1308,8 @@
       p.bobT = (p.bobT || Math.random() * 10) + dt;
       p.bobY = Math.sin(p.bobT * 1.4 + (p.phase || 0)) * 5;
       p.sway = Math.sin(p.bobT * 0.7 + (p.phase || 0)) * 3;
+      (p.props || []).forEach(function (pr) { pr.ang += pr.spd * dt; });
+      (p.gears || []).forEach(function (g) { g.ang += g.spd * dt; });
       // Steam/spark timer
       p.fxT = (p.fxT || 0) - dt;
       if (p.fxT <= 0) {
@@ -1348,6 +1378,87 @@
     ruffPlatforms = ruffPlatforms.filter(function (p) { return p.x + p.w > -80; });
   }
 
+
+  function drawMechGear(ctx, x, y, r, ang, teeth) {
+    teeth = teeth || 8;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(ang);
+    ctx.beginPath();
+    for (var i = 0; i < teeth; i++) {
+      var a0 = (i / teeth) * Math.PI * 2;
+      var a1 = ((i + 0.35) / teeth) * Math.PI * 2;
+      var a2 = ((i + 0.5) / teeth) * Math.PI * 2;
+      var a3 = ((i + 0.85) / teeth) * Math.PI * 2;
+      var rOut = r;
+      var rIn = r * 0.72;
+      if (i === 0) ctx.moveTo(Math.cos(a0) * rIn, Math.sin(a0) * rIn);
+      ctx.lineTo(Math.cos(a0) * rOut, Math.sin(a0) * rOut);
+      ctx.lineTo(Math.cos(a1) * rOut, Math.sin(a1) * rOut);
+      ctx.lineTo(Math.cos(a2) * rIn, Math.sin(a2) * rIn);
+      ctx.lineTo(Math.cos(a3) * rIn, Math.sin(a3) * rIn);
+    }
+    ctx.closePath();
+    var gg = ctx.createRadialGradient(-r * 0.2, -r * 0.2, 1, 0, 0, r);
+    gg.addColorStop(0, "#c4a574");
+    gg.addColorStop(0.55, "#8a6a3a");
+    gg.addColorStop(1, "#3a2810");
+    ctx.fillStyle = gg;
+    ctx.fill();
+    ctx.strokeStyle = "rgba(40,28,12,0.75)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.28, 0, Math.PI * 2);
+    ctx.fillStyle = "#2a1c0c";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(212,175,55,0.5)";
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawMechProp(ctx, x, y, r, ang, blades) {
+    blades = blades || 3;
+    ctx.save();
+    ctx.translate(x, y);
+    // Hub
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.22, 0, Math.PI * 2);
+    ctx.fillStyle = "#5a4830";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(212,175,55,0.6)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Blades
+    for (var i = 0; i < blades; i++) {
+      var a = ang + (i / blades) * Math.PI * 2;
+      ctx.save();
+      ctx.rotate(a);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(r * 0.35, -r * 0.18, r * 0.95, -r * 0.08);
+      ctx.quadraticCurveTo(r * 0.5, 0, r * 0.95, r * 0.08);
+      ctx.quadraticCurveTo(r * 0.35, r * 0.18, 0, 0);
+      ctx.closePath();
+      var pg = ctx.createLinearGradient(0, 0, r, 0);
+      pg.addColorStop(0, "rgba(180,160,120,0.85)");
+      pg.addColorStop(0.5, "rgba(120,100,70,0.55)");
+      pg.addColorStop(1, "rgba(80,60,40,0.25)");
+      ctx.fillStyle = pg;
+      ctx.fill();
+      ctx.restore();
+    }
+    // Motion blur ring hint
+    ctx.globalAlpha = 0.2;
+    ctx.strokeStyle = "rgba(200,180,140,0.5)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.9, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
   function drawTrainingPlatforms() {
     if (!ruffPlatforms || !ruffPlatforms.length || typeof ctx === "undefined") return;
     ruffPlatforms.forEach(function (p) {
@@ -1355,6 +1466,13 @@
       var ox = p.x + (p.sway || 0);
       var oy = p.y - p.h * 0.5 + (p.bobY || 0);
       ctx.save();
+      // Mechanical parts BEHIND platform hull
+      (p.gears || []).forEach(function (g) {
+        drawMechGear(ctx, ox + g.ox, oy + g.oy, g.r, g.ang, g.teeth);
+      });
+      (p.props || []).forEach(function (pr) {
+        drawMechProp(ctx, ox + pr.ox, oy + pr.oy, pr.r, pr.ang, pr.blades);
+      });
       if (!img || !img.naturalWidth) {
         ctx.fillStyle = "rgba(80,60,30,0.85)";
         ctx.fillRect(ox, oy, p.w, p.h);
