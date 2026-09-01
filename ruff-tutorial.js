@@ -870,10 +870,14 @@
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.60; // +25% birds
       try { if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 198; } catch (e) {}
     } else if (name === "shield") {
+      try { ruffCoins = []; ruffCrystals = []; } catch (e) {}
+
       window.__airborneAirfieldObstacles = true;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.75;
     } else if (name === "boss1") {
+      try { ruffCoins = []; ruffCrystals = []; ruffPlatforms = []; } catch (e) {}
+
       // Clear any stuck cinematic pause
       try {
         window.__airborneBossCamPause = false;
@@ -915,14 +919,15 @@
     } else if (name === "combined") {
       window.__airborneTrainingBoss = false;
       window.__airborneTrainingBossTried = false;
-      // Keep background balloons for entire training
       ruffBossDark = 0;
+      if (ruffLines.length) showRadio(ruffLines[0], 2.6);
       window.__airborneAirfieldRings = true;
       window.__airborneAirfieldObstacles = true;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 0.85; // denser combined
-      try { spawnTrainingCoins(6); } catch (e) {}
-    }
-
+      if (typeof spawnInterval !== "undefined") spawnInterval = 0.95;
+      try { ruffCoins = []; ruffCrystals = []; } catch (e) {}
+      try { spawnTrainingPlatformsLesson(); } catch (e) { console.warn("combined plats", e); }
+      try { if (!ruffAirship) spawnTrainingAirship(); } catch (e) {}
+    
     if (name === "intro") {
       ruffIntroFly = true;
       ruffIntroFlyT = 0;
@@ -1008,12 +1013,14 @@
     } else if (name === "combined") {
       window.__airborneTrainingBoss = false;
       window.__airborneTrainingBossTried = false;
-      // Keep background balloons for entire training
       ruffBossDark = 0;
       if (ruffLines.length) showRadio(ruffLines[0], 2.6);
       window.__airborneAirfieldRings = true;
       window.__airborneAirfieldObstacles = true;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 1.2;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 0.95;
+      try { ruffCoins = []; ruffCrystals = []; } catch (e) {}
+      try { spawnTrainingPlatformsLesson(); } catch (e) { console.warn("combined plats", e); }
+      try { if (!ruffAirship) spawnTrainingAirship(); } catch (e) {}
     } else if (name === "landing") {
       if (ruffLines.length) showRadio(ruffLines[0], 3.0);
       window.__airborneRuffLandArmed = true;
@@ -1028,17 +1035,15 @@
 
   // Coins + crystals for the whole airborne flight (not just one lesson)
   var FLIGHT_COLLECT_STAGES = {
-    // Platforms lesson + later (NOT first bird obstacles lesson)
-    platforms: 1, shield: 1, powerup: 1,
-    airship: 1, combined: 1, boss1: 1
+    platforms: 1, combined: 1, powerup: 1, airship: 1
   };
   function updateFlightCollectibles(dt) {
     var st = ruffStage || window.__airborneRuffStage || "";
     if (st === "intro" || st === "takeoff" || st === "cruise" || st === "altitude" ||
-        st === "rings" || st === "report" || st === "idle") return;
+        st === "rings" || st === "obstacles" || st === "shield" || st === "boss1" ||
+        st === "report" || st === "idle" || st === "landing") return;
     if (!FLIGHT_COLLECT_STAGES[st]) return;
-    // Platforms lesson: only fixed coins/crystal on platforms (no free-float respawn)
-    if (st === "platforms") {
+    if (st === "platforms" || st === "combined") {
       try { updateCrystals(dt); } catch (e) {}
       try { updateTrainingCoins(dt); } catch (e) {}
       try { updateTrainingPlatforms(dt); } catch (e) {}
@@ -1046,12 +1051,6 @@
     }
     try { updateCrystals(dt); } catch (e) {}
     try { updateTrainingCoins(dt); } catch (e) {}
-    try {
-      var liveCr = (ruffCrystals || []).filter(function(c){ return c && !c.collected && c.x > -40; }).length;
-      var liveCo = (ruffCoins || []).filter(function(c){ return c && !c.collected && c.x > -40; }).length;
-      if (liveCr < 2) spawnCrystals(2);
-      if (liveCo < 3) spawnTrainingCoins(3);
-    } catch (e) {}
   }
 
   function syncStageFlags() {
@@ -1340,24 +1339,38 @@
     // Solid platforms — blimp cannot pass through
     if (typeof player !== "undefined" && player) {
       ruffPlatforms.forEach(function (p) {
-        // Top hitbox lowered 15% (less restriction fighting on deck)
-        var top = p.y - p.h * 0.5 + p.h * 0.15 + (p.bobY || 0);
+        // Top hitbox lowered 20% (less restriction on deck)
+        var top = p.y - p.h * 0.5 + p.h * 0.20 + (p.bobY || 0);
         var bot = p.y + p.h * 0.5 + (p.bobY || 0);
         var left = p.x + (p.sway || 0) + p.w * 0.06;
         var right = p.x + p.w + (p.sway || 0) - p.w * 0.06;
         var px = player.x, py = player.y;
         var hw = player.w * 0.38, hh = player.h * 0.38;
         if (px + hw > left && px - hw < right && py + hh > top && py - hh < bot) {
-          // Push out via nearest edge
           var dL = (px + hw) - left;
           var dR = right - (px - hw);
           var dT = (py + hh) - top;
           var dB = bot - (py - hh);
           var m = Math.min(dL, dR, dT, dB);
-          if (m === dT) { player.y = top - hh - 1; player.vy = Math.min(player.vy, 0); }
-          else if (m === dB) { player.y = bot + hh + 1; player.vy = Math.max(player.vy, 40); }
-          else if (m === dL) { player.x = left - hw - 1; }
-          else { player.x = right + hw + 1; }
+          if (m === dT) {
+            // Land on top — bounce upward
+            player.y = top - hh - 1;
+            var bounce = Math.max(220, Math.abs(player.vy) * 0.55 + 160);
+            player.vy = -bounce;
+            p.bobY = (p.bobY || 0) + 4; // platform reacts
+            try {
+              if (window.__airborneFlapPulse) window.__airborneFlapPulse();
+            } catch (eB) {}
+          } else if (m === dB) {
+            player.y = bot + hh + 1;
+            player.vy = Math.max(Math.abs(player.vy) * 0.4 + 80, 60);
+          } else if (m === dL) {
+            player.x = left - hw - 1;
+            player.vy = Math.min(player.vy, -80);
+          } else {
+            player.x = right + hw + 1;
+            player.vy = Math.min(player.vy, -60);
+          }
         }
       });
     }
@@ -3554,6 +3567,7 @@ function finishToMap() {
         }
       }
     } else if (ruffStage === "shield") {
+      try { ruffCoins = []; ruffCrystals = []; } catch (e) {}
       window.__airborneAirfieldAllowShield = true;
       // Spawn shield early
       if ((typeof shieldPickup === "undefined" || !shieldPickup || shieldPickup.x < -50) && ruffStageT < 8 && !(typeof shieldActive !== "undefined" && shieldActive)) {
@@ -3668,6 +3682,7 @@ function finishToMap() {
         requestNextStage();
       }
     } else if (ruffStage === "boss1") {
+      try { ruffCoins = []; ruffCrystals = []; ruffPlatforms = []; } catch (e) {}
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
@@ -3732,11 +3747,20 @@ function finishToMap() {
           boss = null;
         }
       } catch (e) {}
-      // Coins/crystals handled only by updateFlightCollectibles (no double-speed)
       window.__airborneFirePickup = null;
-      if ((ruffCrystals || []).length < 4 && ruffStageT > 2) spawnCrystals(2);
-      if ((ruffCoins || []).length < 10 && ruffStageT > 1.0) spawnTrainingCoins(6);
-      if (!ruffLessonPendingNext && ruffStageT > 30) {
+      window.__airborneAirfieldRings = true;
+      window.__airborneAirfieldObstacles = true;
+      // Platforms + airship in combined
+      if ((!ruffPlatforms || !ruffPlatforms.length) && ruffStageT < 2) {
+        try { spawnTrainingPlatformsLesson(); } catch (e) {}
+      }
+      if (!ruffAirship && ruffStageT < 3) {
+        try { spawnTrainingAirship(); } catch (e) {}
+      }
+      try { updateTrainingPlatforms(dt); } catch (e) {}
+      try { updateTrainingAirship(dt); } catch (e) {}
+      // No free-float coins/crystals — only platform-fixed
+      if (!ruffLessonPendingNext && ruffStageT > 35) {
         requestNextStage();
       }
     } else if (ruffStage === "landing") {
@@ -3840,6 +3864,7 @@ function finishToMap() {
     try { drawCrystals(); } catch (e) {}
     try { drawTrainingCoins(); } catch (e) {}
     // bg balloons drawn before cloud layer in main-loop
+    try { drawTrainingPlatforms(); } catch (e) {}
     try { drawTrainingAirship(); } catch (e) {}
     try { drawScreenDust(); } catch (e) {}
     if (ruffStage !== "boss1" && window.__airborneRuffStage !== "boss1") {
@@ -3975,4 +4000,5 @@ function finishToMap() {
   window.__airborneRuffStage = "idle";
   window.__airborneRuffRequestLand = false;
   window.__airborneRingCollects = 0;
+}
 })();
