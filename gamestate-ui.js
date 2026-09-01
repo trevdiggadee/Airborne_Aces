@@ -527,6 +527,7 @@
         try {
           if (typeof obstacles !== "undefined") obstacles = [];
           if (typeof birdFlocks !== "undefined") birdFlocks = [];
+          try { if (window.resetTrainingCollectHUD) window.resetTrainingCollectHUD(); } catch (e) {}
           startTrain();
           if (typeof obstacles !== "undefined") obstacles = [];
           if (typeof birdFlocks !== "undefined") birdFlocks = [];

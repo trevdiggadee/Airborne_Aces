@@ -1219,7 +1219,7 @@
         y: y,
         w: w,
         h: h,
-        speed: 95,
+        speed: 71,
         archCrystal: !!spec.archCrystal
       };
       ruffPlatforms.push(plat);
@@ -1275,7 +1275,7 @@
     if (!ruffPlatforms || !ruffPlatforms.length) return;
     var now = performance.now() / 1000;
     ruffPlatforms.forEach(function (p) {
-      p.x -= (p.speed || 95) * dt;
+      p.x -= (p.speed || 71) * dt;
       // Dynamic motion: gentle bob + slow sway
       p.bobT = (p.bobT || Math.random() * 10) + dt;
       p.bobY = Math.sin(p.bobT * 1.4 + (p.phase || 0)) * 5;
@@ -1310,10 +1310,11 @@
     // Solid platforms — blimp cannot pass through
     if (typeof player !== "undefined" && player) {
       ruffPlatforms.forEach(function (p) {
-        var top = p.y - p.h * 0.5 + (p.bobY || 0);
+        // Top hitbox lowered 15% (less restriction fighting on deck)
+        var top = p.y - p.h * 0.5 + p.h * 0.15 + (p.bobY || 0);
         var bot = p.y + p.h * 0.5 + (p.bobY || 0);
-        var left = p.x + (p.sway || 0);
-        var right = p.x + p.w + (p.sway || 0);
+        var left = p.x + (p.sway || 0) + p.w * 0.06;
+        var right = p.x + p.w + (p.sway || 0) - p.w * 0.06;
         var px = player.x, py = player.y;
         var hw = player.w * 0.38, hh = player.h * 0.38;
         if (px + hw > left && px - hw < right && py + hh > top && py - hh < bot) {
@@ -1354,13 +1355,6 @@
       var ox = p.x + (p.sway || 0);
       var oy = p.y - p.h * 0.5 + (p.bobY || 0);
       ctx.save();
-      // Soft shadow under platform
-      ctx.globalAlpha = 0.28;
-      ctx.fillStyle = "#000";
-      ctx.beginPath();
-      ctx.ellipse(ox + p.w * 0.5, oy + p.h * 0.92, p.w * 0.42, 8, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
       if (!img || !img.naturalWidth) {
         ctx.fillStyle = "rgba(80,60,30,0.85)";
         ctx.fillRect(ox, oy, p.w, p.h);
@@ -2886,10 +2880,34 @@
   }
   window.__airborneClearAllGameplay = clearAllGameplayEntities;
 
+
+  function resetTrainingCollectHUD() {
+    try {
+      ruffStats = { crystals: 0, coins: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, landingStars: 3 };
+    } catch (e) {}
+    try {
+      window.__airborneRingCollects = 0;
+      window.__airborneCoinCollects = 0;
+      window.__airborneCrystalCollects = 0;
+    } catch (e) {}
+    try {
+      var el;
+      el = document.getElementById("collectRings"); if (el) el.textContent = "0";
+      el = document.getElementById("collectCrystals"); if (el) el.textContent = "0";
+      el = document.getElementById("collectPowerPct"); if (el) el.textContent = "0";
+      el = document.getElementById("scoreVal"); if (el) el.textContent = "0";
+    } catch (e) {}
+    try {
+      if (typeof score === "number") score = 0;
+      if (typeof gameplayScore === "number") gameplayScore = 0;
+    } catch (e) {}
+  }
+
   function hardResetTrainingState(opts) {
     opts = opts || {};
     var keepAirfield = !!opts.keepAirfield;
     try { clearAllGameplayEntities(); } catch (e) {}
+    try { resetTrainingCollectHUD(); } catch (e) {}
     try {
       ruffActive = false;
       ruffStage = "idle";
@@ -3025,6 +3043,7 @@
     try { clearTrainingPowerIcon(); } catch (e) {}
   }
   window.__airborneHardResetTraining = hardResetTrainingState;
+  window.resetTrainingCollectHUD = resetTrainingCollectHUD;
 
   function finishToHangar_mark(){ try { window.__airborneOneShotUsed = {}; } catch(e) {} }
   function finishToHangar() {
@@ -3168,6 +3187,7 @@ function finishToMap() {
   function beginRuffTraining() {
     // Soft clear without killing airfield flags
     try { hardResetTrainingState({ keepAirfield: true }); } catch (e) {}
+    try { resetTrainingCollectHUD(); } catch (e) {}
     try { if (window.__airborneClearAllGameplay) window.__airborneClearAllGameplay(); } catch (e) {}
 
     ruffActive = true;
@@ -3488,7 +3508,9 @@ function finishToMap() {
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       try { updateTrainingPlatforms(dt); } catch (e) {}
-      if (!ruffLessonPendingNext && ruffStageT > 30) {
+      // Wait until every platform has scrolled off (failsafe 90s)
+      var platsLeft = (ruffPlatforms || []).length;
+      if (!ruffLessonPendingNext && ((ruffStageT > 8 && platsLeft === 0) || ruffStageT > 90)) {
         ruffPlatforms = [];
         requestNextStage();
       }
