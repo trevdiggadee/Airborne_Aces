@@ -858,7 +858,7 @@
       } else {
         // Drive + liftoff
         window.__airborneAirfieldPaused = false;
-        window.__airborneTrainingFlight = false;
+        window.__airborneTrainingFlight = true; // keep training systems alive
 
         if (window.__airborneAirfieldBoostPending) {
           window.__airborneAirfieldBoostPending = false;

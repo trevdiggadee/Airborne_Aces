@@ -3626,8 +3626,11 @@ function finishToMap() {
         }
       }
       if ((ruffIntroLineArmed && ruffLineIdx >= ruffLines.length && ruffLineT > 0.8) ||
-          ruffStageT > 8) {
+          ruffStageT > 6) {
         ruffIntroFly = false;
+        ruffIntroFlyT = 99;
+        window.__airborneAirfieldPaused = false;
+        window.__airborneTrainingFlight = true;
         nextStage(); // → takeoff — runway unlocks only after this
         console.log("[R.U.F.F.] intro done → takeoff");
       }
@@ -3636,8 +3639,10 @@ function finishToMap() {
     // Stage logic — every stage has a hard timeout so training never freezes
     if (ruffStage === "takeoff") {
       const ph = window.__airborneAirfieldPhase;
-      // Only advance after actual climb/lesson — never skip runway on a timer
-      if (ph === "lesson" || (ph === "climb" && ruffStageT > 3)) {
+      window.__airborneAirfieldPaused = false;
+      window.__airborneTrainingFlight = true;
+      // Advance after climb/lesson, or failsafe if airborne long enough
+      if (ph === "lesson" || (ph === "climb" && ruffStageT > 2) || ruffStageT > 25) {
         nextStage(); // → cruise free-fly
       }
     } else if (ruffStage === "cruise") {
@@ -3988,7 +3993,14 @@ function finishToMap() {
       try { drawTrainingBossDark(); } catch (e) {}
     }
     try { drawSparkles(); } catch (e) {}
-    try { drawRuffCompanion(); } catch (e) {}
+    // Companion sprite drawn by main-loop drawTrainingRuffEmergency (follow + anim)
+    // Still publish position for emergency
+    try {
+      if (typeof player !== "undefined" && player) {
+        window.__airborneRuffX = ruffX;
+        window.__airborneRuffY = ruffY;
+      }
+    } catch (e) {}
   }
 
   function drawPowerOrb() {

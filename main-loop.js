@@ -215,45 +215,65 @@
   // ===== Always-on training Ruff (does not depend on ruff-tutorial state) =====
   window.__airborneRuffFrameT = window.__airborneRuffFrameT || 0;
   window.__airborneRuffFrame = window.__airborneRuffFrame || 0;
-  function drawTrainingRuffEmergency(dt) {
+function drawTrainingRuffEmergency(dt) {
     try {
       if (!(window.__airborneAirfield || window.__airborneTrainingFlight || window.__airborneRuffActive)) return;
       if (window.__airborneRuffStage === "report") return;
       if (typeof ctx === "undefined" || !ctx) return;
       var W0 = (typeof W !== "undefined" && W > 0) ? W : 400;
       var H0 = (typeof H !== "undefined" && H > 0) ? H : 600;
-      // Prefer live position from tutorial if available
-      var x = (typeof window.__airborneRuffX === "number" && window.__airborneRuffX > 0) ? window.__airborneRuffX : W0 * 0.72;
-      var y = (typeof window.__airborneRuffY === "number" && window.__airborneRuffY > 0) ? window.__airborneRuffY : H0 * 0.28;
-      window.__airborneRuffFrameT += (dt || 0.016);
-      if (window.__airborneRuffFrameT > 0.06) {
-        window.__airborneRuffFrameT = 0;
-        window.__airborneRuffFrame = (window.__airborneRuffFrame + 1) % 36;
+
+      // Follow the blimp (behind + slightly above)
+      var x, y;
+      if (typeof player !== "undefined" && player && player.x > 0) {
+        var gapX = (player.w || 60) * 0.55 + 36;
+        var gapY = (player.h || 40) * 0.55 + 24;
+        x = player.x - gapX;
+        y = player.y - gapY;
+        // After intro, always track player
+        if (window.__airborneRuffStage === "intro" && window.__airborneRuffX > 0) {
+          // blend toward follow after fly-in
+          x = window.__airborneRuffX * 0.3 + x * 0.7;
+          y = window.__airborneRuffY * 0.3 + y * 0.7;
+        }
+      } else if (window.__airborneRuffX > 0 && window.__airborneRuffY > 0) {
+        x = window.__airborneRuffX;
+        y = window.__airborneRuffY;
+      } else {
+        x = W0 * 0.22;
+        y = H0 * 0.55;
       }
-      var fi = (window.__airborneRuffFrame | 0) + 1;
-      var key = "ruff_" + (fi < 10 ? "0" + fi : "" + fi);
+      x = Math.max(36, Math.min(W0 * 0.55, x));
+      y = Math.max(H0 * 0.08, Math.min(H0 * 0.72, y));
+      window.__airborneRuffX = x;
+      window.__airborneRuffY = y;
+
+      // Smooth animation ~18fps
+      window.__airborneRuffFrameT = (window.__airborneRuffFrameT || 0) + (dt || 0.016);
+      if (window.__airborneRuffFrameT >= 1 / 18) {
+        window.__airborneRuffFrameT -= 1 / 18;
+        window.__airborneRuffFrame = ((window.__airborneRuffFrame || 0) + 1) % 36;
+      }
+      var fi = ((window.__airborneRuffFrame || 0) | 0) + 1;
+      var key = "ruff_" + (fi < 10 ? "0" + fi : String(fi));
       var img = (typeof images !== "undefined") ? images[key] : null;
       if (!img || !img.naturalWidth) {
         for (var i = 1; i <= 36; i++) {
-          var k = "ruff_" + (i < 10 ? "0" + i : "" + i);
+          var k = "ruff_" + (i < 10 ? "0" + i : String(i));
           if (images && images[k] && images[k].naturalWidth) { img = images[k]; break; }
         }
       }
-      var size = 100;
+      var size = 92;
       ctx.save();
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "source-over";
       if (img && img.naturalWidth) {
         ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
       } else {
-        // bright fallback so missing assets are obvious
         ctx.fillStyle = "rgba(255, 200, 60, 0.95)";
         ctx.beginPath();
-        ctx.arc(x, y, 36, 0, Math.PI * 2);
+        ctx.arc(x, y, 34, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = "#5a3e14";
-        ctx.lineWidth = 3;
-        ctx.stroke();
         ctx.fillStyle = "#1a1208";
         ctx.font = "bold 12px system-ui,sans-serif";
         ctx.textAlign = "center";
@@ -264,6 +284,7 @@
       console.warn("emergency Ruff", e);
     }
   }
+
 
 function loop(ts) {
     try {
@@ -329,6 +350,24 @@ function loop(ts) {
       if (typeof window.__airborneUpdateRuff === "function") {
         try { window.__airborneUpdateRuff(dt); } catch (e) { console.warn("updRuff", e); }
       }
+      // Ruff lesson failsafe — never soft-lock on intro/takeoff
+      try {
+        if (window.__airborneAirfield) {
+          window.__airborneTrainT = (window.__airborneTrainT || 0) + dt;
+          if (window.__airborneRuffStage === "intro" && window.__airborneTrainT > 9) {
+            window.__airborneRuffStage = "takeoff";
+            window.__airborneAirfieldPaused = false;
+            window.__airborneTrainingFlight = true;
+          }
+          // Keep training flight flag true for whole airfield run
+          if (window.__airborneAirfield && window.__airborneRuffStage !== "report") {
+            window.__airborneTrainingFlight = true;
+            window.__airborneRuffActive = true;
+          }
+        } else {
+          window.__airborneTrainT = 0;
+        }
+      } catch (eFs) {}
     }
     if (state === "paused") {
       // Fully frozen — still render current frame below
