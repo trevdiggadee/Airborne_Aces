@@ -3508,11 +3508,11 @@ canvas {
 /* RPM altitude quarter gauge — under top HUD, shifted right */
 .altRpm {
   position: absolute;
-  top: 100%; /* under top UI */
-  right: -8%; /* ~10% further right vs prior */
-  width: clamp(72px, 19vw, 108px);
-  height: clamp(72px, 19vw, 108px);
-  margin-top: 4px;
+  top: 80%; /* moved up ~20% from under-HUD anchor */
+  right: -8%;
+  width: clamp(90px, 23.75vw, 135px); /* +25% size */
+  height: clamp(90px, 23.75vw, 135px);
+  margin-top: 0;
   pointer-events: none;
   z-index: 24;
   filter: drop-shadow(0 3px 6px rgba(0,0,0,0.55));
