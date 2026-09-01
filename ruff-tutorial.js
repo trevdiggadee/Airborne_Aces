@@ -34,8 +34,6 @@
 
   // ---------- State ----------
   let ruffActive = false;
-    try { clearTrainingPowerIcon(); } catch (e) {}
-
   let ruffStage = "idle"; // see STAGES
   let ruffStageT = 0;
   let ruffLineIdx = 0;
@@ -301,20 +299,25 @@
         dock.style.visibility = "visible";
       }
       var meter = document.getElementById("stormMeter");
-      if (!meter) return;
-      meter.classList.add("trainingPos");
-      meter.classList.remove("trainingHidden");
-      meter.style.display = "flex";
-      meter.style.visibility = "visible";
-      meter.style.opacity = "1";
-      meter.style.pointerEvents = "auto";
-      window.__airborneAirfieldAllowPowerup = true;
-    try {
-      if (typeof stormCharge !== "undefined" && typeof STORM_MAX === "number") {
-        stormCharge = STORM_MAX;
-        if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay(false);
+      if (meter) {
+        meter.classList.add("trainingPos");
+        meter.classList.remove("trainingHidden");
+        meter.style.display = "flex";
+        meter.style.visibility = "visible";
+        meter.style.opacity = "1";
+        meter.style.pointerEvents = "auto";
       }
-    } catch (e) {}
+      window.__airborneAirfieldAllowPowerup = true;
+      // Training: power fully charged from the start
+      try {
+        if (typeof STORM_MAX === "number") {
+          if (typeof stormCharge !== "undefined") stormCharge = STORM_MAX;
+          if (typeof window.stormCharge !== "undefined") window.stormCharge = STORM_MAX;
+        } else {
+          if (typeof stormCharge !== "undefined") stormCharge = 100;
+        }
+        if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay(false);
+      } catch (eCh) {}
     } catch (e) {}
   }
   function clearTrainingPowerIcon() {
@@ -3084,6 +3087,7 @@
     window.__airborneTrainingReportReady = false;
     window.__airborneTrainingReportShown = false;
     window.__airborneForceTrainRestart = true;
+    window.__airborneAirfieldAllowPowerup = true;
     window.__airborneEndCelebrationDone = false;
     window.__airborneEndCelebration = null;
     window.__airborneRankUpPlayed = false;
@@ -3954,6 +3958,7 @@ function finishToMap() {
   };
   window.__airborneForceRuffCruise = window.__airborneForceRuffAltitude;
   window.__airborneBeginRuff = beginRuffTraining;
+  window.placeTrainingPowerIcon = placeTrainingPowerIcon;
   function updateEndCelebration(dt) {
     var c = window.__airborneEndCelebration;
     if (!c) return;

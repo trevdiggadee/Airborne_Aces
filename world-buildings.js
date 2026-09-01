@@ -426,6 +426,7 @@
       if (typeof stormActive !== "undefined") stormActive = false;
       if (typeof stormCharge !== "undefined") stormCharge = 0;
       if (typeof stormTimer !== "undefined") stormTimer = 0;
+      // (refilled after Ruff starts)
       if (typeof bombs !== "undefined") bombs = [];
       if (typeof powerup !== "undefined") powerup = null;
       if (typeof hearts !== "undefined") hearts = [];
@@ -454,7 +455,7 @@
     window.__airborneAirfieldPhase = "taxi";
     if (typeof window.__airborneBeginRuff === "function") {
       try { window.__airborneBeginRuff(); } catch (e) { console.warn(e); }
-    try { if (window.showFlightTraceBanner) window.showFlightTraceBanner(); } catch (e) {}
+      try { if (window.showFlightTraceBanner) window.showFlightTraceBanner(); } catch (e) {}
     }
     // Re-assert after begin (hardReset soft may have toggled)
     window.__airborneRuffActive = true;
@@ -462,6 +463,14 @@
     window.__airborneAirfield = true;
     window.__airborneTrainingFlight = true;
     window.__airborneAirfieldPhase = "taxi";
+    window.__airborneAirfieldAllowPowerup = true;
+    try {
+      if (typeof STORM_MAX === "number" && typeof stormCharge !== "undefined") stormCharge = STORM_MAX;
+      else if (typeof stormCharge !== "undefined") stormCharge = 100;
+      if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay(false);
+      if (typeof window.placeTrainingPowerIcon === "function") window.placeTrainingPowerIcon();
+      else if (typeof placeTrainingPowerIcon === "function") placeTrainingPowerIcon();
+    } catch (ePow) {}
     airfieldMode = true;
     airfieldPhase = "taxi";
     if (!airfieldTiles || !airfieldTiles.length) {
@@ -490,10 +499,10 @@
     window.__airborneScriptedPose = null;
     window.__airborneAirfieldInvuln = true;
     window.__airborneAirfieldPaused = true; // locked until intro done
-    window.__airborneTrainingFlight = false;
+    window.__airborneTrainingFlight = true;
     window.__airborneClimbAlmostDone = false;
     window.__airborneAirfieldBlockBoss = true;
-    window.__airborneAirfieldAllowPowerup = false;
+    window.__airborneAirfieldAllowPowerup = true;
     window.__airborneAirfieldObstacles = false;
     window.__airborneAirfieldRings = false;
     if (typeof levelEndPad !== "undefined") levelEndPad = null;

@@ -188,6 +188,7 @@ function bossPortraitImg(num) {
 }
 
 function triggerBoss(num) {
+    try { if (typeof window.__airborneStartBossCam === "function") window.__airborneStartBossCam(); } catch (e) {}
     const cfg = bossConfig(num);
     setMusicTheme(THEME_BOSS);
     lastBossTriggered = num;
