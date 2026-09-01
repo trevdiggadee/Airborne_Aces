@@ -783,9 +783,9 @@
         airfieldPhase === "lesson") {
       // Freeze strip only during active intro (not forever if Ruff fails)
       const ruffSt = window.__airborneRuffStage || "intro";
-      const introActive = (ruffSt === "intro") && !!window.__airborneRuffActive;
-      // Safety: never freeze strip more than ~12s from training start
-      const introTimedOut = (airfieldRunwayT || 0) > 12;
+      const introActive = (ruffSt === "intro" || ruffSt === "idle");
+      // Safety: never freeze strip more than ~14s from training start
+      const introTimedOut = (airfieldRunwayT || 0) > 14;
       const introStill = introActive && !introTimedOut;
       let scrollSpd = 0;
       if (!introStill) {
@@ -836,7 +836,8 @@
       window.__airborneAirfieldInvuln = true;
 
       const ruffSt = window.__airborneRuffStage || "intro";
-      const introLock = (ruffSt === "intro") && !!window.__airborneRuffActive && (airfieldRunwayT || 0) < 12;
+      // Lock runway until intro is finished (do not require RuffActive flag)
+      const introLock = (ruffSt === "intro" || ruffSt === "idle") && (airfieldRunwayT || 0) < 14;
 
       if (introLock) {
         // Wait for R.U.F.F. intro — strip frozen, blimp on deck
@@ -904,7 +905,7 @@
     } else if (airfieldPhase === "climb") {
       window.__airborneAirfieldInvuln = true;
       window.__airborneAirfieldPaused = false;
-      window.__airborneTrainingFlight = false;
+      window.__airborneTrainingFlight = true;
 
       const dur = 2.0;
       const tClimb = Math.min(1, airfieldPhaseT / dur);
@@ -931,6 +932,12 @@
         airfieldLesson = 0;
         airfieldLessonT = 0;
         airfieldSub = "practice";
+        window.__airborneTrainingFlight = true;
+        // Hand off to Ruff lesson chain
+        if (window.__airborneRuffStage === "intro" || window.__airborneRuffStage === "takeoff") {
+          window.__airborneRuffStage = "cruise";
+          window.__airborneForceRuffCruise = true;
+        }
         if (typeof player !== "undefined" && player) {
           player.x = W * 0.22;
           player.y = H * 0.4;

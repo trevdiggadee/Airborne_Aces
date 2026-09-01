@@ -2550,7 +2550,9 @@
     }
     // Dramatic intro fly-in from upper-right
     if (ruffIntroFly && ruffStage === "intro") {
+      window.__airborneRuffIntroFly = true;
       ruffIntroFlyT += dt;
+      window.__airborneRuffIntroT = ruffIntroFlyT;
       const destX = (typeof W !== "undefined" ? W : 400) * 0.18;
       const destY = (typeof H !== "undefined" ? H : 600) * 0.28;
       const k = Math.min(1, ruffIntroFlyT / 1.0);
@@ -2580,8 +2582,11 @@
         ruffSpeechDone = true;
         showRadio(ruffLines[0], 3.2);
       }
+      window.__airborneRuffX = ruffX;
+      window.__airborneRuffY = ruffY;
       return;
     }
+    window.__airborneRuffIntroFly = false;
     if (typeof player === "undefined" || !player) return;
     // Behind + above with clear gap so sprites never touch
     const gapX = player.w * 0.55 + 36;
@@ -3510,11 +3515,14 @@ function finishToMap() {
     window.__airborneTrainingFlight = true;
     ruffIntroFly = true;
     ruffIntroFlyT = 0;
-    ruffX = _W * 0.72;
-    ruffY = _H * 0.28;
+    ruffX = _W * 0.95;
+    ruffY = _H * 0.16;
     window.__airborneRuffX = ruffX;
     window.__airborneRuffY = ruffY;
-    window.__airborneRuffStage = ruffStage || "intro";
+    window.__airborneRuffIntroFly = true;
+    window.__airborneRuffIntroT = 0;
+    window.__airborneRuffStage = "intro";
+    ruffStage = "intro";
     console.log("[R.U.F.F.] begin", ruffActive, ruffStage, Math.round(ruffX), Math.round(ruffY));
   }
 
@@ -3549,6 +3557,14 @@ function finishToMap() {
     if (!ruffActive) return;
     window.__airborneRuffX = ruffX;
     window.__airborneRuffY = ruffY;
+    if (window.__airborneForceRuffCruise) {
+      window.__airborneForceRuffCruise = false;
+      ruffIntroFly = false;
+      window.__airborneRuffIntroFly = false;
+      if (ruffStage === "intro" || ruffStage === "takeoff" || ruffStage === "idle") {
+        setStage("cruise");
+      }
+    }
     ruffStageT += dt;
     ruffLineT += dt;
     try { tickLessonGate(dt); } catch (e) {}
@@ -3626,9 +3642,10 @@ function finishToMap() {
         }
       }
       if ((ruffIntroLineArmed && ruffLineIdx >= ruffLines.length && ruffLineT > 0.8) ||
-          ruffStageT > 6) {
+          ruffStageT > 11) {
         ruffIntroFly = false;
         ruffIntroFlyT = 99;
+        window.__airborneRuffIntroFly = false;
         window.__airborneAirfieldPaused = false;
         window.__airborneTrainingFlight = true;
         nextStage(); // → takeoff — runway unlocks only after this
@@ -3639,12 +3656,19 @@ function finishToMap() {
     // Stage logic — every stage has a hard timeout so training never freezes
     if (ruffStage === "takeoff") {
       const ph = window.__airborneAirfieldPhase;
-      window.__airborneAirfieldPaused = false;
       window.__airborneTrainingFlight = true;
       // Advance after climb/lesson, or failsafe if airborne long enough
-      if (ph === "lesson" || (ph === "climb" && ruffStageT > 2) || ruffStageT > 25) {
+      if (ph === "lesson" || (ph === "climb" && ruffStageT > 1.5) || ruffStageT > 30) {
         nextStage(); // → cruise free-fly
       }
+    }
+    // If airfield already in lesson mode but stage lagged on intro/takeoff, catch up
+    if ((ruffStage === "intro" || ruffStage === "takeoff") &&
+        window.__airborneAirfieldPhase === "lesson" && ruffStageT > 0.5) {
+      ruffIntroFly = false;
+      window.__airborneRuffIntroFly = false;
+      if (ruffStage === "intro") setStage("takeoff");
+      else nextStage();
     } else if (ruffStage === "cruise") {
       // Free flight after takeoff — no lessons, coins, or crystals yet
       window.__airborneAirfieldObstacles = false;
