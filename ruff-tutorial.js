@@ -34,6 +34,8 @@
 
   // ---------- State ----------
   let ruffActive = false;
+    try { clearTrainingPowerIcon(); } catch (e) {}
+
   let ruffStage = "idle"; // see STAGES
   let ruffStageT = 0;
   let ruffLineIdx = 0;
@@ -299,25 +301,20 @@
         dock.style.visibility = "visible";
       }
       var meter = document.getElementById("stormMeter");
-      if (meter) {
-        meter.classList.add("trainingPos");
-        meter.classList.remove("trainingHidden");
-        meter.style.display = "flex";
-        meter.style.visibility = "visible";
-        meter.style.opacity = "1";
-        meter.style.pointerEvents = "auto";
-      }
+      if (!meter) return;
+      meter.classList.add("trainingPos");
+      meter.classList.remove("trainingHidden");
+      meter.style.display = "flex";
+      meter.style.visibility = "visible";
+      meter.style.opacity = "1";
+      meter.style.pointerEvents = "auto";
       window.__airborneAirfieldAllowPowerup = true;
-      // Training: power fully charged from the start
-      try {
-        if (typeof STORM_MAX === "number") {
-          if (typeof stormCharge !== "undefined") stormCharge = STORM_MAX;
-          if (typeof window.stormCharge !== "undefined") window.stormCharge = STORM_MAX;
-        } else {
-          if (typeof stormCharge !== "undefined") stormCharge = 100;
-        }
+    try {
+      if (typeof stormCharge !== "undefined" && typeof STORM_MAX === "number") {
+        stormCharge = STORM_MAX;
         if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay(false);
-      } catch (eCh) {}
+      }
+    } catch (e) {}
     } catch (e) {}
   }
   function clearTrainingPowerIcon() {
@@ -2663,23 +2660,15 @@
   }
 
   function drawRuffCompanion() {
-    // Always draw while training is live
-    if (window.__airborneAirfield || window.__airborneRuffActive) {
-      ruffActive = true;
-      window.__airborneRuffActive = true;
-    }
     if (!ruffActive || typeof ctx === "undefined") return;
     if (ruffStage === "report") return;
-
-    const W0 = (typeof W !== "undefined" && W > 0) ? W : 400;
-    const H0 = (typeof H !== "undefined" && H > 0) ? H : 600;
+    const maxX = (typeof W !== "undefined" ? W : 400) - 20;
+    const maxY = (typeof H !== "undefined" ? H : 600) - 20;
     let dx = ruffX, dy = ruffY;
-    if (!(dx > 0) || !isFinite(dx)) dx = W0 * 0.82;
-    if (!(dy > 0) || !isFinite(dy)) dy = H0 * 0.22;
-    // Keep on-screen
-    dx = Math.max(40, Math.min(W0 - 40, dx));
-    dy = Math.max(40, Math.min(H0 - 40, dy));
-    ruffX = dx; ruffY = dy;
+    if (!(dx > 0) || !isFinite(dx)) dx = (typeof W !== "undefined" ? W : 400) * 0.2;
+    if (!(dy > 0) || !isFinite(dy)) dy = (typeof H !== "undefined" ? H : 600) * 0.3;
+    dx = Math.max(20, Math.min(maxX, dx));
+    dy = Math.max(20, Math.min(maxY, dy));
 
     const idx = ((ruffFrame | 0) % RUFF_FRAME_COUNT) + 1;
     const key = "ruff_" + String(idx).padStart(2, "0");
@@ -2690,11 +2679,11 @@
         if (images && images[k2] && images[k2].naturalWidth) { img = images[k2]; break; }
       }
     }
-    const size = 92;
+    const size = 85; // fixed size regardless of blimp
     const sc = size * (ruffScalePulse || 1);
 
-    // Jet particles
-    (ruffJetParticles || []).forEach(function (p) {
+    // Jetpack particles (world space, behind body)
+    ruffJetParticles.forEach(function (p) {
       const t = 1 - p.age / p.life;
       ctx.save();
       ctx.globalAlpha = Math.max(0, t * 0.85);
@@ -2702,82 +2691,71 @@
       ctx.beginPath();
       ctx.arc(p.x, p.y, Math.max(0.5, p.r * t), 0, Math.PI * 2);
       ctx.fill();
+      if (p.hot) {
+        ctx.globalCompositeOperation = "lighter";
+        ctx.fillStyle = "rgba(255,230,120,0.5)";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(0.4, p.r * 0.45 * t), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+
+    // Motion ghosts
+    ruffMotionGhosts.forEach(function (g) {
+      const t = 1 - g.age / g.life;
+      ctx.save();
+      ctx.globalAlpha = 0.18 * t;
+      ctx.translate(g.x, g.y);
+      ctx.rotate(g.tilt || 0);
+      if (img && img.naturalWidth) {
+        ctx.drawImage(img, -sc / 2, -sc / 2, sc, sc);
+      } else {
+        ctx.fillStyle = "#c4a35a";
+        ctx.beginPath();
+        ctx.arc(0, 0, sc * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
     });
 
     ctx.save();
     ctx.translate(dx, dy);
     ctx.rotate(ruffTilt || 0);
-
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = "rgba(212,175,55,0.5)";
+    ctx.beginPath();
+    ctx.arc(-6, 4, sc * 0.28, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
     if (img && img.naturalWidth) {
       ctx.drawImage(img, -sc / 2, -sc / 2, sc, sc);
     } else {
-      // Procedural steampunk radio companion (visible without sprite assets)
-      var s = sc * 0.55;
-      // glow
-      ctx.globalAlpha = 0.35;
-      var glow = ctx.createRadialGradient(0, 0, 2, 0, 0, s * 1.4);
-      glow.addColorStop(0, "rgba(255,210,80,0.8)");
-      glow.addColorStop(1, "rgba(255,180,40,0)");
-      ctx.fillStyle = glow;
+      ctx.fillStyle = "#c4a35a";
+      ctx.strokeStyle = "#4a3210";
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(0, 0, s * 1.4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-      // body
-      ctx.fillStyle = "#c9a24a";
-      ctx.strokeStyle = "#5a3e14";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.ellipse(0, 4, s * 0.55, s * 0.62, 0, 0, Math.PI * 2);
+      ctx.arc(0, 0, sc * 0.42, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
-      // belly
-      ctx.fillStyle = "#e8d5a0";
-      ctx.beginPath();
-      ctx.ellipse(0, 10, s * 0.32, s * 0.36, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // head
-      ctx.fillStyle = "#d4b05c";
-      ctx.beginPath();
-      ctx.arc(0, -s * 0.42, s * 0.38, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      // goggles
-      ctx.fillStyle = "#2a6aaa";
-      ctx.beginPath();
-      ctx.arc(-s * 0.14, -s * 0.44, s * 0.12, 0, Math.PI * 2);
-      ctx.arc(s * 0.14, -s * 0.44, s * 0.12, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = "#d4af37";
-      ctx.beginPath();
-      ctx.arc(-s * 0.14, -s * 0.44, s * 0.12, 0, Math.PI * 2);
-      ctx.arc(s * 0.14, -s * 0.44, s * 0.12, 0, Math.PI * 2);
-      ctx.stroke();
-      // antenna
-      ctx.strokeStyle = "#8a6a30";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(s * 0.1, -s * 0.72);
-      ctx.lineTo(s * 0.22, -s * 1.05);
-      ctx.stroke();
-      ctx.fillStyle = "#ff4d4d";
-      ctx.beginPath();
-      ctx.arc(s * 0.22, -s * 1.05, 4, 0, Math.PI * 2);
-      ctx.fill();
-      // jetpack
-      ctx.fillStyle = "#6a5a40";
-      ctx.fillRect(-s * 0.55, -s * 0.05, s * 0.22, s * 0.4);
-      ctx.fillRect(s * 0.33, -s * 0.05, s * 0.22, s * 0.4);
-      // label
-      ctx.fillStyle = "#fff8e0";
-      ctx.font = "bold " + Math.max(9, s * 0.22) + "px system-ui,sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("R.U.F.F.", 0, s * 0.95);
     }
     ctx.restore();
-  }
 
+    // Speak lines from mouth (small black dashes)
+    ruffSpeakLines.forEach(function (s) {
+      const t = 1 - s.age / s.life;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, t);
+      ctx.strokeStyle = "rgba(15,12,10,0.85)";
+      ctx.lineWidth = 1.6;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      ctx.lineTo(s.x + s.len * t, s.y + (s.vy * 0.02));
+      ctx.stroke();
+      ctx.restore();
+    });
+  }
 
   // ---------- Flight report ----------
   function showFlightReport() {
@@ -3106,7 +3084,6 @@
     window.__airborneTrainingReportReady = false;
     window.__airborneTrainingReportShown = false;
     window.__airborneForceTrainRestart = true;
-    window.__airborneAirfieldAllowPowerup = true;
     window.__airborneEndCelebrationDone = false;
     window.__airborneEndCelebration = null;
     window.__airborneRankUpPlayed = false;
@@ -3439,8 +3416,8 @@ function finishToMap() {
     window.__airborneRuffActive = true;
     ruffIntroFly = true;
     ruffIntroFlyT = 0;
-    ruffX = _W * 0.72;
-    ruffY = _H * 0.28;
+    ruffX = _W * 0.88;
+    ruffY = _H * 0.22;
     console.log("[R.U.F.F.] begin", ruffActive, ruffStage, Math.round(ruffX), Math.round(ruffY));
   }
 
@@ -3884,14 +3861,6 @@ function finishToMap() {
   }
 
   function drawRuff() {
-    if (window.__airborneAirfield || window.__airborneRuffActive || window.__airborneTrainingFlight) {
-      ruffActive = true;
-      window.__airborneRuffActive = true;
-      if (!ruffStage || ruffStage === "idle") {
-        ruffStage = window.__airborneRuffStage || "intro";
-        window.__airborneRuffStage = ruffStage;
-      }
-    }
     if (!ruffActive && window.__airborneRuffActive) {
       ruffActive = true;
       if (!ruffStage || ruffStage === "idle") ruffStage = window.__airborneRuffStage || "intro";
@@ -3985,7 +3954,6 @@ function finishToMap() {
   };
   window.__airborneForceRuffCruise = window.__airborneForceRuffAltitude;
   window.__airborneBeginRuff = beginRuffTraining;
-  window.placeTrainingPowerIcon = placeTrainingPowerIcon;
   function updateEndCelebration(dt) {
     var c = window.__airborneEndCelebration;
     if (!c) return;
