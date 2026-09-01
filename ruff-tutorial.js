@@ -2360,7 +2360,7 @@
     // Epic celebration before score UI
     if (!window.__airborneEndCelebrationDone) {
       window.__airborneEndCelebrationDone = true;
-      window.__airborneEndCelebration = { t: 0, life: 3.4 };
+      window.__airborneEndCelebration = { t: 0, life: 0.9 };
       try {
         // Burst fireworks + confetti
         if (typeof spawnVictoryFirework === "function") {
@@ -2392,7 +2392,7 @@
       // Short celebration then show report (avoid 10s dead air)
       setTimeout(function () {
         try { showFlightReport(); } catch (e) {}
-      }, 400);
+      }, 280);
       return;
     }
 
@@ -2644,6 +2644,29 @@
     window.__airborneEndCelebrationDone = false;
     window.__airborneEndCelebration = null;
     window.__airborneLandTouchAt = 0;
+    window.__airborneTaxiUntil = 0;
+    window.__airborneBossCamPause = false;
+    window.__airborneAirfieldPaused = false;
+    window.__airborneWorldFrozen = false;
+    try {
+      if (window.__airborneCam) {
+        window.__airborneCam.phase = "idle";
+        window.__airborneCam.z = 1;
+        window.__airborneCam.paused = false;
+      }
+    } catch (eCam) {}
+    try {
+      if (typeof state !== "undefined") state = "playing";
+    } catch (eSt) {}
+    try {
+      var po = document.getElementById("pauseOverlay");
+      if (po) { po.classList.add("hidden"); po.setAttribute("aria-hidden", "true"); }
+    } catch (ePo) {}
+    try {
+      var gsEl = document.getElementById("gameScreen");
+      if (gsEl) { gsEl.style.display = "block"; gsEl.style.visibility = "visible"; }
+    } catch (eGs) {}
+    try { if (typeof lastTime !== "undefined") lastTime = null; } catch (eLt) {}
     try {
       ruffLessonPendingNext = false;
       ruffLessonClearing = false;
@@ -3279,7 +3302,7 @@ function finishToMap() {
         requestNextStage();
       }
     } else if (ruffStage === "landing") {
-      // Full landing sequence: descend → touchdown → hold-to-drive → score
+      // Clean landing: request once, force taxi if stuck in land too long
       window.__airborneTrainingFlight = true;
       window.__airborneAirfield = true;
       try {
@@ -3287,26 +3310,21 @@ function finishToMap() {
         if (typeof levelEndPhase !== "undefined") levelEndPhase = null;
         if (typeof bossActive !== "undefined") bossActive = false;
       } catch (e) {}
-      // Request land once (processed at top of updateAirfield)
       if (!window.__airborneRuffLandArmed) {
         window.__airborneRuffLandArmed = true;
         window.__airborneRuffRequestLand = true;
         ruffLandingCelebrated = false;
-        try {
-          if (typeof ensureAirfieldStripVisible === "function") ensureAirfieldStripVisible();
-        } catch (e2) {}
       }
-      // Re-assert request if somehow still not in land/skid after a beat
       var ph0 = window.__airborneAirfieldPhase;
-      if (ruffStageT > 0.5 && ph0 !== "land" && ph0 !== "skid" && ph0 !== "score" && ph0 !== "done") {
+      if (ruffStageT > 0.4 && ph0 !== "land" && ph0 !== "skid" && ph0 !== "score" && ph0 !== "done") {
         window.__airborneRuffRequestLand = true;
       }
-      // Assist skid ONLY after player has had time to descend (strip rise + approach)
-      try {
-        if (window.__airborneAirfieldPhase === "land" && ruffStageT > 7.0) {
+      // If still descending after 5s, force taxi
+      if (ph0 === "land" && ruffStageT > 5.0) {
+        try {
           if (typeof window.__airborneForceLandingSkid === "function") window.__airborneForceLandingSkid();
-        }
-      } catch (eLd) {}
+        } catch (eLd) {}
+      }
       const ph = window.__airborneAirfieldPhase;
       // Celebration when touchdown / drive complete
       if (!ruffLandingCelebrated && (ph === "land_drive" || ph === "landed" || ph === "done" || window.__airborneTrainingReportReady)) {

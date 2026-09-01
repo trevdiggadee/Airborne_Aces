@@ -355,24 +355,16 @@
       
       updateScreenEffects(dt);
     }
-    // Steampunk altitude instrument — needle + climb knob
+    // RPM-style altitude: needle 0° at 6 o'clock → 90° at 9 o'clock as elevation rises
     try {
       if (typeof player !== "undefined" && player && typeof H !== "undefined") {
         var gy = (typeof groundLevelY === "function") ? groundLevelY() : H * 0.85;
         var topY = player.h * 0.5;
-        // 0 = ground (low on scale), 1 = ceiling (high / danger)
         var frac = 1 - Math.max(0, Math.min(1, (player.y - topY) / Math.max(40, gy - topY)));
-        // Scale art: ~500 at bottom → ~3000 at top — map with slight padding
-        var needlePct = (8 + frac * 84).toFixed(2) + "%";
-        var needle = document.getElementById("altHorizNeedle");
-        if (needle) needle.style.bottom = needlePct;
-
-        // Climb/descend knob: vy < 0 climb (up), vy > 0 descend (down)
-        var vy = player.vy || 0;
-        var climb = Math.max(-1, Math.min(1, -vy / 420)); // +1 climb, -1 descend
-        var knobPct = (50 + climb * 42).toFixed(2) + "%";
-        var knob = document.getElementById("altClimbKnob");
-        if (knob) knob.style.bottom = knobPct;
+        // SVG: needle drawn pointing down (6 o'clock). rotate(0)=low, rotate(-90)=9 o'clock high
+        var deg = -(frac * 90);
+        var needle = document.getElementById("altRpmNeedle");
+        if (needle) needle.setAttribute("transform", "rotate(" + deg.toFixed(2) + " 50 50)");
       }
     } catch (eAlt) {}
 
@@ -381,12 +373,15 @@
       drawParallaxLayers();
       drawSketchSkyline();
     }
-    drawPowerlines();
-    drawBuildings();
-    drawBuildingSmoke();
-    drawStreet();
-    drawStreetlamps();
-    drawGroundVehicles();
+    // Campaign city ground only off airfield / training
+    if (!(typeof isAirfieldMode === "function" && isAirfieldMode()) && !window.__airborneAirfield) {
+      drawPowerlines();
+      drawBuildings();
+      drawBuildingSmoke();
+      drawStreet();
+      drawStreetlamps();
+      drawGroundVehicles();
+    }
     drawBossShadow();
     drawWindParticlesBack();
     // Training background balloons — behind blimps and clouds

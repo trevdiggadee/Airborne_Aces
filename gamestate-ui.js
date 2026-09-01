@@ -389,6 +389,23 @@
     ensureAudio();
     setMusicTheme(THEME_NORMAL);
     startMusic();
+    // Clear freeze/pause leftover from prior run
+    try {
+      state = "playing";
+      window.__airborneBossCamPause = false;
+      window.__airborneAirfieldPaused = false;
+      window.__airborneWorldFrozen = false;
+      if (window.__airborneCam) {
+        window.__airborneCam.phase = "idle";
+        window.__airborneCam.z = 1;
+        window.__airborneCam.paused = false;
+      }
+      if (typeof lastTime !== "undefined") lastTime = null;
+      var po = document.getElementById("pauseOverlay");
+      if (po) { po.classList.add("hidden"); po.setAttribute("aria-hidden", "true"); }
+      var gsEl = document.getElementById("gameScreen");
+      if (gsEl) { gsEl.style.display = "block"; gsEl.style.visibility = "visible"; gsEl.style.opacity = "1"; }
+    } catch (eClr) {}
     // force hide overlays
     document.getElementById("startOverlay").classList.add("hidden");
     document.getElementById("gameOverOverlay").classList.add("hidden");
