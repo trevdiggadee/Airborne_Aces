@@ -864,10 +864,15 @@
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-    } else if (name === "obstacles" || name === "shield") {
+    } else if (name === "obstacles") {
       window.__airborneAirfieldObstacles = true;
       window.__airborneAirfieldRings = false;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 0.75; // denser obstacles
+      if (typeof spawnInterval !== "undefined") spawnInterval = 0.60; // +25% birds
+      try { if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 198; } catch (e) {}
+    } else if (name === "shield") {
+      window.__airborneAirfieldObstacles = true;
+      window.__airborneAirfieldRings = false;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 0.75;
     } else if (name === "boss1") {
       // Clear any stuck cinematic pause
       try {
@@ -1023,9 +1028,9 @@
 
   // Coins + crystals for the whole airborne flight (not just one lesson)
   var FLIGHT_COLLECT_STAGES = {
-    // Coins/crystals begin after rings (platforms lesson + rest of flight)
-    platforms: 1, obstacles: 1, shield: 1, powerup: 1,
-    airship: 1, combined: 1, boss1: 1, landing: 1
+    // Platforms lesson + later (NOT first bird obstacles lesson)
+    platforms: 1, shield: 1, powerup: 1,
+    airship: 1, combined: 1, boss1: 1
   };
   function updateFlightCollectibles(dt) {
     var st = ruffStage || window.__airborneRuffStage || "";
@@ -1230,7 +1235,7 @@
     var coinR = 14;
     var pad = 18;
     var usable = Math.max(40, plat.w - pad * 2);
-    var count = Math.max(2, Math.min(8, Math.floor(usable / (coinR * 2.4))));
+    var count = Math.max(1, Math.min(7, Math.floor(usable / (coinR * 2.4)) - 1));
     for (var i = 0; i < count; i++) {
       var t = (i + 0.5) / count;
       ruffCoins.push({
@@ -1268,20 +1273,76 @@
 
   function updateTrainingPlatforms(dt) {
     if (!ruffPlatforms || !ruffPlatforms.length) return;
+    var now = performance.now() / 1000;
     ruffPlatforms.forEach(function (p) {
       p.x -= (p.speed || 95) * dt;
+      // Dynamic motion: gentle bob + slow sway
+      p.bobT = (p.bobT || Math.random() * 10) + dt;
+      p.bobY = Math.sin(p.bobT * 1.4 + (p.phase || 0)) * 5;
+      p.sway = Math.sin(p.bobT * 0.7 + (p.phase || 0)) * 3;
+      // Steam/spark timer
+      p.fxT = (p.fxT || 0) - dt;
+      if (p.fxT <= 0) {
+        p.fxT = 0.12 + Math.random() * 0.2;
+        if (!p.fx) p.fx = [];
+        // steam puff from top/stack area
+        p.fx.push({
+          x: p.w * (0.3 + Math.random() * 0.4),
+          y: -p.h * 0.35,
+          vx: (Math.random() - 0.5) * 20,
+          vy: -25 - Math.random() * 35,
+          life: 0.6 + Math.random() * 0.5,
+          age: 0,
+          r: 4 + Math.random() * 8,
+          kind: Math.random() < 0.65 ? "steam" : "spark"
+        });
+        if (p.fx.length > 18) p.fx.splice(0, p.fx.length - 18);
+      }
+      (p.fx || []).forEach(function (f) {
+        f.age += dt;
+        f.x += f.vx * dt;
+        f.y += f.vy * dt;
+        f.vy *= 0.98;
+        f.r += dt * (f.kind === "steam" ? 10 : 2);
+      });
+      p.fx = (p.fx || []).filter(function (f) { return f.age < f.life; });
     });
+    // Solid platforms — blimp cannot pass through
+    if (typeof player !== "undefined" && player) {
+      ruffPlatforms.forEach(function (p) {
+        var top = p.y - p.h * 0.5 + (p.bobY || 0);
+        var bot = p.y + p.h * 0.5 + (p.bobY || 0);
+        var left = p.x + (p.sway || 0);
+        var right = p.x + p.w + (p.sway || 0);
+        var px = player.x, py = player.y;
+        var hw = player.w * 0.38, hh = player.h * 0.38;
+        if (px + hw > left && px - hw < right && py + hh > top && py - hh < bot) {
+          // Push out via nearest edge
+          var dL = (px + hw) - left;
+          var dR = right - (px - hw);
+          var dT = (py + hh) - top;
+          var dB = bot - (py - hh);
+          var m = Math.min(dL, dR, dT, dB);
+          if (m === dT) { player.y = top - hh - 1; player.vy = Math.min(player.vy, 0); }
+          else if (m === dB) { player.y = bot + hh + 1; player.vy = Math.max(player.vy, 40); }
+          else if (m === dL) { player.x = left - hw - 1; }
+          else { player.x = right + hw + 1; }
+        }
+      });
+    }
     // Keep fixed coins/crystal locked to platform tops
     (ruffCoins || []).forEach(function (c) {
       if (!c.fixedToPlatform || !c.platRef) return;
-      c.x = c.platRef.x + c.platOffX;
-      c.y = c.platRef.y + c.platOffY;
-      c.speed = c.platRef.speed;
+      var p = c.platRef;
+      c.x = p.x + c.platOffX + (p.sway || 0);
+      c.y = p.y + c.platOffY + (p.bobY || 0);
+      c.speed = p.speed;
     });
     (ruffCrystals || []).forEach(function (c) {
       if (!c.fixedToPlatform || !c.platRef) return;
-      c.x = c.platRef.x + (c.platOffX || 0);
-      c.y = c.platRef.y + (c.platOffY || 0);
+      var p = c.platRef;
+      c.x = p.x + (c.platOffX || 0) + (p.sway || 0);
+      c.y = p.y + (c.platOffY || 0) + (p.bobY || 0);
     });
     ruffPlatforms = ruffPlatforms.filter(function (p) { return p.x + p.w > -80; });
   }
@@ -1290,16 +1351,45 @@
     if (!ruffPlatforms || !ruffPlatforms.length || typeof ctx === "undefined") return;
     ruffPlatforms.forEach(function (p) {
       var img = (typeof images !== "undefined" && images) ? images[p.key] : null;
-      if (!img || !img.naturalWidth) {
-        // Fallback silhouette
-        ctx.save();
-        ctx.fillStyle = "rgba(80,60,30,0.85)";
-        ctx.fillRect(p.x, p.y - p.h * 0.5, p.w, p.h);
-        ctx.restore();
-        return;
-      }
+      var ox = p.x + (p.sway || 0);
+      var oy = p.y - p.h * 0.5 + (p.bobY || 0);
       ctx.save();
-      ctx.drawImage(img, p.x, p.y - p.h * 0.5, p.w, p.h);
+      // Soft shadow under platform
+      ctx.globalAlpha = 0.28;
+      ctx.fillStyle = "#000";
+      ctx.beginPath();
+      ctx.ellipse(ox + p.w * 0.5, oy + p.h * 0.92, p.w * 0.42, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      if (!img || !img.naturalWidth) {
+        ctx.fillStyle = "rgba(80,60,30,0.85)";
+        ctx.fillRect(ox, oy, p.w, p.h);
+      } else {
+        ctx.drawImage(img, ox, oy, p.w, p.h);
+      }
+      // Steam / spark particles
+      (p.fx || []).forEach(function (f) {
+        var u = 1 - f.age / f.life;
+        if (u <= 0) return;
+        var fx = ox + f.x, fy = oy + p.h * 0.5 + f.y;
+        if (f.kind === "steam") {
+          ctx.globalAlpha = u * 0.35;
+          var g = ctx.createRadialGradient(fx, fy, 0, fx, fy, f.r);
+          g.addColorStop(0, "rgba(220,220,230,0.7)");
+          g.addColorStop(1, "rgba(180,180,190,0)");
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(fx, fy, f.r, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.globalAlpha = u * 0.9;
+          ctx.fillStyle = "rgba(255,200,100," + u + ")";
+          ctx.beginPath();
+          ctx.arc(fx, fy, Math.max(1, f.r * 0.25), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+      ctx.globalAlpha = 1;
       ctx.restore();
     });
   }
@@ -2538,7 +2628,7 @@
     // Epic celebration before score UI
     if (!window.__airborneEndCelebrationDone) {
       window.__airborneEndCelebrationDone = true;
-      window.__airborneEndCelebration = { t: 0, life: 0.9 };
+      window.__airborneEndCelebration = { t: 0, life: 0.45 };
       try {
         // Burst fireworks + confetti
         if (typeof spawnVictoryFirework === "function") {
@@ -2570,7 +2660,7 @@
       // Short celebration then show report (avoid 10s dead air)
       setTimeout(function () {
         try { showFlightReport(); } catch (e) {}
-      }, 280);
+      }, 120);
       return;
     }
 
@@ -2702,7 +2792,8 @@
           else final.innerHTML = '<span class="fsLabel">FINAL SCORE</span><span class="fsValue">' + sc + '</span>';
         }
         // RANK UP pops big over medal area first, then fades; medal + rank name reveal
-        if (rankBanner) {
+        if (rankBanner && !window.__airborneRankUpPlayed) {
+          window.__airborneRankUpPlayed = true;
           rankBanner.classList.add("visible");
           rankBanner.classList.remove("bounceIn", "medalShow", "rankNameShow");
           rankBanner.style.opacity = "1";
@@ -2836,6 +2927,7 @@
     window.__airborneForceTrainRestart = true;
     window.__airborneEndCelebrationDone = false;
     window.__airborneEndCelebration = null;
+    window.__airborneRankUpPlayed = false;
     window.__airborneLandTouchAt = 0;
     window.__airborneTaxiUntil = 0;
     window.__airborneBossCamPause = false;
@@ -3300,10 +3392,14 @@ function finishToMap() {
     } else if (ruffStage === "altitude") {
       // Do NOT wipe obstacles every frame — causes random item disappear
       ruffMarkers = []; // no dashed guides
-      if (!ruffLessonPendingNext && ruffStageT > 28) requestNextStage();
+      if (!ruffLessonPendingNext && ruffStageT > 15) requestNextStage();
     } else if (ruffStage === "crystals" || ruffStage === "powerup") {
       if (!ruffLessonPendingNext) requestNextStage();
     } else if (ruffStage === "obstacles") {
+      try { ruffCoins = []; ruffCrystals = []; } catch (e) {}
+      if (typeof spawnInterval !== "undefined") spawnInterval = 0.60;
+      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 198;
+
       if (ruffLessonPendingNext) {
         stopLessonSpawns();
       } else {
@@ -3504,6 +3600,15 @@ function finishToMap() {
         requestNextStage();
       }
     } else if (ruffStage === "landing") {
+      // Sweep collectibles off as descent begins
+      try {
+        (ruffCoins || []).forEach(function (c) { if (c) c.x = -999; });
+        (ruffCrystals || []).forEach(function (c) { if (c) c.x = -999; });
+        ruffCoins = [];
+        ruffCrystals = [];
+        ruffPlatforms = [];
+      } catch (eSweep) {}
+
       // Clean landing: request once, force taxi if stuck in land too long
       window.__airborneTrainingFlight = true;
       window.__airborneAirfield = true;

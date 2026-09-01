@@ -218,7 +218,7 @@
     const t0 = window.__airborneLandTouchAt;
     if (!t0) return;
     // Only after short taxi buffer
-    if (performance.now() - t0 < 3500) return;
+    if (performance.now() - t0 < 2800) return;
     window.__airborneTrainingReportShown = true;
     window.__airborneTrainingReportReady = true;
     window.__airborneAirfieldDidLand = true;
@@ -1326,7 +1326,7 @@
         airfieldFireworks = airfieldFireworks.filter(function(fw) { return fw.age < fw.life; });
       }
       // Score pops immediately after taxi
-      if (!window.__airborneTrainingReportShown && airfieldScoreT >= 0) {
+      if (!window.__airborneTrainingReportShown) {
         window.__airborneTrainingReportShown = true;
         window.__airborneTrainingReportReady = true;
         window.__airborneAirfieldDidLand = true;

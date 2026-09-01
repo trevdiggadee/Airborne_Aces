@@ -1491,7 +1491,11 @@
           }
         } catch (e) {}
       } else {
-        o.x -= obstacleSpeed * (window.__airborneAirfield && window.__airborneAirfieldObstacles ? 1.18 : 1) * (o.speedMult || 1) * dt;
+        var birdSpdMul = 1;
+        if (window.__airborneAirfield && window.__airborneAirfieldObstacles) {
+          birdSpdMul = (window.__airborneRuffStage === "obstacles") ? 0.90 : 1.18; // -10% on first bird lesson
+        }
+        o.x -= obstacleSpeed * birdSpdMul * (o.speedMult || 1) * dt;
       }
       if (o.isRing || o.type === "gold_ring") {
         // Hit-burst rings fly outward from the blimp
