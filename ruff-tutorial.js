@@ -1170,9 +1170,10 @@
   // ---------- Floating training platforms (steampunk sky docks) ----------
   var ruffPlatforms = [];
   var PLATFORM_KEYS = [
-    "plat_balcony", "plat_bridge", "plat_round_smoke", "plat_wheel",
-    "plat_chimney", "plat_greenhouse", "plat_walk_a", "plat_walk_b",
-    "plat_rock_island", "plat_arch", "plat_helipad"
+    "island_stone_arch", "island_barrel_platform", "island_tiny_rock_mossy",
+    "island_gear_wheel_platform", "island_tree_lamppost", "island_tiny_rock_grass",
+    "island_market_stall", "prop_tree_standalone", "island_propeller_platform",
+    "island_ring_portal_blue", "island_signpost"
   ];
 
   function spawnTrainingPlatformsLesson() {
@@ -1188,26 +1189,30 @@
     // Strategic vertical lanes: low / mid-low / mid / mid-high / high
     // Sequence teaches: climb, dive, weave, arch crystal, climb again
     var sequence = [
-      { key: "plat_helipad",     yFrac: 0.72, gap: 1.15 },
-      { key: "plat_round_smoke", yFrac: 0.55, gap: 1.25 },
-      { key: "plat_bridge",      yFrac: 0.38, gap: 1.35 },
-      { key: "plat_wheel",       yFrac: 0.62, gap: 1.15 },
-      { key: "plat_arch",        yFrac: 0.48, gap: 1.45, archCrystal: true },
-      { key: "plat_balcony",     yFrac: 0.32, gap: 1.30 },
-      { key: "plat_chimney",     yFrac: 0.68, gap: 1.20 },
-      { key: "plat_greenhouse",  yFrac: 0.42, gap: 1.25 },
-      { key: "plat_rock_island", yFrac: 0.58, gap: 1.30 },
-      { key: "plat_walk_a",      yFrac: 0.35, gap: 1.10 },
-      { key: "plat_helipad",     yFrac: 0.70, gap: 1.20 }
+      // Strategic altitude path — teach climb / dive / weave
+      // coinMode: deck | none | sparse ; crystal only on barrel (2nd asset)
+      { key: "island_signpost",           yFrac: 0.70, gap: 1.20, coinMode: "sparse", coins: 1 },
+      { key: "island_barrel_platform",    yFrac: 0.52, gap: 1.25, coinMode: "none", crystal: true },
+      { key: "island_tiny_rock_mossy",    yFrac: 0.38, gap: 1.15, coinMode: "sparse", coins: 1 },
+      { key: "island_market_stall",       yFrac: 0.62, gap: 1.30, coinMode: "deck", coins: 4 },
+      { key: "island_tree_lamppost",      yFrac: 0.34, gap: 1.25, coinMode: "deck", coins: 3 },
+      { key: "island_gear_wheel_platform",yFrac: 0.58, gap: 1.20, coinMode: "deck", coins: 3 },
+      { key: "island_ring_portal_blue",   yFrac: 0.45, gap: 1.35, coinMode: "sparse", coins: 2 },
+      { key: "island_propeller_platform", yFrac: 0.30, gap: 1.30, coinMode: "deck", coins: 4 },
+      { key: "island_tiny_rock_grass",    yFrac: 0.68, gap: 1.15, coinMode: "sparse", coins: 1 },
+      { key: "prop_tree_standalone",      yFrac: 0.40, gap: 1.20, coinMode: "sparse", coins: 2 },
+      { key: "island_stone_arch",         yFrac: 0.50, gap: 1.40, coinMode: "deck", coins: 3 }
     ];
     var x = W0 + 60;
     sequence.forEach(function (spec, idx) {
       var img = (typeof images !== "undefined" && images) ? images[spec.key] : null;
       var aspect = (img && img.naturalWidth && img.naturalHeight)
         ? (img.naturalWidth / img.naturalHeight) : 2.2;
-      var h = Math.min(H0 * 0.22, 110);
-      if (spec.key === "plat_arch") h = Math.min(H0 * 0.28, 130);
-      if (spec.key === "plat_bridge") h = Math.min(H0 * 0.16, 85);
+      var h = Math.min(H0 * 0.24, 120);
+      if (spec.key === "island_ring_portal_blue" || spec.key === "island_stone_arch") h = Math.min(H0 * 0.30, 140);
+      if (spec.key === "island_barrel_platform" || spec.key.indexOf("tiny") >= 0) h = Math.min(H0 * 0.16, 85);
+      if (spec.key === "island_signpost") h = Math.min(H0 * 0.26, 125);
+      if (spec.key === "island_propeller_platform" || spec.key === "island_market_stall") h = Math.min(H0 * 0.26, 125);
       var w = h * aspect;
       // Cap width so platforms stay readable
       if (w > W0 * 0.85) { w = W0 * 0.85; h = w / aspect; }
@@ -1219,7 +1224,7 @@
         w: w,
         h: h,
         speed: 71,
-        archCrystal: !!spec.archCrystal,
+        crystal: !!spec.crystal,
         phase: Math.random() * Math.PI * 2,
         // Mechanical parts behind hull — varied, not frantic
         props: [],
@@ -1250,31 +1255,36 @@
         });
       }
       ruffPlatforms.push(plat);
-      // Coins along top surface
-      placeCoinsOnPlatform(plat);
-      if (spec.archCrystal) placeCrystalInArch(plat);
+      // Coins on best landing surfaces; crystal only on barrel platform
+      if (spec.coinMode && spec.coinMode !== "none") {
+        placeCoinsOnPlatform(plat, spec.coins || 2, spec.coinMode);
+      }
+      if (spec.crystal) placeCrystalOnBarrel(plat);
       x += w * spec.gap + 40;
     });
   }
 
-  function placeCoinsOnPlatform(plat) {
-    // Fit as many as reasonable along the top deck
-    var coinR = 14;
-    var pad = 18;
-    var usable = Math.max(40, plat.w - pad * 2);
-    var count = Math.max(1, Math.min(7, Math.floor(usable / (coinR * 2.4)) - 1));
+  function placeCoinsOnPlatform(plat, count, mode) {
+    count = count || 2;
+    mode = mode || "deck";
+    var coinR = 13;
+    // Deck sits near upper third of sprite for most islands
+    var topY = -plat.h * (mode === "sparse" ? 0.28 : 0.32);
+    var pad = mode === "sparse" ? plat.w * 0.28 : plat.w * 0.18;
+    var usable = Math.max(24, plat.w - pad * 2);
+    count = Math.max(1, Math.min(count, Math.floor(usable / (coinR * 2.2))));
     for (var i = 0; i < count; i++) {
       var t = (i + 0.5) / count;
       ruffCoins.push({
         x: plat.x + pad + t * usable,
-        y: plat.y - plat.h * 0.42,
+        y: plat.y + topY,
         r: coinR,
         bob: Math.random() * Math.PI * 2,
         collected: false,
         fixedToPlatform: true,
         platRef: plat,
         platOffX: pad + t * usable,
-        platOffY: -plat.h * 0.42,
+        platOffY: topY,
         frame: 0,
         frameT: 0,
         speed: plat.speed
@@ -1282,19 +1292,19 @@
     }
   }
 
-  function placeCrystalInArch(plat) {
-    // Center of arch opening
+  function placeCrystalOnBarrel(plat) {
+    // Center of barrel / glass dome platform (second asset)
     ruffCrystals.push({
       x: plat.x + plat.w * 0.5,
-      y: plat.y - plat.h * 0.08,
-      r: 22,
+      y: plat.y - plat.h * 0.22,
+      r: 20,
       frame: 0,
       frameT: 0,
       collected: false,
       fixedToPlatform: true,
       platRef: plat,
       platOffX: plat.w * 0.5,
-      platOffY: -plat.h * 0.08
+      platOffY: -plat.h * 0.22
     });
   }
 

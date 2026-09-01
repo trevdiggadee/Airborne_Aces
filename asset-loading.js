@@ -67,6 +67,18 @@
 
     mountains_cutout: "mountains_cutout.webp",
     landing_field: "landing_field.webp",
+    island_stone_arch: "island_stone_arch.webp",
+    island_barrel_platform: "island_barrel_platform.webp",
+    island_tiny_rock_mossy: "island_tiny_rock_mossy.webp",
+    island_gear_wheel_platform: "island_gear_wheel_platform.webp",
+    island_tree_lamppost: "island_tree_lamppost.webp",
+    island_tiny_rock_grass: "island_tiny_rock_grass.webp",
+    island_market_stall: "island_market_stall.webp",
+    prop_tree_standalone: "prop_tree_standalone.webp",
+    island_propeller_platform: "island_propeller_platform.webp",
+    island_ring_portal_blue: "island_ring_portal_blue.webp",
+    island_signpost: "island_signpost.webp",
+
     plat_balcony: "plat_balcony.webp",
     plat_bridge: "plat_bridge.webp",
     plat_round_smoke: "plat_round_smoke.webp",
