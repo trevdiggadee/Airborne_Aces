@@ -554,6 +554,11 @@
         window.__airborneRuffActive = false;
       }
     }
+    window.__airborneRuffIntroT = 0;
+    window.__airborneRuffIntroFly = true;
+    window.__airborneRuffFollowBlend = 0;
+    window.__airborneTrainT = 0;
+    window.__airborneRuffStage = "intro";
     startRuffNow();
     setTimeout(startRuffNow, 100);
     setTimeout(startRuffNow, 400);
@@ -933,10 +938,11 @@
         airfieldLessonT = 0;
         airfieldSub = "practice";
         window.__airborneTrainingFlight = true;
+        window.__airborneRuffActive = true;
         // Hand off to Ruff lesson chain
+        window.__airborneForceRuffCruise = true;
         if (window.__airborneRuffStage === "intro" || window.__airborneRuffStage === "takeoff") {
           window.__airborneRuffStage = "cruise";
-          window.__airborneForceRuffCruise = true;
         }
         if (typeof player !== "undefined" && player) {
           player.x = W * 0.22;

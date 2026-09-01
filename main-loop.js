@@ -222,42 +222,42 @@ function drawTrainingRuffEmergency(dt) {
       if (typeof ctx === "undefined" || !ctx) return;
       var W0 = (typeof W !== "undefined" && W > 0) ? W : 400;
       var H0 = (typeof H !== "undefined" && H > 0) ? H : 600;
-
-      var x, y;
       var stage = window.__airborneRuffStage || "intro";
-      var introFlying = (stage === "intro") && (window.__airborneRuffIntroFly !== false);
+      var dti = (typeof dt === "number" && dt > 0) ? Math.min(dt, 0.05) : 0.016;
 
-      if (introFlying) {
-        // Dramatic fly-in from upper-right → left of runway
-        window.__airborneRuffIntroT = (window.__airborneRuffIntroT || 0) + (dt || 0.016);
-        var t = Math.min(1, window.__airborneRuffIntroT / 1.35);
-        var ease = 1 - Math.pow(1 - t, 3);
+      // Intro phases: 0–1.4s fly-in, 1.4–end of intro hover near dest
+      if (stage === "intro") {
+        window.__airborneRuffIntroT = (window.__airborneRuffIntroT || 0) + dti;
+        var tFly = Math.min(1, window.__airborneRuffIntroT / 1.4);
+        var ease = 1 - Math.pow(1 - tFly, 3);
         var startX = W0 * 0.95, startY = H0 * 0.16;
-        var destX = W0 * 0.20, destY = H0 * 0.30;
-        x = startX + (destX - startX) * ease;
-        y = startY + (destY - startY) * ease + Math.sin(window.__airborneRuffIntroT * 4) * 6 * (1 - ease);
-        if (t >= 1) window.__airborneRuffIntroFly = false;
-      } else if (typeof player !== "undefined" && player && player.x > 0) {
-        // Follow blimp
-        var gapX = (player.w || 60) * 0.55 + 36;
-        var gapY = (player.h || 40) * 0.55 + 24;
-        x = player.x - gapX;
-        y = player.y - gapY + Math.sin((performance.now() / 1000) * 2.2) * 8;
-      } else if (window.__airborneRuffX > 0 && window.__airborneRuffY > 0) {
-        x = window.__airborneRuffX;
-        y = window.__airborneRuffY;
+        var destX = W0 * 0.18, destY = H0 * 0.28;
+        window.__airborneRuffX = startX + (destX - startX) * ease;
+        window.__airborneRuffY = startY + (destY - startY) * ease + Math.sin(window.__airborneRuffIntroT * 3) * 5 * (1 - ease);
+        window.__airborneRuffFollowBlend = 0;
       } else {
-        x = W0 * 0.22;
-        y = H0 * 0.45;
+        // Smooth blend toward follow over ~0.9s after intro ends
+        window.__airborneRuffFollowBlend = Math.min(1, (window.__airborneRuffFollowBlend || 0) + dti / 0.9);
+        var b = window.__airborneRuffFollowBlend;
+        var fx = W0 * 0.18, fy = H0 * 0.28;
+        if (typeof player !== "undefined" && player && player.x > 0) {
+          fx = player.x - ((player.w || 60) * 0.55 + 36);
+          fy = player.y - ((player.h || 40) * 0.45 + 20) + Math.sin((performance.now() / 1000) * 2.0) * 6;
+        }
+        var ox = (window.__airborneRuffX > 0) ? window.__airborneRuffX : fx;
+        var oy = (window.__airborneRuffY > 0) ? window.__airborneRuffY : fy;
+        window.__airborneRuffX = ox + (fx - ox) * Math.max(0.08, b * 0.2);
+        window.__airborneRuffY = oy + (fy - oy) * Math.max(0.08, b * 0.2);
       }
-      x = Math.max(36, Math.min(W0 * 0.62, x));
-      y = Math.max(H0 * 0.08, Math.min(H0 * 0.75, y));
+      var x = Math.max(36, Math.min(W0 * 0.62, window.__airborneRuffX));
+      var y = Math.max(H0 * 0.08, Math.min(H0 * 0.75, window.__airborneRuffY));
       window.__airborneRuffX = x;
       window.__airborneRuffY = y;
 
-      window.__airborneRuffFrameT = (window.__airborneRuffFrameT || 0) + (dt || 0.016);
-      if (window.__airborneRuffFrameT >= 1 / 18) {
-        window.__airborneRuffFrameT -= 1 / 18;
+      // Animation 10 fps — less choppy
+      window.__airborneRuffFrameT = (window.__airborneRuffFrameT || 0) + dti;
+      if (window.__airborneRuffFrameT >= 0.1) {
+        window.__airborneRuffFrameT -= 0.1;
         window.__airborneRuffFrame = ((window.__airborneRuffFrame || 0) + 1) % 36;
       }
       var fi = ((window.__airborneRuffFrame || 0) | 0) + 1;
@@ -290,6 +290,7 @@ function drawTrainingRuffEmergency(dt) {
       console.warn("emergency Ruff", e);
     }
   }
+
 
 
 
@@ -515,7 +516,7 @@ function loop(ts) {
       console.warn("drawRuff failed", eRuff);
     }
     // Guaranteed Ruff during training
-    try { drawTrainingRuffEmergency(typeof dt === "number" ? dt : 0.016); } catch (eER) {}
+    
     drawWindParticlesFront();
     drawShieldEffect();
     drawStorm();

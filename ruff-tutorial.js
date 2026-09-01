@@ -1143,25 +1143,10 @@
 
   function tickLessonGate(dt) {
     if (!ruffLessonPendingNext) return;
-    if (ruffLessonClearing) {
-      stopLessonSpawns();
-      ruffLessonPauseT += dt;
-      // Force-clear after 6s so we never soft-lock on a stuck item
-      // Coins/crystals already scroll via updateFlightCollectibles — do not double-update
-      if (lessonItemsPending() > 0 && ruffLessonPauseT < 6.0) {
-        return;
-      }
-      // Items gone (or timeout) — begin 2s pause
-      ruffLessonClearing = false;
-      ruffLessonPauseT = 0;
-      // hard-clear leftovers so next lesson is clean
-      try {
-        ruffCrystals = (ruffCrystals || []).filter(function (c) { return c && !c.collected && c.x > -60; });
-        ruffCoins = (ruffCoins || []).filter(function (c) { return c && !c.collected && c.x > -60; });
-      } catch (e) {}
-    }
     ruffLessonPauseT += dt;
-    if (ruffLessonPauseT >= 1.0) {
+    // Never soft-lock: after 0.6s always advance
+    if (ruffLessonPauseT >= 0.6) {
+      try { stopLessonSpawns(); } catch (e) {}
       ruffLessonPendingNext = false;
       ruffLessonClearing = false;
       ruffLessonPauseT = 0;
@@ -2542,7 +2527,7 @@
     try {
     ruffBob += dt * 2.2;
     ruffFrameT += dt;
-    const ruffFps = 18; // smooth companion loop
+    const ruffFps = 12; // smooth companion loop
     const ruffFd = 1 / ruffFps;
     while (ruffFrameT >= ruffFd) {
       ruffFrameT -= ruffFd;
@@ -2590,7 +2575,7 @@
     if (typeof player === "undefined" || !player) return;
     // Behind + above with clear gap so sprites never touch
     const gapX = player.w * 0.55 + 36;
-    const gapY = player.h * 0.75 + 28;
+    const gapY = player.h * 0.45 + 20;
     const H0 = (typeof H !== "undefined" ? H : 600);
     const W0 = (typeof W !== "undefined" ? W : 400);
     let targetX = player.x - gapX;
@@ -3561,8 +3546,9 @@ function finishToMap() {
       window.__airborneForceRuffCruise = false;
       ruffIntroFly = false;
       window.__airborneRuffIntroFly = false;
-      if (ruffStage === "intro" || ruffStage === "takeoff" || ruffStage === "idle") {
+      if (ruffStage === "intro" || ruffStage === "takeoff" || ruffStage === "idle" || !ruffStage) {
         setStage("cruise");
+        console.log("[R.U.F.F.] force → cruise");
       }
     }
     ruffStageT += dt;
@@ -3657,33 +3643,52 @@ function finishToMap() {
     if (ruffStage === "takeoff") {
       const ph = window.__airborneAirfieldPhase;
       window.__airborneTrainingFlight = true;
-      // Advance after climb/lesson, or failsafe if airborne long enough
-      if (ph === "lesson" || (ph === "climb" && ruffStageT > 1.5) || ruffStageT > 30) {
-        nextStage(); // → cruise free-fly
+      if (ph === "lesson" || (ph === "climb" && ruffStageT > 1.2) || ruffStageT > 28) {
+        setStage("cruise");
+        console.log("[R.U.F.F.] takeoff → cruise");
       }
     }
-    // If airfield already in lesson mode but stage lagged on intro/takeoff, catch up
+    // Catch-up if airfield already in lesson phase
     if ((ruffStage === "intro" || ruffStage === "takeoff") &&
-        window.__airborneAirfieldPhase === "lesson" && ruffStageT > 0.5) {
+        window.__airborneAirfieldPhase === "lesson") {
       ruffIntroFly = false;
       window.__airborneRuffIntroFly = false;
-      if (ruffStage === "intro") setStage("takeoff");
-      else nextStage();
+      setStage("cruise");
+      console.log("[R.U.F.F.] catch-up → cruise");
     } else if (ruffStage === "cruise") {
-      // Free flight after takeoff — no lessons, coins, or crystals yet
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       window.__airborneFirePickup = null;
-      if (!ruffLessonPendingNext && ruffStageT > 10) {
-        requestNextStage(); // → altitude after 10s
+      if (ruffStageT > 8) {
+        setStage("altitude");
+        console.log("[R.U.F.F.] cruise → altitude");
       }
     } else if (ruffStage === "altitude") {
-      // Do NOT wipe obstacles every frame — causes random item disappear
-      ruffMarkers = []; // no dashed guides
-      if (!ruffLessonPendingNext && ruffStageT > 15) requestNextStage();
+      ruffMarkers = [];
+      if (ruffStageT > 15) {
+        setStage("rings");
+        console.log("[R.U.F.F.] altitude → rings");
+      }
+    } else if (ruffStage === "rings") {
+      window.__airborneAirfieldRings = true;
+      window.__airborneAirfieldObstacles = false;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      if (ruffStageT > 28) {
+        setStage("platforms");
+        console.log("[R.U.F.F.] rings → platforms");
+      }
     } else if (ruffStage === "crystals" || ruffStage === "powerup") {
-      if (!ruffLessonPendingNext) requestNextStage();
+      setStage("obstacles");
+    } else if (ruffStage === "platforms") {
+      window.__airborneAirfieldObstacles = false;
+      window.__airborneAirfieldRings = false;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      try { updateTrainingPlatforms(dt); } catch (e) {}
+      if (ruffStageT > 28) {
+        setStage("obstacles");
+        console.log("[R.U.F.F.] platforms → obstacles");
+      }
     } else if (ruffStage === "obstacles") {
       try { ruffCoins = []; ruffCrystals = []; } catch (e) {}
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.60;
@@ -3701,7 +3706,8 @@ function finishToMap() {
         const obsCount = (typeof obstacles !== "undefined" && obstacles) ? obstacles.length : 0;
         if ((ruffStageT > 14 && obsCount === 0) || ruffStageT > 20) {
           ruffStats.obstaclesAvoided += 2;
-          requestNextStage();
+          setStage("shield");
+          console.log("[R.U.F.F.] obstacles → shield");
         }
       }
     } else if (ruffStage === "shield") {
@@ -3726,7 +3732,11 @@ function finishToMap() {
         window.__airborneAirfieldObstacles = false;
         if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       }
-      if (!ruffLessonPendingNext && ruffStageT > 30) {
+      if (ruffStageT > 30) {
+        setStage("airship");
+        console.log("[R.U.F.F.] shield → airship");
+      }
+      if (false && !ruffLessonPendingNext && ruffStageT > 30) {
         requestNextStage();
       }
     } else if (ruffStage === "powerup") {
@@ -3798,8 +3808,9 @@ function finishToMap() {
         ? obstacles.filter(function (o) { return o && (o.isRing || o.type === "gold_ring") && !o.collected; }).length
         : 0;
       // Rings lesson ~35s (+15s longer)
-      if (!ruffLessonPendingNext && ((ruffStats.rings >= 4 && ringLeft === 0 && ruffStageT > 18) || ruffStageT > 30)) {
-        requestNextStage();
+      if ((ruffStats.rings >= 4 && ringLeft === 0 && ruffStageT > 12) || ruffStageT > 28) {
+        setStage("platforms");
+        console.log("[R.U.F.F.] rings → platforms");
       }
     } else if (ruffStage === "airship") {
       window.__airborneAirfieldObstacles = false;
@@ -3812,12 +3823,10 @@ function finishToMap() {
       ensureScreenDust();
       updateScreenDust(dt);
       // Wait until airship fully cleared the left edge
-      if (!ruffLessonPendingNext && ruffStageT > 2 && !ruffAirship) {
-        requestNextStage();
-      } else if (!ruffLessonPendingNext && ruffStageT > 28) {
-        // Failsafe only after long wait
+      if ((ruffStageT > 2 && !ruffAirship) || ruffStageT > 28) {
         ruffAirship = null;
-        requestNextStage();
+        setStage("combined");
+        console.log("[R.U.F.F.] airship → combined");
       }
     } else if (ruffStage === "boss1") {
       try { ruffCoins = []; ruffCrystals = []; ruffPlatforms = []; } catch (e) {}
