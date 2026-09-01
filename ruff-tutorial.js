@@ -351,6 +351,7 @@
     "cruise",
     "altitude",
     "rings",
+    "platforms",
     "obstacles",
     "shield",
     "airship",
@@ -402,6 +403,11 @@
       "Alright, rookie. Time for some precision flying.",
       "Fly through the rings. Chain them for a combo."
     ],
+    platforms: [
+      "See those floating platforms? Use altitude to thread the path.",
+      "Coins sit on top — dip and climb to scoop them up.",
+      "That golden arch holds a crystal. Fly through the middle!"
+    ],
     airship: [
       "Hold up — heavy traffic ahead.",
       "That's an industrial hauler. Give it a wide berth.",
@@ -449,6 +455,7 @@
     shield: "Shield",
     powerup: "Power-up",
     rings: "Rings",
+    platforms: "Sky Platforms",
     combined: "Combined",
     landing: "Landing",
     report: "Flight report"
@@ -815,7 +822,7 @@
       if (ft) { ft.style.display = "none"; ft.style.visibility = "hidden"; }
     } catch (e) {}
     try {
-            var stages = ["intro","takeoff","cruise","altitude","rings","obstacles","shield","airship","combined","boss1","landing","report"];
+            var stages = ["intro","takeoff","cruise","altitude","rings","platforms","obstacles","shield","airship","combined","boss1","landing","report"];
       var si = stages.indexOf(name);
       if (si < 0) si = 0;
       var pct = (name === "report" || name === "landing") ? 100 : ((si / (stages.length - 1)) * 100);
@@ -829,7 +836,7 @@
       if (ft) { ft.style.display = "none"; ft.style.visibility = "hidden"; }
     } catch (e) {}
     try {
-            var stages = ["intro","takeoff","cruise","altitude","rings","obstacles","shield","airship","combined","boss1","landing","report"];
+            var stages = ["intro","takeoff","cruise","altitude","rings","platforms","obstacles","shield","airship","combined","boss1","landing","report"];
       var si = stages.indexOf(name);
       if (si < 0) si = 0;
       var pct = (name === "report" || name === "landing") ? 100 : ((si / (stages.length - 1)) * 100);
@@ -939,6 +946,12 @@
       window.__airborneAirfieldPhase = "taxi";
       window.__airborneResetRunway = true;
       try { trainEngineStart(); trainWindStart(); } catch (e) {}
+    } else if (name === "platforms") {
+      if (ruffLines.length) showRadio(ruffLines[0], 3.2);
+      window.__airborneAirfieldObstacles = false;
+      window.__airborneAirfieldRings = false;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      try { spawnTrainingPlatformsLesson(); } catch (e) { console.warn("platforms", e); }
     } else if (name === "cruise") {
       if (ruffLines.length) showRadio(ruffLines[0], 3.0);
       window.__airborneAirfieldObstacles = false;
@@ -1010,17 +1023,22 @@
 
   // Coins + crystals for the whole airborne flight (not just one lesson)
   var FLIGHT_COLLECT_STAGES = {
-    altitude: 1, rings: 1, obstacles: 1, shield: 1, powerup: 1,
+    // Coins/crystals begin after rings (platforms lesson + rest of flight)
+    platforms: 1, obstacles: 1, shield: 1, powerup: 1,
     airship: 1, combined: 1, boss1: 1, landing: 1
   };
   function updateFlightCollectibles(dt) {
     var st = ruffStage || window.__airborneRuffStage || "";
-    // Entire airborne training after free-fly cruise
-    if (!FLIGHT_COLLECT_STAGES[st] && st !== "cruise" && st !== "intro" && st !== "takeoff") {
-      // still allow if ruffActive mid-flight
-      if (!(ruffActive && st && st !== "report" && st !== "idle")) return;
+    if (st === "intro" || st === "takeoff" || st === "cruise" || st === "altitude" ||
+        st === "rings" || st === "report" || st === "idle") return;
+    if (!FLIGHT_COLLECT_STAGES[st]) return;
+    // Platforms lesson: only fixed coins/crystal on platforms (no free-float respawn)
+    if (st === "platforms") {
+      try { updateCrystals(dt); } catch (e) {}
+      try { updateTrainingCoins(dt); } catch (e) {}
+      try { updateTrainingPlatforms(dt); } catch (e) {}
+      return;
     }
-    if (st === "intro" || st === "takeoff" || st === "cruise" || st === "report" || st === "idle") return;
     try { updateCrystals(dt); } catch (e) {}
     try { updateTrainingCoins(dt); } catch (e) {}
     try {
@@ -1144,8 +1162,154 @@
     }
   }
 
+
+  // ---------- Floating training platforms (steampunk sky docks) ----------
+  var ruffPlatforms = [];
+  var PLATFORM_KEYS = [
+    "plat_balcony", "plat_bridge", "plat_round_smoke", "plat_wheel",
+    "plat_chimney", "plat_greenhouse", "plat_walk_a", "plat_walk_b",
+    "plat_rock_island", "plat_arch", "plat_helipad"
+  ];
+
+  function spawnTrainingPlatformsLesson() {
+    ruffPlatforms = [];
+    ruffCoins = (ruffCoins || []).filter(function (c) { return c && c.fixedToPlatform; });
+    ruffCrystals = (ruffCrystals || []).filter(function (c) { return c && c.fixedToPlatform; });
+    // Clear free-float collectibles
+    ruffCoins = [];
+    ruffCrystals = [];
+
+    var W0 = (typeof W !== "undefined" ? W : 400);
+    var H0 = (typeof H !== "undefined" ? H : 600);
+    // Strategic vertical lanes: low / mid-low / mid / mid-high / high
+    // Sequence teaches: climb, dive, weave, arch crystal, climb again
+    var sequence = [
+      { key: "plat_helipad",     yFrac: 0.72, gap: 1.15 },
+      { key: "plat_round_smoke", yFrac: 0.55, gap: 1.25 },
+      { key: "plat_bridge",      yFrac: 0.38, gap: 1.35 },
+      { key: "plat_wheel",       yFrac: 0.62, gap: 1.15 },
+      { key: "plat_arch",        yFrac: 0.48, gap: 1.45, archCrystal: true },
+      { key: "plat_balcony",     yFrac: 0.32, gap: 1.30 },
+      { key: "plat_chimney",     yFrac: 0.68, gap: 1.20 },
+      { key: "plat_greenhouse",  yFrac: 0.42, gap: 1.25 },
+      { key: "plat_rock_island", yFrac: 0.58, gap: 1.30 },
+      { key: "plat_walk_a",      yFrac: 0.35, gap: 1.10 },
+      { key: "plat_helipad",     yFrac: 0.70, gap: 1.20 }
+    ];
+    var x = W0 + 60;
+    sequence.forEach(function (spec, idx) {
+      var img = (typeof images !== "undefined" && images) ? images[spec.key] : null;
+      var aspect = (img && img.naturalWidth && img.naturalHeight)
+        ? (img.naturalWidth / img.naturalHeight) : 2.2;
+      var h = Math.min(H0 * 0.22, 110);
+      if (spec.key === "plat_arch") h = Math.min(H0 * 0.28, 130);
+      if (spec.key === "plat_bridge") h = Math.min(H0 * 0.16, 85);
+      var w = h * aspect;
+      // Cap width so platforms stay readable
+      if (w > W0 * 0.85) { w = W0 * 0.85; h = w / aspect; }
+      var y = H0 * spec.yFrac;
+      var plat = {
+        key: spec.key,
+        x: x,
+        y: y,
+        w: w,
+        h: h,
+        speed: 95,
+        archCrystal: !!spec.archCrystal
+      };
+      ruffPlatforms.push(plat);
+      // Coins along top surface
+      placeCoinsOnPlatform(plat);
+      if (spec.archCrystal) placeCrystalInArch(plat);
+      x += w * spec.gap + 40;
+    });
+  }
+
+  function placeCoinsOnPlatform(plat) {
+    // Fit as many as reasonable along the top deck
+    var coinR = 14;
+    var pad = 18;
+    var usable = Math.max(40, plat.w - pad * 2);
+    var count = Math.max(2, Math.min(8, Math.floor(usable / (coinR * 2.4))));
+    for (var i = 0; i < count; i++) {
+      var t = (i + 0.5) / count;
+      ruffCoins.push({
+        x: plat.x + pad + t * usable,
+        y: plat.y - plat.h * 0.42,
+        r: coinR,
+        bob: Math.random() * Math.PI * 2,
+        collected: false,
+        fixedToPlatform: true,
+        platRef: plat,
+        platOffX: pad + t * usable,
+        platOffY: -plat.h * 0.42,
+        frame: 0,
+        frameT: 0,
+        speed: plat.speed
+      });
+    }
+  }
+
+  function placeCrystalInArch(plat) {
+    // Center of arch opening
+    ruffCrystals.push({
+      x: plat.x + plat.w * 0.5,
+      y: plat.y - plat.h * 0.08,
+      r: 22,
+      frame: 0,
+      frameT: 0,
+      collected: false,
+      fixedToPlatform: true,
+      platRef: plat,
+      platOffX: plat.w * 0.5,
+      platOffY: -plat.h * 0.08
+    });
+  }
+
+  function updateTrainingPlatforms(dt) {
+    if (!ruffPlatforms || !ruffPlatforms.length) return;
+    ruffPlatforms.forEach(function (p) {
+      p.x -= (p.speed || 95) * dt;
+    });
+    // Keep fixed coins/crystal locked to platform tops
+    (ruffCoins || []).forEach(function (c) {
+      if (!c.fixedToPlatform || !c.platRef) return;
+      c.x = c.platRef.x + c.platOffX;
+      c.y = c.platRef.y + c.platOffY;
+      c.speed = c.platRef.speed;
+    });
+    (ruffCrystals || []).forEach(function (c) {
+      if (!c.fixedToPlatform || !c.platRef) return;
+      c.x = c.platRef.x + (c.platOffX || 0);
+      c.y = c.platRef.y + (c.platOffY || 0);
+    });
+    ruffPlatforms = ruffPlatforms.filter(function (p) { return p.x + p.w > -80; });
+  }
+
+  function drawTrainingPlatforms() {
+    if (!ruffPlatforms || !ruffPlatforms.length || typeof ctx === "undefined") return;
+    ruffPlatforms.forEach(function (p) {
+      var img = (typeof images !== "undefined" && images) ? images[p.key] : null;
+      if (!img || !img.naturalWidth) {
+        // Fallback silhouette
+        ctx.save();
+        ctx.fillStyle = "rgba(80,60,30,0.85)";
+        ctx.fillRect(p.x, p.y - p.h * 0.5, p.w, p.h);
+        ctx.restore();
+        return;
+      }
+      ctx.save();
+      ctx.drawImage(img, p.x, p.y - p.h * 0.5, p.w, p.h);
+      ctx.restore();
+    });
+  }
+  window.__airborneDrawTrainingPlatforms = drawTrainingPlatforms;
+
+
   // ---------- Crystals ----------
   function spawnCrystals(n) {
+    var st0 = ruffStage || window.__airborneRuffStage || "";
+    if (st0 === "intro" || st0 === "takeoff" || st0 === "cruise" || st0 === "altitude" || st0 === "rings") return;
     // APPEND only — never wipe crystals already on screen (was causing random disappear)
     n = n || 4;
     const existing = (ruffCrystals || []).filter(function (c) { return c && !c.collected; });
@@ -1768,7 +1932,12 @@
 
     ruffCrystals.forEach(function (c) {
       if (c.collected) return;
-      c.x -= spd * dt;
+      if (c.fixedToPlatform && c.platRef) {
+        c.x = c.platRef.x + (c.platOffX || 0);
+        c.y = c.platRef.y + (c.platOffY || 0);
+      } else {
+        c.x -= spd * dt;
+      }
       c.frameT += dt;
       const cFps = 24; // smooth crystal loop
       const cFd = 1 / cFps;
@@ -1843,6 +2012,9 @@
 
 
   function spawnTrainingCoins(n) {
+    var stC = ruffStage || window.__airborneRuffStage || "";
+    if (stC === "intro" || stC === "takeoff" || stC === "cruise" || stC === "altitude" || stC === "rings") return;
+    if (stC === "platforms") return; // only fixed platform coins
     n = n || 4;
     const groundY = (typeof groundLevelY === "function") ? groundLevelY() : (typeof H !== "undefined" ? H * 0.78 : 400);
     for (let i = 0; i < n; i++) {
@@ -1871,12 +2043,18 @@
     const ph = (typeof player !== "undefined" && player) ? player.h * 0.42 : 16;
     ruffCoins.forEach(function (c) {
       if (c.collected) return;
+      // Platform-fixed coins: position owned by updateTrainingPlatforms
+      if (c.fixedToPlatform && c.platRef) {
+        c.x = c.platRef.x + c.platOffX;
+        c.y = c.platRef.y + c.platOffY + Math.sin((c.bob = (c.bob || 0) + dt * 2.4)) * 2;
+      } else {
       c.speed = spd;
       c.x -= spd * dt;
       // Gentle bob only on Y — does not affect horizontal speed
       c.bob += dt * 2.4;
       c.yBase = (c.yBase != null) ? c.yBase : c.y;
       c.y = c.yBase + Math.sin(c.bob) * 3.5;
+      }
       c.glow = (c.glow || 0) + dt * 4;
       c.sparkT = (c.sparkT || 0) - dt;
       if (c.sparkT <= 0) {
@@ -2584,6 +2762,7 @@
     try {
       ruffCrystals = [];
       ruffCoins = [];
+      ruffPlatforms = [];
       if (typeof ruffRings !== "undefined") ruffRings = [];
       ruffBgBalloons = [];
       ruffAirship = null;
@@ -3207,6 +3386,15 @@ function finishToMap() {
           if (typeof spawnInterval !== "undefined") spawnInterval = 999;
           requestNextStage();
         }
+      }
+    } else if (ruffStage === "platforms") {
+      window.__airborneAirfieldObstacles = false;
+      window.__airborneAirfieldRings = false;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      try { updateTrainingPlatforms(dt); } catch (e) {}
+      if (!ruffLessonPendingNext && ruffStageT > 30) {
+        ruffPlatforms = [];
+        requestNextStage();
       }
     } else if (ruffStage === "rings") {
       if (typeof powerup !== "undefined") powerup = null;

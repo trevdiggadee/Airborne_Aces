@@ -355,34 +355,6 @@
       
       updateScreenEffects(dt);
     }
-    // Nixie altitude readout (feet) — under top HUD
-    try {
-      if (typeof player !== "undefined" && player && typeof H !== "undefined") {
-        var gy = (typeof groundLevelY === "function") ? groundLevelY() : H * 0.85;
-        var topY = player.h * 0.5;
-        var frac = 1 - Math.max(0, Math.min(1, (player.y - topY) / Math.max(40, gy - topY)));
-        // 0 ft at ground → 4,500 ft at ceiling (matches instrument scale vibe)
-        var feet = Math.round(frac * 4500);
-        var s = String(feet);
-        // Format with commas: 0 / 450 / 1,200 / 4,500
-        var withComma = feet >= 1000
-          ? (String(Math.floor(feet / 1000)) + "," + String(feet % 1000).padStart(3, "0"))
-          : s;
-        var dig = document.getElementById("altNixieDigits");
-        if (dig) {
-          // Build cells: digits + comma
-          var chars = withComma.split("");
-          var html = "";
-          for (var i = 0; i < chars.length; i++) {
-            html += '<span class="altNixieCell">' + chars[i] + "</span>";
-          }
-          if (dig._last !== withComma) {
-            dig._last = withComma;
-            dig.innerHTML = html;
-          }
-        }
-      }
-    } catch (eAlt) {}
 
     // City parallax only off-airfield (mountains already drawn behind strip above)
     if (!(typeof isAirfieldMode === "function" && isAirfieldMode()) && !window.__airborneAirfield) {
@@ -427,6 +399,7 @@
     try { ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; } catch (e) {}
     try { if (window.__airborneDrawRoyalBehind) window.__airborneDrawRoyalBehind(); } catch (e) {}
     drawPlayer(); try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePowerVisual(); } catch(e) {};
+    try { if (window.__airborneDrawTrainingPlatforms) window.__airborneDrawTrainingPlatforms(); } catch (e) {}
     try { if (window.drawHitCoins) window.drawHitCoins(); } catch (e) {}
     try { if (typeof drawRingFronts === "function") drawRingFronts(); else if (window.__airborneDrawRingFronts) window.__airborneDrawRingFronts(); } catch (e) {}
     // Soft clouds FRONT layer OFF for now
