@@ -355,19 +355,31 @@
       
       updateScreenEffects(dt);
     }
-    // RPM-style altitude: needle 0° at 6 o'clock → 90° at 9 o'clock as elevation rises
+    // Nixie altitude readout (feet) — under top HUD
     try {
       if (typeof player !== "undefined" && player && typeof H !== "undefined") {
         var gy = (typeof groundLevelY === "function") ? groundLevelY() : H * 0.85;
         var topY = player.h * 0.5;
         var frac = 1 - Math.max(0, Math.min(1, (player.y - topY) / Math.max(40, gy - topY)));
-        // Needle points down at 0 (6 o'clock). SVG +rotate is clockwise → 9 o'clock = +90°
-        var deg = frac * 90;
-        var needle = document.getElementById("altRpmNeedle");
-        if (needle) {
-          needle.setAttribute("transform", "rotate(" + deg.toFixed(2) + " 50 50)");
-          needle.style.transform = "rotate(" + deg.toFixed(2) + "deg)";
-          needle.style.transformOrigin = "50px 50px";
+        // 0 ft at ground → 4,500 ft at ceiling (matches instrument scale vibe)
+        var feet = Math.round(frac * 4500);
+        var s = String(feet);
+        // Format with commas: 0 / 450 / 1,200 / 4,500
+        var withComma = feet >= 1000
+          ? (String(Math.floor(feet / 1000)) + "," + String(feet % 1000).padStart(3, "0"))
+          : s;
+        var dig = document.getElementById("altNixieDigits");
+        if (dig) {
+          // Build cells: digits + comma
+          var chars = withComma.split("");
+          var html = "";
+          for (var i = 0; i < chars.length; i++) {
+            html += '<span class="altNixieCell">' + chars[i] + "</span>";
+          }
+          if (dig._last !== withComma) {
+            dig._last = withComma;
+            dig.innerHTML = html;
+          }
         }
       }
     } catch (eAlt) {}

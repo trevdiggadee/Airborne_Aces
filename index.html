@@ -7,9 +7,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="format-detection" content="telephone=no" />
 <title>Airborne Aces</title>
-<link rel="stylesheet" href="style.css?v=ruff383">
-<link rel="stylesheet" href="blimp-profile.css?v=ruff383">
-<link rel="stylesheet" href="launch-screens.css?v=ruff383">
+<link rel="stylesheet" href="style.css?v=ruff384">
+<link rel="stylesheet" href="blimp-profile.css?v=ruff384">
+<link rel="stylesheet" href="launch-screens.css?v=ruff384">
 <style id="otg-legacy-splash-hide">#splashScreen{visibility:hidden!important;pointer-events:none!important;}</style>
 </head>
 <body>
@@ -38,7 +38,7 @@
   <div class="otg-enter-wrap">
     <button class="otg-enter-btn" id="otg-enter-btn" type="button" aria-label="Enter Hangar">
     <span class="enterHangarShine" aria-hidden="true"></span>
-  <img class="enterHangarImg" src="enter_hangar_btn.png?v=ruff383" alt="Enter Hangar" draggable="false" />
+  <img class="enterHangarImg" src="enter_hangar_btn.png?v=ruff384" alt="Enter Hangar" draggable="false" />
   </button>
   </div>
   
@@ -107,7 +107,7 @@
   </div>
   <button class="enterHangarBtn" id="splashEnterBtn" type="button" aria-label="Enter Hangar">
   <span class="enterHangarShine" aria-hidden="true"></span>
-  <img class="enterHangarImg" src="enter_hangar_btn.png?v=ruff383" alt="Enter Hangar" draggable="false" />
+  <img class="enterHangarImg" src="enter_hangar_btn.png?v=ruff384" alt="Enter Hangar" draggable="false" />
 </button>
 </div>
 
@@ -279,7 +279,7 @@
 
 <div id="pauseOverlay" class="hidden" aria-hidden="true">
   <div class="pausePanel" role="dialog" aria-labelledby="pauseTitle">
-    <img class="pausePlateImg" src="pause_menu_plate.webp?v=ruff383" alt="" draggable="false" />
+    <img class="pausePlateImg" src="pause_menu_plate.webp?v=ruff384" alt="" draggable="false" />
     <div class="pauseHitLayer">
       <!-- visually hidden title for a11y; art shows PAUSED -->
       <h2 class="pauseTitle srOnly" id="pauseTitle">PAUSED</h2>
@@ -310,37 +310,26 @@
 </div>
 
 <div id="hudFrame">
-  <img id="hudFrameImg" crossorigin="anonymous" src="hudFrame.webp?v=ruff383" alt="" />
+  <img id="hudFrameImg" crossorigin="anonymous" src="hudFrame.webp?v=ruff384" alt="" />
   <div id="altGaugeLeft" class="altGauge" aria-hidden="true" style="display:none!important"></div>
-  <div id="altGaugeRight" class="altRpm" aria-hidden="true" title="Altitude">
-    <svg class="altRpmSvg" viewBox="0 0 100 100" aria-hidden="true">
-      <!-- Quarter arc face: 6 o'clock (bottom) → 9 o'clock (left) -->
-      <defs>
-        <linearGradient id="altArcGrad" x1="0%" y1="100%" x2="0%" y2="0%">
-          <stop offset="0%" stop-color="#2b7fd4"/>
-          <stop offset="45%" stop-color="#7dffb0"/>
-          <stop offset="75%" stop-color="#ffd24a"/>
-          <stop offset="100%" stop-color="#ff3a3a"/>
-        </linearGradient>
-      </defs>
-      <!-- Corner-locked quarter pie background -->
-      <path class="altRpmFace" d="M 50 95 A 45 45 0 0 1 5 50 L 50 50 Z" fill="rgba(20,14,8,0.88)" stroke="rgba(212,168,75,0.85)" stroke-width="2.2"/>
-      <path class="altRpmArc" d="M 50 92 A 42 42 0 0 1 8 50" fill="none" stroke="url(#altArcGrad)" stroke-width="5" stroke-linecap="round"/>
-      <!-- Tick marks -->
-      <g class="altRpmTicks" stroke="rgba(255,230,180,0.75)" stroke-width="1.4">
-        <line x1="50" y1="88" x2="50" y2="78"/>
-        <line x1="35.4" y1="84.6" x2="39.5" y2="76.5" transform="rotate(0)"/>
-        <line x1="22.9" y1="74.1" x2="29.3" y2="68.1"/>
-        <line x1="14.6" y1="59.5" x2="22.7" y2="55.4"/>
-        <line x1="12" y1="50" x2="22" y2="50"/>
-      </g>
-      <text x="52" y="72" class="altRpmLabel" fill="rgba(255,220,140,0.9)" font-size="7" font-family="system-ui,sans-serif" font-weight="700">ALT</text>
-      <!-- Needle pivots at center of full circle (50,50); rests at 6 o'clock -->
-      <g id="altRpmNeedle" transform="rotate(0 50 50)">
-        <line x1="50" y1="50" x2="50" y2="86" stroke="#ff4d4d" stroke-width="2.4" stroke-linecap="round"/>
-        <circle cx="50" cy="50" r="4.2" fill="#d4a84b" stroke="#3a2410" stroke-width="1.2"/>
-      </g>
-    </svg>
+  <div id="altGaugeRight" class="altNixie" aria-hidden="true" title="Altitude">
+    <div class="altNixiePlate">
+      <div class="altNixieRow">
+        <span class="altNixieCell altNixieLbl">A</span>
+        <span class="altNixieCell altNixieLbl">L</span>
+        <span class="altNixieCell altNixieLbl">T</span>
+        <span class="altNixieCell altNixieColon">:</span>
+        <span class="altNixieDigits" id="altNixieDigits">
+          <span class="altNixieCell">0</span>
+          <span class="altNixieCell">,</span>
+          <span class="altNixieCell">0</span>
+          <span class="altNixieCell">0</span>
+          <span class="altNixieCell">0</span>
+        </span>
+        <span class="altNixieCell altNixieUnit">F</span>
+        <span class="altNixieCell altNixieUnit">T</span>
+      </div>
+    </div>
   </div>
 <div id="healthMeter">
     <img id="healthImg" crossorigin="anonymous" src="heartPickup.webp?cb=2" alt="Health" />
@@ -506,23 +495,23 @@
   </div>
 </div>
 
-<script src="assets-placeholders.js?v=ruff383"></script>
-<script src="blimp-profile.js?v=ruff383"></script>
-<script src="menu-intro.js?v=ruff383"></script>
-<script src="world-map.js?v=ruff383"></script>
-<script src="audio.js?v=ruff383"></script>
-<script src="asset-loading.js?v=ruff383"></script>
-<script src="ruff-tutorial.js?v=ruff383"></script>
-<script src="world-buildings.js?v=ruff383"></script>
-<script src="player-obstacles.js?v=ruff383"></script>
-<script src="power-fx.js?v=ruff383"></script>
-<script src="bosses.js?v=ruff383"></script>
-<script src="boss-dialogue.js?v=ruff383"></script>
-<script src="effects-combat.js?v=ruff383"></script>
-<script src="gamestate-ui.js?v=ruff383"></script>
-<script src="world-atmosphere.js?v=ruff383"></script>
-<script src="main-loop.js?v=ruff383"></script>
+<script src="assets-placeholders.js?v=ruff384"></script>
+<script src="blimp-profile.js?v=ruff384"></script>
+<script src="menu-intro.js?v=ruff384"></script>
+<script src="world-map.js?v=ruff384"></script>
+<script src="audio.js?v=ruff384"></script>
+<script src="asset-loading.js?v=ruff384"></script>
+<script src="ruff-tutorial.js?v=ruff384"></script>
+<script src="world-buildings.js?v=ruff384"></script>
+<script src="player-obstacles.js?v=ruff384"></script>
+<script src="power-fx.js?v=ruff384"></script>
+<script src="bosses.js?v=ruff384"></script>
+<script src="boss-dialogue.js?v=ruff384"></script>
+<script src="effects-combat.js?v=ruff384"></script>
+<script src="gamestate-ui.js?v=ruff384"></script>
+<script src="world-atmosphere.js?v=ruff384"></script>
+<script src="main-loop.js?v=ruff384"></script>
 
-<script src="launch-screens.js?v=ruff383"></script>
+<script src="launch-screens.js?v=ruff384"></script>
 </body>
 </html>

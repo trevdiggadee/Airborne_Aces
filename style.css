@@ -3505,29 +3505,88 @@ canvas {
 #hudFrame { position: relative; }
 #hudFrame { overflow: visible !important; }
 
-/* RPM altitude quarter gauge — under top HUD, shifted right */
-.altRpm {
+/* Steampunk nixie altitude — under top HUD, right */
+.altNixie {
   position: absolute;
-  top: 80%; /* moved up ~20% from under-HUD anchor */
-  right: -8%;
-  width: clamp(90px, 23.75vw, 135px); /* +25% size */
-  height: clamp(90px, 23.75vw, 135px);
-  margin-top: 0;
-  pointer-events: none;
+  top: 100%;
+  right: 2%;
+  margin-top: 6px;
   z-index: 24;
-  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.55));
+  pointer-events: none;
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,0.55));
 }
-.altRpmSvg {
-  width: 100%;
-  height: 100%;
-  display: block;
-  overflow: visible;
+.altNixiePlate {
+  background:
+    linear-gradient(165deg, #6a5438 0%, #3a2a18 35%, #1c140c 70%, #2a1c10 100%);
+  border: 2.5px solid #c9a66b;
+  border-radius: 14px;
+  padding: 7px 11px 8px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,220,160,0.35),
+    inset 0 -2px 6px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(60,40,20,0.8);
+  position: relative;
 }
-#altRpmNeedle {
-  transform-origin: 50px 50px;
-  transition: none;
+.altNixiePlate::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 10px;
+  border: 1px solid rgba(180,140,80,0.35);
+  pointer-events: none;
+}
+.altNixieRow {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  position: relative;
+  z-index: 1;
+}
+.altNixieCell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.05em;
+  height: 1.55em;
+  padding: 0 0.12em;
+  font-family: "Courier New", "Lucida Console", monospace;
+  font-weight: 700;
+  font-size: clamp(11px, 3.1vw, 16px);
+  letter-spacing: 0.02em;
+  color: #ffd9a0;
+  text-shadow:
+    0 0 4px rgba(255,180,80,0.95),
+    0 0 10px rgba(255,140,40,0.55),
+    0 1px 0 rgba(0,0,0,0.8);
+  background: linear-gradient(180deg, #1a120a 0%, #0c0806 100%);
+  border: 1px solid rgba(90,70,40,0.7);
+  border-radius: 4px;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.7);
+}
+.altNixieLbl {
+  color: #e8c48a;
+  text-shadow:
+    0 0 5px rgba(255,200,100,0.85),
+    0 0 12px rgba(255,150,50,0.4);
+}
+.altNixieColon {
+  min-width: 0.45em;
+  color: #ffcc88;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  text-shadow: 0 0 6px rgba(255,180,80,0.9);
+}
+.altNixieDigits {
+  display: inline-flex;
+  gap: 3px;
+  margin: 0 2px;
+}
+.altNixieUnit {
+  color: #f0c878;
 }
 #altGaugeLeft { display: none !important; }
+
 
 
 
