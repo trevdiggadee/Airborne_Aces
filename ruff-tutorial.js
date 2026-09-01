@@ -2570,13 +2570,27 @@
     try { if (window.__airborneClearPowerEntities) window.__airborneClearPowerEntities(); } catch (e) {}
     try { if (window.__airborneClearObstacles) window.__airborneClearObstacles(); } catch (e) {}
     try {
+      if (typeof obstacles !== "undefined") obstacles = [];
+      if (typeof birdFlocks !== "undefined") birdFlocks = [];
+      if (typeof bombs !== "undefined") bombs = [];
+      if (typeof rockets !== "undefined") rockets = [];
+      if (typeof powerup !== "undefined") powerup = null;
+      if (typeof shieldPickup !== "undefined") shieldPickup = null;
+      if (typeof healPickup !== "undefined") healPickup = null;
+      if (typeof hearts !== "undefined") hearts = [];
+      if (typeof particles !== "undefined") particles = [];
+      if (typeof comboPopups !== "undefined") comboPopups = [];
+    } catch (e) {}
+    try {
       ruffCrystals = [];
       ruffCoins = [];
       if (typeof ruffRings !== "undefined") ruffRings = [];
       ruffBgBalloons = [];
       ruffAirship = null;
       ruffPowerOrb = null;
+      ruffMarkers = [];
       window.__airborneRuffAirship = null;
+      window.__airborneRuffRings = [];
     } catch (e) {}
     try {
       if (window.__airborneHeatseekers) window.__airborneHeatseekers.length = 0;

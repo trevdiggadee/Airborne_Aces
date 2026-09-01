@@ -525,7 +525,11 @@
         (typeof beginAirfieldTraining === "function" ? beginAirfieldTraining : null);
       if (startTrain) {
         try {
+          if (typeof obstacles !== "undefined") obstacles = [];
+          if (typeof birdFlocks !== "undefined") birdFlocks = [];
           startTrain();
+          if (typeof obstacles !== "undefined") obstacles = [];
+          if (typeof birdFlocks !== "undefined") birdFlocks = [];
           console.log("[Airborne] Training started", window.__airborneAirfield, window.__airborneAirfieldPhase, window.__airborneRuffStage);
         } catch (err) {
           console.error("[Airborne] Training failed", err);
@@ -883,13 +887,37 @@
     pauseHangarBtn.addEventListener("click", (e) => {
       try { if (e) { e.preventDefault(); e.stopPropagation(); } } catch (err) {}
       try { closePauseMenu(); } catch (err) {}
+      // Full wipe so restart never resumes mid-flight with leftover rings/birds
+      try {
+        if (window.__airborneHardResetTraining) window.__airborneHardResetTraining();
+        else if (window.__airborneClearAllGameplay) window.__airborneClearAllGameplay();
+      } catch (err) {}
+      try {
+        if (typeof obstacles !== "undefined") obstacles = [];
+        if (typeof birdFlocks !== "undefined") birdFlocks = [];
+        if (typeof bombs !== "undefined") bombs = [];
+        if (typeof powerup !== "undefined") powerup = null;
+        if (typeof shieldPickup !== "undefined") shieldPickup = null;
+        if (typeof healPickup !== "undefined") healPickup = null;
+        if (typeof hearts !== "undefined") hearts = [];
+        if (typeof bossActive !== "undefined") bossActive = false;
+        if (typeof boss !== "undefined") boss = null;
+      } catch (err) {}
+      try {
+        window.__airborneAirfield = false;
+        window.__airborneTrainingFlight = false;
+        window.__airborneRuffActive = false;
+        window.__airborneRuffStage = "idle";
+        window.__airborneAirfieldPhase = "done";
+        window.__airborneTaxiUntil = 0;
+        window.__airborneBossCamPause = false;
+        window.__airborneAirfieldPaused = false;
+      } catch (err) {}
       try {
         if (typeof window.__airborneFinishToHangar === "function") {
           window.__airborneFinishToHangar();
         } else if (typeof finishToHangar === "function") {
           finishToHangar();
-        } else if (typeof window.__airborneFinishToMap === "function") {
-          window.__airborneFinishToMap();
         }
       } catch (err) { console.warn(err); }
       try {

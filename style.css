@@ -3505,13 +3505,14 @@ canvas {
 #hudFrame { position: relative; }
 #hudFrame { overflow: visible !important; }
 
-/* RPM-style altitude quarter gauge — top-right corner, 6→9 o'clock */
+/* RPM altitude quarter gauge — under top HUD, shifted right */
 .altRpm {
   position: absolute;
-  top: 8%;
-  right: 1.5%;
-  width: clamp(72px, 19vw, 108px); /* ~25% larger than prior instrument */
+  top: 100%; /* under top UI */
+  right: -8%; /* ~10% further right vs prior */
+  width: clamp(72px, 19vw, 108px);
   height: clamp(72px, 19vw, 108px);
+  margin-top: 4px;
   pointer-events: none;
   z-index: 24;
   filter: drop-shadow(0 3px 6px rgba(0,0,0,0.55));
@@ -3523,8 +3524,8 @@ canvas {
   overflow: visible;
 }
 #altRpmNeedle {
-  transition: transform 0.08s linear;
   transform-origin: 50px 50px;
+  transition: none;
 }
 #altGaugeLeft { display: none !important; }
 

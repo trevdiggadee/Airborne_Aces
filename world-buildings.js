@@ -332,6 +332,10 @@
     window.__airborneAirfieldPaused = false;
     window.__airborneBossCamPause = false;
     window.__airborneTaxiUntil = 0;
+    window.__airborneRuffStage = "intro";
+    window.__airborneRuffActive = true;
+    window.__airborneRuffLandArmed = false;
+    window.__airborneRuffRequestLand = false;
     try { if (typeof state !== "undefined") state = "playing"; } catch (eSt) {}
     try { if (typeof lastTime !== "undefined") lastTime = null; } catch (eLt) {}
     try {
@@ -340,6 +344,11 @@
       var gsEl = document.getElementById("gameScreen");
       if (gsEl) { gsEl.style.display = "block"; gsEl.style.visibility = "visible"; gsEl.style.opacity = "1"; }
     } catch (eUi) {}
+    try {
+      if (window.__airborneClearAllGameplay) window.__airborneClearAllGameplay();
+      if (typeof obstacles !== "undefined") obstacles = [];
+      if (typeof birdFlocks !== "undefined") birdFlocks = [];
+    } catch (eCl) {}
     try { if (window.__airborneResetBackClouds) window.__airborneResetBackClouds(); } catch (e) {};
     airfieldPhase = "taxi";
     airfieldLesson = 0;

@@ -361,10 +361,14 @@
         var gy = (typeof groundLevelY === "function") ? groundLevelY() : H * 0.85;
         var topY = player.h * 0.5;
         var frac = 1 - Math.max(0, Math.min(1, (player.y - topY) / Math.max(40, gy - topY)));
-        // SVG: needle drawn pointing down (6 o'clock). rotate(0)=low, rotate(-90)=9 o'clock high
-        var deg = -(frac * 90);
+        // Needle points down at 0 (6 o'clock). SVG +rotate is clockwise → 9 o'clock = +90°
+        var deg = frac * 90;
         var needle = document.getElementById("altRpmNeedle");
-        if (needle) needle.setAttribute("transform", "rotate(" + deg.toFixed(2) + " 50 50)");
+        if (needle) {
+          needle.setAttribute("transform", "rotate(" + deg.toFixed(2) + " 50 50)");
+          needle.style.transform = "rotate(" + deg.toFixed(2) + "deg)";
+          needle.style.transformOrigin = "50px 50px";
+        }
       }
     } catch (eAlt) {}
 
