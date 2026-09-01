@@ -405,7 +405,11 @@
     // Soft clouds FRONT layer OFF for now
     // drawClouds();
     // R.U.F.F. on top of world (not under strip/mountains)
-    if (typeof window.__airborneDrawRuff === "function") window.__airborneDrawRuff();
+    try {
+      if (typeof window.__airborneDrawRuff === "function") window.__airborneDrawRuff();
+    } catch (eRuff) {
+      console.warn("drawRuff failed", eRuff);
+    }
     drawWindParticlesFront();
     drawShieldEffect();
     drawStorm();

@@ -34,8 +34,6 @@
 
   // ---------- State ----------
   let ruffActive = false;
-    try { clearTrainingPowerIcon(); } catch (e) {}
-
   let ruffStage = "idle"; // see STAGES
   let ruffStageT = 0;
   let ruffLineIdx = 0;
@@ -301,20 +299,25 @@
         dock.style.visibility = "visible";
       }
       var meter = document.getElementById("stormMeter");
-      if (!meter) return;
-      meter.classList.add("trainingPos");
-      meter.classList.remove("trainingHidden");
-      meter.style.display = "flex";
-      meter.style.visibility = "visible";
-      meter.style.opacity = "1";
-      meter.style.pointerEvents = "auto";
-      window.__airborneAirfieldAllowPowerup = true;
-    try {
-      if (typeof stormCharge !== "undefined" && typeof STORM_MAX === "number") {
-        stormCharge = STORM_MAX;
-        if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay(false);
+      if (meter) {
+        meter.classList.add("trainingPos");
+        meter.classList.remove("trainingHidden");
+        meter.style.display = "flex";
+        meter.style.visibility = "visible";
+        meter.style.opacity = "1";
+        meter.style.pointerEvents = "auto";
       }
-    } catch (e) {}
+      window.__airborneAirfieldAllowPowerup = true;
+      // Training: power fully charged from the start
+      try {
+        if (typeof STORM_MAX === "number") {
+          if (typeof stormCharge !== "undefined") stormCharge = STORM_MAX;
+          if (typeof window.stormCharge !== "undefined") window.stormCharge = STORM_MAX;
+        } else {
+          if (typeof stormCharge !== "undefined") stormCharge = 100;
+        }
+        if (typeof updateStormMeterDisplay === "function") updateStormMeterDisplay(false);
+      } catch (eCh) {}
     } catch (e) {}
   }
   function clearTrainingPowerIcon() {
@@ -1170,9 +1173,10 @@
   // ---------- Floating training platforms (steampunk sky docks) ----------
   var ruffPlatforms = [];
   var PLATFORM_KEYS = [
-    "plat_balcony", "plat_bridge", "plat_round_smoke", "plat_wheel",
-    "plat_chimney", "plat_greenhouse", "plat_walk_a", "plat_walk_b",
-    "plat_rock_island", "plat_arch", "plat_helipad"
+    "island_stone_arch", "island_barrel_platform", "island_tiny_rock_mossy",
+    "island_gear_wheel_platform", "island_tree_lamppost", "island_tiny_rock_grass",
+    "island_market_stall", "prop_tree_standalone", "island_propeller_platform",
+    "island_ring_portal_blue", "island_signpost"
   ];
 
   function spawnTrainingPlatformsLesson() {
@@ -1188,26 +1192,30 @@
     // Strategic vertical lanes: low / mid-low / mid / mid-high / high
     // Sequence teaches: climb, dive, weave, arch crystal, climb again
     var sequence = [
-      { key: "plat_helipad",     yFrac: 0.72, gap: 1.15 },
-      { key: "plat_round_smoke", yFrac: 0.55, gap: 1.25 },
-      { key: "plat_bridge",      yFrac: 0.38, gap: 1.35 },
-      { key: "plat_wheel",       yFrac: 0.62, gap: 1.15 },
-      { key: "plat_arch",        yFrac: 0.48, gap: 1.45, archCrystal: true },
-      { key: "plat_balcony",     yFrac: 0.32, gap: 1.30 },
-      { key: "plat_chimney",     yFrac: 0.68, gap: 1.20 },
-      { key: "plat_greenhouse",  yFrac: 0.42, gap: 1.25 },
-      { key: "plat_rock_island", yFrac: 0.58, gap: 1.30 },
-      { key: "plat_walk_a",      yFrac: 0.35, gap: 1.10 },
-      { key: "plat_helipad",     yFrac: 0.70, gap: 1.20 }
+      // Strategic altitude path — teach climb / dive / weave
+      // coinMode: deck | none | sparse ; crystal only on barrel (2nd asset)
+      { key: "island_signpost",           yFrac: 0.70, gap: 1.20, coinMode: "sparse", coins: 1 },
+      { key: "island_barrel_platform",    yFrac: 0.52, gap: 1.25, coinMode: "none", crystal: true },
+      { key: "island_tiny_rock_mossy",    yFrac: 0.38, gap: 1.15, coinMode: "sparse", coins: 1 },
+      { key: "island_market_stall",       yFrac: 0.62, gap: 1.30, coinMode: "deck", coins: 4 },
+      { key: "island_tree_lamppost",      yFrac: 0.34, gap: 1.25, coinMode: "deck", coins: 3 },
+      { key: "island_gear_wheel_platform",yFrac: 0.58, gap: 1.20, coinMode: "deck", coins: 3 },
+      { key: "island_ring_portal_blue",   yFrac: 0.45, gap: 1.35, coinMode: "sparse", coins: 2 },
+      { key: "island_propeller_platform", yFrac: 0.30, gap: 1.30, coinMode: "deck", coins: 4 },
+      { key: "island_tiny_rock_grass",    yFrac: 0.68, gap: 1.15, coinMode: "sparse", coins: 1 },
+      { key: "prop_tree_standalone",      yFrac: 0.40, gap: 1.20, coinMode: "sparse", coins: 2 },
+      { key: "island_stone_arch",         yFrac: 0.50, gap: 1.40, coinMode: "deck", coins: 3 }
     ];
     var x = W0 + 60;
     sequence.forEach(function (spec, idx) {
       var img = (typeof images !== "undefined" && images) ? images[spec.key] : null;
       var aspect = (img && img.naturalWidth && img.naturalHeight)
         ? (img.naturalWidth / img.naturalHeight) : 2.2;
-      var h = Math.min(H0 * 0.22, 110);
-      if (spec.key === "plat_arch") h = Math.min(H0 * 0.28, 130);
-      if (spec.key === "plat_bridge") h = Math.min(H0 * 0.16, 85);
+      var h = Math.min(H0 * 0.24, 120);
+      if (spec.key === "island_ring_portal_blue" || spec.key === "island_stone_arch") h = Math.min(H0 * 0.30, 140);
+      if (spec.key === "island_barrel_platform" || spec.key.indexOf("tiny") >= 0) h = Math.min(H0 * 0.16, 85);
+      if (spec.key === "island_signpost") h = Math.min(H0 * 0.26, 125);
+      if (spec.key === "island_propeller_platform" || spec.key === "island_market_stall") h = Math.min(H0 * 0.26, 125);
       var w = h * aspect;
       // Cap width so platforms stay readable
       if (w > W0 * 0.85) { w = W0 * 0.85; h = w / aspect; }
@@ -1219,7 +1227,7 @@
         w: w,
         h: h,
         speed: 71,
-        archCrystal: !!spec.archCrystal,
+        crystal: !!spec.crystal,
         phase: Math.random() * Math.PI * 2,
         // Mechanical parts behind hull — varied, not frantic
         props: [],
@@ -1250,31 +1258,36 @@
         });
       }
       ruffPlatforms.push(plat);
-      // Coins along top surface
-      placeCoinsOnPlatform(plat);
-      if (spec.archCrystal) placeCrystalInArch(plat);
+      // Coins on best landing surfaces; crystal only on barrel platform
+      if (spec.coinMode && spec.coinMode !== "none") {
+        placeCoinsOnPlatform(plat, spec.coins || 2, spec.coinMode);
+      }
+      if (spec.crystal) placeCrystalOnBarrel(plat);
       x += w * spec.gap + 40;
     });
   }
 
-  function placeCoinsOnPlatform(plat) {
-    // Fit as many as reasonable along the top deck
-    var coinR = 14;
-    var pad = 18;
-    var usable = Math.max(40, plat.w - pad * 2);
-    var count = Math.max(1, Math.min(7, Math.floor(usable / (coinR * 2.4)) - 1));
+  function placeCoinsOnPlatform(plat, count, mode) {
+    count = count || 2;
+    mode = mode || "deck";
+    var coinR = 13;
+    // Deck sits near upper third of sprite for most islands
+    var topY = -plat.h * (mode === "sparse" ? 0.28 : 0.32);
+    var pad = mode === "sparse" ? plat.w * 0.28 : plat.w * 0.18;
+    var usable = Math.max(24, plat.w - pad * 2);
+    count = Math.max(1, Math.min(count, Math.floor(usable / (coinR * 2.2))));
     for (var i = 0; i < count; i++) {
       var t = (i + 0.5) / count;
       ruffCoins.push({
         x: plat.x + pad + t * usable,
-        y: plat.y - plat.h * 0.42,
+        y: plat.y + topY,
         r: coinR,
         bob: Math.random() * Math.PI * 2,
         collected: false,
         fixedToPlatform: true,
         platRef: plat,
         platOffX: pad + t * usable,
-        platOffY: -plat.h * 0.42,
+        platOffY: topY,
         frame: 0,
         frameT: 0,
         speed: plat.speed
@@ -1282,19 +1295,19 @@
     }
   }
 
-  function placeCrystalInArch(plat) {
-    // Center of arch opening
+  function placeCrystalOnBarrel(plat) {
+    // Center of barrel / glass dome platform (second asset)
     ruffCrystals.push({
       x: plat.x + plat.w * 0.5,
-      y: plat.y - plat.h * 0.08,
-      r: 22,
+      y: plat.y - plat.h * 0.22,
+      r: 20,
       frame: 0,
       frameT: 0,
       collected: false,
       fixedToPlatform: true,
       platRef: plat,
       platOffX: plat.w * 0.5,
-      platOffY: -plat.h * 0.08
+      platOffY: -plat.h * 0.22
     });
   }
 
@@ -1355,7 +1368,7 @@
           if (m === dT) {
             // Land on top — bounce upward
             player.y = top - hh - 1;
-            var bounce = Math.max(220, Math.abs(player.vy) * 0.55 + 160);
+            var bounce = Math.max(140, Math.abs(player.vy) * 0.35 + 90);
             player.vy = -bounce;
             p.bobY = (p.bobY || 0) + 4; // platform reacts
             try {
@@ -2649,103 +2662,190 @@
     } catch (e) { console.warn("updateRuffCompanion", e); }
   }
 
-  function drawRuffCompanion() {
-    if (!ruffActive || typeof ctx === "undefined") return;
-    if (ruffStage === "report") return;
-    const maxX = (typeof W !== "undefined" ? W : 400) - 20;
-    const maxY = (typeof H !== "undefined" ? H : 600) - 20;
-    let dx = ruffX, dy = ruffY;
-    if (!(dx > 0) || !isFinite(dx)) dx = (typeof W !== "undefined" ? W : 400) * 0.2;
-    if (!(dy > 0) || !isFinite(dy)) dy = (typeof H !== "undefined" ? H : 600) * 0.3;
-    dx = Math.max(20, Math.min(maxX, dx));
-    dy = Math.max(20, Math.min(maxY, dy));
-
-    const idx = ((ruffFrame | 0) % RUFF_FRAME_COUNT) + 1;
-    const key = "ruff_" + String(idx).padStart(2, "0");
-    let img = (typeof images !== "undefined") ? images[key] : null;
-    if (!img || !img.naturalWidth) {
-      for (let i = 1; i <= RUFF_FRAME_COUNT; i++) {
-        const k2 = "ruff_" + String(i).padStart(2, "0");
-        if (images && images[k2] && images[k2].naturalWidth) { img = images[k2]; break; }
-      }
-    }
-    const size = 85; // fixed size regardless of blimp
-    const sc = size * (ruffScalePulse || 1);
-
-    // Jetpack particles (world space, behind body)
-    ruffJetParticles.forEach(function (p) {
-      const t = 1 - p.age / p.life;
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, t * 0.85);
-      ctx.fillStyle = p.hot ? "rgba(255,160,40,0.9)" : "rgba(80,70,65,0.7)";
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, Math.max(0.5, p.r * t), 0, Math.PI * 2);
-      ctx.fill();
-      if (p.hot) {
-        ctx.globalCompositeOperation = "lighter";
-        ctx.fillStyle = "rgba(255,230,120,0.5)";
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, Math.max(0.4, p.r * 0.45 * t), 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.restore();
-    });
-
-    // Motion ghosts
-    ruffMotionGhosts.forEach(function (g) {
-      const t = 1 - g.age / g.life;
-      ctx.save();
-      ctx.globalAlpha = 0.18 * t;
-      ctx.translate(g.x, g.y);
-      ctx.rotate(g.tilt || 0);
-      if (img && img.naturalWidth) {
-        ctx.drawImage(img, -sc / 2, -sc / 2, sc, sc);
-      } else {
-        ctx.fillStyle = "#c4a35a";
-        ctx.beginPath();
-        ctx.arc(0, 0, sc * 0.35, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.restore();
-    });
-
-    ctx.save();
-    ctx.translate(dx, dy);
-    ctx.rotate(ruffTilt || 0);
-    ctx.globalAlpha = 0.22;
-    ctx.fillStyle = "rgba(212,175,55,0.5)";
-    ctx.beginPath();
-    ctx.arc(-6, 4, sc * 0.28, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    if (img && img.naturalWidth) {
-      ctx.drawImage(img, -sc / 2, -sc / 2, sc, sc);
-    } else {
-      ctx.fillStyle = "#c4a35a";
-      ctx.strokeStyle = "#4a3210";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(0, 0, sc * 0.42, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-    }
-    ctx.restore();
-
-    // Speak lines from mouth (small black dashes)
-    ruffSpeakLines.forEach(function (s) {
-      const t = 1 - s.age / s.life;
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, t);
-      ctx.strokeStyle = "rgba(15,12,10,0.85)";
-      ctx.lineWidth = 1.6;
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(s.x, s.y);
-      ctx.lineTo(s.x + s.len * t, s.y + (s.vy * 0.02));
-      ctx.stroke();
-      ctx.restore();
-    });
+  function getRuffCtx() {
+    try {
+      if (typeof ctx !== "undefined" && ctx && ctx.canvas) return ctx;
+    } catch (e) {}
+    try {
+      var c = document.getElementById("gameCanvas");
+      if (c) return c.getContext("2d");
+    } catch (e2) {}
+    return null;
   }
+
+  function ensureRuffDomBuddy() {
+    var el = document.getElementById("ruffDomBuddy");
+    if (el) return el;
+    el = document.createElement("div");
+    el.id = "ruffDomBuddy";
+    el.setAttribute("aria-hidden", "true");
+    el.style.cssText = [
+      "position:fixed",
+      "z-index:45",
+      "width:88px",
+      "height:88px",
+      "pointer-events:none",
+      "display:none",
+      "align-items:center",
+      "justify-content:center",
+      "border-radius:50%",
+      "background:radial-gradient(circle at 35% 30%, #ffe08a 0%, #c9a24a 45%, #6a4a18 100%)",
+      "box-shadow:0 0 18px rgba(255,200,60,0.75), inset 0 -6px 12px rgba(0,0,0,0.25)",
+      "border:2px solid #5a3e14",
+      "font:800 11px/1.1 system-ui,sans-serif",
+      "color:#fff8e0",
+      "text-shadow:0 1px 2px #000",
+      "transform:translate(-50%,-50%)"
+    ].join(";");
+    el.innerHTML = "<div style='text-align:center'>R.U.F.F.<br><span style=\"font-size:9px;opacity:.85\">pilot buddy</span></div>";
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function syncRuffDomBuddy(show, x, y) {
+    try {
+      var el = ensureRuffDomBuddy();
+      if (!show) { el.style.display = "none"; return; }
+      var canvas = document.getElementById("gameCanvas");
+      var rect = canvas ? canvas.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+      var W0 = (typeof W !== "undefined" && W > 0) ? W : rect.width;
+      var H0 = (typeof H !== "undefined" && H > 0) ? H : rect.height;
+      var sx = rect.left + (x / W0) * rect.width;
+      var sy = rect.top + (y / H0) * rect.height;
+      el.style.display = "flex";
+      el.style.left = sx + "px";
+      el.style.top = sy + "px";
+    } catch (e) {}
+  }
+
+  function drawRuffCompanion() {
+    // Force-active during training
+    if (window.__airborneAirfield || window.__airborneRuffActive || window.__airborneTrainingFlight) {
+      ruffActive = true;
+      window.__airborneRuffActive = true;
+    }
+    if (!ruffActive) {
+      syncRuffDomBuddy(false);
+      return;
+    }
+    if (ruffStage === "report") {
+      syncRuffDomBuddy(false);
+      return;
+    }
+
+    var W0 = (typeof W !== "undefined" && W > 0) ? W : 400;
+    var H0 = (typeof H !== "undefined" && H > 0) ? H : 600;
+    var dx = ruffX, dy = ruffY;
+    if (!(dx > 20) || !isFinite(dx)) dx = W0 * 0.72;
+    if (!(dy > 20) || !isFinite(dy)) dy = H0 * 0.28;
+    dx = Math.max(40, Math.min(W0 - 40, dx));
+    dy = Math.max(40, Math.min(H0 - 40, dy));
+    ruffX = dx; ruffY = dy;
+
+    // DOM buddy only if no sprite frames loaded (repo has correct ruff_*.webp)
+    var hasSprite = !!(img && img.naturalWidth);
+    if (!hasSprite) syncRuffDomBuddy(true, dx, dy);
+    else syncRuffDomBuddy(false);
+
+    var c = getRuffCtx();
+    if (!c) return;
+
+    var idx = ((ruffFrame | 0) % RUFF_FRAME_COUNT) + 1;
+    var key = "ruff_" + String(idx).padStart(2, "0");
+    var img = (typeof images !== "undefined") ? images[key] : null;
+    if (!img || !img.naturalWidth) {
+      for (var i = 1; i <= RUFF_FRAME_COUNT; i++) {
+        var k2 = "ruff_" + String(i).padStart(2, "0");
+        if (typeof images !== "undefined" && images[k2] && images[k2].naturalWidth) { img = images[k2]; break; }
+      }
+    }
+    var size = 96;
+    var sc = size * (ruffScalePulse || 1);
+
+    try {
+      (ruffJetParticles || []).forEach(function (p) {
+        var t = 1 - p.age / p.life;
+        c.save();
+        c.globalAlpha = Math.max(0, t * 0.85);
+        c.fillStyle = p.hot ? "rgba(255,160,40,0.9)" : "rgba(80,70,65,0.7)";
+        c.beginPath();
+        c.arc(p.x, p.y, Math.max(0.5, p.r * t), 0, Math.PI * 2);
+        c.fill();
+        c.restore();
+      });
+    } catch (eJ) {}
+
+    c.save();
+    try {
+      c.globalAlpha = 1;
+      c.globalCompositeOperation = "source-over";
+      c.translate(dx, dy);
+      c.rotate(ruffTilt || 0);
+
+      if (img && img.naturalWidth) {
+        c.drawImage(img, -sc / 2, -sc / 2, sc, sc);
+      } else {
+        var s = sc * 0.55;
+        c.globalAlpha = 0.4;
+        var glow = c.createRadialGradient(0, 0, 2, 0, 0, s * 1.5);
+        glow.addColorStop(0, "rgba(255,210,80,0.9)");
+        glow.addColorStop(1, "rgba(255,180,40,0)");
+        c.fillStyle = glow;
+        c.beginPath();
+        c.arc(0, 0, s * 1.5, 0, Math.PI * 2);
+        c.fill();
+        c.globalAlpha = 1;
+        c.fillStyle = "#c9a24a";
+        c.strokeStyle = "#5a3e14";
+        c.lineWidth = 2;
+        c.beginPath();
+        c.ellipse(0, 4, s * 0.55, s * 0.62, 0, 0, Math.PI * 2);
+        c.fill();
+        c.stroke();
+        c.fillStyle = "#e8d5a0";
+        c.beginPath();
+        c.ellipse(0, 10, s * 0.32, s * 0.36, 0, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = "#d4b05c";
+        c.beginPath();
+        c.arc(0, -s * 0.42, s * 0.38, 0, Math.PI * 2);
+        c.fill();
+        c.stroke();
+        c.fillStyle = "#2a6aaa";
+        c.beginPath();
+        c.arc(-s * 0.14, -s * 0.44, s * 0.12, 0, Math.PI * 2);
+        c.arc(s * 0.14, -s * 0.44, s * 0.12, 0, Math.PI * 2);
+        c.fill();
+        c.strokeStyle = "#d4af37";
+        c.beginPath();
+        c.arc(-s * 0.14, -s * 0.44, s * 0.12, 0, Math.PI * 2);
+        c.arc(s * 0.14, -s * 0.44, s * 0.12, 0, Math.PI * 2);
+        c.stroke();
+        c.strokeStyle = "#8a6a30";
+        c.lineWidth = 2;
+        c.beginPath();
+        c.moveTo(s * 0.1, -s * 0.72);
+        c.lineTo(s * 0.22, -s * 1.05);
+        c.stroke();
+        c.fillStyle = "#ff4d4d";
+        c.beginPath();
+        c.arc(s * 0.22, -s * 1.05, 4, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = "#6a5a40";
+        c.fillRect(-s * 0.55, -s * 0.05, s * 0.22, s * 0.4);
+        c.fillRect(s * 0.33, -s * 0.05, s * 0.22, s * 0.4);
+        c.fillStyle = "#fff8e0";
+        c.font = "bold " + Math.max(10, s * 0.24) + "px system-ui,sans-serif";
+        c.textAlign = "center";
+        c.fillText("R.U.F.F.", 0, s * 0.98);
+      }
+    } catch (eDraw) {
+      console.warn("drawRuffCompanion", eDraw);
+    }
+    c.restore();
+  }
+
+
 
   // ---------- Flight report ----------
   function showFlightReport() {
@@ -3074,6 +3174,7 @@
     window.__airborneTrainingReportReady = false;
     window.__airborneTrainingReportShown = false;
     window.__airborneForceTrainRestart = true;
+    window.__airborneAirfieldAllowPowerup = true;
     window.__airborneEndCelebrationDone = false;
     window.__airborneEndCelebration = null;
     window.__airborneRankUpPlayed = false;
@@ -3268,6 +3369,7 @@ function finishToMap() {
     window.__airborneRuffStage = "idle";
     window.__airborneRuffRequestLand = false;
     window.__airborneRuffLandArmed = false;
+    try { syncRuffDomBuddy(false); } catch (e) {}
     try { clearTrainingPowerIcon(); } catch (e) {}
     // Prefer window exports (functions are scoped inside other files)
     try {
@@ -3406,8 +3508,8 @@ function finishToMap() {
     window.__airborneRuffActive = true;
     ruffIntroFly = true;
     ruffIntroFlyT = 0;
-    ruffX = _W * 0.88;
-    ruffY = _H * 0.22;
+    ruffX = _W * 0.72;
+    ruffY = _H * 0.28;
     console.log("[R.U.F.F.] begin", ruffActive, ruffStage, Math.round(ruffX), Math.round(ruffY));
   }
 
@@ -3851,6 +3953,14 @@ function finishToMap() {
   }
 
   function drawRuff() {
+    if (window.__airborneAirfield || window.__airborneRuffActive || window.__airborneTrainingFlight) {
+      ruffActive = true;
+      window.__airborneRuffActive = true;
+      if (!ruffStage || ruffStage === "idle") {
+        ruffStage = window.__airborneRuffStage || "intro";
+        window.__airborneRuffStage = ruffStage;
+      }
+    }
     if (!ruffActive && window.__airborneRuffActive) {
       ruffActive = true;
       if (!ruffStage || ruffStage === "idle") ruffStage = window.__airborneRuffStage || "intro";
@@ -3944,6 +4054,7 @@ function finishToMap() {
   };
   window.__airborneForceRuffCruise = window.__airborneForceRuffAltitude;
   window.__airborneBeginRuff = beginRuffTraining;
+  window.placeTrainingPowerIcon = placeTrainingPowerIcon;
   function updateEndCelebration(dt) {
     var c = window.__airborneEndCelebration;
     if (!c) return;
