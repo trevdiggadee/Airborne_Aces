@@ -3506,10 +3506,15 @@ function finishToMap() {
     // setStage resets intro fly — re-arm after
     ruffActive = true;
     window.__airborneRuffActive = true;
+    window.__airborneAirfield = true;
+    window.__airborneTrainingFlight = true;
     ruffIntroFly = true;
     ruffIntroFlyT = 0;
     ruffX = _W * 0.72;
     ruffY = _H * 0.28;
+    window.__airborneRuffX = ruffX;
+    window.__airborneRuffY = ruffY;
+    window.__airborneRuffStage = ruffStage || "intro";
     console.log("[R.U.F.F.] begin", ruffActive, ruffStage, Math.round(ruffX), Math.round(ruffY));
   }
 
@@ -3542,6 +3547,8 @@ function finishToMap() {
       }
     }
     if (!ruffActive) return;
+    window.__airborneRuffX = ruffX;
+    window.__airborneRuffY = ruffY;
     ruffStageT += dt;
     ruffLineT += dt;
     try { tickLessonGate(dt); } catch (e) {}

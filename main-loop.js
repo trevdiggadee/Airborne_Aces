@@ -211,7 +211,61 @@
     ctx.restore();
   }
 
-  function loop(ts) {
+  
+  // ===== Always-on training Ruff (does not depend on ruff-tutorial state) =====
+  window.__airborneRuffFrameT = window.__airborneRuffFrameT || 0;
+  window.__airborneRuffFrame = window.__airborneRuffFrame || 0;
+  function drawTrainingRuffEmergency(dt) {
+    try {
+      if (!(window.__airborneAirfield || window.__airborneTrainingFlight || window.__airborneRuffActive)) return;
+      if (window.__airborneRuffStage === "report") return;
+      if (typeof ctx === "undefined" || !ctx) return;
+      var W0 = (typeof W !== "undefined" && W > 0) ? W : 400;
+      var H0 = (typeof H !== "undefined" && H > 0) ? H : 600;
+      // Prefer live position from tutorial if available
+      var x = (typeof window.__airborneRuffX === "number" && window.__airborneRuffX > 0) ? window.__airborneRuffX : W0 * 0.72;
+      var y = (typeof window.__airborneRuffY === "number" && window.__airborneRuffY > 0) ? window.__airborneRuffY : H0 * 0.28;
+      window.__airborneRuffFrameT += (dt || 0.016);
+      if (window.__airborneRuffFrameT > 0.06) {
+        window.__airborneRuffFrameT = 0;
+        window.__airborneRuffFrame = (window.__airborneRuffFrame + 1) % 36;
+      }
+      var fi = (window.__airborneRuffFrame | 0) + 1;
+      var key = "ruff_" + (fi < 10 ? "0" + fi : "" + fi);
+      var img = (typeof images !== "undefined") ? images[key] : null;
+      if (!img || !img.naturalWidth) {
+        for (var i = 1; i <= 36; i++) {
+          var k = "ruff_" + (i < 10 ? "0" + i : "" + i);
+          if (images && images[k] && images[k].naturalWidth) { img = images[k]; break; }
+        }
+      }
+      var size = 100;
+      ctx.save();
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+      if (img && img.naturalWidth) {
+        ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
+      } else {
+        // bright fallback so missing assets are obvious
+        ctx.fillStyle = "rgba(255, 200, 60, 0.95)";
+        ctx.beginPath();
+        ctx.arc(x, y, 36, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#5a3e14";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.fillStyle = "#1a1208";
+        ctx.font = "bold 12px system-ui,sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("R.U.F.F.", x, y + 4);
+      }
+      ctx.restore();
+    } catch (e) {
+      console.warn("emergency Ruff", e);
+    }
+  }
+
+function loop(ts) {
     try {
     if (lastTime === null) lastTime = ts;
     let dt = (ts - lastTime) / 1000;
@@ -406,10 +460,15 @@
     // drawClouds();
     // R.U.F.F. on top of world (not under strip/mountains)
     try {
+      try {
       if (typeof window.__airborneDrawRuff === "function") window.__airborneDrawRuff();
+    } catch (eRuff) { console.warn("drawRuff failed", eRuff); }
+    try { drawTrainingRuffEmergency(typeof dt === "number" ? dt : 0.016); } catch (eER) {}
     } catch (eRuff) {
       console.warn("drawRuff failed", eRuff);
     }
+    // Guaranteed Ruff during training
+    try { drawTrainingRuffEmergency(typeof dt === "number" ? dt : 0.016); } catch (eER) {}
     drawWindParticlesFront();
     drawShieldEffect();
     drawStorm();
