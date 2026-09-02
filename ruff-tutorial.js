@@ -6,7 +6,7 @@
 
 (function () {
   // AIRBORNE_BUILD ruff412 2026-09-02T04:50Z-platfix
-  window.__AIRBORNE_BUILD = "ruff413";
+  window.__AIRBORNE_BUILD = "ruff414";
   window.__AIRBORNE_BUILD_STAMP = "2026-09-02T04:50Z-platfix";
   try { console.log("%c Airborne build ruff412 ", "background:#1a5;color:#fff;font-weight:bold;", "2026-09-02T04:50Z-platfix"); } catch (e) {}
 
@@ -120,175 +120,134 @@
     });
   }
 
-  function playTrainingMusic() {
-    if (!trainEnsure()) return;
-    stopTrainingMusic();
-    try {
-      var t0 = __trainCtx.currentTime;
-      var o1 = __trainCtx.createOscillator();
-      var o2 = __trainCtx.createOscillator();
-      var g1 = __trainCtx.createGain();
-      var g2 = __trainCtx.createGain();
-      o1.type = "sine";
-      o2.type = "triangle";
-      o1.frequency.value = 146.8;
-      o2.frequency.value = 220;
-      g1.gain.value = 0.12;
-      g2.gain.value = 0.07;
-      o1.connect(g1); g1.connect(__trainMaster);
-      o2.connect(g2); g2.connect(__trainMaster);
-      o1.start(); o2.start();
-      __trainBed = { o1: o1, o2: o2, g1: g1, g2: g2 };
-    } catch (e) { console.warn(e); }
-  }
-
-  function stopTrainingMusic() {
-    try {
-      if (!__trainBed) return;
-      try { __trainBed.o1.stop(); } catch (e) {}
-      try { __trainBed.o2.stop(); } catch (e) {}
-      __trainBed = null;
-    } catch (e) {}
-  }
-
-  function trainEngineStart() {
-    if (!trainEnsure()) return;
-    trainEngineStop();
-    try {
-      var o1 = __trainCtx.createOscillator();
-      var o2 = __trainCtx.createOscillator();
-      var f = __trainCtx.createBiquadFilter();
-      var g = __trainCtx.createGain();
-      o1.type = "sawtooth";
-      o2.type = "triangle";
-      o1.frequency.value = 55;
-      o2.frequency.value = 98;
-      f.type = "lowpass";
-      f.frequency.value = 320;
-      g.gain.value = 0.08;
-      o1.connect(f); o2.connect(f); f.connect(g); g.connect(__trainMaster);
-      o1.start(); o2.start();
-      __trainEngine = { o1: o1, o2: o2, g: g };
-    } catch (e) {}
-  }
-
-  function trainEngineStop() {
-    try {
-      if (!__trainEngine) return;
-      try { __trainEngine.o1.stop(); } catch (e) {}
-      try { __trainEngine.o2.stop(); } catch (e) {}
-      __trainEngine = null;
-    } catch (e) {}
-  }
-
-  function trainWindStart() {
-    if (!trainEnsure()) return;
-    trainWindStop();
-    try {
-      var len = __trainCtx.sampleRate * 2;
-      var buf = __trainCtx.createBuffer(1, len, __trainCtx.sampleRate);
-      var d = buf.getChannelData(0);
-      for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * 0.4;
-      var src = __trainCtx.createBufferSource();
-      src.buffer = buf;
-      src.loop = true;
-      var f = __trainCtx.createBiquadFilter();
-      f.type = "bandpass";
-      f.frequency.value = 800;
-      f.Q.value = 0.5;
-      var g = __trainCtx.createGain();
-      g.gain.value = 0.045;
-      src.connect(f); f.connect(g); g.connect(__trainMaster);
-      src.start();
-      __trainWind = { src: src, g: g };
-    } catch (e) {}
-  }
-
-  function trainWindStop() {
-    try {
-      if (!__trainWind) return;
-      try { __trainWind.src.stop(); } catch (e) {}
-      __trainWind = null;
-    } catch (e) {}
-  }
-
-  function sfxTrainingCoin() { trainBeep(988, 0.1, 0.18, "square"); }
-  function sfxTrainingStageClear() { trainChord([392, 494, 587, 784], 0.22, 0.16); }
-  function sfxTrainingShield() { trainBeep(330, 0.25, 0.15, "triangle"); trainBeep(440, 0.2, 0.1, "sine"); }
-  function sfxTrainingBossWarn() { trainBeep(80, 0.45, 0.2, "sawtooth"); }
-  function sfxTrainingCrystal() { trainBeep(1200, 0.08, 0.16, "sine"); trainBeep(1600, 0.1, 0.12, "sine"); }
-  function sfxTrainingRing() { trainBeep(660, 0.06, 0.14, "triangle"); trainBeep(880, 0.12, 0.12, "sine"); }
-  function sfxTrainingLand() {
-    trainBeep(200, 0.15, 0.2, "triangle");
-    setTimeout(function(){ trainChord([523, 659, 784, 1046], 0.3, 0.18); }, 150);
-  }
-  function sfxTrainingPower() { trainBeep(180, 0.2, 0.18, "sawtooth"); trainBeep(360, 0.25, 0.14, "square"); }
-  
-  // Boss lesson exclusive track
+  // ---- Flight Training BGM (Cloud Cruisers) + Boss crossfade ----
+  var __trainBgmAudio = null;
+  var __trainBgmFadeTimer = null;
   var __trainBossAudio = null;
+  var __trainBossFadeTimer = null;
+  var TRAIN_BGM_VOL = 0.20;
+  var TRAIN_BOSS_VOL = 0.20;
+
+  function __clearFade(timerRef) {
+    try {
+      if (timerRef && timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    } catch (e) {}
+  }
+
+  function __fadeAudio(audio, toVol, ms, onDone) {
+    if (!audio) { if (onDone) onDone(); return null; }
+    var steps = Math.max(8, Math.round(ms / 50));
+    var i = 0;
+    var from = 0;
+    try { from = audio.volume || 0; } catch (e) { from = 0; }
+    var id = setInterval(function () {
+      i++;
+      try {
+        var t = Math.min(1, i / steps);
+        audio.volume = Math.max(0, Math.min(1, from + (toVol - from) * t));
+        if (i >= steps) {
+          clearInterval(id);
+          try { audio.volume = toVol; } catch (e2) {}
+          if (onDone) onDone();
+        }
+      } catch (e3) {
+        clearInterval(id);
+        if (onDone) onDone();
+      }
+    }, 50);
+    return id;
+  }
+
+  function playTrainingMusic() {
+    try {
+      stopTrainingMusic(true);
+      // Prefer Cloud Cruisers; fall back to spaced filename if needed
+      var a = new Audio("Cloud_Cruisers.mp3?v=ruff414");
+      a.loop = true;
+      a.volume = 0;
+      a.play().catch(function (e) {
+        console.warn("train bgm play", e);
+        try {
+          a = new Audio("Cloud%20Cruisers.mp3?v=ruff414");
+          a.loop = true;
+          a.volume = 0;
+          a.play().catch(function (e2) { console.warn("train bgm alt", e2); });
+          __trainBgmAudio = a;
+          __trainBgmFadeTimer = __fadeAudio(a, TRAIN_BGM_VOL, 1600);
+        } catch (e3) {}
+      });
+      __trainBgmAudio = a;
+      __trainBgmFadeTimer = __fadeAudio(a, TRAIN_BGM_VOL, 1600);
+      console.log("[Audio] training BGM Cloud Cruisers @20%");
+    } catch (e) { console.warn("playTrainingMusic", e); }
+  }
+
+  function stopTrainingMusic(hard) {
+    try {
+      if (__trainBgmFadeTimer) { clearInterval(__trainBgmFadeTimer); __trainBgmFadeTimer = null; }
+      if (!__trainBgmAudio) return;
+      var a = __trainBgmAudio;
+      if (hard) {
+        try { a.pause(); a.currentTime = 0; } catch (e) {}
+        __trainBgmAudio = null;
+        return;
+      }
+      __trainBgmFadeTimer = __fadeAudio(a, 0, 1400, function () {
+        try { a.pause(); a.currentTime = 0; } catch (e2) {}
+        if (__trainBgmAudio === a) __trainBgmAudio = null;
+      });
+    } catch (e) {}
+  }
+
   function playTrainingBossMusic() {
     try {
-      stopTrainingBossMusic(true); // hard stop any previous
-      var a = new Audio("the_engine_s_decree.mp3?v=ruff181");
+      // Crossfade: training BGM out while boss theme fades in
+      stopTrainingMusic(false); // soft fade out ~1.4s
+      if (__trainBossFadeTimer) { clearInterval(__trainBossFadeTimer); __trainBossFadeTimer = null; }
+      if (__trainBossAudio) {
+        try { __trainBossAudio.pause(); } catch (e) {}
+        __trainBossAudio = null;
+      }
+      var a = new Audio("the_engine_s_decree.mp3?v=ruff414");
       a.loop = true;
-      a.volume = 0; // fade in to 20%
+      a.volume = 0;
       a.play().catch(function (e) { console.warn("boss mp3", e); });
       __trainBossAudio = a;
-      var target = 0.20;
-      var steps = 20;
-      var i = 0;
-      var fadeIn = setInterval(function () {
-        i++;
-        if (!__trainBossAudio || __trainBossAudio !== a) { clearInterval(fadeIn); return; }
-        a.volume = Math.min(target, target * (i / steps));
-        if (i >= steps) clearInterval(fadeIn);
-      }, 50); // ~1s fade in
-      try {
-        if (__trainBed && __trainBed.g1) __trainBed.g1.gain.value = 0.03;
-        if (__trainBed && __trainBed.g2) __trainBed.g2.gain.value = 0.02;
-      } catch (e) {}
-    } catch (e) { console.warn(e); }
+      // Slight delay so crossfade overlaps (~0.4s of both)
+      setTimeout(function () {
+        if (__trainBossAudio !== a) return;
+        __trainBossFadeTimer = __fadeAudio(a, TRAIN_BOSS_VOL, 1600);
+      }, 400);
+      console.log("[Audio] boss BGM crossfade @20%");
+    } catch (e) { console.warn("playTrainingBossMusic", e); }
   }
+
   function stopTrainingBossMusic(hard) {
     try {
-      if (__trainBossAudio) {
-        var a = __trainBossAudio;
-        if (hard) {
-          try { a.pause(); a.currentTime = 0; } catch (e) {}
-          __trainBossAudio = null;
-        } else {
-          // Fade out ~1s then stop
-          var startV = a.volume || 0.2;
-          var steps = 20;
-          var i = 0;
-          var fadeOut = setInterval(function () {
-            i++;
-            try {
-              a.volume = Math.max(0, startV * (1 - i / steps));
-              if (i >= steps) {
-                clearInterval(fadeOut);
-                try { a.pause(); a.currentTime = 0; } catch (e2) {}
-                if (__trainBossAudio === a) __trainBossAudio = null;
-              }
-            } catch (e3) { clearInterval(fadeOut); __trainBossAudio = null; }
-          }, 50);
-        }
+      if (__trainBossFadeTimer) { clearInterval(__trainBossFadeTimer); __trainBossFadeTimer = null; }
+      if (!__trainBossAudio) return;
+      var a = __trainBossAudio;
+      if (hard) {
+        try { a.pause(); a.currentTime = 0; } catch (e) {}
+        __trainBossAudio = null;
+        return;
       }
-      try {
-        if (__trainBed && __trainBed.g1) __trainBed.g1.gain.value = 0.12;
-        if (__trainBed && __trainBed.g2) __trainBed.g2.gain.value = 0.07;
-      } catch (e) {}
+      __trainBossFadeTimer = __fadeAudio(a, 0, 1400, function () {
+        try { a.pause(); a.currentTime = 0; } catch (e2) {}
+        if (__trainBossAudio === a) __trainBossAudio = null;
+      });
     } catch (e) {}
   }
 
   function stopAllTrainingAudio() {
     stopTrainingBossMusic(true);
-    stopTrainingMusic();
+    stopTrainingMusic(true);
     trainEngineStop();
     trainWindStop();
   }
-
-
 
   let ruffCoins = [];
 
@@ -3178,6 +3137,7 @@
   }
 
   function hardResetTrainingState(opts) {
+    try { stopAllTrainingAudio(); } catch (eAud) {}
     opts = opts || {};
     var keepAirfield = !!opts.keepAirfield;
     try { clearAllGameplayEntities(); } catch (e) {}
