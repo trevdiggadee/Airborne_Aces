@@ -348,6 +348,22 @@
   let ruffPowerOrb = null;
 
   // Stage order
+  const FLIGHT_COLLECT_STAGES = {
+    altitude: true,
+    rings: true,
+    platforms: true,
+    combined: true,
+    airship: false,
+    obstacles: false,
+    shield: false,
+    boss1: false,
+    cruise: false,
+    intro: false,
+    takeoff: false,
+    landing: false,
+    report: false
+  };
+
   const STAGE_ORDER = [
     "intro",
     "takeoff",
@@ -949,16 +965,18 @@
 
   function updateFlightCollectibles(dt) {
     var st = ruffStage || window.__airborneRuffStage || "";
-    if (st === "intro" || st === "takeoff" || st === "cruise" || st === "altitude" ||
-        st === "rings" || st === "obstacles" || st === "shield" || st === "boss1" ||
-        st === "report" || st === "idle" || st === "landing") return;
-    if (!FLIGHT_COLLECT_STAGES[st]) return;
-    if (st === "platforms" || st === "combined") {
-      try { updateCrystals(dt); } catch (e) {}
-      try { updateTrainingCoins(dt); } catch (e) {}
+    // Platforms keep moving + coins collectible until they scroll off
+    if ((ruffPlatforms && ruffPlatforms.length) || st === "platforms" || st === "combined") {
       try { updateTrainingPlatforms(dt); } catch (e) {}
+      try { updateTrainingCoins(dt); } catch (e) {}
+      try { updateCrystals(dt); } catch (e) {}
       return;
     }
+    if (st === "intro" || st === "takeoff" || st === "cruise" || st === "obstacles" ||
+        st === "shield" || st === "boss1" || st === "report" || st === "idle" || st === "landing") {
+      return;
+    }
+    if (FLIGHT_COLLECT_STAGES && FLIGHT_COLLECT_STAGES[st] === false) return;
     try { updateCrystals(dt); } catch (e) {}
     try { updateTrainingCoins(dt); } catch (e) {}
   }
@@ -1123,7 +1141,8 @@
         phase: Math.random() * Math.PI * 2,
         // Mechanical parts behind hull — varied, not frantic
         props: [],
-        gears: []
+        gears: [],
+        dirt: []
       };
       // 1–2 propellers (faster spin)
       var nProp = 1 + (Math.random() < 0.55 ? 1 : 0);
@@ -1137,18 +1156,7 @@
           blades: 3 + (Math.random() < 0.5 ? 1 : 0)
         });
       }
-      // 2–3 gears (slower)
-      var nGear = 2 + (Math.random() < 0.5 ? 1 : 0);
-      for (var gi = 0; gi < nGear; gi++) {
-        plat.gears.push({
-          ox: w * (0.2 + gi * 0.28 + Math.random() * 0.1),
-          oy: h * (0.45 + Math.random() * 0.35),
-          r: Math.min(14, h * 0.12) * (0.7 + Math.random() * 0.5),
-          ang: Math.random() * Math.PI * 2,
-          spd: (0.45 + Math.random() * 0.55) * (gi % 2 === 0 ? 1 : -1), // opposite mesh feel
-          teeth: 6 + Math.floor(Math.random() * 4)
-        });
-      }
+      
       ruffPlatforms.push(plat);
       // Coins on best landing surfaces; crystal only on barrel platform
       if (spec.coinMode && spec.coinMode !== "none") {
@@ -1207,13 +1215,35 @@
     if (!ruffPlatforms || !ruffPlatforms.length) return;
     var now = performance.now() / 1000;
     ruffPlatforms.forEach(function (p) {
+      // Soft squash recovery (cartoon)
+      if (p.squash) p.squash = Math.max(0, p.squash - dt * 1.8);
+      // Dirt continuously dribbles off earthy bottoms
+      p.dirt = p.dirt || [];
+      if (Math.random() < 0.35) {
+        p.dirt.push({
+          x: (Math.random() - 0.5) * p.w * 0.8,
+          y: p.h * 0.42,
+          vx: (Math.random() - 0.5) * 20,
+          vy: 30 + Math.random() * 50,
+          life: 0.5 + Math.random() * 0.5,
+          age: 0,
+          r: 1.2 + Math.random() * 2.2
+        });
+      }
+      for (var di = p.dirt.length - 1; di >= 0; di--) {
+        var d = p.dirt[di];
+        d.age += dt;
+        d.x += d.vx * dt;
+        d.y += d.vy * dt;
+        d.vy += 120 * dt;
+        if (d.age >= d.life) p.dirt.splice(di, 1);
+      }
       p.x -= (p.speed || 71) * dt;
       // Dynamic motion: gentle bob + slow sway
       p.bobT = (p.bobT || Math.random() * 10) + dt;
       p.bobY = Math.sin(p.bobT * 1.4 + (p.phase || 0)) * 5;
       p.sway = Math.sin(p.bobT * 0.7 + (p.phase || 0)) * 3;
       (p.props || []).forEach(function (pr) { pr.ang += pr.spd * dt; });
-      (p.gears || []).forEach(function (g) { g.ang += g.spd * dt; });
       // Steam/spark timer
       p.fxT = (p.fxT || 0) - dt;
       if (p.fxT <= 0) {
@@ -1244,6 +1274,29 @@
     // Solid platforms — blimp cannot pass through
     if (typeof player !== "undefined" && player) {
       ruffPlatforms.forEach(function (p) {
+      // Soft squash recovery (cartoon)
+      if (p.squash) p.squash = Math.max(0, p.squash - dt * 1.8);
+      // Dirt continuously dribbles off earthy bottoms
+      p.dirt = p.dirt || [];
+      if (Math.random() < 0.35) {
+        p.dirt.push({
+          x: (Math.random() - 0.5) * p.w * 0.8,
+          y: p.h * 0.42,
+          vx: (Math.random() - 0.5) * 20,
+          vy: 30 + Math.random() * 50,
+          life: 0.5 + Math.random() * 0.5,
+          age: 0,
+          r: 1.2 + Math.random() * 2.2
+        });
+      }
+      for (var di = p.dirt.length - 1; di >= 0; di--) {
+        var d = p.dirt[di];
+        d.age += dt;
+        d.x += d.vx * dt;
+        d.y += d.vy * dt;
+        d.vy += 120 * dt;
+        if (d.age >= d.life) p.dirt.splice(di, 1);
+      }
         // Top hitbox lowered 20% (less restriction on deck)
         var top = p.y - p.h * 0.5 + p.h * 0.20 + (p.bobY || 0);
         var bot = p.y + p.h * 0.5 + (p.bobY || 0);
@@ -1258,11 +1311,25 @@
           var dB = bot - (py - hh);
           var m = Math.min(dL, dR, dT, dB);
           if (m === dT) {
-            // Land on top — bounce upward
+            // Cartoonish bounce on top
             player.y = top - hh - 1;
-            var bounce = Math.max(140, Math.abs(player.vy) * 0.35 + 90);
+            var bounce = Math.max(220, Math.abs(player.vy) * 0.55 + 160);
             player.vy = -bounce;
-            p.bobY = (p.bobY || 0) + 4; // platform reacts
+            p.bobY = (p.bobY || 0) + 10;
+            p.squash = 0.22;
+            // Dirt burst on landing
+            p.dirt = p.dirt || [];
+            for (var di = 0; di < 10; di++) {
+              p.dirt.push({
+                x: (Math.random() - 0.5) * p.w * 0.7,
+                y: p.h * 0.35,
+                vx: (Math.random() - 0.5) * 80,
+                vy: 40 + Math.random() * 90,
+                life: 0.45 + Math.random() * 0.35,
+                age: 0,
+                r: 1.5 + Math.random() * 2.5
+              });
+            }
             try {
               if (window.__airborneFlapPulse) window.__airborneFlapPulse();
             } catch (eB) {}
@@ -1380,23 +1447,58 @@
   function drawTrainingPlatforms() {
     if (!ruffPlatforms || !ruffPlatforms.length || typeof ctx === "undefined") return;
     ruffPlatforms.forEach(function (p) {
+      // Soft squash recovery (cartoon)
+      if (p.squash) p.squash = Math.max(0, p.squash - dt * 1.8);
+      // Dirt continuously dribbles off earthy bottoms
+      p.dirt = p.dirt || [];
+      if (Math.random() < 0.35) {
+        p.dirt.push({
+          x: (Math.random() - 0.5) * p.w * 0.8,
+          y: p.h * 0.42,
+          vx: (Math.random() - 0.5) * 20,
+          vy: 30 + Math.random() * 50,
+          life: 0.5 + Math.random() * 0.5,
+          age: 0,
+          r: 1.2 + Math.random() * 2.2
+        });
+      }
+      for (var di = p.dirt.length - 1; di >= 0; di--) {
+        var d = p.dirt[di];
+        d.age += dt;
+        d.x += d.vx * dt;
+        d.y += d.vy * dt;
+        d.vy += 120 * dt;
+        if (d.age >= d.life) p.dirt.splice(di, 1);
+      }
       var img = (typeof images !== "undefined" && images) ? images[p.key] : null;
       var ox = p.x + (p.sway || 0);
       var oy = p.y - p.h * 0.5 + (p.bobY || 0);
       ctx.save();
       // Mechanical parts BEHIND platform hull
-      (p.gears || []).forEach(function (g) {
-        drawMechGear(ctx, ox + g.ox, oy + g.oy, g.r, g.ang, g.teeth);
-      });
       (p.props || []).forEach(function (pr) {
         drawMechProp(ctx, ox + pr.ox, oy + pr.oy, pr.r, pr.ang, pr.blades);
       });
+      var sq = 1 - (p.squash || 0) * 0.5;
+      ctx.save();
+      ctx.translate(ox + p.w / 2, oy + p.h / 2);
+      ctx.scale(1 + (p.squash || 0) * 0.15, sq);
       if (!img || !img.naturalWidth) {
         ctx.fillStyle = "rgba(80,60,30,0.85)";
-        ctx.fillRect(ox, oy, p.w, p.h);
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
       } else {
-        ctx.drawImage(img, ox, oy, p.w, p.h);
+        ctx.drawImage(img, -p.w / 2, -p.h / 2, p.w, p.h);
       }
+      ctx.restore();
+      // Dirt particles falling off bottom
+      (p.dirt || []).forEach(function (d) {
+        var t = 1 - d.age / d.life;
+        ctx.globalAlpha = Math.max(0, t * 0.85);
+        ctx.fillStyle = d.r > 2.2 ? "#6b4a28" : "#8a6238";
+        ctx.beginPath();
+        ctx.arc(ox + p.w / 2 + d.x, oy + p.h / 2 + d.y, d.r * t, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      });
       // Steam / spark particles
       (p.fx || []).forEach(function (f) {
         var u = 1 - f.age / f.life;
@@ -2199,7 +2301,8 @@
           if (sp.age >= sp.life) c.sparks.splice(si, 1);
         }
       }
-      if (Math.abs(c.x - px) < pw + c.r && Math.abs(c.y - py) < ph + c.r) {
+      var hitPad = c.fixedToPlatform ? 1.35 : 1.0;
+      if (Math.abs(c.x - px) < (pw + c.r) * hitPad && Math.abs(c.y - py) < (ph + c.r) * hitPad) {
         c.collected = true;
         ruffStats.coins = (ruffStats.coins || 0) + 1;
         try { sfxTrainingCoin(); } catch (e) {}

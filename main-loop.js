@@ -274,14 +274,15 @@ function drawTrainingRuffEmergency(dt) {
       var dti = (typeof dt === "number" && dt > 0) ? Math.min(dt, 0.05) : 0.016;
 
       // Intro phases: 0–1.4s fly-in, 1.4–end of intro hover near dest
-      if (stage === "intro") {
+      if (stage === "intro" || (stage === "takeoff" && (window.__airborneRuffIntroT || 0) < 2.5)) {
         window.__airborneRuffIntroT = (window.__airborneRuffIntroT || 0) + dti;
-        var tFly = Math.min(1, window.__airborneRuffIntroT / 1.4);
+        var tFly = Math.min(1, window.__airborneRuffIntroT / 1.5);
         var ease = 1 - Math.pow(1 - tFly, 3);
         var startX = W0 * 0.95, startY = H0 * 0.16;
-        var destX = W0 * 0.18, destY = H0 * 0.28;
+        var destX = W0 * 0.20, destY = H0 * 0.26;
+        // Hover at dest with gentle bob after fly-in
         window.__airborneRuffX = startX + (destX - startX) * ease;
-        window.__airborneRuffY = startY + (destY - startY) * ease + Math.sin(window.__airborneRuffIntroT * 3) * 5 * (1 - ease);
+        window.__airborneRuffY = startY + (destY - startY) * ease + Math.sin(window.__airborneRuffIntroT * 2.2) * 6;
         window.__airborneRuffFollowBlend = 0;
       } else {
         // Smooth blend toward follow over ~0.9s after intro ends
