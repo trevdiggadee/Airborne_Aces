@@ -6,9 +6,9 @@
 
 (function () {
   // AIRBORNE_BUILD ruff412 2026-09-02T04:50Z-platfix
-  window.__AIRBORNE_BUILD = "ruff415";
+  window.__AIRBORNE_BUILD = "ruff414";
   window.__AIRBORNE_BUILD_STAMP = "2026-09-02T04:50Z-platfix";
-  try { console.log("%c Airborne build ruff415 ", "background:#1a5;color:#fff;font-weight:bold;", "2026-09-02T04:50Z-platfix"); } catch (e) {}
+  try { console.log("%c Airborne build ruff412 ", "background:#1a5;color:#fff;font-weight:bold;", "2026-09-02T04:50Z-platfix"); } catch (e) {}
 
   const RUFF_FRAME_COUNT = 36;
   const CRYSTAL_FRAME_COUNT = 25;
@@ -165,13 +165,13 @@
     try {
       stopTrainingMusic(true);
       // Prefer Cloud Cruisers; fall back to spaced filename if needed
-      var a = new Audio("Cloud_Cruisers.mp3?v=ruff415");
+      var a = new Audio("Cloud_Cruisers.mp3?v=ruff414");
       a.loop = true;
       a.volume = 0;
       a.play().catch(function (e) {
         console.warn("train bgm play", e);
         try {
-          a = new Audio("Cloud%20Cruisers.mp3?v=ruff415");
+          a = new Audio("Cloud%20Cruisers.mp3?v=ruff414");
           a.loop = true;
           a.volume = 0;
           a.play().catch(function (e2) { console.warn("train bgm alt", e2); });
@@ -211,7 +211,7 @@
         try { __trainBossAudio.pause(); } catch (e) {}
         __trainBossAudio = null;
       }
-      var a = new Audio("the_engine_s_decree.mp3?v=ruff415");
+      var a = new Audio("the_engine_s_decree.mp3?v=ruff414");
       a.loop = true;
       a.volume = 0;
       a.play().catch(function (e) { console.warn("boss mp3", e); });
@@ -764,25 +764,7 @@
   // ---------- Stage control ----------
   function setStage(name) {
     if (!name) return;
-
-    // Do not enter the boss while a platform is still visible.
-    if (name === "boss1" && ruffPlatforms && ruffPlatforms.some(function (p) {
-      return p && p.x + (p.w || 0) > 0;
-    })) {
-      window.__airborneAirfieldObstacles = false;
-      window.__airborneAirfieldRings = false;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-      return;
-    }
-
-    var previousStage = ruffStage;
-    try {
-      if (name !== "boss1") {
-        stopTrainingBossMusic(false);
-        // Crossfade back to Cloud Cruisers after the boss.
-        if (previousStage === "boss1" && (name === "landing" || name === "report")) playTrainingMusic();
-      }
-    } catch (e) {}
+    try { if (name !== "boss1") stopTrainingBossMusic(); } catch (e) {}
 
     ruffStage = name;
     ruffStageT = 0;
@@ -943,10 +925,12 @@
       try { ruffCoins = []; ruffCrystals = []; } catch (e) {}
       try { spawnTrainingPlatformsLesson(); } catch (e) { console.warn("combined plats", e); }
     } else if (name === "boss1") {
-      // Platforms have naturally cleared before boss entry.
+      // Only hard-clear leftovers; prefer natural scroll-off before boss
       try {
-        ruffCoins = (ruffCoins || []).filter(function (c) { return c && c.x > -80 && !c.collected; });
-        ruffCrystals = (ruffCrystals || []).filter(function (c) { return c && c.x > -80 && !c.collected; });
+        ruffCoins = [];
+        ruffCrystals = [];
+        ruffPlatforms = [];
+        window.__airborneRuffPlatforms = [];
       } catch (e) {}
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = false;
@@ -1084,7 +1068,7 @@
   var ruffPlatforms = [];
   var PLATFORM_SCROLL_SPEED = 26; // fixed — never changes with bird lesson
   var PLATFORM_KEYS = [
-    "island_barrel_platform", "island_ring_portal_blue",
+    "island_barrel_platform", "island_gear_wheel_platform", "island_ring_portal_blue",
     "island_market_stall", "island_tiny_rock_grass", "island_tiny_rock_mossy", "island_propeller_platform",
     "island_gazebo", "island_cherry_blossom", "prop_tree_standalone", "island_tree_lamppost", "island_signpost"
   ];
@@ -1105,7 +1089,7 @@
       // Vertical lanes spread 0.28–0.72; large horizontal gaps
       // Crystals
       { key: "island_barrel_platform",     yFrac: 0.50, gap: 1.85, coinMode: "none", crystal: true },
-      { key: "island_crate_platform",      yFrac: 0.68, gap: 1.80, coinMode: "none", crystal: true },
+      { key: "island_gear_wheel_platform", yFrac: 0.68, gap: 1.80, coinMode: "none", crystal: true },
       { key: "island_ring_portal_blue",    yFrac: 0.32, gap: 1.90, coinMode: "none", crystal: true },
       // Coins
       { key: "island_market_stall",        yFrac: 0.58, gap: 1.85, coinMode: "deck", coins: 4 },
@@ -1180,8 +1164,7 @@
     mode = mode || "deck";
     var coinR = 13;
     // Deck sits near upper third of sprite for most islands
-    // Raise platform coins 15% higher than their previous deck position.
-    var topY = -plat.h * (mode === "sparse" ? 0.425 : 0.486) - plat.h * 0.15;
+    var topY = -plat.h * (mode === "sparse" ? 0.425 : 0.486); // elevated on deck
     var pad = mode === "sparse" ? plat.w * 0.28 : plat.w * 0.18;
     var usable = Math.max(24, plat.w - pad * 2);
     count = Math.max(1, Math.min(count, Math.floor(usable / (coinR * 2.2))));
@@ -1286,7 +1269,27 @@
       ruffPlatforms.forEach(function (p) {
       // Soft squash recovery (cartoon)
       if (p.squash) p.squash = Math.max(0, p.squash - dt * 1.8);
-      // Dirt is simulated once above at 25% of the old motion speed.
+      // Dirt continuously dribbles off earthy bottoms
+      p.dirt = p.dirt || [];
+      if (Math.random() < 0.35) {
+        p.dirt.push({
+          x: (Math.random() - 0.5) * p.w * 0.8,
+          y: p.h * 0.42,
+          vx: (Math.random() - 0.5) * 20,
+          vy: 30 + Math.random() * 50,
+          life: 0.5 + Math.random() * 0.5,
+          age: 0,
+          r: 1.2 + Math.random() * 2.2
+        });
+      }
+      for (var di = p.dirt.length - 1; di >= 0; di--) {
+        var d = p.dirt[di];
+        d.age += dt;
+        d.x += d.vx * dt;
+        d.y += d.vy * dt;
+        d.vy += 120 * dt;
+        if (d.age >= d.life) p.dirt.splice(di, 1);
+      }
         // Top hitbox lowered 20% (less restriction on deck)
         var top = p.y - p.h * 0.5 + p.h * 0.20 + (p.bobY || 0);
         var bot = p.y + p.h * 0.5 + (p.bobY || 0);
@@ -1500,7 +1503,7 @@
           c.globalAlpha = t * 0.8;
           c.fillStyle = d.r > 2.2 ? "#6b4a28" : "#8a6238";
           c.beginPath();
-          c.arc(ox + w * 0.5 + d.x, oy + h * 0.35 + d.y, Math.max(0.6, d.r * t), 0, Math.PI * 2);
+          c.arc(ox + w * 0.5 + d.x, oy + h * 0.55 + d.y, Math.max(0.6, d.r * t), 0, Math.PI * 2);
           c.fill();
         });
         // Steam
@@ -2433,12 +2436,6 @@
   }
 
 
-  // Foreground collectible pass: called after the last platform draw.
-  window.__airborneDrawTrainingCollectiblesFront = function () {
-    try { drawCrystals(); } catch (e) {}
-    try { drawTrainingCoins(); } catch (e) {}
-  };
-
   function drawCrystals() {
     if (!ruffCrystals.length || typeof ctx === "undefined") return;
     var tnow = performance.now() * 0.001;
@@ -3224,10 +3221,6 @@
     window.__airborneRingCollects = 0;
     window.__airborneCollectCoins = 0;
     window.__airborneCollectCrystals = 0;
-    window.__airborneRuffPlatforms = [];
-    window.__airborneTrainingBossBalloons = null;
-    window.__airborneFirePickup = null;
-    window.__airborneTrainingPowerWait = 0;
 
     try {
       if (window.__airborneCam) {
@@ -3721,7 +3714,7 @@ function finishToMap() {
       if (!ruffPlatforms || !ruffPlatforms.length) {
         try { spawnTrainingPlatformsLesson(); } catch (e) { console.warn("plat respawn", e); }
       }
-      // Movement is handled once per frame by updateFlightCollectibles().
+      try { updateTrainingPlatforms(dt); } catch (e) {}
       // Wait until every platform has scrolled fully off
       var anyPlat = ruffPlatforms && ruffPlatforms.some(function (p) { return p && (p.x + (p.w || 0) > 0); });
       if (!anyPlat && ruffStageT > 10) {
@@ -3836,7 +3829,7 @@ function finishToMap() {
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-      // Movement is handled once per frame by updateFlightCollectibles().
+      try { updateTrainingPlatforms(dt); } catch (e) {}
       // Wait until every platform has scrolled off (failsafe 90s)
       var platsLeft = (ruffPlatforms || []).length;
       if (!ruffLessonPendingNext && ((ruffStageT > 8 && platsLeft === 0) || ruffStageT > 90)) {
@@ -3878,11 +3871,12 @@ function finishToMap() {
         console.log("[R.U.F.F.] airship → combined");
       }
     } else if (ruffStage === "boss1") {
-      // Never delete moving platforms here; setStage() blocks premature boss entry.
-      try {
-        ruffCoins = (ruffCoins || []).filter(function (c) { return c && !c.collected && c.x > -80; });
-        ruffCrystals = (ruffCrystals || []).filter(function (c) { return c && !c.collected && c.x > -80; });
-      } catch (e) {}
+      // Sweep any leftover platforms immediately so boss is clean
+      if (ruffPlatforms && ruffPlatforms.length) {
+        ruffPlatforms = [];
+        window.__airborneRuffPlatforms = [];
+      }
+      try { ruffCoins = []; ruffCrystals = []; ruffPlatforms = []; } catch (e) {}
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
@@ -3954,7 +3948,7 @@ function finishToMap() {
       if ((!ruffPlatforms || !ruffPlatforms.length) && ruffStageT < 2) {
         try { spawnTrainingPlatformsLesson(); } catch (e) {}
       }
-      // Movement is handled once per frame by updateFlightCollectibles().
+      try { updateTrainingPlatforms(dt); } catch (e) {}
       // Wait for platforms to fully scroll off before boss
       var platsLeftC = (ruffPlatforms || []).length;
       if (!ruffLessonPendingNext && ((ruffStageT > 12 && platsLeftC === 0) || ruffStageT > 90)) {
