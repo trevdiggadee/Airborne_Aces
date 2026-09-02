@@ -905,6 +905,12 @@
         if (typeof boss !== "undefined") boss = null;
       } catch (err) {}
       try {
+        window.__airborneRuffPlatforms = [];
+        window.__airborneTrainingBossBalloons = null;
+        window.__airborneFireballs = [];
+        window.__airborneHeatseekers = [];
+        window.__airborneWarBullets = [];
+        window.__airborneOrphanTrails = [];
         window.__airborneAirfield = false;
         window.__airborneTrainingFlight = false;
         window.__airborneRuffActive = false;

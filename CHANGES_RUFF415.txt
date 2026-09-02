@@ -1,0 +1,12 @@
+Airborne Aces — Flight Training fixes (ruff415)
+
+- Platform coins raised 15% and forced to render in front of platform art.
+- Mid-game Return to Hangar now hard-clears training/platform/combat leftovers before re-entry.
+- Boss stage is blocked until every visible platform fully scrolls off screen.
+- Removed gear-wheel platform from the training platform sequence.
+- Platform movement now updates exactly once per frame at fixed speed (26 px/s), preventing lesson/bird-stage speed changes.
+- Dirt effect now uses only the slow simulation (25% of former motion speed = 75% slower) and is rendered 20% higher.
+- Cloud_Cruisers.mp3 is the Flight Training BGM at 20% volume.
+- Boss music is capped at 20% volume and crossfades with Cloud Cruisers instead of stopping abruptly.
+- Cloud Cruisers crossfades back in after the boss for landing/report.
+- HTML cache-bust bumped to ruff415 so browsers do not keep serving the prior ruff414 JS.
