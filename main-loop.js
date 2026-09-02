@@ -284,12 +284,6 @@
         var img = (typeof images !== "undefined" && images && p.key) ? images[p.key] : null;
         if (img && img.complete && img.naturalWidth > 0) {
           ctx.drawImage(img, ox, oy, w, h);
-        } else {
-          ctx.fillStyle = "#e8c87a";
-          ctx.fillRect(ox, oy, w, h);
-          ctx.strokeStyle = "#fff";
-          ctx.lineWidth = 3;
-          ctx.strokeRect(ox, oy, w, h);
         }
       }
       ctx.restore();
@@ -297,7 +291,6 @@
       console.warn("plat emergency", e);
     }
   }
-
 
 function drawTrainingRuffEmergency(dt) {
     try {

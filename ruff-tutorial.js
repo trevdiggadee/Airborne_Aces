@@ -1085,11 +1085,9 @@
   // ---------- Floating training platforms (steampunk sky docks) ----------
   var ruffPlatforms = [];
   var PLATFORM_KEYS = [
-    "island_crate_platform", "island_tiny_rock_mossy", "island_market_stall",
-    "island_cherry_blossom", "island_watchtower_windsock", "island_greenhouse_factory",
-    "island_stone_arch", "island_ring_portal_blue", "island_gear_wheel_platform",
-    "island_gazebo", "island_crane", "island_barrel_platform", "island_propeller_platform",
-    "island_signpost", "island_tree_lamppost", "island_tiny_rock_grass", "prop_tree_standalone"
+    "island_barrel_platform", "island_gear_wheel_platform", "island_ring_portal_blue",
+    "island_market_stall", "island_tiny_rock_grass", "island_tiny_rock_mossy", "island_propeller_platform",
+    "island_gazebo", "island_cherry_blossom", "prop_tree_standalone", "island_tree_lamppost", "island_signpost"
   ];
 
   function spawnTrainingPlatformsLesson() {
@@ -1105,27 +1103,21 @@
     // Strategic vertical lanes: low / mid-low / mid / mid-high / high
     // Sequence teaches: climb, dive, weave, arch crystal, climb again
     var sequence = [
-      // Crystals only
-      { key: "island_barrel_platform",     yFrac: 0.48, gap: 1.25, coinMode: "none", crystal: true },
-      { key: "island_gear_wheel_platform", yFrac: 0.58, gap: 1.20, coinMode: "none", crystal: true },
-      { key: "island_ring_portal_blue",    yFrac: 0.42, gap: 1.30, coinMode: "none", crystal: true },
-      // Coins only
-      { key: "island_market_stall",        yFrac: 0.62, gap: 1.30, coinMode: "deck", coins: 4 },
-      { key: "island_tiny_rock_grass",     yFrac: 0.68, gap: 1.15, coinMode: "sparse", coins: 2 },
-      { key: "island_tiny_rock_mossy",     yFrac: 0.36, gap: 1.15, coinMode: "sparse", coins: 2 },
-      { key: "island_propeller_platform",  yFrac: 0.30, gap: 1.30, coinMode: "deck", coins: 4 },
+      // Crystals
+      { key: "island_barrel_platform",     yFrac: 0.48, gap: 1.30, coinMode: "none", crystal: true },
+      { key: "island_gear_wheel_platform", yFrac: 0.58, gap: 1.25, coinMode: "none", crystal: true },
+      { key: "island_ring_portal_blue",    yFrac: 0.42, gap: 1.35, coinMode: "none", crystal: true },
+      // Coins
+      { key: "island_market_stall",        yFrac: 0.62, gap: 1.35, coinMode: "deck", coins: 4 },
+      { key: "island_tiny_rock_grass",     yFrac: 0.68, gap: 1.20, coinMode: "sparse", coins: 2 },
+      { key: "island_tiny_rock_mossy",     yFrac: 0.36, gap: 1.20, coinMode: "sparse", coins: 2 },
+      { key: "island_propeller_platform",  yFrac: 0.30, gap: 1.35, coinMode: "deck", coins: 4 },
       // No collectibles
-      { key: "island_gazebo",              yFrac: 0.45, gap: 1.25, coinMode: "none" },
-      { key: "island_cherry_blossom",      yFrac: 0.40, gap: 1.25, coinMode: "none" },
-      { key: "prop_tree_standalone",       yFrac: 0.50, gap: 1.15, coinMode: "none" },
-      { key: "island_tree_lamppost",       yFrac: 0.34, gap: 1.20, coinMode: "none" },
-      { key: "island_signpost",            yFrac: 0.70, gap: 1.15, coinMode: "none" },
-      // Extra scenic platforms (no coins/crystals)
-      { key: "island_crate_platform",      yFrac: 0.55, gap: 1.20, coinMode: "none" },
-      { key: "island_watchtower_windsock", yFrac: 0.38, gap: 1.25, coinMode: "none" },
-      { key: "island_greenhouse_factory",  yFrac: 0.50, gap: 1.35, coinMode: "none" },
-      { key: "island_stone_arch",          yFrac: 0.46, gap: 1.30, coinMode: "none" },
-      { key: "island_crane",               yFrac: 0.52, gap: 1.25, coinMode: "none" }
+      { key: "island_gazebo",              yFrac: 0.45, gap: 1.30, coinMode: "none" },
+      { key: "island_cherry_blossom",      yFrac: 0.40, gap: 1.30, coinMode: "none" },
+      { key: "prop_tree_standalone",       yFrac: 0.50, gap: 1.20, coinMode: "none" },
+      { key: "island_tree_lamppost",       yFrac: 0.34, gap: 1.25, coinMode: "none" },
+      { key: "island_signpost",            yFrac: 0.70, gap: 1.20, coinMode: "none" }
     ];
     var x = W0 * 0.55; // start on-screen so first platform is visible immediately
     sequence.forEach(function (spec, idx) {
@@ -1150,7 +1142,7 @@
         y: y,
         w: w,
         h: h,
-        speed: 58,
+        speed: 43.5,
         crystal: !!spec.crystal,
         phase: Math.random() * Math.PI * 2,
         // Mechanical parts behind hull — varied, not frantic
@@ -1315,7 +1307,7 @@
       c.x = p.x + (c.platOffX || 0) + (p.sway || 0);
       c.y = p.y + (c.platOffY || 0) + (p.bobY || 0);
     });
-    ruffPlatforms = ruffPlatforms.filter(function (p) { return p.x + p.w > -80; });
+    ruffPlatforms = ruffPlatforms.filter(function (p) { return p.x + p.w > -20; });
     window.__airborneRuffPlatforms = ruffPlatforms;
     try { syncPlatformDomOverlays(); } catch (eDom) {}
   }
@@ -1403,60 +1395,14 @@
 
 
   function syncPlatformDomOverlays() {
+    // Disabled — canvas-only, no white box overlays
     try {
       var layer = document.getElementById("platDomLayer");
-      if (!layer) {
-        layer = document.createElement("div");
-        layer.id = "platDomLayer";
-        layer.style.cssText = "position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:40;overflow:hidden;";
-        document.body.appendChild(layer);
-      }
-      var list = ruffPlatforms || window.__airborneRuffPlatforms || [];
-      var canvas = document.getElementById("gameCanvas");
-      var rect = canvas ? canvas.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
-      var W0 = (typeof W !== "undefined" && W > 0) ? W : rect.width;
-      var H0 = (typeof H !== "undefined" && H > 0) ? H : rect.height;
-      // reuse children
-      while (layer.children.length > list.length) layer.removeChild(layer.lastChild);
-      for (var i = 0; i < list.length; i++) {
-        var p = list[i];
-        var el = layer.children[i];
-        if (!el) {
-          el = document.createElement("div");
-          el.style.cssText = "position:absolute;background-size:contain;background-repeat:no-repeat;background-position:center;pointer-events:none;";
-          layer.appendChild(el);
-        }
-        if (!p) { el.style.display = "none"; continue; }
-        var w = +p.w || 80, h = +p.h || 40;
-        var ox = (+p.x || 0) + (+p.sway || 0);
-        var oy = (+p.y || 0) - h * 0.5 + (+p.bobY || 0);
-        var sx = rect.left + (ox / W0) * rect.width;
-        var sy = rect.top + (oy / H0) * rect.height;
-        var sw = (w / W0) * rect.width;
-        var sh = (h / H0) * rect.height;
-        el.style.display = "block";
-        el.style.left = sx + "px";
-        el.style.top = sy + "px";
-        el.style.width = Math.max(8, sw) + "px";
-        el.style.height = Math.max(8, sh) + "px";
-        if (p.key) {
-          el.style.backgroundImage = "url('" + p.key + ".webp')";
-        }
-        el.style.backgroundColor = "rgba(212,165,116,0.35)";
-        el.style.border = "2px solid rgba(255,255,255,0.85)";
-        el.style.boxSizing = "border-box";
-        el.style.borderRadius = "8px";
-      }
-      if (!list.length) {
-        layer.innerHTML = "";
-      }
-    } catch (e) {
-      console.warn("plat DOM", e);
-    }
+      if (layer) { layer.innerHTML = ""; layer.remove(); }
+    } catch (e) {}
   }
 
   function drawTrainingPlatforms() {
-    // Intentionally minimal — no dirt/fx/props (those hid/broke draws before)
     window.__airborneRuffPlatforms = ruffPlatforms;
     if (!ruffPlatforms || !ruffPlatforms.length) return;
     var c = (typeof ctx !== "undefined") ? ctx : null;
@@ -1488,18 +1434,8 @@
         c.globalCompositeOperation = "source-over";
         if (img && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0) {
           c.drawImage(img, ox, oy, w, h);
-        } else {
-          // High-contrast fallback — must be visible
-          c.fillStyle = "#d4a574";
-          c.fillRect(ox, oy, w, h);
-          c.strokeStyle = "#ffffff";
-          c.lineWidth = 3;
-          c.strokeRect(ox + 1.5, oy + 1.5, w - 3, h - 3);
-          c.fillStyle = "#3a2810";
-          c.font = "bold 12px sans-serif";
-          c.textAlign = "center";
-          c.fillText((p.key || "plat").split("_").pop(), ox + w / 2, oy + h / 2);
         }
+        // No fallback box — missing art simply skips (avoids white/tan frames)
         c.restore();
       } catch (eDraw) {
         console.warn("[plat] draw fail", p.key, eDraw);
@@ -1507,6 +1443,7 @@
     }
   }
   window.__airborneDrawTrainingPlatforms = drawTrainingPlatforms;
+
 
 
 
@@ -3694,9 +3631,14 @@ function finishToMap() {
         try { spawnTrainingPlatformsLesson(); } catch (e) { console.warn("plat respawn", e); }
       }
       try { updateTrainingPlatforms(dt); } catch (e) {}
-      if (ruffStageT > 32) {
+      // Wait until every platform has scrolled fully off
+      var anyPlat = ruffPlatforms && ruffPlatforms.some(function (p) { return p && (p.x + p.w > -10); });
+      if (!anyPlat && ruffStageT > 8) {
         setStage("obstacles");
-        console.log("[R.U.F.F.] platforms → obstacles");
+        console.log("[R.U.F.F.] platforms → obstacles (cleared)");
+      } else if (ruffStageT > 55) {
+        setStage("obstacles");
+        console.log("[R.U.F.F.] platforms → obstacles (timeout)");
       }
     } else if (ruffStage === "obstacles") {
       try { ruffCoins = []; ruffCrystals = []; } catch (e) {}
