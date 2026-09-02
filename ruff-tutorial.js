@@ -928,8 +928,15 @@
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.60;
       try { if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 198; } catch (e) {}
+      try {
+        ruffCoins = (ruffCoins || []).filter(function (c) { return c && c.fixedToPlatform && !c.collected; });
+        ruffCrystals = (ruffCrystals || []).filter(function (c) { return c && c.fixedToPlatform && !c.collected; });
+      } catch (e) {}
     } else if (name === "shield") {
-      try { ruffCoins = []; ruffCrystals = []; } catch (e) {}
+      try {
+        ruffCoins = (ruffCoins || []).filter(function (c) { return c && c.fixedToPlatform && !c.collected; });
+        ruffCrystals = (ruffCrystals || []).filter(function (c) { return c && c.fixedToPlatform && !c.collected; });
+      } catch (e) {}
       window.__airborneAirfieldObstacles = true;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.75;
@@ -954,7 +961,13 @@
       try { ruffCoins = []; ruffCrystals = []; } catch (e) {}
       try { spawnTrainingPlatformsLesson(); } catch (e) { console.warn("combined plats", e); }
     } else if (name === "boss1") {
-      try { ruffCoins = []; ruffCrystals = []; ruffPlatforms = []; } catch (e) {}
+      // Only hard-clear leftovers; prefer natural scroll-off before boss
+      try {
+        ruffCoins = [];
+        ruffCrystals = [];
+        ruffPlatforms = [];
+        window.__airborneRuffPlatforms = [];
+      } catch (e) {}
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
@@ -1148,7 +1161,7 @@
         y: y,
         w: w,
         h: h,
-        speed: 32.6,
+        speed: 26,
         crystal: !!spec.crystal,
         phase: Math.random() * Math.PI * 2,
         // Mechanical parts behind hull — varied, not frantic
@@ -1168,18 +1181,7 @@
           blades: 3 + (Math.random() < 0.5 ? 1 : 0)
         });
       }
-      // Gears toward bottom of platform
-      var nGear = 1 + (Math.random() < 0.6 ? 1 : 0);
-      for (var gi = 0; gi < nGear; gi++) {
-        plat.gears.push({
-          ox: w * (0.22 + gi * 0.45 + Math.random() * 0.1),
-          oy: h * (0.72 + Math.random() * 0.18), // bottom region
-          r: Math.min(14, h * 0.14) * (0.85 + Math.random() * 0.25),
-          ang: Math.random() * Math.PI * 2,
-          spd: 0.9 + Math.random() * 0.7, // slow industrial turn
-          teeth: 7 + (Math.random() < 0.5 ? 1 : 0)
-        });
-      }
+
 
       ruffPlatforms.push(plat);
       window.__airborneRuffPlatforms = ruffPlatforms;
@@ -1197,7 +1199,7 @@
     mode = mode || "deck";
     var coinR = 13;
     // Deck sits near upper third of sprite for most islands
-    var topY = -plat.h * (mode === "sparse" ? 0.322 : 0.368); // +15% higher on deck
+    var topY = -plat.h * (mode === "sparse" ? 0.370 : 0.423); // +15% again on deck
     var pad = mode === "sparse" ? plat.w * 0.28 : plat.w * 0.18;
     var usable = Math.max(24, plat.w - pad * 2);
     count = Math.max(1, Math.min(count, Math.floor(usable / (coinR * 2.2))));
@@ -1242,23 +1244,23 @@
     ruffPlatforms.forEach(function (p) {
       if (p.squash) p.squash = Math.max(0, p.squash - dt * 1.8);
 
-      p.x -= (p.speed || 32.6) * dt;
+      p.speed = 26;
+      p.x -= 26 * dt;
       if (p.squash) p.squash = Math.max(0, p.squash - dt * 1.6);
       // Dynamic motion: gentle bob + slow sway
       p.bobT = (p.bobT || Math.random() * 10) + dt;
       p.bobY = Math.sin(p.bobT * 1.4 + (p.phase || 0)) * 5 + (p.squash ? p.squash * 6 : 0);
       p.sway = Math.sin(p.bobT * 0.7 + (p.phase || 0)) * 3;
       (p.props || []).forEach(function (pr) { pr.ang += pr.spd * dt; });
-      (p.gears || []).forEach(function (g) { g.ang += g.spd * dt; });
-      // Floating dirt — slow drift, gentle fall
+      // Floating dirt — 75% slower, raised 20%
       p.dirt = p.dirt || [];
-      if (Math.random() < 0.12) {
+      if (Math.random() < 0.06) {
         p.dirt.push({
-          x: (Math.random() - 0.5) * p.w * 0.7,
-          y: p.h * 0.38,
-          vx: (Math.random() - 0.5) * 8,
-          vy: 6 + Math.random() * 12,
-          life: 1.1 + Math.random() * 0.9,
+          x: (Math.random() - 0.5) * p.w * 0.65,
+          y: p.h * 0.30, // raised ~20%
+          vx: (Math.random() - 0.5) * 3,
+          vy: 1.5 + Math.random() * 3.5,
+          life: 2.2 + Math.random() * 1.6,
           age: 0,
           r: 1.0 + Math.random() * 1.8
         });
@@ -1266,10 +1268,10 @@
       for (var di = p.dirt.length - 1; di >= 0; di--) {
         var d = p.dirt[di];
         d.age += dt;
-        d.x += d.vx * dt;
-        d.y += d.vy * dt;
-        d.vy += 18 * dt; // light gravity — floats
-        d.vx *= (1 - 0.4 * dt);
+        d.x += d.vx * dt * 0.25;
+        d.y += d.vy * dt * 0.25;
+        d.vy += 4.5 * dt; // 75% slower motion
+        d.vx *= (1 - 0.15 * dt);
         if (d.age >= d.life) p.dirt.splice(di, 1);
       }
       // Soft steam puffs
@@ -1521,9 +1523,6 @@
         try {
           (p.props || []).forEach(function (pr) {
             drawMechProp(c, ox + pr.ox, oy + pr.oy, pr.r, pr.ang, pr.blades);
-          });
-          (p.gears || []).forEach(function (g) {
-            drawMechGear(c, ox + g.ox, oy + g.oy, g.r, g.ang, g.teeth);
           });
         } catch (eP) {}
         c.save();
@@ -3089,6 +3088,19 @@
     try { if (window.__airborneClearPowerEntities) window.__airborneClearPowerEntities(); } catch (e) {}
     try { if (window.__airborneClearObstacles) window.__airborneClearObstacles(); } catch (e) {}
     try {
+      ruffPlatforms = [];
+      window.__airborneRuffPlatforms = [];
+      ruffCoins = [];
+      ruffCrystals = [];
+      ruffAirship = null;
+      ruffMarkers = [];
+      ruffSparkles = [];
+    } catch (e) {}
+    try {
+      var layer = document.getElementById("platDomLayer");
+      if (layer) { layer.innerHTML = ""; layer.remove(); }
+    } catch (e) {}
+    try {
       if (typeof obstacles !== "undefined") obstacles = [];
       if (typeof birdFlocks !== "undefined") birdFlocks = [];
       if (typeof bombs !== "undefined") bombs = [];
@@ -3447,6 +3459,15 @@ function finishToMap() {
 
   // ---------- Public API ----------
   function beginRuffTraining() {
+    try {
+      ruffPlatforms = [];
+      window.__airborneRuffPlatforms = [];
+      ruffCoins = [];
+      ruffCrystals = [];
+      ruffAirship = null;
+      if (typeof obstacles !== "undefined") obstacles = [];
+      if (typeof birdFlocks !== "undefined") birdFlocks = [];
+    } catch (eBeg) {}
     // Soft clear without killing airfield flags
     try { hardResetTrainingState({ keepAirfield: true }); } catch (e) {}
     try { resetTrainingCollectHUD(); } catch (e) {}
@@ -3747,7 +3768,11 @@ function finishToMap() {
         console.log("[R.U.F.F.] platforms → obstacles (timeout)");
       }
     } else if (ruffStage === "obstacles") {
-      try { ruffCoins = []; ruffCrystals = []; } catch (e) {}
+      // Keep platform-attached coins until platforms scroll off
+      try {
+        ruffCoins = (ruffCoins || []).filter(function (c) { return c && c.fixedToPlatform && !c.collected; });
+        ruffCrystals = (ruffCrystals || []).filter(function (c) { return c && c.fixedToPlatform && !c.collected; });
+      } catch (e) {}
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.60;
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 198;
 
@@ -3888,6 +3913,11 @@ function finishToMap() {
         console.log("[R.U.F.F.] airship → combined");
       }
     } else if (ruffStage === "boss1") {
+      // Sweep any leftover platforms immediately so boss is clean
+      if (ruffPlatforms && ruffPlatforms.length) {
+        ruffPlatforms = [];
+        window.__airborneRuffPlatforms = [];
+      }
       try { ruffCoins = []; ruffCrystals = []; ruffPlatforms = []; } catch (e) {}
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
@@ -3956,18 +3986,17 @@ function finishToMap() {
       window.__airborneFirePickup = null;
       window.__airborneAirfieldRings = true;
       window.__airborneAirfieldObstacles = true;
-      // Platforms + airship in combined
+      ruffAirship = null; // airship removed
       if ((!ruffPlatforms || !ruffPlatforms.length) && ruffStageT < 2) {
         try { spawnTrainingPlatformsLesson(); } catch (e) {}
       }
-      if (!ruffAirship && ruffStageT < 3) {
-        try { spawnTrainingAirship(); } catch (e) {}
-      }
       try { updateTrainingPlatforms(dt); } catch (e) {}
-      try { updateTrainingAirship(dt); } catch (e) {}
-      // No free-float coins/crystals — only platform-fixed
-      if (!ruffLessonPendingNext && ruffStageT > 35) {
-        requestNextStage();
+      // Wait for platforms to fully scroll off before boss
+      var platsLeftC = (ruffPlatforms || []).length;
+      if (!ruffLessonPendingNext && ((ruffStageT > 12 && platsLeftC === 0) || ruffStageT > 90)) {
+        ruffPlatforms = [];
+        window.__airborneRuffPlatforms = [];
+        requestNextStage(); // → boss1
       }
     } else if (ruffStage === "landing") {
       // Sweep collectibles off as descent begins
@@ -4075,10 +4104,10 @@ function finishToMap() {
       console.log("[R.U.F.F.] drawing", ruffStage, Math.round(ruffX), Math.round(ruffY));
     }
     try { drawMarkers(); } catch (e) {}
+    // Platforms under coins/crystals
+    try { drawTrainingPlatforms(); } catch (e) {}
     try { drawCrystals(); } catch (e) {}
     try { drawTrainingCoins(); } catch (e) {}
-    // bg balloons drawn before cloud layer in main-loop
-    try { drawTrainingPlatforms(); } catch (e) {}
     try { drawTrainingAirship(); } catch (e) {}
     try { drawScreenDust(); } catch (e) {}
     if (ruffStage !== "boss1" && window.__airborneRuffStage !== "boss1") {
