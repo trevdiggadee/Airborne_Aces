@@ -245,7 +245,7 @@
         return;
       }
       window.__airborneLessonDriverT += dt;
-      var order = ["cruise","altitude","rings","platforms","obstacles","shield","airship","combined","boss1","landing"];
+      var order = ["cruise","altitude","rings","platforms","obstacles","shield","combined","boss1","landing"];
       var idx = order.indexOf(st);
       if (idx < 0) return;
       // Failsafe only — primary progression is ruff-tutorial setStage timers
