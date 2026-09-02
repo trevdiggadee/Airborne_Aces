@@ -790,7 +790,7 @@
       const ruffSt = window.__airborneRuffStage || "intro";
       const introActive = (ruffSt === "intro" || ruffSt === "idle");
       // Safety: never freeze strip more than ~14s from training start
-      const introTimedOut = (airfieldRunwayT || 0) > 14;
+      const introTimedOut = (airfieldRunwayT || 0) > 16;
       const introStill = introActive && !introTimedOut;
       let scrollSpd = 0;
       if (!introStill) {
@@ -842,7 +842,7 @@
 
       const ruffSt = window.__airborneRuffStage || "intro";
       // Lock runway until intro is finished (do not require RuffActive flag)
-      const introLock = (ruffSt === "intro" || ruffSt === "idle") && (airfieldRunwayT || 0) < 14;
+      const introLock = (ruffSt === "intro" || ruffSt === "idle" || !ruffSt) && (airfieldRunwayT || 0) < 16;
 
       if (introLock) {
         // Wait for R.U.F.F. intro — strip frozen, blimp on deck

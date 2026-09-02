@@ -248,13 +248,13 @@
       var order = ["cruise","altitude","rings","platforms","obstacles","shield","airship","combined","boss1","landing"];
       var idx = order.indexOf(st);
       if (idx < 0) return;
-      var durations = [8, 15, 28, 28, 20, 30, 24, 30, 45, 20];
-      var need = durations[idx] || 20;
+      // Failsafe only — primary progression is ruff-tutorial setStage timers
+      var durations = [12, 18, 32, 34, 24, 32, 28, 32, 50, 24];
+      var need = durations[idx] || 24;
       if (window.__airborneLessonDriverT >= need) {
         window.__airborneLessonDriverT = 0;
         var next = order[idx + 1];
         if (!next) return;
-        window.__airborneRuffStage = next;
         window.__airborneForceSetStage = next;
         console.log("[LessonDriver] →", next);
       }
@@ -274,24 +274,23 @@ function drawTrainingRuffEmergency(dt) {
       var dti = (typeof dt === "number" && dt > 0) ? Math.min(dt, 0.05) : 0.016;
 
       // Intro phases: 0–1.4s fly-in, 1.4–end of intro hover near dest
-      if (stage === "intro" || (stage === "takeoff" && (window.__airborneRuffIntroT || 0) < 2.5)) {
+      if (stage === "intro") {
         window.__airborneRuffIntroT = (window.__airborneRuffIntroT || 0) + dti;
-        var tFly = Math.min(1, window.__airborneRuffIntroT / 1.5);
+        var tFly = Math.min(1, window.__airborneRuffIntroT / 1.6);
         var ease = 1 - Math.pow(1 - tFly, 3);
-        var startX = W0 * 0.95, startY = H0 * 0.16;
-        var destX = W0 * 0.20, destY = H0 * 0.26;
-        // Hover at dest with gentle bob after fly-in
+        var startX = W0 * 0.95, startY = H0 * 0.14;
+        var destX = W0 * 0.22, destY = H0 * 0.24;
         window.__airborneRuffX = startX + (destX - startX) * ease;
-        window.__airborneRuffY = startY + (destY - startY) * ease + Math.sin(window.__airborneRuffIntroT * 2.2) * 6;
+        window.__airborneRuffY = startY + (destY - startY) * ease + Math.sin(window.__airborneRuffIntroT * 2.0) * 5;
         window.__airborneRuffFollowBlend = 0;
       } else {
-        // Smooth blend toward follow over ~0.9s after intro ends
-        window.__airborneRuffFollowBlend = Math.min(1, (window.__airborneRuffFollowBlend || 0) + dti / 0.9);
+        // Smooth blend toward follow (closer to blimp, not high above)
+        window.__airborneRuffFollowBlend = Math.min(1, (window.__airborneRuffFollowBlend || 0) + dti / 1.2);
         var b = window.__airborneRuffFollowBlend;
-        var fx = W0 * 0.18, fy = H0 * 0.28;
+        var fx = W0 * 0.20, fy = H0 * 0.35;
         if (typeof player !== "undefined" && player && player.x > 0) {
-          fx = player.x - ((player.w || 60) * 0.55 + 36);
-          fy = player.y - ((player.h || 40) * 0.45 + 20) + Math.sin((performance.now() / 1000) * 2.0) * 6;
+          fx = player.x - ((player.w || 60) * 0.50 + 28);
+          fy = player.y - ((player.h || 40) * 0.12 + 6) + Math.sin((performance.now() / 1000) * 2.0) * 5;
         }
         var ox = (window.__airborneRuffX > 0) ? window.__airborneRuffX : fx;
         var oy = (window.__airborneRuffY > 0) ? window.__airborneRuffY : fy;
@@ -412,8 +411,8 @@ function loop(ts) {
       try {
         if (window.__airborneAirfield) {
           window.__airborneTrainT = (window.__airborneTrainT || 0) + dt;
-          if (window.__airborneRuffStage === "intro" && window.__airborneTrainT > 12) {
-            window.__airborneRuffStage = "takeoff";
+          if (window.__airborneRuffStage === "intro" && window.__airborneTrainT > 16) {
+            window.__airborneForceSetStage = "takeoff";
             window.__airborneRuffIntroFly = false;
             window.__airborneAirfieldPaused = false;
             window.__airborneTrainingFlight = true;

@@ -916,7 +916,8 @@
     } else if (name === "rings") {
       window.__airborneAirfieldRings = true;
       window.__airborneAirfieldObstacles = false;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 1.5;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 1.15;
+      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 200;
     } else if (name === "platforms") {
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
@@ -943,8 +944,9 @@
       window.__airborneAirfieldRings = true;
       window.__airborneAirfieldObstacles = true;
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.95;
+      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 200;
       try { ruffCoins = []; ruffCrystals = []; } catch (e) {}
-      try { spawnTrainingPlatformsLesson(); } catch (e) {}
+      try { spawnTrainingPlatformsLesson(); } catch (e) { console.warn("combined plats", e); }
       try { if (!ruffAirship) spawnTrainingAirship(); } catch (e) {}
     } else if (name === "boss1") {
       try { ruffCoins = []; ruffCrystals = []; ruffPlatforms = []; } catch (e) {}
@@ -1116,7 +1118,7 @@
       { key: "prop_tree_standalone",      yFrac: 0.40, gap: 1.20, coinMode: "sparse", coins: 2 },
       { key: "island_stone_arch",         yFrac: 0.50, gap: 1.40, coinMode: "deck", coins: 3 }
     ];
-    var x = W0 + 60;
+    var x = W0 * 0.55; // start on-screen so first platform is visible immediately
     sequence.forEach(function (spec, idx) {
       var img = (typeof images !== "undefined" && images) ? images[spec.key] : null;
       var aspect = (img && img.naturalWidth && img.naturalHeight)
@@ -1136,7 +1138,7 @@
         y: y,
         w: w,
         h: h,
-        speed: 71,
+        speed: 58,
         crystal: !!spec.crystal,
         phase: Math.random() * Math.PI * 2,
         // Mechanical parts behind hull — varied, not frantic
@@ -2584,8 +2586,8 @@
     window.__airborneRuffIntroFly = false;
     if (typeof player === "undefined" || !player) return;
     // Behind + above with clear gap so sprites never touch
-    const gapX = player.w * 0.55 + 36;
-    const gapY = player.h * 0.45 + 20;
+    const gapX = player.w * 0.50 + 28;
+    const gapY = player.h * 0.15 + 8; // stay close above blimp, not high
     const H0 = (typeof H !== "undefined" ? H : 600);
     const W0 = (typeof W !== "undefined" ? W : 400);
     let targetX = player.x - gapX;
@@ -3645,14 +3647,14 @@ function finishToMap() {
           showRadio(ruffLines[ruffLineIdx], 3.2);
         }
       }
-      if ((ruffIntroLineArmed && ruffLineIdx >= ruffLines.length && ruffLineT > 0.8) ||
-          ruffStageT > 11) {
+      if ((ruffIntroLineArmed && ruffLineIdx >= ruffLines.length && ruffLineT > 1.2) ||
+          ruffStageT > 14) {
         ruffIntroFly = false;
         ruffIntroFlyT = 99;
         window.__airborneRuffIntroFly = false;
         window.__airborneAirfieldPaused = false;
         window.__airborneTrainingFlight = true;
-        nextStage(); // → takeoff — runway unlocks only after this
+        setStage("takeoff");
         console.log("[R.U.F.F.] intro done → takeoff");
       }
     }
@@ -3691,7 +3693,8 @@ function finishToMap() {
     } else if (ruffStage === "rings") {
       window.__airborneAirfieldRings = true;
       window.__airborneAirfieldObstacles = false;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 1.15;
+      if (typeof obstacleSpeed !== "undefined" && obstacleSpeed < 180) obstacleSpeed = 200;
       if (ruffStageT > 28) {
         setStage("platforms");
         console.log("[R.U.F.F.] rings → platforms");
@@ -3702,8 +3705,11 @@ function finishToMap() {
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      if (!ruffPlatforms || !ruffPlatforms.length) {
+        try { spawnTrainingPlatformsLesson(); } catch (e) { console.warn("plat respawn", e); }
+      }
       try { updateTrainingPlatforms(dt); } catch (e) {}
-      if (ruffStageT > 28) {
+      if (ruffStageT > 32) {
         setStage("obstacles");
         console.log("[R.U.F.F.] platforms → obstacles");
       }
