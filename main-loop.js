@@ -215,6 +215,54 @@
   // ===== Always-on training Ruff (does not depend on ruff-tutorial state) =====
   window.__airborneRuffFrameT = window.__airborneRuffFrameT || 0;
   window.__airborneRuffFrame = window.__airborneRuffFrame || 0;
+
+  // Independent training lesson driver (backup if tutorial stage logic stalls)
+  window.__airborneLessonDriverT = window.__airborneLessonDriverT || 0;
+  function tickTrainingLessonDriver(dt) {
+    try {
+      if (!window.__airborneAirfield) {
+        window.__airborneLessonDriverT = 0;
+        window.__airborneLessonDriverArmed = false;
+        return;
+      }
+      var ph = window.__airborneAirfieldPhase;
+      var st = window.__airborneRuffStage || "intro";
+      // Arm once we reach flight lesson phase
+      if (ph === "lesson" || ph === "climb") {
+        window.__airborneLessonDriverArmed = true;
+      }
+      if (!window.__airborneLessonDriverArmed) return;
+      if (st === "intro" || st === "takeoff") {
+        window.__airborneRuffStage = "cruise";
+        if (typeof window.__airborneBeginRuff === "function") {
+          /* force via setStage path */
+        }
+        try {
+          // Call into tutorial setStage if exported later; use flag
+          window.__airborneForceRuffCruise = true;
+        } catch (e) {}
+        window.__airborneLessonDriverT = 0;
+        return;
+      }
+      window.__airborneLessonDriverT += dt;
+      var order = ["cruise","altitude","rings","platforms","obstacles","shield","airship","combined","boss1","landing"];
+      var idx = order.indexOf(st);
+      if (idx < 0) return;
+      var durations = [8, 15, 28, 28, 20, 30, 24, 30, 45, 20];
+      var need = durations[idx] || 20;
+      if (window.__airborneLessonDriverT >= need) {
+        window.__airborneLessonDriverT = 0;
+        var next = order[idx + 1];
+        if (!next) return;
+        window.__airborneRuffStage = next;
+        window.__airborneForceSetStage = next;
+        console.log("[LessonDriver] →", next);
+      }
+    } catch (e) {
+      console.warn("lessonDriver", e);
+    }
+  }
+
 function drawTrainingRuffEmergency(dt) {
     try {
       if (!(window.__airborneAirfield || window.__airborneTrainingFlight || window.__airborneRuffActive)) return;
@@ -358,6 +406,7 @@ function loop(ts) {
       if (typeof window.__airborneUpdateRuff === "function") {
         try { window.__airborneUpdateRuff(dt); } catch (e) { console.warn("updRuff", e); }
       }
+      try { tickTrainingLessonDriver(dt); } catch (eLD) {}
       // Ruff lesson failsafe — never soft-lock on intro/takeoff
       try {
         if (window.__airborneAirfield) {
@@ -400,6 +449,7 @@ function loop(ts) {
           : (typeof updateAirfield === "function") ? updateAirfield : null;
         if (_updAf) _updAf(dt);
         if (typeof window.__airborneUpdateRuff === "function") window.__airborneUpdateRuff(dt);
+        try { tickTrainingLessonDriver(dt); } catch (eLD) {}
       }
       updateBuildings(dtScale);
       updatePowerlines(dtScale);
