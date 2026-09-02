@@ -263,6 +263,42 @@
     }
   }
 
+
+  
+  function drawTrainingPlatformsEmergency() {
+    try {
+      var list = window.__airborneRuffPlatforms;
+      if (!list || !list.length) return;
+      if (typeof ctx === "undefined" || !ctx) return;
+      ctx.save();
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+      for (var i = 0; i < list.length; i++) {
+        var p = list[i];
+        if (!p) continue;
+        var w = +p.w || 0, h = +p.h || 0;
+        if (w < 4 || h < 4) continue;
+        var ox = (+p.x || 0) + (+p.sway || 0);
+        var oy = (+p.y || 0) - h * 0.5 + (+p.bobY || 0);
+        if (!isFinite(ox) || !isFinite(oy)) continue;
+        var img = (typeof images !== "undefined" && images && p.key) ? images[p.key] : null;
+        if (img && img.complete && img.naturalWidth > 0) {
+          ctx.drawImage(img, ox, oy, w, h);
+        } else {
+          ctx.fillStyle = "#e8c87a";
+          ctx.fillRect(ox, oy, w, h);
+          ctx.strokeStyle = "#fff";
+          ctx.lineWidth = 3;
+          ctx.strokeRect(ox, oy, w, h);
+        }
+      }
+      ctx.restore();
+    } catch (e) {
+      console.warn("plat emergency", e);
+    }
+  }
+
+
 function drawTrainingRuffEmergency(dt) {
     try {
       if (!(window.__airborneAirfield || window.__airborneTrainingFlight || window.__airborneRuffActive)) return;
@@ -407,6 +443,12 @@ function loop(ts) {
         try { window.__airborneUpdateRuff(dt); } catch (e) { console.warn("updRuff", e); }
       }
       try { tickTrainingLessonDriver(dt); } catch (eLD) {}
+      try {
+        if (typeof window.__airborneRuffPlatforms !== "undefined") {
+          // force canvas draw + DOM every frame while platforms exist
+          drawTrainingPlatformsEmergency();
+        }
+      } catch (eP2) {}
       // Ruff lesson failsafe — never soft-lock on intro/takeoff
       try {
         if (window.__airborneAirfield) {
@@ -450,6 +492,12 @@ function loop(ts) {
         if (_updAf) _updAf(dt);
         if (typeof window.__airborneUpdateRuff === "function") window.__airborneUpdateRuff(dt);
         try { tickTrainingLessonDriver(dt); } catch (eLD) {}
+      try {
+        if (typeof window.__airborneRuffPlatforms !== "undefined") {
+          // force canvas draw + DOM every frame while platforms exist
+          drawTrainingPlatformsEmergency();
+        }
+      } catch (eP2) {}
       }
       updateBuildings(dtScale);
       updatePowerlines(dtScale);
@@ -550,23 +598,20 @@ function loop(ts) {
     // Ensure power-up fade never leaves the blimp transparent
     try { ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; } catch (e) {}
     try { if (window.__airborneDrawRoyalBehind) window.__airborneDrawRoyalBehind(); } catch (e) {}
+        try { if (window.__airborneDrawTrainingPlatforms) window.__airborneDrawTrainingPlatforms(); } catch (e) {}
     drawPlayer(); try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePowerVisual(); } catch(e) {};
-    try { if (window.__airborneDrawTrainingPlatforms) window.__airborneDrawTrainingPlatforms(); } catch (e) {}
     try { if (window.drawHitCoins) window.drawHitCoins(); } catch (e) {}
     try { if (typeof drawRingFronts === "function") drawRingFronts(); else if (window.__airborneDrawRingFronts) window.__airborneDrawRingFronts(); } catch (e) {}
     // Soft clouds FRONT layer OFF for now
     // drawClouds();
     // R.U.F.F. on top of world (not under strip/mountains)
     try {
-      try {
       if (typeof window.__airborneDrawRuff === "function") window.__airborneDrawRuff();
     } catch (eRuff) { console.warn("drawRuff failed", eRuff); }
     try { drawTrainingRuffEmergency(typeof dt === "number" ? dt : 0.016); } catch (eER) {}
-    } catch (eRuff) {
-      console.warn("drawRuff failed", eRuff);
-    }
-    // Guaranteed Ruff during training
-    
+    // Platforms ON TOP so they cannot be covered
+    try { drawTrainingPlatformsEmergency(); } catch (ePE) {}
+    try { if (window.__airborneDrawTrainingPlatforms) window.__airborneDrawTrainingPlatforms(); } catch (e) {}
     drawWindParticlesFront();
     drawShieldEffect();
     drawStorm();

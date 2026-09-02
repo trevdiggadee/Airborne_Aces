@@ -78,6 +78,12 @@
     island_propeller_platform: "island_propeller_platform.webp",
     island_ring_portal_blue: "island_ring_portal_blue.webp",
     island_signpost: "island_signpost.webp",
+    island_crane: "island_crane.webp",
+    island_gazebo: "island_gazebo.webp",
+    island_greenhouse_factory: "island_greenhouse_factory.webp",
+    island_watchtower_windsock: "island_watchtower_windsock.webp",
+    island_cherry_blossom: "island_cherry_blossom.webp",
+    island_crate_platform: "island_crate_platform.webp",
 
     plat_balcony: "plat_balcony.webp",
     plat_bridge: "plat_bridge.webp",

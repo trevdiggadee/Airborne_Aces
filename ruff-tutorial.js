@@ -1085,10 +1085,11 @@
   // ---------- Floating training platforms (steampunk sky docks) ----------
   var ruffPlatforms = [];
   var PLATFORM_KEYS = [
-    "island_stone_arch", "island_barrel_platform", "island_tiny_rock_mossy",
-    "island_gear_wheel_platform", "island_tree_lamppost", "island_tiny_rock_grass",
-    "island_market_stall", "prop_tree_standalone", "island_propeller_platform",
-    "island_ring_portal_blue", "island_signpost"
+    "island_crate_platform", "island_tiny_rock_mossy", "island_market_stall",
+    "island_cherry_blossom", "island_watchtower_windsock", "island_greenhouse_factory",
+    "island_stone_arch", "island_ring_portal_blue", "island_gear_wheel_platform",
+    "island_gazebo", "island_crane", "island_barrel_platform", "island_propeller_platform",
+    "island_signpost", "island_tree_lamppost", "island_tiny_rock_grass", "prop_tree_standalone"
   ];
 
   function spawnTrainingPlatformsLesson() {
@@ -1104,30 +1105,41 @@
     // Strategic vertical lanes: low / mid-low / mid / mid-high / high
     // Sequence teaches: climb, dive, weave, arch crystal, climb again
     var sequence = [
-      // Strategic altitude path — teach climb / dive / weave
-      // coinMode: deck | none | sparse ; crystal only on barrel (2nd asset)
-      { key: "island_signpost",           yFrac: 0.70, gap: 1.20, coinMode: "sparse", coins: 1 },
-      { key: "island_barrel_platform",    yFrac: 0.52, gap: 1.25, coinMode: "none", crystal: true },
-      { key: "island_tiny_rock_mossy",    yFrac: 0.38, gap: 1.15, coinMode: "sparse", coins: 1 },
-      { key: "island_market_stall",       yFrac: 0.62, gap: 1.30, coinMode: "deck", coins: 4 },
-      { key: "island_tree_lamppost",      yFrac: 0.34, gap: 1.25, coinMode: "deck", coins: 3 },
-      { key: "island_gear_wheel_platform",yFrac: 0.58, gap: 1.20, coinMode: "deck", coins: 3 },
-      { key: "island_ring_portal_blue",   yFrac: 0.45, gap: 1.35, coinMode: "sparse", coins: 2 },
-      { key: "island_propeller_platform", yFrac: 0.30, gap: 1.30, coinMode: "deck", coins: 4 },
-      { key: "island_tiny_rock_grass",    yFrac: 0.68, gap: 1.15, coinMode: "sparse", coins: 1 },
-      { key: "prop_tree_standalone",      yFrac: 0.40, gap: 1.20, coinMode: "sparse", coins: 2 },
-      { key: "island_stone_arch",         yFrac: 0.50, gap: 1.40, coinMode: "deck", coins: 3 }
+      // Crystals only
+      { key: "island_barrel_platform",     yFrac: 0.48, gap: 1.25, coinMode: "none", crystal: true },
+      { key: "island_gear_wheel_platform", yFrac: 0.58, gap: 1.20, coinMode: "none", crystal: true },
+      { key: "island_ring_portal_blue",    yFrac: 0.42, gap: 1.30, coinMode: "none", crystal: true },
+      // Coins only
+      { key: "island_market_stall",        yFrac: 0.62, gap: 1.30, coinMode: "deck", coins: 4 },
+      { key: "island_tiny_rock_grass",     yFrac: 0.68, gap: 1.15, coinMode: "sparse", coins: 2 },
+      { key: "island_tiny_rock_mossy",     yFrac: 0.36, gap: 1.15, coinMode: "sparse", coins: 2 },
+      { key: "island_propeller_platform",  yFrac: 0.30, gap: 1.30, coinMode: "deck", coins: 4 },
+      // No collectibles
+      { key: "island_gazebo",              yFrac: 0.45, gap: 1.25, coinMode: "none" },
+      { key: "island_cherry_blossom",      yFrac: 0.40, gap: 1.25, coinMode: "none" },
+      { key: "prop_tree_standalone",       yFrac: 0.50, gap: 1.15, coinMode: "none" },
+      { key: "island_tree_lamppost",       yFrac: 0.34, gap: 1.20, coinMode: "none" },
+      { key: "island_signpost",            yFrac: 0.70, gap: 1.15, coinMode: "none" },
+      // Extra scenic platforms (no coins/crystals)
+      { key: "island_crate_platform",      yFrac: 0.55, gap: 1.20, coinMode: "none" },
+      { key: "island_watchtower_windsock", yFrac: 0.38, gap: 1.25, coinMode: "none" },
+      { key: "island_greenhouse_factory",  yFrac: 0.50, gap: 1.35, coinMode: "none" },
+      { key: "island_stone_arch",          yFrac: 0.46, gap: 1.30, coinMode: "none" },
+      { key: "island_crane",               yFrac: 0.52, gap: 1.25, coinMode: "none" }
     ];
     var x = W0 * 0.55; // start on-screen so first platform is visible immediately
     sequence.forEach(function (spec, idx) {
       var img = (typeof images !== "undefined" && images) ? images[spec.key] : null;
       var aspect = (img && img.naturalWidth && img.naturalHeight)
         ? (img.naturalWidth / img.naturalHeight) : 2.2;
-      var h = Math.min(H0 * 0.24, 120);
+      var h = Math.min(H0 * 0.30, 150);
       if (spec.key === "island_ring_portal_blue" || spec.key === "island_stone_arch") h = Math.min(H0 * 0.30, 140);
       if (spec.key === "island_barrel_platform" || spec.key.indexOf("tiny") >= 0) h = Math.min(H0 * 0.16, 85);
       if (spec.key === "island_signpost") h = Math.min(H0 * 0.26, 125);
       if (spec.key === "island_propeller_platform" || spec.key === "island_market_stall") h = Math.min(H0 * 0.26, 125);
+      if (spec.key === "island_greenhouse_factory" || spec.key === "island_cherry_blossom") h = Math.min(H0 * 0.32, 150);
+      if (spec.key === "island_gazebo" || spec.key === "island_watchtower_windsock") h = Math.min(H0 * 0.30, 140);
+      if (spec.key === "island_crane" || spec.key === "island_crate_platform") h = Math.min(H0 * 0.24, 120);
       var w = h * aspect;
       // Cap width so platforms stay readable
       if (w > W0 * 0.85) { w = W0 * 0.85; h = w / aspect; }
@@ -1160,6 +1172,7 @@
       }
       
       ruffPlatforms.push(plat);
+      window.__airborneRuffPlatforms = ruffPlatforms;
       // Coins on best landing surfaces; crystal only on barrel platform
       if (spec.coinMode && spec.coinMode !== "none") {
         placeCoinsOnPlatform(plat, spec.coins || 2, spec.coinMode);
@@ -1217,61 +1230,14 @@
     if (!ruffPlatforms || !ruffPlatforms.length) return;
     var now = performance.now() / 1000;
     ruffPlatforms.forEach(function (p) {
-      // Soft squash recovery (cartoon)
       if (p.squash) p.squash = Math.max(0, p.squash - dt * 1.8);
-      // Dirt continuously dribbles off earthy bottoms
-      p.dirt = p.dirt || [];
-      if (Math.random() < 0.35) {
-        p.dirt.push({
-          x: (Math.random() - 0.5) * p.w * 0.8,
-          y: p.h * 0.42,
-          vx: (Math.random() - 0.5) * 20,
-          vy: 30 + Math.random() * 50,
-          life: 0.5 + Math.random() * 0.5,
-          age: 0,
-          r: 1.2 + Math.random() * 2.2
-        });
-      }
-      for (var di = p.dirt.length - 1; di >= 0; di--) {
-        var d = p.dirt[di];
-        d.age += dt;
-        d.x += d.vx * dt;
-        d.y += d.vy * dt;
-        d.vy += 120 * dt;
-        if (d.age >= d.life) p.dirt.splice(di, 1);
-      }
+
       p.x -= (p.speed || 71) * dt;
       // Dynamic motion: gentle bob + slow sway
       p.bobT = (p.bobT || Math.random() * 10) + dt;
       p.bobY = Math.sin(p.bobT * 1.4 + (p.phase || 0)) * 5;
       p.sway = Math.sin(p.bobT * 0.7 + (p.phase || 0)) * 3;
       (p.props || []).forEach(function (pr) { pr.ang += pr.spd * dt; });
-      // Steam/spark timer
-      p.fxT = (p.fxT || 0) - dt;
-      if (p.fxT <= 0) {
-        p.fxT = 0.12 + Math.random() * 0.2;
-        if (!p.fx) p.fx = [];
-        // steam puff from top/stack area
-        p.fx.push({
-          x: p.w * (0.3 + Math.random() * 0.4),
-          y: -p.h * 0.35,
-          vx: (Math.random() - 0.5) * 20,
-          vy: -25 - Math.random() * 35,
-          life: 0.6 + Math.random() * 0.5,
-          age: 0,
-          r: 4 + Math.random() * 8,
-          kind: Math.random() < 0.65 ? "steam" : "spark"
-        });
-        if (p.fx.length > 18) p.fx.splice(0, p.fx.length - 18);
-      }
-      (p.fx || []).forEach(function (f) {
-        f.age += dt;
-        f.x += f.vx * dt;
-        f.y += f.vy * dt;
-        f.vy *= 0.98;
-        f.r += dt * (f.kind === "steam" ? 10 : 2);
-      });
-      p.fx = (p.fx || []).filter(function (f) { return f.age < f.life; });
     });
     // Solid platforms — blimp cannot pass through
     if (typeof player !== "undefined" && player) {
@@ -1319,19 +1285,6 @@
             player.vy = -bounce;
             p.bobY = (p.bobY || 0) + 10;
             p.squash = 0.22;
-            // Dirt burst on landing
-            p.dirt = p.dirt || [];
-            for (var di = 0; di < 10; di++) {
-              p.dirt.push({
-                x: (Math.random() - 0.5) * p.w * 0.7,
-                y: p.h * 0.35,
-                vx: (Math.random() - 0.5) * 80,
-                vy: 40 + Math.random() * 90,
-                life: 0.45 + Math.random() * 0.35,
-                age: 0,
-                r: 1.5 + Math.random() * 2.5
-              });
-            }
             try {
               if (window.__airborneFlapPulse) window.__airborneFlapPulse();
             } catch (eB) {}
@@ -1363,6 +1316,8 @@
       c.y = p.y + (c.platOffY || 0) + (p.bobY || 0);
     });
     ruffPlatforms = ruffPlatforms.filter(function (p) { return p.x + p.w > -80; });
+    window.__airborneRuffPlatforms = ruffPlatforms;
+    try { syncPlatformDomOverlays(); } catch (eDom) {}
   }
 
 
@@ -1446,88 +1401,114 @@
     ctx.restore();
   }
 
-  function drawTrainingPlatforms() {
-    if (!ruffPlatforms || !ruffPlatforms.length || typeof ctx === "undefined") return;
-    ruffPlatforms.forEach(function (p) {
-      // Soft squash recovery (cartoon)
-      if (p.squash) p.squash = Math.max(0, p.squash - dt * 1.8);
-      // Dirt continuously dribbles off earthy bottoms
-      p.dirt = p.dirt || [];
-      if (Math.random() < 0.35) {
-        p.dirt.push({
-          x: (Math.random() - 0.5) * p.w * 0.8,
-          y: p.h * 0.42,
-          vx: (Math.random() - 0.5) * 20,
-          vy: 30 + Math.random() * 50,
-          life: 0.5 + Math.random() * 0.5,
-          age: 0,
-          r: 1.2 + Math.random() * 2.2
-        });
+
+  function syncPlatformDomOverlays() {
+    try {
+      var layer = document.getElementById("platDomLayer");
+      if (!layer) {
+        layer = document.createElement("div");
+        layer.id = "platDomLayer";
+        layer.style.cssText = "position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:40;overflow:hidden;";
+        document.body.appendChild(layer);
       }
-      for (var di = p.dirt.length - 1; di >= 0; di--) {
-        var d = p.dirt[di];
-        d.age += dt;
-        d.x += d.vx * dt;
-        d.y += d.vy * dt;
-        d.vy += 120 * dt;
-        if (d.age >= d.life) p.dirt.splice(di, 1);
-      }
-      var img = (typeof images !== "undefined" && images) ? images[p.key] : null;
-      var ox = p.x + (p.sway || 0);
-      var oy = p.y - p.h * 0.5 + (p.bobY || 0);
-      ctx.save();
-      // Mechanical parts BEHIND platform hull
-      (p.props || []).forEach(function (pr) {
-        drawMechProp(ctx, ox + pr.ox, oy + pr.oy, pr.r, pr.ang, pr.blades);
-      });
-      var sq = 1 - (p.squash || 0) * 0.5;
-      ctx.save();
-      ctx.translate(ox + p.w / 2, oy + p.h / 2);
-      ctx.scale(1 + (p.squash || 0) * 0.15, sq);
-      if (!img || !img.naturalWidth) {
-        ctx.fillStyle = "rgba(80,60,30,0.85)";
-        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-      } else {
-        ctx.drawImage(img, -p.w / 2, -p.h / 2, p.w, p.h);
-      }
-      ctx.restore();
-      // Dirt particles falling off bottom
-      (p.dirt || []).forEach(function (d) {
-        var t = 1 - d.age / d.life;
-        ctx.globalAlpha = Math.max(0, t * 0.85);
-        ctx.fillStyle = d.r > 2.2 ? "#6b4a28" : "#8a6238";
-        ctx.beginPath();
-        ctx.arc(ox + p.w / 2 + d.x, oy + p.h / 2 + d.y, d.r * t, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      });
-      // Steam / spark particles
-      (p.fx || []).forEach(function (f) {
-        var u = 1 - f.age / f.life;
-        if (u <= 0) return;
-        var fx = ox + f.x, fy = oy + p.h * 0.5 + f.y;
-        if (f.kind === "steam") {
-          ctx.globalAlpha = u * 0.35;
-          var g = ctx.createRadialGradient(fx, fy, 0, fx, fy, f.r);
-          g.addColorStop(0, "rgba(220,220,230,0.7)");
-          g.addColorStop(1, "rgba(180,180,190,0)");
-          ctx.fillStyle = g;
-          ctx.beginPath();
-          ctx.arc(fx, fy, f.r, 0, Math.PI * 2);
-          ctx.fill();
-        } else {
-          ctx.globalAlpha = u * 0.9;
-          ctx.fillStyle = "rgba(255,200,100," + u + ")";
-          ctx.beginPath();
-          ctx.arc(fx, fy, Math.max(1, f.r * 0.25), 0, Math.PI * 2);
-          ctx.fill();
+      var list = ruffPlatforms || window.__airborneRuffPlatforms || [];
+      var canvas = document.getElementById("gameCanvas");
+      var rect = canvas ? canvas.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+      var W0 = (typeof W !== "undefined" && W > 0) ? W : rect.width;
+      var H0 = (typeof H !== "undefined" && H > 0) ? H : rect.height;
+      // reuse children
+      while (layer.children.length > list.length) layer.removeChild(layer.lastChild);
+      for (var i = 0; i < list.length; i++) {
+        var p = list[i];
+        var el = layer.children[i];
+        if (!el) {
+          el = document.createElement("div");
+          el.style.cssText = "position:absolute;background-size:contain;background-repeat:no-repeat;background-position:center;pointer-events:none;";
+          layer.appendChild(el);
         }
-      });
-      ctx.globalAlpha = 1;
-      ctx.restore();
-    });
+        if (!p) { el.style.display = "none"; continue; }
+        var w = +p.w || 80, h = +p.h || 40;
+        var ox = (+p.x || 0) + (+p.sway || 0);
+        var oy = (+p.y || 0) - h * 0.5 + (+p.bobY || 0);
+        var sx = rect.left + (ox / W0) * rect.width;
+        var sy = rect.top + (oy / H0) * rect.height;
+        var sw = (w / W0) * rect.width;
+        var sh = (h / H0) * rect.height;
+        el.style.display = "block";
+        el.style.left = sx + "px";
+        el.style.top = sy + "px";
+        el.style.width = Math.max(8, sw) + "px";
+        el.style.height = Math.max(8, sh) + "px";
+        if (p.key) {
+          el.style.backgroundImage = "url('" + p.key + ".webp')";
+        }
+        el.style.backgroundColor = "rgba(212,165,116,0.35)";
+        el.style.border = "2px solid rgba(255,255,255,0.85)";
+        el.style.boxSizing = "border-box";
+        el.style.borderRadius = "8px";
+      }
+      if (!list.length) {
+        layer.innerHTML = "";
+      }
+    } catch (e) {
+      console.warn("plat DOM", e);
+    }
+  }
+
+  function drawTrainingPlatforms() {
+    // Intentionally minimal — no dirt/fx/props (those hid/broke draws before)
+    window.__airborneRuffPlatforms = ruffPlatforms;
+    if (!ruffPlatforms || !ruffPlatforms.length) return;
+    var c = (typeof ctx !== "undefined") ? ctx : null;
+    if (!c) {
+      try {
+        var el = document.getElementById("gameCanvas");
+        if (el) c = el.getContext("2d");
+      } catch (e0) {}
+    }
+    if (!c) return;
+
+    for (var i = 0; i < ruffPlatforms.length; i++) {
+      var p = ruffPlatforms[i];
+      if (!p) continue;
+      var w = +p.w || 0, h = +p.h || 0;
+      if (w < 4 || h < 4) continue;
+      var ox = (+p.x || 0) + (+p.sway || 0);
+      var oy = (+p.y || 0) - h * 0.5 + (+p.bobY || 0);
+      if (!isFinite(ox) || !isFinite(oy)) continue;
+
+      var img = null;
+      try {
+        if (typeof images !== "undefined" && images) img = images[p.key];
+      } catch (e1) {}
+
+      try {
+        c.save();
+        c.globalAlpha = 1;
+        c.globalCompositeOperation = "source-over";
+        if (img && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0) {
+          c.drawImage(img, ox, oy, w, h);
+        } else {
+          // High-contrast fallback — must be visible
+          c.fillStyle = "#d4a574";
+          c.fillRect(ox, oy, w, h);
+          c.strokeStyle = "#ffffff";
+          c.lineWidth = 3;
+          c.strokeRect(ox + 1.5, oy + 1.5, w - 3, h - 3);
+          c.fillStyle = "#3a2810";
+          c.font = "bold 12px sans-serif";
+          c.textAlign = "center";
+          c.fillText((p.key || "plat").split("_").pop(), ox + w / 2, oy + h / 2);
+        }
+        c.restore();
+      } catch (eDraw) {
+        console.warn("[plat] draw fail", p.key, eDraw);
+      }
+    }
   }
   window.__airborneDrawTrainingPlatforms = drawTrainingPlatforms;
+
+
 
 
   // ---------- Crystals ----------
@@ -3372,6 +3353,10 @@ function finishToMap() {
     window.__airborneRuffRequestLand = false;
     window.__airborneRuffLandArmed = false;
     try { syncRuffDomBuddy(false); } catch (e) {}
+    try {
+      var layer = document.getElementById("platDomLayer");
+      if (layer) layer.innerHTML = "";
+    } catch (eL) {}
     try { clearTrainingPowerIcon(); } catch (e) {}
     // Prefer window exports (functions are scoped inside other files)
     try {
