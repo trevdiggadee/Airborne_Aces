@@ -1164,11 +1164,23 @@
           oy: h * (0.15 + Math.random() * 0.35),
           r: Math.min(18, h * 0.16) * (0.85 + Math.random() * 0.3),
           ang: Math.random() * Math.PI * 2,
-          spd: 2.8 + Math.random() * 1.6, // rad/s — brisk but not frantic
+          spd: 2.8 + Math.random() * 1.6,
           blades: 3 + (Math.random() < 0.5 ? 1 : 0)
         });
       }
-      
+      // Gears toward bottom of platform
+      var nGear = 1 + (Math.random() < 0.6 ? 1 : 0);
+      for (var gi = 0; gi < nGear; gi++) {
+        plat.gears.push({
+          ox: w * (0.22 + gi * 0.45 + Math.random() * 0.1),
+          oy: h * (0.72 + Math.random() * 0.18), // bottom region
+          r: Math.min(14, h * 0.14) * (0.85 + Math.random() * 0.25),
+          ang: Math.random() * Math.PI * 2,
+          spd: 0.9 + Math.random() * 0.7, // slow industrial turn
+          teeth: 7 + (Math.random() < 0.5 ? 1 : 0)
+        });
+      }
+
       ruffPlatforms.push(plat);
       window.__airborneRuffPlatforms = ruffPlatforms;
       // Coins on best landing surfaces; crystal only on barrel platform
@@ -1185,7 +1197,7 @@
     mode = mode || "deck";
     var coinR = 13;
     // Deck sits near upper third of sprite for most islands
-    var topY = -plat.h * (mode === "sparse" ? 0.28 : 0.32);
+    var topY = -plat.h * (mode === "sparse" ? 0.322 : 0.368); // +15% higher on deck
     var pad = mode === "sparse" ? plat.w * 0.28 : plat.w * 0.18;
     var usable = Math.max(24, plat.w - pad * 2);
     count = Math.max(1, Math.min(count, Math.floor(usable / (coinR * 2.2))));
@@ -1212,7 +1224,7 @@
     // Center of barrel / glass dome platform (second asset)
     ruffCrystals.push({
       x: plat.x + plat.w * 0.5,
-      y: plat.y - plat.h * 0.22,
+      y: plat.y - plat.h * 0.25,
       r: 20,
       frame: 0,
       frameT: 0,
@@ -1220,7 +1232,7 @@
       fixedToPlatform: true,
       platRef: plat,
       platOffX: plat.w * 0.5,
-      platOffY: -plat.h * 0.22
+      platOffY: -plat.h * 0.25
     });
   }
 
@@ -1237,17 +1249,18 @@
       p.bobY = Math.sin(p.bobT * 1.4 + (p.phase || 0)) * 5 + (p.squash ? p.squash * 6 : 0);
       p.sway = Math.sin(p.bobT * 0.7 + (p.phase || 0)) * 3;
       (p.props || []).forEach(function (pr) { pr.ang += pr.spd * dt; });
-      // Dirt drip
+      (p.gears || []).forEach(function (g) { g.ang += g.spd * dt; });
+      // Floating dirt — slow drift, gentle fall
       p.dirt = p.dirt || [];
-      if (Math.random() < 0.22) {
+      if (Math.random() < 0.12) {
         p.dirt.push({
-          x: (Math.random() - 0.5) * p.w * 0.75,
-          y: p.h * 0.4,
-          vx: (Math.random() - 0.5) * 18,
-          vy: 28 + Math.random() * 45,
-          life: 0.45 + Math.random() * 0.45,
+          x: (Math.random() - 0.5) * p.w * 0.7,
+          y: p.h * 0.38,
+          vx: (Math.random() - 0.5) * 8,
+          vy: 6 + Math.random() * 12,
+          life: 1.1 + Math.random() * 0.9,
           age: 0,
-          r: 1.2 + Math.random() * 2.2
+          r: 1.0 + Math.random() * 1.8
         });
       }
       for (var di = p.dirt.length - 1; di >= 0; di--) {
@@ -1255,7 +1268,8 @@
         d.age += dt;
         d.x += d.vx * dt;
         d.y += d.vy * dt;
-        d.vy += 110 * dt;
+        d.vy += 18 * dt; // light gravity — floats
+        d.vx *= (1 - 0.4 * dt);
         if (d.age >= d.life) p.dirt.splice(di, 1);
       }
       // Soft steam puffs
@@ -1323,22 +1337,23 @@
           var dB = bot - (py - hh);
           var m = Math.min(dL, dR, dT, dB);
           if (m === dT) {
-            // Cartoon bounce on top
+            // Cartoon bounce — snappy but controlled
             player.y = top - hh - 1;
-            var bounce = Math.max(240, Math.abs(player.vy) * 0.6 + 180);
+            var impact = Math.abs(player.vy || 0);
+            var bounce = Math.min(280, Math.max(120, impact * 0.42 + 110));
             player.vy = -bounce;
-            p.bobY = (p.bobY || 0) + 12;
-            p.squash = 0.28;
+            p.bobY = (p.bobY || 0) + 7;
+            p.squash = 0.18;
             p.dirt = p.dirt || [];
-            for (var di = 0; di < 12; di++) {
+            for (var di = 0; di < 7; di++) {
               p.dirt.push({
-                x: (Math.random() - 0.5) * p.w * 0.7,
-                y: p.h * 0.35,
-                vx: (Math.random() - 0.5) * 90,
-                vy: 50 + Math.random() * 100,
-                life: 0.5 + Math.random() * 0.4,
+                x: (Math.random() - 0.5) * p.w * 0.55,
+                y: p.h * 0.32,
+                vx: (Math.random() - 0.5) * 35,
+                vy: 12 + Math.random() * 28,
+                life: 0.8 + Math.random() * 0.6,
                 age: 0,
-                r: 1.5 + Math.random() * 2.8
+                r: 1.2 + Math.random() * 2.0
               });
             }
             try {
@@ -1371,7 +1386,7 @@
       c.x = p.x + (c.platOffX || 0) + (p.sway || 0);
       c.y = p.y + (c.platOffY || 0) + (p.bobY || 0);
     });
-    ruffPlatforms = ruffPlatforms.filter(function (p) { return p.x + p.w > -20; });
+    ruffPlatforms = ruffPlatforms.filter(function (p) { return p.x + p.w > 0; }); // fully off left edge
     window.__airborneRuffPlatforms = ruffPlatforms;
     try { syncPlatformDomOverlays(); } catch (eDom) {}
   }
@@ -1502,10 +1517,13 @@
         c.save();
         c.globalAlpha = 1;
         c.globalCompositeOperation = "source-over";
-        // Props behind
+        // Props + gears behind / under deck
         try {
           (p.props || []).forEach(function (pr) {
             drawMechProp(c, ox + pr.ox, oy + pr.oy, pr.r, pr.ang, pr.blades);
+          });
+          (p.gears || []).forEach(function (g) {
+            drawMechGear(c, ox + g.ox, oy + g.oy, g.r, g.ang, g.teeth);
           });
         } catch (eP) {}
         c.save();
@@ -3719,11 +3737,12 @@ function finishToMap() {
       }
       try { updateTrainingPlatforms(dt); } catch (e) {}
       // Wait until every platform has scrolled fully off
-      var anyPlat = ruffPlatforms && ruffPlatforms.some(function (p) { return p && (p.x + p.w > -10); });
-      if (!anyPlat && ruffStageT > 8) {
+      var anyPlat = ruffPlatforms && ruffPlatforms.some(function (p) { return p && (p.x + (p.w || 0) > 0); });
+      if (!anyPlat && ruffStageT > 10) {
         setStage("obstacles");
         console.log("[R.U.F.F.] platforms → obstacles (cleared)");
-      } else if (ruffStageT > 55) {
+      } else if (ruffStageT > 70) {
+        // Safety only after plenty of time at slow speed
         setStage("obstacles");
         console.log("[R.U.F.F.] platforms → obstacles (timeout)");
       }
