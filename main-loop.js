@@ -245,17 +245,24 @@ window.__AIRBORNE_MAIN_BUILD = "ruff412";
         window.__airborneLessonDriverT = 0;
         return;
       }
+      // Hold platforms/combined until platforms fully off-screen
+      var plats = window.__airborneRuffPlatforms;
+      if ((st === "platforms" || st === "combined" || st === "obstacles" || st === "shield") &&
+          plats && plats.length > 0) {
+        return; // do not force next stage while platforms still scrolling
+      }
       window.__airborneLessonDriverT += dt;
       var order = ["cruise","altitude","rings","platforms","obstacles","shield","combined","boss1","landing"];
       var idx = order.indexOf(st);
       if (idx < 0) return;
       // Failsafe only — primary progression is ruff-tutorial setStage timers
-      var durations = [12, 18, 32, 34, 24, 32, 28, 32, 50, 24];
-      var need = durations[idx] || 24;
+      var durations = [12, 18, 32, 90, 30, 32, 90, 50, 24];
+      var need = durations[idx] || 30;
       if (window.__airborneLessonDriverT >= need) {
         window.__airborneLessonDriverT = 0;
         var next = order[idx + 1];
         if (!next) return;
+        if (next === "boss1" && plats && plats.length) return;
         window.__airborneForceSetStage = next;
         console.log("[LessonDriver] →", next);
       }

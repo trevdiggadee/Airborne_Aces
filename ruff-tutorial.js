@@ -6,7 +6,7 @@
 
 (function () {
   // AIRBORNE_BUILD ruff412 2026-09-02T04:50Z-platfix
-  window.__AIRBORNE_BUILD = "ruff412";
+  window.__AIRBORNE_BUILD = "ruff413";
   window.__AIRBORNE_BUILD_STAMP = "2026-09-02T04:50Z-platfix";
   try { console.log("%c Airborne build ruff412 ", "background:#1a5;color:#fff;font-weight:bold;", "2026-09-02T04:50Z-platfix"); } catch (e) {}
 
@@ -1205,7 +1205,7 @@
     mode = mode || "deck";
     var coinR = 13;
     // Deck sits near upper third of sprite for most islands
-    var topY = -plat.h * (mode === "sparse" ? 0.370 : 0.423); // +15% again on deck
+    var topY = -plat.h * (mode === "sparse" ? 0.425 : 0.486); // elevated on deck
     var pad = mode === "sparse" ? plat.w * 0.28 : plat.w * 0.18;
     var usable = Math.max(24, plat.w - pad * 2);
     count = Math.max(1, Math.min(count, Math.floor(usable / (coinR * 2.2))));
@@ -1260,24 +1260,24 @@
       (p.props || []).forEach(function (pr) { pr.ang += pr.spd * dt; });
       // Floating dirt — 75% slower, raised 20%
       p.dirt = p.dirt || [];
-      if (Math.random() < 0.06) {
+      if (Math.random() < 0.05) {
         p.dirt.push({
           x: (Math.random() - 0.5) * p.w * 0.65,
-          y: p.h * 0.30, // raised ~20%
-          vx: (Math.random() - 0.5) * 3,
-          vy: 1.5 + Math.random() * 3.5,
-          life: 2.2 + Math.random() * 1.6,
+          y: p.h * 0.28,
+          vx: (Math.random() - 0.5) * 2.5,
+          vy: 1.2 + Math.random() * 2.8,
+          life: 2.4 + Math.random() * 1.8,
           age: 0,
-          r: 1.0 + Math.random() * 1.8
+          r: 1.0 + Math.random() * 1.6
         });
       }
       for (var di = p.dirt.length - 1; di >= 0; di--) {
         var d = p.dirt[di];
         d.age += dt;
-        d.x += d.vx * dt * 0.25;
-        d.y += d.vy * dt * 0.25;
-        d.vy += 4.5 * dt; // 75% slower motion
-        d.vx *= (1 - 0.15 * dt);
+        d.x += d.vx * dt * 0.22;
+        d.y += d.vy * dt * 0.22;
+        d.vy += 3.5 * dt;
+        d.vx *= (1 - 0.12 * dt);
         if (d.age >= d.life) p.dirt.splice(di, 1);
       }
       // Soft steam puffs
@@ -3182,6 +3182,34 @@
     var keepAirfield = !!opts.keepAirfield;
     try { clearAllGameplayEntities(); } catch (e) {}
     try { resetTrainingCollectHUD(); } catch (e) {}
+
+    // Platforms / collectibles / airship — always wipe on reset/restart
+    try {
+      ruffPlatforms = [];
+      window.__airborneRuffPlatforms = [];
+      ruffCoins = [];
+      ruffCrystals = [];
+      ruffAirship = null;
+      ruffMarkers = [];
+      ruffSparkles = [];
+      ruffBgBalloons = [];
+      ruffScreenDust = [];
+    } catch (e) {}
+    try {
+      var layer = document.getElementById("platDomLayer");
+      if (layer) { layer.innerHTML = ""; layer.remove(); }
+    } catch (e) {}
+    try {
+      if (typeof obstacles !== "undefined") obstacles = [];
+      if (typeof birdFlocks !== "undefined") birdFlocks = [];
+      if (typeof bombs !== "undefined") bombs = [];
+      if (typeof rockets !== "undefined") rockets = [];
+      if (typeof powerup !== "undefined") powerup = null;
+      if (typeof shieldPickup !== "undefined") shieldPickup = null;
+      if (typeof particles !== "undefined") particles = [];
+    } catch (e) {}
+    try { if (window.__airborneClearObstacles) window.__airborneClearObstacles(); } catch (e) {}
+
     try {
       ruffActive = false;
       ruffStage = "idle";
@@ -3194,10 +3222,7 @@
       ruffWaitingAvoid = false;
       ruffWaitingRing = 0;
       ruffLandingCelebrated = false;
-      ruffCrystals = [];
-      ruffCoins = [];
-      if (typeof ruffRings !== "undefined") ruffRings = [];
-      ruffStats = { crystals: 0, coins: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, survivingStars: 3 };
+      ruffStats = { crystals: 0, coins: 0, rings: 0, powerups: 0, obstaclesAvoided: 0, bestCombo: 0, landingStars: 3 };
       ruffJetParticles = [];
       ruffMotionGhosts = [];
       ruffSpeakLines = [];
@@ -3205,7 +3230,11 @@
       ruffFrameT = 0;
       ruffX = 0;
       ruffY = 0;
+      ruffLessonPendingNext = false;
+      ruffLessonClearing = false;
+      ruffLessonPauseT = 0;
     } catch (e) {}
+
     window.__airborneRuffActive = false;
     window.__airborneRuffStage = "idle";
     window.__airborneRuffLandArmed = false;
@@ -3226,33 +3255,31 @@
     window.__airborneBossCamPause = false;
     window.__airborneAirfieldPaused = false;
     window.__airborneWorldFrozen = false;
+    window.__airborneLessonDriverT = 0;
+    window.__airborneLessonDriverArmed = false;
+    window.__airborneForceSetStage = null;
+    window.__airborneRingCollects = 0;
+    window.__airborneCollectCoins = 0;
+    window.__airborneCollectCrystals = 0;
+
     try {
       if (window.__airborneCam) {
         window.__airborneCam.phase = "idle";
         window.__airborneCam.z = 1;
         window.__airborneCam.paused = false;
       }
+      if (typeof applyCamCss === "function") applyCamCss(1);
     } catch (eCam) {}
-    try {
-      if (typeof state !== "undefined") state = "playing";
-    } catch (eSt) {}
     try {
       var po = document.getElementById("pauseOverlay");
       if (po) { po.classList.add("hidden"); po.setAttribute("aria-hidden", "true"); }
     } catch (ePo) {}
-    try {
-      var gsEl = document.getElementById("gameScreen");
-      if (gsEl) { gsEl.style.display = "block"; gsEl.style.visibility = "visible"; }
-    } catch (eGs) {}
     try { if (typeof lastTime !== "undefined") lastTime = null; } catch (eLt) {}
     try {
-      ruffLessonPendingNext = false;
-      ruffLessonClearing = false;
-      ruffLessonPauseT = 0;
-      ruffAirship = null;
-      ruffBgBalloons = [];
-      ruffScreenDust = [];
+      if (typeof score === "number") score = 0;
+      if (typeof gameplayScore === "number") gameplayScore = 0;
     } catch (e) {}
+
     if (!keepAirfield) {
       window.__airborneAirfield = false;
       window.__airborneTrainingFlight = false;
@@ -3269,54 +3296,18 @@
       window.__airborneActivePowerVisual = null;
       window.__airborneActivePowerUntil = 0;
       window.__airborneFirePowerActive = false;
-      if (window.__airborneCam) {
-        window.__airborneCam.phase = "idle";
-        window.__airborneCam.z = 1;
-        window.__airborneCam.paused = false;
-      }
-      if (typeof applyCamCss === "function") applyCamCss(1);
     } catch (e) {}
     try {
       var rep = document.getElementById("ruffReport");
       if (rep) {
         rep.classList.remove("visible");
         rep.style.display = "none";
-        rep.style.opacity = "0";
       }
-      var rb = document.getElementById("ruffRankBanner");
-      if (rb) {
-        rb.classList.remove("visible", "medalShow", "rankNameShow");
-        rb.style.opacity = "0";
-      }
-      var ftb = document.getElementById("ftBannerForce");
-      if (ftb && ftb.parentNode) ftb.parentNode.removeChild(ftb);
-      var aab = document.getElementById("aaFlightBanner");
-      if (aab && aab.parentNode) aab.parentNode.removeChild(aab);
     } catch (e) {}
-    try {
-      if (typeof obstacles !== "undefined") obstacles = [];
-      if (typeof bombs !== "undefined") bombs = [];
-      if (typeof powerup !== "undefined") powerup = null;
-      if (typeof hearts !== "undefined") hearts = [];
-      if (typeof bossActive !== "undefined") bossActive = false;
-      if (typeof boss !== "undefined") boss = null;
-      if (typeof stormActive !== "undefined") stormActive = false;
-      if (typeof stormCharge !== "undefined") stormCharge = 0;
-      if (typeof stormTimer !== "undefined") stormTimer = 0;
-      if (typeof score === "number") score = 0;
-      if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = "0";
-    } catch (e) {}
-    try {
-      var rep = document.getElementById("ruffReport");
-      if (rep) { rep.classList.remove("visible"); rep.style.display = "none"; }
-      var rad = document.getElementById("ruffRadio");
-      if (rad) { rad.classList.remove("visible"); rad.style.display = "none"; }
-    } catch (e) {}
-    try { stopAllTrainingAudio(); } catch (e) {}
-    try { hideFlightTrace(); } catch (e) {}
-    try { hideRadio(); } catch (e) {}
-    try { clearTrainingPowerIcon(); } catch (e) {}
+    console.log("[R.U.F.F.] hardReset", window.__AIRBORNE_BUILD || "?", keepAirfield);
   }
+
+
   window.__airborneHardResetTraining = hardResetTrainingState;
   window.resetTrainingCollectHUD = resetTrainingCollectHUD;
 
