@@ -5,6 +5,11 @@
 // ============================================================
 
 (function () {
+  // AIRBORNE_BUILD ruff412 2026-09-02T04:50Z-platfix
+  window.__AIRBORNE_BUILD = "ruff412";
+  window.__AIRBORNE_BUILD_STAMP = "2026-09-02T04:50Z-platfix";
+  try { console.log("%c Airborne build ruff412 ", "background:#1a5;color:#fff;font-weight:bold;", "2026-09-02T04:50Z-platfix"); } catch (e) {}
+
   const RUFF_FRAME_COUNT = 36;
   const CRYSTAL_FRAME_COUNT = 25;
   const CRYSTAL_SCORE = 15;
@@ -1102,6 +1107,7 @@
 
   // ---------- Floating training platforms (steampunk sky docks) ----------
   var ruffPlatforms = [];
+  var PLATFORM_SCROLL_SPEED = 26; // fixed — never changes with bird lesson
   var PLATFORM_KEYS = [
     "island_barrel_platform", "island_gear_wheel_platform", "island_ring_portal_blue",
     "island_market_stall", "island_tiny_rock_grass", "island_tiny_rock_mossy", "island_propeller_platform",
@@ -1161,7 +1167,7 @@
         y: y,
         w: w,
         h: h,
-        speed: 26,
+        speed: PLATFORM_SCROLL_SPEED,
         crystal: !!spec.crystal,
         phase: Math.random() * Math.PI * 2,
         // Mechanical parts behind hull — varied, not frantic
@@ -1244,8 +1250,8 @@
     ruffPlatforms.forEach(function (p) {
       if (p.squash) p.squash = Math.max(0, p.squash - dt * 1.8);
 
-      p.speed = 26;
-      p.x -= 26 * dt;
+      p.speed = PLATFORM_SCROLL_SPEED;
+      p.x -= PLATFORM_SCROLL_SPEED * dt;
       if (p.squash) p.squash = Math.max(0, p.squash - dt * 1.6);
       // Dynamic motion: gentle bob + slow sway
       p.bobT = (p.bobT || Math.random() * 10) + dt;
@@ -3459,6 +3465,7 @@ function finishToMap() {
 
   // ---------- Public API ----------
   function beginRuffTraining() {
+    try { console.log("[R.U.F.F.] begin", window.__AIRBORNE_BUILD, window.__AIRBORNE_BUILD_STAMP); } catch (e) {}
     try {
       ruffPlatforms = [];
       window.__airborneRuffPlatforms = [];
