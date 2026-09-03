@@ -501,7 +501,8 @@
 
   function showLessonBanner(title) {
     if (!title) return;
-    window.__airborneFtBanner = { t: 0, life: 2.6, text: String(title).toUpperCase() };
+    // DOM-only banner (avoid canvas + DOM double titles)
+    window.__airborneFtBanner = null;
     try {
       var n = document.getElementById("aaFlightBanner");
       if (!n) {
@@ -511,9 +512,9 @@
       }
       n.textContent = String(title).toUpperCase();
       n.style.cssText = "position:fixed;left:50%;top:32%;transform:translate(-50%,-50%);z-index:999999;"
-        + "padding:12px 26px;border-radius:16px;pointer-events:none;"
+        + "padding:8px 18px;border-radius:12px;pointer-events:none;"
         + "background:rgba(18,10,4,0.94);border:3px solid #ffc84a;"
-        + "color:#ffe566;font:900 clamp(18px,6.5vw,36px) Rockwell,Georgia,serif;"
+        + "color:#ffe566;font:800 clamp(15px,4.8vw,26px) Rockwell,Georgia,serif;"
         + "letter-spacing:0.1em;text-shadow:0 2px 8px #000;opacity:0;"
         + "transition:opacity 0.35s ease;white-space:nowrap;";
       requestAnimationFrame(function () { n.style.opacity = "1"; });
@@ -527,29 +528,8 @@
   window.__airborneShowLessonBanner = showLessonBanner;
 
   function showFlightTraceBanner() {
-    window.__airborneFtBanner = { t: 0, life: 3.2, text: "FLIGHT TRAINING" };
-    // Also paint a high-z fixed element (independent of game HUD)
-    try {
-      var n = document.getElementById("aaFlightBanner");
-      if (!n) {
-        n = document.createElement("div");
-        n.id = "aaFlightBanner";
-        document.body.appendChild(n);
-      }
-      n.textContent = "FLIGHT TRAINING";
-      n.style.cssText = "position:fixed;left:50%;top:34%;transform:translate(-50%,-50%);z-index:999999;"
-        + "padding:14px 28px;border-radius:16px;pointer-events:none;"
-        + "background:rgba(18,10,4,0.94);border:3px solid #ffc84a;"
-        + "color:#ffe566;font:900 clamp(22px,8vw,42px) Rockwell,Georgia,serif;"
-        + "letter-spacing:0.12em;text-shadow:0 2px 8px #000;opacity:0;"
-        + "transition:opacity 0.4s ease;white-space:nowrap;";
-      requestAnimationFrame(function(){ n.style.opacity = "1"; });
-      clearTimeout(showFlightTraceBanner._hide);
-      showFlightTraceBanner._hide = setTimeout(function(){
-        n.style.opacity = "0";
-        setTimeout(function(){ if (n.parentNode) n.parentNode.removeChild(n); }, 450);
-      }, 2800);
-    } catch (e) {}
+    // Use only the smaller lesson banner style (no large double title)
+    try { showLessonBanner("Flight Training"); } catch (e) {}
   }
   function updateFlightTrainingBanner(dt) {
     var b = window.__airborneFtBanner;
@@ -578,7 +558,7 @@
 
     // Panel
     var text = b.text || "FLIGHT TRAINING";
-    ctx.font = "900 " + Math.max(22, Math.min(42, W0 * 0.085)) + "px Rockwell, Georgia, serif";
+    ctx.font = "800 " + Math.max(14, Math.min(26, W0 * 0.055)) + "px Rockwell, Georgia, serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     var tw = ctx.measureText(text).width;
@@ -849,9 +829,9 @@
     // Lesson name banner
     try {
       var lessonTitles = {
-        // intro uses showFlightTraceBanner only (avoid double)
+        intro: "Flight Training",
         takeoff: "Takeoff",
-        cruise: "Flight Training",
+        // cruise: skip — already shown at intro
         // altitude / rings: no banner
         platforms: "Sky Platforms",
         obstacles: "Obstacles",
@@ -861,11 +841,7 @@
         landing: "Landing",
         report: "Flight Report"
       };
-      if (name === "intro") {
-        /* single Flight Training banner via showFlightTraceBanner */
-      } else if (lessonTitles[name]) {
-        showLessonBanner(lessonTitles[name]);
-      }
+      if (lessonTitles[name]) showLessonBanner(lessonTitles[name]);
     } catch (eBan) {}
 
     ruffStageT = 0;
@@ -3617,8 +3593,6 @@ function finishToMap() {
       ruffLessonClearing = false;
       ruffAirship = null;
     } catch (e) {}
-    try { showFlightTraceBanner(); } catch (e) {}
-
     // Use setStage for full intro wiring (does not clear ruffActive)
     try {
       // Avoid recursive hard clear inside setStage collectible wipe only
