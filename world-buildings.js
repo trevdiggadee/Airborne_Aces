@@ -457,6 +457,15 @@
       try { window.__airborneBeginRuff(); } catch (e) { console.warn(e); }
       try { if (window.showFlightTraceBanner) window.showFlightTraceBanner(); } catch (e) {}
     }
+    // Ensure training BGM starts on the same user-gesture stack as Take Flight
+    try {
+      if (typeof window.__airbornePlayTrainingMusic === "function") {
+        window.__airbornePlayTrainingMusic();
+        setTimeout(function () {
+          try { window.__airbornePlayTrainingMusic(); } catch (e2) {}
+        }, 500);
+      }
+    } catch (eMus) { console.warn("train bgm kick", eMus); }
     // Re-assert after begin (hardReset soft may have toggled)
     window.__airborneRuffActive = true;
     window.__airborneRuffStage = "intro";

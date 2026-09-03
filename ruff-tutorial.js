@@ -120,51 +120,48 @@
     });
   }
 
-  // ---- Flight Training BGM via <audio id="trainingMusic"> (same pattern as splash/menu) ----
+  // ---- Flight Training BGM (Web Audio buffer primary + HTMLAudio fallback) ----
+  // Ultra-reliable path: decode MP3 into the same AudioContext unlocked by user gesture.
   var __trainBgmFadeTimer = null;
   var __trainBossFadeTimer = null;
+  var __trainBgmSource = null;
+  var __trainBgmGain = null;
+  var __trainBgmBuffer = null;
+  var __trainBossSource = null;
+  var __trainBossGain = null;
+  var __trainBossBuffer = null;
+  var __trainHtmlBgm = null;
+  var __trainHtmlBoss = null;
   var TRAIN_BGM_VOL = 0.20;
   var TRAIN_BOSS_VOL = 0.20;
+  var __trainBgmWanted = false;
+  var __trainBgmLoading = false;
 
   function getTrainingMusicEl() {
-    return document.getElementById("trainingMusic");
+    var el = document.getElementById("trainingMusic");
+    if (!el) {
+      el = document.createElement("audio");
+      el.id = "trainingMusic";
+      el.loop = true;
+      el.preload = "auto";
+      el.setAttribute("playsinline", "playsinline");
+      el.src = "Cloud_Cruisers.mp3";
+      document.body.appendChild(el);
+    }
+    return el;
   }
   function getTrainingBossMusicEl() {
-    return document.getElementById("trainingBossMusic");
-  }
-
-  function __fadeHtmlAudio(el, toVol, ms, onDone) {
-    if (!el) { if (onDone) onDone(); return null; }
-    if (__trainBgmFadeTimer && el === getTrainingMusicEl()) {
-      clearInterval(__trainBgmFadeTimer);
-      __trainBgmFadeTimer = null;
+    var el = document.getElementById("trainingBossMusic");
+    if (!el) {
+      el = document.createElement("audio");
+      el.id = "trainingBossMusic";
+      el.loop = true;
+      el.preload = "auto";
+      el.setAttribute("playsinline", "playsinline");
+      el.src = "the_engine_s_decree.mp3";
+      document.body.appendChild(el);
     }
-    if (__trainBossFadeTimer && el === getTrainingBossMusicEl()) {
-      clearInterval(__trainBossFadeTimer);
-      __trainBossFadeTimer = null;
-    }
-    var steps = Math.max(10, Math.round((ms || 1200) / 50));
-    var i = 0;
-    var from = 0;
-    try { from = Number(el.volume) || 0; } catch (e) { from = 0; }
-    var id = setInterval(function () {
-      i++;
-      try {
-        var t = Math.min(1, i / steps);
-        el.volume = Math.max(0, Math.min(1, from + (toVol - from) * t));
-        if (i >= steps) {
-          clearInterval(id);
-          try { el.volume = toVol; } catch (e2) {}
-          if (onDone) onDone();
-        }
-      } catch (e3) {
-        clearInterval(id);
-        if (onDone) onDone();
-      }
-    }, 50);
-    if (el === getTrainingMusicEl()) __trainBgmFadeTimer = id;
-    if (el === getTrainingBossMusicEl()) __trainBossFadeTimer = id;
-    return id;
+    return el;
   }
 
   function __silenceMenuAndSplash() {
@@ -177,121 +174,308 @@
     } catch (e) {}
   }
 
+  function __stopBufferSource(srcRef, gainRef) {
+    try {
+      if (srcRef) {
+        try { srcRef.stop(0); } catch (e) {}
+        try { srcRef.disconnect(); } catch (e) {}
+      }
+    } catch (e) {}
+    try {
+      if (gainRef) gainRef.disconnect();
+    } catch (e) {}
+  }
+
+  function __loadAudioBuffer(url, cb) {
+    try {
+      trainEnsure();
+      if (!__trainCtx) {
+        try { if (window.__airborneEnsureAudio) window.__airborneEnsureAudio(); } catch (e) {}
+      }
+      var ctx = __trainCtx;
+      if (!ctx && typeof audioCtx !== "undefined") ctx = audioCtx;
+      if (!ctx) {
+        // last resort: create
+        try {
+          ctx = new (window.AudioContext || window.webkitAudioContext)();
+          __trainCtx = ctx;
+        } catch (e2) {
+          if (cb) cb(null);
+          return;
+        }
+      }
+      if (ctx.state === "suspended") {
+        try { ctx.resume(); } catch (e3) {}
+      }
+      fetch(url, { cache: "force-cache" })
+        .then(function (res) {
+          if (!res.ok) throw new Error("HTTP " + res.status + " for " + url);
+          return res.arrayBuffer();
+        })
+        .then(function (arr) {
+          return new Promise(function (resolve, reject) {
+            var p = ctx.decodeAudioData(arr, resolve, reject);
+            if (p && typeof p.then === "function") p.then(resolve).catch(reject);
+          });
+        })
+        .then(function (buf) {
+          console.log("[Audio] decoded", url, "dur=" + (buf && buf.duration));
+          if (cb) cb(buf, ctx);
+        })
+        .catch(function (err) {
+          console.warn("[Audio] load/decode fail", url, err && err.message);
+          if (cb) cb(null, ctx);
+        });
+    } catch (e) {
+      console.warn("[Audio] __loadAudioBuffer", e);
+      if (cb) cb(null);
+    }
+  }
+
+  function __startBufferLoop(buffer, ctx, vol, store) {
+    if (!buffer || !ctx) return false;
+    try {
+      if (ctx.state === "suspended") ctx.resume();
+      var gain = ctx.createGain();
+      gain.gain.value = 0.0001;
+      gain.connect(ctx.destination);
+      var src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.loop = true;
+      src.connect(gain);
+      src.start(0);
+      // fade in
+      var now = ctx.currentTime;
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(vol, now + 1.4);
+      store.source = src;
+      store.gain = gain;
+      console.log("[Audio] buffer loop started @", vol);
+      return true;
+    } catch (e) {
+      console.warn("[Audio] buffer start fail", e);
+      return false;
+    }
+  }
+
+  function __playHtmlFallback(which) {
+    try {
+      var el = which === "boss" ? getTrainingBossMusicEl() : getTrainingMusicEl();
+      var vol = which === "boss" ? TRAIN_BOSS_VOL : TRAIN_BGM_VOL;
+      el.loop = true;
+      el.volume = 0;
+      if (which === "boss") __trainHtmlBoss = el;
+      else __trainHtmlBgm = el;
+      var p = el.play();
+      if (p && p.then) {
+        p.then(function () {
+          console.log("[Audio] HTML fallback playing", el.src);
+          var steps = 28, i = 0;
+          var id = setInterval(function () {
+            i++;
+            try { el.volume = Math.min(vol, vol * (i / steps)); } catch (e) {}
+            if (i >= steps) clearInterval(id);
+          }, 50);
+        }).catch(function (err) {
+          console.warn("[Audio] HTML fallback fail", err && err.message);
+        });
+      }
+    } catch (e) {
+      console.warn("[Audio] HTML fallback error", e);
+    }
+  }
+
   function playTrainingMusic() {
+    __trainBgmWanted = true;
     try {
       stopTrainingBossMusic(true);
       __silenceMenuAndSplash();
       trainEnsure();
       try { if (window.__airborneEnsureAudio) window.__airborneEnsureAudio(); } catch (e) {}
 
-      var el = getTrainingMusicEl();
-      if (!el) {
-        // Create element on the fly if missing from HTML
-        el = document.createElement("audio");
-        el.id = "trainingMusic";
-        el.loop = true;
-        el.preload = "auto";
-        el.src = "Cloud_Cruisers.mp3";
-        document.body.appendChild(el);
-        console.warn("[Audio] created trainingMusic element dynamically");
-      }
+      // Stop previous train BGM
+      __stopBufferSource(__trainBgmSource, __trainBgmGain);
+      __trainBgmSource = null;
+      __trainBgmGain = null;
       try {
-        if (!el.src || el.src.indexOf("Cloud") < 0) {
-          el.src = "Cloud_Cruisers.mp3";
-        }
+        var hel = getTrainingMusicEl();
+        hel.pause();
+        hel.currentTime = 0;
+        hel.volume = 0;
       } catch (e) {}
-      el.loop = true;
-      el.volume = 0;
-      var p = el.play();
-      if (p && typeof p.then === "function") {
-        p.then(function () {
-          console.log("[Audio] training BGM playing", el.src);
-          __fadeHtmlAudio(el, TRAIN_BGM_VOL, 1600);
-        }).catch(function (err) {
-          console.warn("[Audio] training BGM blocked/fail", err && err.message);
-          // One more try after a tick (user-gesture timing)
-          setTimeout(function () {
-            try {
-              el.volume = 0;
-              el.play().then(function () {
-                console.log("[Audio] training BGM retry ok");
-                __fadeHtmlAudio(el, TRAIN_BGM_VOL, 1200);
-              }).catch(function (e2) {
-                console.warn("[Audio] training BGM retry fail", e2 && e2.message);
-              });
-            } catch (e3) {}
-          }, 250);
-        });
-      } else {
-        el.volume = TRAIN_BGM_VOL;
+
+      function startWithBuffer(buf, ctx) {
+        if (!__trainBgmWanted) return;
+        if (buf && ctx) {
+          var store = { source: null, gain: null };
+          if (__startBufferLoop(buf, ctx, TRAIN_BGM_VOL, store)) {
+            __trainBgmSource = store.source;
+            __trainBgmGain = store.gain;
+            __trainBgmBuffer = buf;
+            return;
+          }
+        }
+        // Fallback HTML
+        __playHtmlFallback("train");
       }
-    } catch (e) { console.warn("playTrainingMusic", e); }
+
+      if (__trainBgmBuffer && __trainCtx) {
+        startWithBuffer(__trainBgmBuffer, __trainCtx);
+        return;
+      }
+      if (__trainBgmLoading) {
+        // already fetching — HTML fallback meanwhile
+        __playHtmlFallback("train");
+        return;
+      }
+      __trainBgmLoading = true;
+      var paths = [
+        "Cloud_Cruisers.mp3",
+        "./Cloud_Cruisers.mp3",
+        "Cloud%20Cruisers.mp3",
+        "Cloud Cruisers.mp3"
+      ];
+      var pi = 0;
+      function tryPath() {
+        if (pi >= paths.length) {
+          __trainBgmLoading = false;
+          console.warn("[Audio] all Cloud Cruisers paths failed — HTML fallback");
+          __playHtmlFallback("train");
+          return;
+        }
+        var url = paths[pi++];
+        __loadAudioBuffer(url, function (buf, ctx) {
+          if (buf) {
+            __trainBgmLoading = false;
+            __trainBgmBuffer = buf;
+            if (ctx) __trainCtx = ctx;
+            startWithBuffer(buf, __trainCtx || ctx);
+          } else {
+            tryPath();
+          }
+        });
+      }
+      tryPath();
+    } catch (e) {
+      console.warn("playTrainingMusic", e);
+      __playHtmlFallback("train");
+    }
   }
 
   function stopTrainingMusic(hard) {
+    __trainBgmWanted = false;
     try {
-      var el = getTrainingMusicEl();
-      if (!el) return;
-      if (hard) {
-        if (__trainBgmFadeTimer) { clearInterval(__trainBgmFadeTimer); __trainBgmFadeTimer = null; }
-        try { el.pause(); el.currentTime = 0; el.volume = 0; } catch (e) {}
-        return;
+      if (__trainBgmGain && __trainCtx && !hard) {
+        var now = __trainCtx.currentTime;
+        try {
+          __trainBgmGain.gain.cancelScheduledValues(now);
+          __trainBgmGain.gain.setValueAtTime(__trainBgmGain.gain.value, now);
+          __trainBgmGain.gain.linearRampToValueAtTime(0.0001, now + 1.2);
+        } catch (e) {}
+        var src = __trainBgmSource, g = __trainBgmGain;
+        setTimeout(function () {
+          __stopBufferSource(src, g);
+          if (__trainBgmSource === src) {
+            __trainBgmSource = null;
+            __trainBgmGain = null;
+          }
+        }, 1300);
+      } else {
+        __stopBufferSource(__trainBgmSource, __trainBgmGain);
+        __trainBgmSource = null;
+        __trainBgmGain = null;
       }
-      __fadeHtmlAudio(el, 0, 1400, function () {
-        try { el.pause(); el.currentTime = 0; } catch (e2) {}
-      });
+      var el = getTrainingMusicEl();
+      if (el) {
+        if (hard) {
+          try { el.pause(); el.currentTime = 0; el.volume = 0; } catch (e) {}
+        } else {
+          var steps = 24, i = 0, from = el.volume || 0;
+          var id = setInterval(function () {
+            i++;
+            try { el.volume = Math.max(0, from * (1 - i / steps)); } catch (e) {}
+            if (i >= steps) {
+              clearInterval(id);
+              try { el.pause(); el.currentTime = 0; } catch (e2) {}
+            }
+          }, 50);
+        }
+      }
     } catch (e) {}
   }
 
   function playTrainingBossMusic() {
     try {
-      stopTrainingMusic(false); // crossfade out
-      var el = getTrainingBossMusicEl();
-      if (!el) {
-        el = document.createElement("audio");
-        el.id = "trainingBossMusic";
-        el.loop = true;
-        el.preload = "auto";
-        el.src = "the_engine_s_decree.mp3";
-        document.body.appendChild(el);
-      }
-      el.loop = true;
-      el.volume = 0;
-      var p = el.play();
-      if (p && typeof p.then === "function") {
-        p.then(function () {
+      stopTrainingMusic(false);
+      trainEnsure();
+      __stopBufferSource(__trainBossSource, __trainBossGain);
+      __trainBossSource = null;
+      __trainBossGain = null;
+
+      function startBoss(buf, ctx) {
+        if (buf && ctx) {
+          var store = { source: null, gain: null };
           setTimeout(function () {
-            __fadeHtmlAudio(el, TRAIN_BOSS_VOL, 1600);
-          }, 300);
-        }).catch(function (err) {
-          console.warn("[Audio] boss BGM fail", err && err.message);
-        });
+            if (__startBufferLoop(buf, ctx, TRAIN_BOSS_VOL, store)) {
+              __trainBossSource = store.source;
+              __trainBossGain = store.gain;
+              __trainBossBuffer = buf;
+            } else {
+              __playHtmlFallback("boss");
+            }
+          }, 350);
+          return;
+        }
+        __playHtmlFallback("boss");
       }
-      console.log("[Audio] boss BGM start");
+
+      if (__trainBossBuffer && __trainCtx) {
+        startBoss(__trainBossBuffer, __trainCtx);
+        return;
+      }
+      __loadAudioBuffer("the_engine_s_decree.mp3", function (buf, ctx) {
+        if (buf) {
+          __trainBossBuffer = buf;
+          if (ctx) __trainCtx = ctx;
+        }
+        startBoss(buf, __trainCtx || ctx);
+      });
+      console.log("[Audio] boss BGM requested");
     } catch (e) { console.warn("playTrainingBossMusic", e); }
   }
 
   function stopTrainingBossMusic(hard) {
     try {
+      __stopBufferSource(__trainBossSource, __trainBossGain);
+      __trainBossSource = null;
+      __trainBossGain = null;
       var el = getTrainingBossMusicEl();
-      if (!el) return;
-      if (hard) {
-        if (__trainBossFadeTimer) { clearInterval(__trainBossFadeTimer); __trainBossFadeTimer = null; }
+      if (el) {
         try { el.pause(); el.currentTime = 0; el.volume = 0; } catch (e) {}
-        return;
       }
-      __fadeHtmlAudio(el, 0, 1400, function () {
-        try { el.pause(); el.currentTime = 0; } catch (e2) {}
-      });
     } catch (e) {}
   }
 
   function stopAllTrainingAudio() {
+    __trainBgmWanted = false;
     stopTrainingBossMusic(true);
     stopTrainingMusic(true);
     try { trainEngineStop(); } catch (e) {}
     try { trainWindStop(); } catch (e) {}
   }
+
+  // Preload Cloud Cruisers as soon as script loads (decode may finish before flight)
+  try {
+    setTimeout(function () {
+      __loadAudioBuffer("Cloud_Cruisers.mp3", function (buf, ctx) {
+        if (buf) {
+          __trainBgmBuffer = buf;
+          if (ctx) __trainCtx = ctx;
+          console.log("[Audio] Cloud Cruisers preloaded");
+        }
+      });
+    }, 800);
+  } catch (e) {}
 
   function sfxTrainingCoin() {
     try {
@@ -321,6 +505,10 @@
   function sfxTrainingBossWarn() {
     try { trainBeep(80, 0.45, 0.16, "sawtooth"); } catch (e) {}
   }
+
+  // Debug
+  window.__airbornePlayTrainingMusic = playTrainingMusic;
+  window.__airborneStopTrainingMusic = stopTrainingMusic;
 
   let ruffCoins = [];
 
