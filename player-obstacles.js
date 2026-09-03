@@ -646,10 +646,6 @@
     const minY = H * 0.12;
     const maxY = groundY - H * 0.22;
     const y = minY + Math.random() * Math.max(40, maxY - minY);
-    if (type === "drone_scout") {
-      dispW = Math.min(78, (typeof W !== "undefined" ? W : 400) * 0.16);
-      aspect = 1;
-    }
     obstacles.push({
       type: "gold_ring",
       x: W + r * 2,
