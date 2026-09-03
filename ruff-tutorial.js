@@ -499,6 +499,33 @@
     // Circular meter uses CSS vars — no node DOM needed
   }
 
+  function showLessonBanner(title) {
+    if (!title) return;
+    window.__airborneFtBanner = { t: 0, life: 2.6, text: String(title).toUpperCase() };
+    try {
+      var n = document.getElementById("aaFlightBanner");
+      if (!n) {
+        n = document.createElement("div");
+        n.id = "aaFlightBanner";
+        document.body.appendChild(n);
+      }
+      n.textContent = String(title).toUpperCase();
+      n.style.cssText = "position:fixed;left:50%;top:32%;transform:translate(-50%,-50%);z-index:999999;"
+        + "padding:12px 26px;border-radius:16px;pointer-events:none;"
+        + "background:rgba(18,10,4,0.94);border:3px solid #ffc84a;"
+        + "color:#ffe566;font:900 clamp(18px,6.5vw,36px) Rockwell,Georgia,serif;"
+        + "letter-spacing:0.1em;text-shadow:0 2px 8px #000;opacity:0;"
+        + "transition:opacity 0.35s ease;white-space:nowrap;";
+      requestAnimationFrame(function () { n.style.opacity = "1"; });
+      clearTimeout(showLessonBanner._hide);
+      showLessonBanner._hide = setTimeout(function () {
+        n.style.opacity = "0";
+        setTimeout(function () { if (n.parentNode) n.parentNode.removeChild(n); }, 400);
+      }, 2400);
+    } catch (e) {}
+  }
+  window.__airborneShowLessonBanner = showLessonBanner;
+
   function showFlightTraceBanner() {
     window.__airborneFtBanner = { t: 0, life: 3.2, text: "FLIGHT TRAINING" };
     // Also paint a high-z fixed element (independent of game HUD)
@@ -819,6 +846,26 @@
     // (only stopped by stopAllTrainingAudio / hangar)
 
     ruffStage = name;
+    // Lesson name banner
+    try {
+      var lessonTitles = {
+        intro: "Flight Training",
+        takeoff: "Takeoff",
+        cruise: "Free Flight",
+        altitude: "Altitude",
+        rings: "Rings",
+        platforms: "Sky Platforms",
+        obstacles: "Obstacles",
+        shield: "Shield",
+        airship: "Airship",
+        combined: "Combined Practice",
+        boss1: "Boss Fight",
+        landing: "Landing",
+        report: "Flight Report"
+      };
+      if (lessonTitles[name]) showLessonBanner(lessonTitles[name]);
+    } catch (eBan) {}
+
     ruffStageT = 0;
     ruffLessonPendingNext = false;
     ruffLessonClearing = false;
@@ -1259,14 +1306,14 @@
     if (!ruffPlatforms || !ruffPlatforms.length) return;
     var now = performance.now() / 1000;
     ruffPlatforms.forEach(function (p) {
-      if (p.squash) p.squash = Math.max(0, p.squash - dt * 1.8);
+      if (p.squash) p.squash = Math.max(0, p.squash - dt * 0.85); // slow spring recovery
 
       p.speed = PLATFORM_SCROLL_SPEED;
       p.x -= PLATFORM_SCROLL_SPEED * dt;
-      if (p.squash) p.squash = Math.max(0, p.squash - dt * 1.6);
+      if (p.squash) p.squash = Math.max(0, p.squash - dt * 0.75);
       // Dynamic motion: gentle bob + slow sway
       p.bobT = (p.bobT || Math.random() * 10) + dt;
-      p.bobY = Math.sin(p.bobT * 1.4 + (p.phase || 0)) * 5 + (p.squash ? p.squash * 6 : 0);
+      p.bobY = Math.sin(p.bobT * 1.4 + (p.phase || 0)) * 5 + (p.squash ? p.squash * 14 : 0);
       p.sway = Math.sin(p.bobT * 0.7 + (p.phase || 0)) * 3;
       (p.props || []).forEach(function (pr) { pr.ang += pr.spd * dt; });
       // Floating dirt — 75% slower, raised 20%
@@ -1320,7 +1367,7 @@
     if (typeof player !== "undefined" && player) {
       ruffPlatforms.forEach(function (p) {
       // Soft squash recovery (cartoon)
-      if (p.squash) p.squash = Math.max(0, p.squash - dt * 1.8);
+      if (p.squash) p.squash = Math.max(0, p.squash - dt * 0.85);
       // Dirt continuously dribbles off earthy bottoms
       p.dirt = p.dirt || [];
       if (Math.random() < 0.35) {
@@ -1356,23 +1403,26 @@
           var dB = bot - (py - hh);
           var m = Math.min(dL, dR, dT, dB);
           if (m === dT) {
-            // Soft landing bounce — gentle spring
+            // Loose cartoon trampoline bounce
             player.y = top - hh - 1;
             var impact = Math.abs(player.vy || 0);
-            var bounce = Math.min(140, Math.max(45, impact * 0.22 + 40));
+            // Soft spring: high restitution, low stiffness feel
+            var bounce = Math.min(195, Math.max(70, impact * 0.62 + 55));
             player.vy = -bounce;
-            p.bobY = (p.bobY || 0) + 3;
-            p.squash = 0.10;
+            // Platform reacts with stretchy squash + slow recovery
+            p.bobY = (p.bobY || 0) + 10;
+            p.squash = 0.32;
+            p.springT = 0.45;
             p.dirt = p.dirt || [];
-            for (var di = 0; di < 7; di++) {
+            for (var di = 0; di < 10; di++) {
               p.dirt.push({
-                x: (Math.random() - 0.5) * p.w * 0.55,
-                y: p.h * 0.32,
-                vx: (Math.random() - 0.5) * 35,
-                vy: 12 + Math.random() * 28,
-                life: 0.8 + Math.random() * 0.6,
+                x: (Math.random() - 0.5) * p.w * 0.6,
+                y: p.h * 0.3,
+                vx: (Math.random() - 0.5) * 40,
+                vy: 8 + Math.random() * 22,
+                life: 0.9 + Math.random() * 0.7,
                 age: 0,
-                r: 1.2 + Math.random() * 2.0
+                r: 1.2 + Math.random() * 2.2
               });
             }
             try {

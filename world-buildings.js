@@ -192,7 +192,7 @@
       try { ensureTaxiRunwayStrip(); } catch (e) {
         try { ensureAirfieldStripVisible(); } catch (e2) {}
       }
-      window.__airborneTaxiUntil = performance.now() + 3200;
+      window.__airborneTaxiUntil = performance.now() + 4160; // +30%
       if (typeof player !== "undefined" && player && typeof H !== "undefined") {
         var th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
         var landY = H - Math.max(40, th * 0.28) - (player.h ? player.h * 0.22 : 10);
@@ -218,7 +218,7 @@
     const t0 = window.__airborneLandTouchAt;
     if (!t0) return;
     // Only after short taxi buffer
-    if (performance.now() - t0 < 2800) return;
+    if (performance.now() - t0 < 3640) return; // +30% before report
     window.__airborneTrainingReportShown = true;
     window.__airborneTrainingReportReady = true;
     window.__airborneAirfieldDidLand = true;
@@ -1209,7 +1209,7 @@
           airfieldTip = "Taxiing…";
           airfieldTiles = [];
           try { ensureTaxiRunwayStrip(); } catch (eTr) {}
-          window.__airborneTaxiUntil = performance.now() + 3200;
+          window.__airborneTaxiUntil = performance.now() + 4160; // +30%
           try { syncAirfieldGlobals(); } catch (eSync) {}
           try {
             if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
@@ -1267,7 +1267,7 @@
       }
       airfieldUseLandingArt = true;
 
-      var scrollSec = 3.75;
+      var scrollSec = 4.875; // +30% landing drive
       var spd = 240;
       if (airfieldSkidT < scrollSec) {
         (airfieldTiles || []).forEach(function (tile) {
