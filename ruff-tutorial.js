@@ -849,21 +849,23 @@
     // Lesson name banner
     try {
       var lessonTitles = {
-        intro: "Flight Training",
+        // intro uses showFlightTraceBanner only (avoid double)
         takeoff: "Takeoff",
-        cruise: "Free Flight",
-        altitude: "Altitude",
-        rings: "Rings",
+        cruise: "Flight Training",
+        // altitude / rings: no banner
         platforms: "Sky Platforms",
         obstacles: "Obstacles",
         shield: "Shield",
-        airship: "Airship",
         combined: "Combined Practice",
         boss1: "Boss Fight",
         landing: "Landing",
         report: "Flight Report"
       };
-      if (lessonTitles[name]) showLessonBanner(lessonTitles[name]);
+      if (name === "intro") {
+        /* single Flight Training banner via showFlightTraceBanner */
+      } else if (lessonTitles[name]) {
+        showLessonBanner(lessonTitles[name]);
+      }
     } catch (eBan) {}
 
     ruffStageT = 0;
@@ -1314,6 +1316,15 @@
       // Dynamic motion: gentle bob + slow sway
       p.bobT = (p.bobT || Math.random() * 10) + dt;
       p.bobY = Math.sin(p.bobT * 1.4 + (p.phase || 0)) * 5 + (p.squash ? p.squash * 14 : 0);
+      // Dip recovery — platform sinks on hit then returns
+      p.dipY = p.dipY || 0;
+      if (p.dipY > 0.15) {
+        p.dipY *= Math.exp(-2.4 * dt); // ease back up
+        if (p.dipY < 0.15) p.dipY = 0;
+      } else {
+        p.dipY = 0;
+      }
+      p.bobY += p.dipY;
       p.sway = Math.sin(p.bobT * 0.7 + (p.phase || 0)) * 3;
       (p.props || []).forEach(function (pr) { pr.ang += pr.spd * dt; });
       // Floating dirt — 75% slower, raised 20%
@@ -1403,16 +1414,16 @@
           var dB = bot - (py - hh);
           var m = Math.min(dL, dR, dT, dB);
           if (m === dT) {
-            // Loose cartoon trampoline bounce
+            // Loose cartoon trampoline + platform dips down then springs back
             player.y = top - hh - 1;
             var impact = Math.abs(player.vy || 0);
-            // Soft spring: high restitution, low stiffness feel
             var bounce = Math.min(195, Math.max(70, impact * 0.62 + 55));
             player.vy = -bounce;
-            // Platform reacts with stretchy squash + slow recovery
-            p.bobY = (p.bobY || 0) + 10;
             p.squash = 0.32;
-            p.springT = 0.45;
+            p.springT = 0.55;
+            // Physical dip: move platform down, then ease back up
+            p.dipY = (p.dipY || 0) + Math.min(28, 12 + impact * 0.04);
+            if (p.dipY > 36) p.dipY = 36;
             p.dirt = p.dirt || [];
             for (var di = 0; di < 10; di++) {
               p.dirt.push({
@@ -3607,8 +3618,6 @@ function finishToMap() {
       ruffAirship = null;
     } catch (e) {}
     try { showFlightTraceBanner(); } catch (e) {}
-    try { setTimeout(function(){ try { showFlightTraceBanner(); } catch (e2) {} }, 120); } catch (e) {}
-    try { setTimeout(function(){ try { showFlightTraceBanner(); } catch (e2) {} }, 600); } catch (e) {}
 
     // Use setStage for full intro wiring (does not clear ruffActive)
     try {

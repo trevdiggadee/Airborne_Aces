@@ -360,8 +360,9 @@
   }
 
   function pickObstacleType() {
-    // Flight training: birds only (no hot-air balloon obstacles)
+    // Flight training: birds + scout drones
     if (window.__airborneAirfield || window.__airborneTrainingFlight) {
+      if (Math.random() < 0.28) return "drone_scout";
       return Math.random() < 0.5 ? "bird_a" : "bird_b";
     }
     const next = nextBossConfig();
@@ -402,6 +403,63 @@
       try { if (typeof images !== "undefined" && images) images[sp.key] = im; } catch (e) {}
     });
   }
+  function drawDroneScout(o, drawY) {
+    if (!o || (o.type !== "drone_scout" && !o.isDrone)) return false;
+    var img = (typeof images !== "undefined" && images) ? images.drone_scout_sheet : null;
+    if (!img || !img.complete || !img.naturalWidth) {
+      // procedural fallback
+      ctx.save();
+      ctx.translate(o.x + o.w / 2, drawY + o.h / 2);
+      ctx.fillStyle = "#2a2a2a";
+      ctx.beginPath();
+      ctx.arc(0, 0, o.w * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#c4a35a";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = "#3dfe9a";
+      ctx.fillRect(-3, -o.h * 0.45, 6, o.h * 0.25);
+      ctx.restore();
+      return true;
+    }
+    var cols = 6, rows = 6, n = 36;
+    var fr = (o.animFrame || 0) % n;
+    var col = fr % cols;
+    var row = Math.floor(fr / cols) % rows;
+    var fw = img.naturalWidth / cols;
+    var fh = img.naturalHeight / rows;
+    ctx.save();
+    // Soft green engine glow
+    ctx.save();
+    ctx.globalAlpha = 0.35 + 0.2 * Math.sin((o.droneZig || 0) * 3);
+    ctx.fillStyle = "#3dfe9a";
+    ctx.beginPath();
+    ctx.arc(o.x + o.w * 0.5, drawY + o.h * 0.15, o.w * 0.22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    // Motion trail dots
+    if (o.droneTrail && o.droneTrail.length) {
+      for (var ti = 0; ti < o.droneTrail.length; ti++) {
+        var t = o.droneTrail[ti];
+        ctx.globalAlpha = 0.15 * (ti / o.droneTrail.length);
+        ctx.fillStyle = "#5eead4";
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+    if (o.powerAffected || o.onFire || o.rot) {
+      ctx.translate(o.x + o.w / 2, drawY + o.h / 2);
+      ctx.rotate(o.rot || 0);
+      ctx.drawImage(img, col * fw, row * fh, fw, fh, -o.w / 2, -o.h / 2, o.w, o.h);
+    } else {
+      ctx.drawImage(img, col * fw, row * fh, fw, fh, o.x, drawY, o.w, o.h);
+    }
+    ctx.restore();
+    return true;
+  }
+
   function drawBirdFromSheet(o, drawY) {
     var sp = o.birdSpecies;
     if (!sp) return false;
@@ -588,6 +646,10 @@
     const minY = H * 0.12;
     const maxY = groundY - H * 0.22;
     const y = minY + Math.random() * Math.max(40, maxY - minY);
+    if (type === "drone_scout") {
+      dispW = Math.min(78, (typeof W !== "undefined" ? W : 400) * 0.16);
+      aspect = 1;
+    }
     obstacles.push({
       type: "gold_ring",
       x: W + r * 2,
@@ -664,6 +726,11 @@
 
     var birdSpecies = null;
     var birdFrameCount = OBSTACLE_ANIM_FRAME_COUNT;
+    if (type === "drone_scout") {
+      dispW = Math.min(78, W * 0.16);
+      aspect = 1;
+      // force square-ish size after later assignments
+    }
     if (type === "bird_a" || type === "bird_b") {
       // Mix original frame birds with new spritesheet species
       if (Math.random() < 0.55) {
@@ -683,6 +750,10 @@
     if (type === "bird_a" || type === "bird_b") {
       // use recomputed size (+10%)
     }
+    if (type === "drone_scout") {
+      dispW = Math.min(78, (typeof W !== "undefined" ? W : 400) * 0.16);
+      aspect = 1;
+    }
     obstacles.push({
       type,
       x: W + dispW,
@@ -692,11 +763,18 @@
       bobPhase: Math.random() * Math.PI * 2,
       bobSpeed: 1.5 + Math.random() * 1.2,
       bobAmount: 8 + Math.random() * 10,
-      speedMult: type === "balloon_anim" ? 0.72 : ((type === "bird_a" || type === "bird_b") ? 0.855 : 1),
+      speedMult: type === "balloon_anim" ? 0.72 : (type === "drone_scout" ? 0.43 : ((type === "bird_a" || type === "bird_b") ? 0.855 : 1)),
       animFrame: Math.floor(Math.random() * birdFrameCount),
       animTimer: Math.random() / OBSTACLE_ANIM_FPS,
       birdSpecies: birdSpecies,
       birdFrameCount: birdFrameCount,
+      droneZig: type === "drone_scout" ? (Math.random() * Math.PI * 2) : 0,
+      droneZigSpd: type === "drone_scout" ? (1.6 + Math.random() * 1.2) : 0,
+      droneZigAmp: type === "drone_scout" ? (28 + Math.random() * 36) : 0,
+      droneBaseY: 0,
+      isDrone: type === "drone_scout",
+      droneSparkT: 0,
+      droneTrail: [],
       scored: false,
       // jet engine flame + smoke trail for mini blimps
       flameTimer: (type === "mini_blimp") ? 0 : null,
@@ -1496,6 +1574,27 @@
           birdSpdMul = (window.__airborneRuffStage === "obstacles") ? 0.90 : 1.18; // -10% on first bird lesson
         }
         o.x -= obstacleSpeed * birdSpdMul * (o.speedMult || 1) * dt;
+        if (o.isDrone || o.type === "drone_scout") {
+          if (!o.droneBaseY) o.droneBaseY = o.y;
+          o.droneZig = (o.droneZig || 0) + (o.droneZigSpd || 2) * dt;
+          var zig = Math.sin(o.droneZig) * (o.droneZigAmp || 32);
+          var zig2 = Math.sin(o.droneZig * 0.5) * (o.droneZigAmp || 32) * 0.35;
+          o.y = o.droneBaseY + zig + zig2;
+          o.animT = (o.animT || 0) + dt;
+          if (o.animT > 0.07) {
+            o.animT = 0;
+            o.animFrame = ((o.animFrame || 0) + 1) % 36;
+          }
+          // Trail samples for drone motion effect
+          o.droneTrail = o.droneTrail || [];
+          o.droneTrail.push({ x: o.x + o.w * 0.5, y: o.y + o.h * 0.5 });
+          if (o.droneTrail.length > 8) o.droneTrail.shift();
+          // Ensure size
+          if (!o.w || o.w < 20) {
+            o.w = Math.min(78, (typeof W !== "undefined" ? W : 400) * 0.16);
+            o.h = o.w;
+          }
+        }
       }
       if (o.isRing || o.type === "gold_ring") {
         // Hit-burst rings fly outward from the blimp
@@ -1808,7 +1907,7 @@
       }
 
       if (dx < collideX && dy < collideY) {
-        const isBird = (o.type === "bird_a" || o.type === "bird_b" || !!o.birdSpecies);
+        const isBird = (o.type === "bird_a" || o.type === "bird_b" || o.type === "drone_scout" || o.isDrone || !!o.birdSpecies);
         const shielded = !!(shieldActive || window.__airborneShieldActive);
 
         // 1) SHIELD — bounce only. No coins. No takeHit.
@@ -1958,6 +2057,9 @@
         return;
       }
       const drawY = o.y + Math.sin(o.bobPhase) * o.bobAmount;
+      if ((o.type === "drone_scout" || o.isDrone) && typeof drawDroneScout === "function" && drawDroneScout(o, drawY)) {
+        return;
+      }
       if (o.birdSpecies && typeof drawBirdFromSheet === "function" && drawBirdFromSheet(o, drawY)) {
         return;
       }
