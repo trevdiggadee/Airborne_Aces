@@ -1141,7 +1141,7 @@
       // Vertical lanes spread 0.28–0.72; large horizontal gaps
       // Crystals
       { key: "island_barrel_platform",     yFrac: 0.50, gap: 1.85, coinMode: "none", crystal: true },
-      { key: "island_gear_wheel_platform", yFrac: 0.68, gap: 1.80, coinMode: "none", crystal: true },
+      { key: "island_gear_wheel_platform", yFrac: 0.68, gap: 1.80, coinMode: "deck", coins: 3, crystal: true },
       { key: "island_ring_portal_blue",    yFrac: 0.32, gap: 1.90, coinMode: "none", crystal: true },
       // Coins
       { key: "island_market_stall",        yFrac: 0.58, gap: 1.85, coinMode: "deck", coins: 4 },
@@ -1356,13 +1356,13 @@
           var dB = bot - (py - hh);
           var m = Math.min(dL, dR, dT, dB);
           if (m === dT) {
-            // Cartoon bounce — snappy but controlled
+            // Soft landing bounce — gentle spring
             player.y = top - hh - 1;
             var impact = Math.abs(player.vy || 0);
-            var bounce = Math.min(280, Math.max(120, impact * 0.42 + 110));
+            var bounce = Math.min(140, Math.max(45, impact * 0.22 + 40));
             player.vy = -bounce;
-            p.bobY = (p.bobY || 0) + 7;
-            p.squash = 0.18;
+            p.bobY = (p.bobY || 0) + 3;
+            p.squash = 0.10;
             p.dirt = p.dirt || [];
             for (var di = 0; di < 7; di++) {
               p.dirt.push({
@@ -1380,13 +1380,13 @@
             } catch (eB) {}
           } else if (m === dB) {
             player.y = bot + hh + 1;
-            player.vy = Math.max(Math.abs(player.vy) * 0.4 + 80, 60);
+            player.vy = Math.max(Math.abs(player.vy) * 0.25 + 40, 30);
           } else if (m === dL) {
             player.x = left - hw - 1;
-            player.vy = Math.min(player.vy, -80);
+            player.vy = Math.min(player.vy, -45);
           } else {
             player.x = right + hw + 1;
-            player.vy = Math.min(player.vy, -60);
+            player.vy = Math.min(player.vy, -35);
           }
         }
       });
@@ -4119,9 +4119,9 @@ function finishToMap() {
     }
     try { drawMarkers(); } catch (e) {}
     // Platforms under coins/crystals
-    try { drawTrainingPlatforms(); } catch (e) {}
+    // Platforms drawn early in main-loop (behind birds/blimp/ruff)
     try { drawCrystals(); } catch (e) {}
-    try { drawTrainingCoins(); } catch (e) {} // coins/crystals above platforms
+    try { drawTrainingCoins(); } catch (e) {}
     try { drawTrainingAirship(); } catch (e) {}
     try { drawScreenDust(); } catch (e) {}
     if (ruffStage !== "boss1" && window.__airborneRuffStage !== "boss1") {

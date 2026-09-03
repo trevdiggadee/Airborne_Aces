@@ -447,7 +447,6 @@ function loop(ts) {
       try {
         if (typeof window.__airborneRuffPlatforms !== "undefined") {
           // force canvas draw + DOM every frame while platforms exist
-          drawTrainingPlatformsEmergency();
         }
       } catch (eP2) {}
       // Ruff lesson failsafe — never soft-lock on intro/takeoff
@@ -496,7 +495,6 @@ function loop(ts) {
       try {
         if (typeof window.__airborneRuffPlatforms !== "undefined") {
           // force canvas draw + DOM every frame while platforms exist
-          drawTrainingPlatformsEmergency();
         }
       } catch (eP2) {}
       }
@@ -575,6 +573,8 @@ function loop(ts) {
     drawWindParticlesBack();
     // Training background balloons — behind blimps and clouds
     try { if (window.__airborneDrawTrainingBgBalloons) window.__airborneDrawTrainingBgBalloons(); } catch (e) {}
+    // Platforms behind blimps, birds, ruff, coins
+    try { if (window.__airborneDrawTrainingPlatforms) window.__airborneDrawTrainingPlatforms(); } catch (e) {}
     drawObstacles();
     if (bossActive) {
       drawBoss();
@@ -599,7 +599,6 @@ function loop(ts) {
     // Ensure power-up fade never leaves the blimp transparent
     try { ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; } catch (e) {}
     try { if (window.__airborneDrawRoyalBehind) window.__airborneDrawRoyalBehind(); } catch (e) {}
-        try { if (window.__airborneDrawTrainingPlatforms) window.__airborneDrawTrainingPlatforms(); } catch (e) {}
     drawPlayer(); try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePowerVisual(); } catch(e) {};
     try { if (window.drawHitCoins) window.drawHitCoins(); } catch (e) {}
     try { if (typeof drawRingFronts === "function") drawRingFronts(); else if (window.__airborneDrawRingFronts) window.__airborneDrawRingFronts(); } catch (e) {}
@@ -614,8 +613,7 @@ function loop(ts) {
 
     try { drawTrainingRuffEmergency(typeof dt === "number" ? dt : 0.016); } catch (eER) {}
     // Platforms ON TOP so they cannot be covered
-    try { drawTrainingPlatformsEmergency(); } catch (ePE) {}
-    // platforms drawn inside drawRuff under coins
+    // platforms drawn earlier (behind birds/blimp/ruff/coins)
 
     drawWindParticlesFront();
     drawShieldEffect();
