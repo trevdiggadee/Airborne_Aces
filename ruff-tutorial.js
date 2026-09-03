@@ -120,29 +120,21 @@
     });
   }
 
-  // ---- Flight Training BGM (Cloud Cruisers) + Boss crossfade ----
+  // ---- Flight Training BGM + SFX ----
   var __trainBgmAudio = null;
   var __trainBgmFadeTimer = null;
   var __trainBossAudio = null;
   var __trainBossFadeTimer = null;
   var TRAIN_BGM_VOL = 0.20;
   var TRAIN_BOSS_VOL = 0.20;
-
-  function __clearFade(timerRef) {
-    try {
-      if (timerRef && timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    } catch (e) {}
-  }
+  var __trainBgmUnlocked = false;
 
   function __fadeAudio(audio, toVol, ms, onDone) {
     if (!audio) { if (onDone) onDone(); return null; }
-    var steps = Math.max(8, Math.round(ms / 50));
+    var steps = Math.max(8, Math.round((ms || 1200) / 50));
     var i = 0;
     var from = 0;
-    try { from = audio.volume || 0; } catch (e) { from = 0; }
+    try { from = Number(audio.volume) || 0; } catch (e) { from = 0; }
     var id = setInterval(function () {
       i++;
       try {
@@ -161,27 +153,63 @@
     return id;
   }
 
+  function __tryPlayHtmlAudio(paths, loop, onReady) {
+    var idx = 0;
+    function next() {
+      if (idx >= paths.length) {
+        console.warn("[Audio] all paths failed", paths);
+        return null;
+      }
+      var path = paths[idx++];
+      try {
+        var a = new Audio(path);
+        a.loop = !!loop;
+        a.preload = "auto";
+        a.volume = 0;
+        var p = a.play();
+        if (p && typeof p.then === "function") {
+          p.then(function () {
+            console.log("[Audio] playing", path);
+            if (onReady) onReady(a);
+          }).catch(function (err) {
+            console.warn("[Audio] play fail", path, err && err.message);
+            next();
+          });
+        } else {
+          if (onReady) onReady(a);
+        }
+        return a;
+      } catch (e) {
+        console.warn("[Audio] create fail", path, e);
+        next();
+        return null;
+      }
+    }
+    return next();
+  }
+
   function playTrainingMusic() {
     try {
+      // Always kill boss track when (re)starting training music
+      stopTrainingBossMusic(true);
       stopTrainingMusic(true);
-      // Prefer Cloud Cruisers; fall back to spaced filename if needed
-      var a = new Audio("Cloud_Cruisers.mp3?v=ruff414");
-      a.loop = true;
-      a.volume = 0;
-      a.play().catch(function (e) {
-        console.warn("train bgm play", e);
-        try {
-          a = new Audio("Cloud%20Cruisers.mp3?v=ruff414");
-          a.loop = true;
-          a.volume = 0;
-          a.play().catch(function (e2) { console.warn("train bgm alt", e2); });
+      trainEnsure();
+      __tryPlayHtmlAudio(
+        [
+          "Cloud_Cruisers.mp3?v=ruff415",
+          "Cloud_Cruisers.mp3",
+          "Cloud%20Cruisers.mp3?v=ruff415",
+          "Cloud Cruisers.mp3?v=ruff415",
+          "./Cloud_Cruisers.mp3?v=ruff415"
+        ],
+        true,
+        function (a) {
           __trainBgmAudio = a;
-          __trainBgmFadeTimer = __fadeAudio(a, TRAIN_BGM_VOL, 1600);
-        } catch (e3) {}
-      });
-      __trainBgmAudio = a;
-      __trainBgmFadeTimer = __fadeAudio(a, TRAIN_BGM_VOL, 1600);
-      console.log("[Audio] training BGM Cloud Cruisers @20%");
+          try { a.volume = 0; } catch (e) {}
+          __trainBgmFadeTimer = __fadeAudio(a, TRAIN_BGM_VOL, 1800);
+          __trainBgmUnlocked = true;
+        }
+      );
     } catch (e) { console.warn("playTrainingMusic", e); }
   }
 
@@ -204,24 +232,29 @@
 
   function playTrainingBossMusic() {
     try {
-      // Crossfade: training BGM out while boss theme fades in
-      stopTrainingMusic(false); // soft fade out ~1.4s
+      // Only during boss — crossfade from training BGM
+      stopTrainingMusic(false);
       if (__trainBossFadeTimer) { clearInterval(__trainBossFadeTimer); __trainBossFadeTimer = null; }
       if (__trainBossAudio) {
         try { __trainBossAudio.pause(); } catch (e) {}
         __trainBossAudio = null;
       }
-      var a = new Audio("the_engine_s_decree.mp3?v=ruff414");
-      a.loop = true;
-      a.volume = 0;
-      a.play().catch(function (e) { console.warn("boss mp3", e); });
-      __trainBossAudio = a;
-      // Slight delay so crossfade overlaps (~0.4s of both)
-      setTimeout(function () {
-        if (__trainBossAudio !== a) return;
-        __trainBossFadeTimer = __fadeAudio(a, TRAIN_BOSS_VOL, 1600);
-      }, 400);
-      console.log("[Audio] boss BGM crossfade @20%");
+      __tryPlayHtmlAudio(
+        [
+          "the_engine_s_decree.mp3?v=ruff415",
+          "the_engine_s_decree.mp3",
+          "./the_engine_s_decree.mp3"
+        ],
+        true,
+        function (a) {
+          __trainBossAudio = a;
+          setTimeout(function () {
+            if (__trainBossAudio !== a) return;
+            __trainBossFadeTimer = __fadeAudio(a, TRAIN_BOSS_VOL, 1600);
+          }, 350);
+        }
+      );
+      console.log("[Audio] boss BGM start");
     } catch (e) { console.warn("playTrainingBossMusic", e); }
   }
 
@@ -245,8 +278,42 @@
   function stopAllTrainingAudio() {
     stopTrainingBossMusic(true);
     stopTrainingMusic(true);
-    trainEngineStop();
-    trainWindStop();
+    try { trainEngineStop(); } catch (e) {}
+    try { trainWindStop(); } catch (e) {}
+  }
+
+  // Collectible / lesson SFX (were missing — calls no-oped)
+  function sfxTrainingCoin() {
+    try {
+      trainBeep(988, 0.07, 0.16, "sine");
+      setTimeout(function () { trainBeep(1319, 0.09, 0.14, "sine"); }, 55);
+    } catch (e) {}
+  }
+  function sfxTrainingCrystal() {
+    try {
+      trainChord([784, 988, 1175, 1568], 0.14, 0.12);
+    } catch (e) {}
+  }
+  function sfxTrainingRing() {
+    try {
+      trainBeep(660, 0.08, 0.14, "triangle");
+      setTimeout(function () { trainBeep(880, 0.1, 0.12, "triangle"); }, 70);
+      setTimeout(function () { trainBeep(1320, 0.12, 0.1, "sine"); }, 140);
+    } catch (e) {}
+  }
+  function sfxTrainingPower() {
+    try {
+      trainChord([220, 330, 440, 660], 0.2, 0.14);
+    } catch (e) {}
+  }
+  function sfxTrainingLand() {
+    try {
+      trainBeep(196, 0.25, 0.12, "triangle");
+      setTimeout(function () { trainBeep(147, 0.3, 0.1, "sine"); }, 120);
+    } catch (e) {}
+  }
+  function sfxTrainingBossWarn() {
+    try { trainBeep(80, 0.45, 0.16, "sawtooth"); } catch (e) {}
   }
 
   let ruffCoins = [];
@@ -3476,8 +3543,21 @@ function finishToMap() {
     } catch (e) {}
 
     try {
+      stopTrainingBossMusic(true);
+      stopTrainingMusic(true);
       trainEnsure();
       playTrainingMusic();
+      // Retry BGM shortly after (covers autoplay / late unlock)
+      setTimeout(function () {
+        try {
+          if (!__trainBgmAudio || __trainBgmAudio.paused) playTrainingMusic();
+        } catch (eR) {}
+      }, 400);
+      setTimeout(function () {
+        try {
+          if (!__trainBgmAudio || __trainBgmAudio.paused) playTrainingMusic();
+        } catch (eR2) {}
+      }, 1200);
       trainEngineStart();
       trainWindStart();
       trainBeep(523, 0.1, 0.22);
