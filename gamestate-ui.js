@@ -525,10 +525,21 @@
         (typeof beginAirfieldTraining === "function" ? beginAirfieldTraining : null);
       if (startTrain) {
         try {
+          // Start BGM immediately on the user-tap gesture (iOS requires this)
+          try {
+            if (typeof window.__airbornePlayTrainingMusic === "function") {
+              window.__airbornePlayTrainingMusic();
+            }
+          } catch (eMus0) {}
           if (typeof obstacles !== "undefined") obstacles = [];
           if (typeof birdFlocks !== "undefined") birdFlocks = [];
           try { if (window.resetTrainingCollectHUD) window.resetTrainingCollectHUD(); } catch (e) {}
           startTrain();
+          try {
+            if (typeof window.__airbornePlayTrainingMusic === "function") {
+              window.__airbornePlayTrainingMusic();
+            }
+          } catch (eMus1) {}
           if (typeof obstacles !== "undefined") obstacles = [];
           if (typeof birdFlocks !== "undefined") birdFlocks = [];
           console.log("[Airborne] Training started", window.__airborneAirfield, window.__airborneAirfieldPhase, window.__airborneRuffStage);
@@ -905,12 +916,6 @@
         if (typeof boss !== "undefined") boss = null;
       } catch (err) {}
       try {
-        window.__airborneRuffPlatforms = [];
-        window.__airborneTrainingBossBalloons = null;
-        window.__airborneFireballs = [];
-        window.__airborneHeatseekers = [];
-        window.__airborneWarBullets = [];
-        window.__airborneOrphanTrails = [];
         window.__airborneAirfield = false;
         window.__airborneTrainingFlight = false;
         window.__airborneRuffActive = false;
