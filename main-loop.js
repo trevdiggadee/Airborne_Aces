@@ -609,10 +609,14 @@ function loop(ts) {
     try {
       if (typeof window.__airborneDrawRuff === "function") window.__airborneDrawRuff();
     } catch (eRuff) { console.warn("drawRuff failed", eRuff); }
+    try { if (window.__airborneDrawTrainingCrystals) window.__airborneDrawTrainingCrystals(); } catch (e) {}
+    try { if (window.__airborneDrawTrainingCoins) window.__airborneDrawTrainingCoins(); } catch (e) {}
+
     try { drawTrainingRuffEmergency(typeof dt === "number" ? dt : 0.016); } catch (eER) {}
-    // Final emergency platform pass, then collectibles always render in front.
+    // Platforms ON TOP so they cannot be covered
     try { drawTrainingPlatformsEmergency(); } catch (ePE) {}
-    try { if (window.__airborneDrawTrainingCollectiblesFront) window.__airborneDrawTrainingCollectiblesFront(); } catch (e) {}
+    // platforms drawn inside drawRuff under coins
+
     drawWindParticlesFront();
     drawShieldEffect();
     drawStorm();

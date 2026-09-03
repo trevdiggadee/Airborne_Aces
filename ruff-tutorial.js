@@ -815,7 +815,8 @@
   // ---------- Stage control ----------
   function setStage(name) {
     if (!name) return;
-    try { if (name !== "boss1") stopTrainingBossMusic(); } catch (e) {}
+    // Boss BGM continues through landing/report until hangar reset
+    // (only stopped by stopAllTrainingAudio / hangar)
 
     ruffStage = name;
     ruffStageT = 0;
@@ -1579,6 +1580,8 @@
     }
   }
   window.__airborneDrawTrainingPlatforms = drawTrainingPlatforms;
+  window.__airborneDrawTrainingCoins = drawTrainingCoins;
+  window.__airborneDrawTrainingCrystals = drawCrystals;
 
 
 
@@ -4118,7 +4121,7 @@ function finishToMap() {
     // Platforms under coins/crystals
     try { drawTrainingPlatforms(); } catch (e) {}
     try { drawCrystals(); } catch (e) {}
-    try { drawTrainingCoins(); } catch (e) {}
+    try { drawTrainingCoins(); } catch (e) {} // coins/crystals above platforms
     try { drawTrainingAirship(); } catch (e) {}
     try { drawScreenDust(); } catch (e) {}
     if (ruffStage !== "boss1" && window.__airborneRuffStage !== "boss1") {
