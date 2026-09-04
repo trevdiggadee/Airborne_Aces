@@ -1017,6 +1017,8 @@
       window.__airborneRuffStage = "combined";
     } else if (name === "combined") {
       window.__airborneTrainingBoss = false;
+    window.__airborneRingSerial = 0;
+
       window.__airborneAirfieldRings = true;
       window.__airborneAirfieldObstacles = true;
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.95;
@@ -3252,6 +3254,8 @@
     try {
       // Training boss atmosphere
       window.__airborneTrainingBoss = false;
+    window.__airborneRingSerial = 0;
+
       window.__airborneTrainingBossBalloons = null;
     } catch (e) {}
     try {
@@ -3349,6 +3353,8 @@
     window.__airborneRuffRequestLand = false;
     window.__airborneTrainingPowerUsed = false;
     window.__airborneTrainingBoss = false;
+    window.__airborneRingSerial = 0;
+
     window.__airborneTrainingBossDone = false;
     window.__airborneTrainingBossTried = false;
     window.__airborneTrainingReportReady = false;
@@ -3437,6 +3443,8 @@
     window.__airborneRuffRequestLand = false;
     window.__airborneRuffLandArmed = false;
     window.__airborneTrainingBoss = false;
+    window.__airborneRingSerial = 0;
+
     window.__airborneTrainingBossDone = false;
     try { clearTrainingPowerIcon(); } catch (e) {}
     try {
@@ -3600,6 +3608,8 @@ function finishToMap() {
     window.__airborneRuffRequestLand = false;
     window.__airborneTrainingPowerUsed = false;
     window.__airborneTrainingBoss = false;
+    window.__airborneRingSerial = 0;
+
     window.__airborneTrainingBossDone = false;
     window.__airborneTrainingBossTried = false;
 
@@ -4064,6 +4074,8 @@ function finishToMap() {
             (ruffStageT > 14 && window.__airborneTrainingBossTried &&
              typeof bossActive !== "undefined" && !bossActive && !bossSinking)) {
           window.__airborneTrainingBoss = false;
+    window.__airborneRingSerial = 0;
+
           updateTrainingBossDark(dt, 0);
           requestNextStage();
         } else if (ruffStageT > 50) {
@@ -4073,6 +4085,8 @@ function finishToMap() {
             bossSinking = null;
           } catch (e) {}
           window.__airborneTrainingBoss = false;
+    window.__airborneRingSerial = 0;
+
           window.__airborneTrainingBossDone = true;
           window.__airborneBossWeaponUnlock = true;
           requestNextStage();
@@ -4081,6 +4095,8 @@ function finishToMap() {
     } else if (ruffStage === "combined") {
       // Never run campaign boss during combined practice
       window.__airborneTrainingBoss = false;
+    window.__airborneRingSerial = 0;
+
       try {
         if (typeof bossActive !== "undefined" && bossActive) {
           bossActive = false;

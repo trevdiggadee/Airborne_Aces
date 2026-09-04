@@ -744,6 +744,8 @@
   window.drawHitCoins = drawHitCoins;
 
   function spawnGoldRing() {
+    window.__airborneRingSerial = (window.__airborneRingSerial || 0) + 1;
+
     const r = Math.min(48, W * 0.115); // gear portal size
     const groundY = groundLevelY();
     const minY = H * 0.12;
@@ -764,7 +766,8 @@
       bobAmount: 8,
       speedMult: 1,
       isRing: true,
-      animFrame: Math.floor(Math.random() * 25),
+      ringNum: window.__airborneRingSerial || 1,
+      animFrame: 0,
       animT: 0
     });
   }
@@ -1792,25 +1795,26 @@
     });
   }
 
-  // Steampunk gear portal ring (5x5 sheet)
-  window.__ringGearSheet = null;
-  window.__ringGearLoading = false;
-  function ensureRingGearSheet() {
-    if (window.__ringGearSheet && window.__ringGearSheet.complete && window.__ringGearSheet.naturalWidth > 0) {
-      return window.__ringGearSheet;
+
+  // Checkered flight ring asset
+  window.__ringCheckeredImg = null;
+  window.__ringCheckeredLoading = false;
+  function ensureRingCheckered() {
+    if (window.__ringCheckeredImg && window.__ringCheckeredImg.complete && window.__ringCheckeredImg.naturalWidth > 0) {
+      return window.__ringCheckeredImg;
     }
-    if (window.__ringGearLoading) return window.__ringGearSheet;
-    window.__ringGearLoading = true;
-    var paths = ["ring_gear_sheet.png?v=ruff432", "ring_gear_sheet.png"];
+    if (window.__ringCheckeredLoading) return window.__ringCheckeredImg;
+    window.__ringCheckeredLoading = true;
+    var paths = ["ring_checkered.png?v=ruff433", "ring_checkered.png"];
     var i = 0;
     function next() {
-      if (i >= paths.length) { window.__ringGearLoading = false; return; }
+      if (i >= paths.length) { window.__ringCheckeredLoading = false; return; }
       var im = new Image();
       im.onload = function () {
         if (im.naturalWidth > 0) {
-          window.__ringGearSheet = im;
-          try { if (typeof images !== "undefined" && images) images.ring_gear_sheet = im; } catch (e) {}
-          window.__ringGearLoading = false;
+          window.__ringCheckeredImg = im;
+          try { if (typeof images !== "undefined" && images) images.ring_checkered = im; } catch (e) {}
+          window.__ringCheckeredLoading = false;
         } else next();
       };
       im.onerror = function () { next(); };
@@ -1819,41 +1823,63 @@
     next();
     return null;
   }
-  try { setTimeout(ensureRingGearSheet, 200); } catch (e) {}
+  try { setTimeout(ensureRingCheckered, 200); } catch (e) {}
 
-  function drawGearRingFrame(o, cx, cy, half) {
-    var img = ensureRingGearSheet() || window.__ringGearSheet;
-    if (!img || !img.naturalWidth) return false;
-    var cols = 5, rows = 5, n = 25;
-    var fr = ((o.animFrame || 0) % n + n) % n;
-    var col = fr % cols;
-    var row = Math.floor(fr / cols) % rows;
-    var fw = img.naturalWidth / cols;
-    var fh = img.naturalHeight / rows;
+  function drawCheckeredRing(o, cx, cy, half) {
+    // half: "back" | "front" | "full"
+    var img = ensureRingCheckered() || window.__ringCheckeredImg;
     var rad = (o.r || o.w / 2 || 40) * (o.expandScale || 1);
-    var dw = rad * 1.55;
-    var dh = rad * 2.35;
+    var dw = rad * 2.15;
+    var dh = rad * 2.55;
     var dx = cx - dw / 2;
     var dy = cy - dh / 2;
     var alpha = (o.fade != null) ? Math.max(0, o.fade) : 1;
     ctx.save();
     if (half === "back") {
+      // Far (left) half behind blimp
       ctx.beginPath();
       ctx.rect(dx - 2, dy - 2, dw * 0.52, dh + 4);
       ctx.clip();
-      ctx.globalAlpha = alpha * (o.passed ? 0.75 : 0.95);
+      ctx.globalAlpha = alpha * (o.passed ? 0.7 : 0.95);
     } else if (half === "front") {
       ctx.beginPath();
       ctx.rect(dx + dw * 0.48, dy - 2, dw * 0.54, dh + 4);
       ctx.clip();
       ctx.globalAlpha = alpha;
+    } else {
+      ctx.globalAlpha = alpha;
     }
-    if (half !== "back") {
-      ctx.shadowColor = o.passed ? "rgba(80,220,140,0.55)" : "rgba(255,170,60,0.5)";
-      ctx.shadowBlur = 14;
+    if (img && img.complete && img.naturalWidth > 0) {
+      if (half !== "back") {
+        ctx.shadowColor = o.passed ? "rgba(80,220,140,0.45)" : "rgba(255,80,60,0.35)";
+        ctx.shadowBlur = 12;
+      }
+      ctx.drawImage(img, dx, dy, dw, dh);
+    } else {
+      // Fallback hoop
+      ctx.strokeStyle = o.passed ? "#3dde8a" : "#c0392b";
+      ctx.lineWidth = Math.max(6, rad * 0.18);
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rad * 0.42, rad * 1.05, 0, 0, Math.PI * 2);
+      ctx.stroke();
     }
-    ctx.drawImage(img, col * fw, row * fh, fw, fh, dx, dy, dw, dh);
     ctx.restore();
+
+    // Number label (drawn on front / full only so it's readable in front of blimp)
+    if (half === "front" || half === "full") {
+      var num = o.ringNum || 1;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.font = "900 " + Math.max(16, Math.min(28, rad * 0.55)) + "px Rockwell, Georgia, serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "rgba(0,0,0,0.75)";
+      ctx.fillStyle = o.passed ? "#b8ffd0" : "#fff8e8";
+      ctx.strokeText(String(num), cx, cy);
+      ctx.fillText(String(num), cx, cy);
+      ctx.restore();
+    }
     return true;
   }
 
@@ -1869,20 +1895,8 @@
         var baseR = (o.r || o.w / 2) * 1.0;
         var rad = baseR * (o.expandScale || 1);
         var passed = !!o.passed;
-        if (!drawGearRingFrame(o, cx, cy, "back")) {
-          var rx = rad * 0.32, ry = rad * 1.12;
-          ctx.save();
-          ctx.translate(cx, cy);
-          ctx.globalAlpha = (o.fade != null) ? o.fade : 1;
-          ctx.strokeStyle = passed ? "#3dde8a" : "#d4a84b";
-          ctx.lineWidth = Math.max(5, rad * 0.14);
-          ctx.beginPath();
-          ctx.scale(rx / ry, 1);
-          ctx.arc(0, 0, ry, Math.PI * 0.5, Math.PI * 1.5, false);
-          ctx.stroke();
-          ctx.restore();
-        }
-        o._ringFront = { cx: cx, cy: cy, rad: rad, passed: passed, gear: true };
+        drawCheckeredRing(o, cx, cy, "back");
+        o._ringFront = { cx: cx, cy: cy, rad: rad, passed: passed, checkered: true };
         return;
       }
       var bobA = (typeof o.bobAmount === "number") ? o.bobAmount : 0;
@@ -1914,6 +1928,7 @@
   }
   window.drawObstacles = drawObstacles;
 
+
   // ---------- Floating heal pickup — sporadic, restores 25% (1 heart) ----------
   let healPickup = null;
   let healSpawnTimer = 6 + Math.random() * 5; // first one arrives a little sooner
@@ -1928,28 +1943,13 @@
         if (!o || !(o.isRing || o.type === "gold_ring")) return;
         if (!o._ringFront) return;
         var rf = o._ringFront;
-        // FRONT (near) half of gear portal — drawn AFTER blimp so it passes through
-        if (rf.gear) {
-          if (!drawGearRingFrame(o, rf.cx, rf.cy, "front")) {
-            // fallback arc
-            var rad = rf.rad || 40;
-            var rx = rad * 0.32, ry = rad * 1.12;
-            ctx.save();
-            ctx.translate(rf.cx, rf.cy);
-            ctx.strokeStyle = rf.passed ? "#3dde8a" : "#e8c060";
-            ctx.lineWidth = Math.max(5, rad * 0.14);
-            ctx.shadowColor = "rgba(255,180,60,0.5)";
-            ctx.shadowBlur = 10;
-            ctx.beginPath();
-            ctx.scale(rx / ry, 1);
-            ctx.arc(0, 0, ry, -Math.PI * 0.5, Math.PI * 0.5, false);
-            ctx.stroke();
-            ctx.restore();
-          }
+        if (rf.checkered) {
+          drawCheckeredRing(o, rf.cx, rf.cy, "front");
+        } else if (rf.gear && typeof drawGearRingFrame === "function") {
+          drawGearRingFrame(o, rf.cx, rf.cy, "front");
         } else {
-          // legacy ellipse front
           var rad2 = rf.rad || 40;
-          var rx2 = rf.rx || rad2 * 0.32, ry2 = rf.ry || rad2 * 1.12;
+          var rx2 = rad2 * 0.32, ry2 = rad2 * 1.12;
           ctx.save();
           ctx.translate(rf.cx, rf.cy);
           ctx.strokeStyle = rf.passed ? "#3dde8a" : "#e8c060";
@@ -1964,6 +1964,7 @@
     } catch (e) {}
   }
   window.__airborneDrawRingFronts = drawRingFronts;
+
 
 
 function spawnHealPickup() {
