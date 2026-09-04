@@ -362,7 +362,7 @@
   function pickObstacleType() {
     // Flight training: birds + scout drones
     if (window.__airborneAirfield || window.__airborneTrainingFlight) {
-      if (Math.random() < 0.38) return "drone_scout";
+      if (Math.random() < 0.45) return "drone_scout";
       return Math.random() < 0.5 ? "bird_a" : "bird_b";
     }
     const next = nextBossConfig();
@@ -392,31 +392,41 @@
   }
   window.__trainingBirdSheetImgs = window.__trainingBirdSheetImgs || {};
   function ensureDroneSheet() {
-    if (typeof images === "undefined" || !images) return;
-    if (images.drone_scout_sheet && images.drone_scout_sheet.complete && images.drone_scout_sheet.naturalWidth) return;
-    if (window.__droneSheetLoading) return;
+    if (window.__droneSheetImg && window.__droneSheetImg.complete && window.__droneSheetImg.naturalWidth) {
+      try { if (typeof images !== "undefined" && images) images.drone_scout_sheet = window.__droneSheetImg; } catch (e) {}
+      return window.__droneSheetImg;
+    }
+    if (typeof images !== "undefined" && images && images.drone_scout_sheet && images.drone_scout_sheet.naturalWidth) {
+      window.__droneSheetImg = images.drone_scout_sheet;
+      return window.__droneSheetImg;
+    }
+    if (window.__droneSheetLoading) return null;
     window.__droneSheetLoading = true;
     var paths = [
-      "drone_scout_sheet.webp?v=ruff426",
-      "drone_scout_sheet.webp",
-      "drone_scout_sheet.png?v=ruff426",
-      "drone_scout_sheet.png"
+      "drone_scout_sheet.png?v=ruff427",
+      "drone_scout_sheet.webp?v=ruff427",
+      "drone_scout_sheet.png",
+      "drone_scout_sheet.webp"
     ];
     var i = 0;
     function tryNext() {
       if (i >= paths.length) { window.__droneSheetLoading = false; return; }
+      var path = paths[i++];
       var im = new Image();
+      im.crossOrigin = "anonymous";
       im.onload = function () {
         if (im.naturalWidth > 0) {
-          images.drone_scout_sheet = im;
+          window.__droneSheetImg = im;
+          try { if (typeof images !== "undefined" && images) images.drone_scout_sheet = im; } catch (e) {}
           window.__droneSheetLoading = false;
-          console.log("[Assets] drone sheet loaded", paths[i-1], im.naturalWidth);
+          console.log("[Assets] drone sheet OK", path, im.naturalWidth + "x" + im.naturalHeight);
         } else tryNext();
       };
       im.onerror = function () { tryNext(); };
-      im.src = paths[i++];
+      im.src = path;
     }
     tryNext();
+    return null;
   }
   try { setTimeout(ensureDroneSheet, 300); } catch (e) {}
 
@@ -434,57 +444,99 @@
   }
   function drawDroneScout(o, drawY) {
     if (!o || (o.type !== "drone_scout" && !o.isDrone)) return false;
-    try { ensureDroneSheet(); } catch (e) {}
-    var img = (typeof images !== "undefined" && images) ? images.drone_scout_sheet : null;
-    if (!img || !img.complete || !img.naturalWidth) {
-      // procedural fallback
-      ctx.save();
-      ctx.translate(o.x + o.w / 2, drawY + o.h / 2);
-      ctx.fillStyle = "#2a2a2a";
-      ctx.beginPath();
-      ctx.arc(0, 0, o.w * 0.35, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = "#c4a35a";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.fillStyle = "#3dfe9a";
-      ctx.fillRect(-3, -o.h * 0.45, 6, o.h * 0.25);
-      ctx.restore();
-      return true;
+    var img = null;
+    try { img = ensureDroneSheet(); } catch (e) {}
+    if (!img) {
+      try {
+        if (typeof images !== "undefined" && images) img = images.drone_scout_sheet;
+      } catch (e2) {}
     }
-    var cols = 6, rows = 6, n = 36;
-    var fr = (o.animFrame || 0) % n;
-    var col = fr % cols;
-    var row = Math.floor(fr / cols) % rows;
-    var fw = img.naturalWidth / cols;
-    var fh = img.naturalHeight / rows;
+    if (!img) img = window.__droneSheetImg || null;
+
+    var dw = o.w || 70;
+    var dh = o.h || dw;
+    var cx = o.x + dw / 2;
+    var cy = drawY + dh / 2;
+
     ctx.save();
-    // Soft green engine glow
-    ctx.save();
-    ctx.globalAlpha = 0.35 + 0.2 * Math.sin((o.droneZig || 0) * 3);
-    ctx.fillStyle = "#3dfe9a";
-    ctx.beginPath();
-    ctx.arc(o.x + o.w * 0.5, drawY + o.h * 0.15, o.w * 0.22, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-    // Motion trail dots
+    // Wind streaks behind drone
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = "rgba(180,220,255,0.7)";
+    ctx.lineWidth = 2;
+    for (var wi = 0; wi < 3; wi++) {
+      var wy = cy - 8 + wi * 8;
+      ctx.beginPath();
+      ctx.moveTo(cx - dw * 0.15, wy);
+      ctx.lineTo(cx - dw * 0.55 - wi * 6, wy + (wi - 1) * 3);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // Trail
     if (o.droneTrail && o.droneTrail.length) {
       for (var ti = 0; ti < o.droneTrail.length; ti++) {
         var t = o.droneTrail[ti];
-        ctx.globalAlpha = 0.15 * (ti / o.droneTrail.length);
+        ctx.globalAlpha = 0.12 + 0.2 * (ti / o.droneTrail.length);
         ctx.fillStyle = "#5eead4";
         ctx.beginPath();
-        ctx.arc(t.x, t.y, 3, 0, Math.PI * 2);
+        ctx.arc(t.x, t.y, 2 + ti * 0.3, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.globalAlpha = 1;
     }
-    if (o.powerAffected || o.onFire || o.rot) {
-      ctx.translate(o.x + o.w / 2, drawY + o.h / 2);
-      ctx.rotate(o.rot || 0);
-      ctx.drawImage(img, col * fw, row * fh, fw, fh, -o.w / 2, -o.h / 2, o.w, o.h);
+
+    if (img && img.complete && img.naturalWidth > 0) {
+      var cols = 6, rows = 6, n = 36;
+      var fr = (o.animFrame || 0) % n;
+      var col = fr % cols;
+      var row = Math.floor(fr / cols) % rows;
+      var fw = img.naturalWidth / cols;
+      var fh = img.naturalHeight / rows;
+      // Green glow
+      ctx.save();
+      ctx.globalAlpha = 0.4;
+      ctx.fillStyle = "#3dfe9a";
+      ctx.beginPath();
+      ctx.arc(cx, cy - dh * 0.28, dw * 0.18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      if (o.rot) {
+        ctx.translate(cx, cy);
+        ctx.rotate(o.rot);
+        ctx.drawImage(img, col * fw, row * fh, fw, fh, -dw / 2, -dh / 2, dw, dh);
+      } else {
+        ctx.drawImage(img, col * fw, row * fh, fw, fh, o.x, drawY, dw, dh);
+      }
     } else {
-      ctx.drawImage(img, col * fw, row * fh, fw, fh, o.x, drawY, o.w, o.h);
+      // Always-visible brass body fallback
+      ctx.translate(cx, cy);
+      ctx.fillStyle = "#3a3530";
+      ctx.beginPath();
+      ctx.arc(0, 0, dw * 0.38, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#d4a84b";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.fillStyle = "#1a90c8";
+      ctx.beginPath();
+      ctx.arc(0, 4, dw * 0.16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#3dfe9a";
+      ctx.fillRect(-4, -dh * 0.48, 8, dh * 0.28);
+      // wings
+      ctx.fillStyle = "#c4a35a";
+      ctx.beginPath();
+      ctx.moveTo(-dw * 0.35, -4);
+      ctx.lineTo(-dw * 0.62, -18);
+      ctx.lineTo(-dw * 0.55, 6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(dw * 0.35, -4);
+      ctx.lineTo(dw * 0.62, -18);
+      ctx.lineTo(dw * 0.55, 6);
+      ctx.closePath();
+      ctx.fill();
     }
     ctx.restore();
     return true;
@@ -710,7 +762,7 @@
     const type = pickObstacleType();
     // Drone uses spritesheet — no OBSTACLE_ANIM_SETS frames
     if (type === "drone_scout") {
-      var dw = Math.min(78, (typeof W !== "undefined" ? W : 400) * 0.16);
+      var dw = Math.min(96, (typeof W !== "undefined" ? W : 400) * 0.20);
       var groundYd = (typeof groundLevelY === "function") ? groundLevelY() : ((typeof H !== "undefined" ? H : 600) * 0.85);
       var yD = (typeof H !== "undefined" ? H : 600) * (0.18 + Math.random() * 0.55);
       if (yD > groundYd - dw) yD = groundYd - dw - 10;

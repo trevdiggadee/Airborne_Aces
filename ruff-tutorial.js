@@ -534,7 +534,7 @@
         document.body.appendChild(n);
       }
       n.textContent = String(title).toUpperCase();
-      n.style.cssText = "position:fixed;left:50%;top:32%;transform:translate(-50%,-50%);z-index:999999;"
+      n.style.cssText = "position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);z-index:999999;"
         + "padding:8px 18px;border-radius:12px;pointer-events:none;"
         + "background:rgba(18,10,4,0.94);border:3px solid #ffc84a;"
         + "color:#ffe566;font:800 clamp(15px,4.8vw,26px) Rockwell,Georgia,serif;"
@@ -576,7 +576,7 @@
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.globalCompositeOperation = "source-over";
-    ctx.translate(W0 * 0.5, H0 * 0.36);
+    ctx.translate(W0 * 0.5, H0 * 0.396);
     ctx.scale(scale, scale);
 
     // Panel
@@ -1420,7 +1420,7 @@
             p.springT = 0.55;
             // Physical dip: move platform down, then ease back up
             // Start a symmetric dip (down then up at same speed)
-            p.dipTarget = Math.min(30, Math.max(14, 12 + impact * 0.05));
+            p.dipTarget = Math.min(34.5, Math.max(16, (12 + impact * 0.05) * 1.15)); // +15% deeper
             p.dirt = p.dirt || [];
             for (var di = 0; di < 10; di++) {
               p.dirt.push({
@@ -1436,6 +1436,41 @@
             try {
               if (window.__airborneFlapPulse) window.__airborneFlapPulse();
             } catch (eB) {}
+            // Bounce SFX
+            try {
+              trainBeep(180, 0.06, 0.14, "triangle");
+              setTimeout(function () { try { trainBeep(140, 0.08, 0.1, "sine"); } catch (e) {} }, 50);
+            } catch (eSfx) {}
+            // Dust puff at contact
+            try {
+              var hx = player.x + (player.w || 40) * 0.5;
+              var hy = top;
+              p.dirt = p.dirt || [];
+              for (var dpi = 0; dpi < 14; dpi++) {
+                p.dirt.push({
+                  x: (Math.random() - 0.5) * p.w * 0.5,
+                  y: p.h * 0.2,
+                  vx: (Math.random() - 0.5) * 50,
+                  vy: -20 - Math.random() * 40,
+                  life: 0.45 + Math.random() * 0.35,
+                  age: 0,
+                  r: 1.5 + Math.random() * 2.5
+                });
+              }
+              if (typeof particles !== "undefined" && particles) {
+                for (var pi = 0; pi < 10; pi++) {
+                  particles.push({
+                    x: hx + (Math.random() - 0.5) * 40,
+                    y: hy,
+                    vx: (Math.random() - 0.5) * 80,
+                    vy: -30 - Math.random() * 50,
+                    life: 0.5 + Math.random() * 0.3,
+                    color: ["#c4b59a", "#a89878", "#ddd4c4"][pi % 3],
+                    size: 3 + Math.random() * 5
+                  });
+                }
+              }
+            } catch (eDust) {}
           } else if (m === dB) {
             player.y = bot + hh + 1;
             player.vy = Math.max(Math.abs(player.vy) * 0.25 + 40, 30);
