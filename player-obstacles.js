@@ -678,8 +678,36 @@
       return;
     }
     const type = pickObstacleType();
+    // Drone uses spritesheet — no OBSTACLE_ANIM_SETS frames
+    if (type === "drone_scout") {
+      var dw = Math.min(78, (typeof W !== "undefined" ? W : 400) * 0.16);
+      var groundYd = (typeof groundLevelY === "function") ? groundLevelY() : ((typeof H !== "undefined" ? H : 600) * 0.85);
+      var yD = (typeof H !== "undefined" ? H : 600) * (0.18 + Math.random() * 0.55);
+      if (yD > groundYd - dw) yD = groundYd - dw - 10;
+      obstacles.push({
+        type: "drone_scout",
+        x: (typeof W !== "undefined" ? W : 400) + dw,
+        y: yD,
+        w: dw,
+        h: dw,
+        scored: false,
+        speedMult: 0.43,
+        animFrame: Math.floor(Math.random() * 36),
+        animT: 0,
+        bobPhase: Math.random() * Math.PI * 2,
+        bobAmount: 0,
+        droneZig: Math.random() * Math.PI * 2,
+        droneZigSpd: 1.6 + Math.random() * 1.2,
+        droneZigAmp: 28 + Math.random() * 36,
+        droneBaseY: yD,
+        isDrone: true,
+        droneTrail: []
+      });
+      return;
+    }
     const frames = OBSTACLE_ANIM_SETS[type];
-    const img = images[frames[0]];
+    if (!frames || !frames.length) return;
+    const img = (typeof images !== "undefined" && images) ? images[frames[0]] : null;
     let aspect = imgAspect(img);
     let dispW;
     if (type === "balloon_anim") {

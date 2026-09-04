@@ -299,6 +299,10 @@
 
   window.__airbornePlayTrainingMusic = playTrainingMusic;
   window.__airborneStopTrainingMusic = stopTrainingMusic;
+  window.stopTrainingBossMusic = stopTrainingBossMusic;
+  window.stopTrainingMusic = stopTrainingMusic;
+  window.stopAllTrainingAudio = stopAllTrainingAudio;
+
 
   let ruffCoins = [];
 
@@ -1211,18 +1215,8 @@
         gears: [],
         dirt: []
       };
-      // 1–2 propellers (faster spin)
-      var nProp = 1 + (Math.random() < 0.55 ? 1 : 0);
-      for (var pi = 0; pi < nProp; pi++) {
-        plat.props.push({
-          ox: w * (0.18 + pi * 0.55 + Math.random() * 0.08),
-          oy: h * (0.15 + Math.random() * 0.35),
-          r: Math.min(18, h * 0.16) * (0.85 + Math.random() * 0.3),
-          ang: Math.random() * Math.PI * 2,
-          spd: 2.8 + Math.random() * 1.6,
-          blades: 3 + (Math.random() < 0.5 ? 1 : 0)
-        });
-      }
+      // propellers removed
+
 
 
       ruffPlatforms.push(plat);
@@ -1295,15 +1289,14 @@
       // Dip recovery — platform sinks on hit then returns
       p.dipY = p.dipY || 0;
       if (p.dipY > 0.15) {
-        p.dipY *= Math.exp(-2.4 * dt); // ease back up
+        p.dipY *= Math.exp(-1.2 * dt); // 50% slower return
         if (p.dipY < 0.15) p.dipY = 0;
       } else {
         p.dipY = 0;
       }
       p.bobY += p.dipY;
       p.sway = Math.sin(p.bobT * 0.7 + (p.phase || 0)) * 3;
-      (p.props || []).forEach(function (pr) { pr.ang += pr.spd * dt; });
-      // Floating dirt — 75% slower, raised 20%
+            // Floating dirt — 75% slower, raised 20%
       p.dirt = p.dirt || [];
       if (Math.random() < 0.05) {
         p.dirt.push({
@@ -1575,9 +1568,6 @@
         c.globalCompositeOperation = "source-over";
         // Props + gears behind / under deck
         try {
-          (p.props || []).forEach(function (pr) {
-            drawMechProp(c, ox + pr.ox, oy + pr.oy, pr.r, pr.ang, pr.blades);
-          });
         } catch (eP) {}
         c.save();
         c.translate(ox + w * 0.5, oy + h * 0.5);

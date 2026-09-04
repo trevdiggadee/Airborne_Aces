@@ -760,13 +760,21 @@
       if (musicPlaying) stopMusic();
       // Pause HTML audio elements (menu / splash / gameplay) when leaving the tab
       try {
-        ["menuMusic", "splashMusic", "gameplayMusic"].forEach(function (id) {
+        ["menuMusic", "splashMusic", "gameplayMusic", "trainingMusic", "trainingBossMusic"].forEach(function (id) {
           var el = document.getElementById(id);
           if (el && !el.paused) {
             el.dataset.wasPlaying = "1";
             el.pause();
           }
         });
+        try {
+          if (typeof window.__airborneStopTrainingMusic === "function") {
+            // pause only — soft stop training/boss BGM when leaving tab
+          }
+          if (typeof stopTrainingBossMusic === "function") stopTrainingBossMusic(true);
+          if (typeof stopTrainingMusic === "function") stopTrainingMusic(true);
+          if (typeof window.__airborneStopTrainingMusic === "function") window.__airborneStopTrainingMusic(true);
+        } catch (eTr) {}
       } catch (e) {}
       if (audioCtx && audioCtx.state === "running") {
         try { audioCtx.suspend(); } catch (e) {}
@@ -788,6 +796,14 @@
   window.addEventListener("pagehide", function () {
     musicWasPlayingBeforeHide = musicPlaying;
     if (musicPlaying) stopMusic();
+    try {
+      ["menuMusic", "splashMusic", "gameplayMusic", "trainingMusic", "trainingBossMusic"].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) { try { el.pause(); } catch (e) {} }
+      });
+      if (typeof window.__airborneStopTrainingMusic === "function") window.__airborneStopTrainingMusic(true);
+      if (typeof stopTrainingBossMusic === "function") stopTrainingBossMusic(true);
+    } catch (e) {}
     if (audioCtx && audioCtx.state === "running") {
       try { audioCtx.suspend(); } catch (e) {}
     }

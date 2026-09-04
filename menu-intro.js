@@ -566,6 +566,17 @@ document.addEventListener("visibilitychange", function () {
         gm.dataset.wasPlaying = "1";
         gm.pause();
       }
+      ["trainingMusic", "trainingBossMusic"].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el && !el.paused) {
+          el.dataset.wasPlaying = "1";
+          el.pause();
+        }
+      });
+      try {
+        if (typeof window.__airborneStopTrainingMusic === "function") window.__airborneStopTrainingMusic(true);
+        if (typeof stopTrainingBossMusic === "function") stopTrainingBossMusic(true);
+      } catch (e) {}
     } else {
       // Resume only if we were playing before hide
       if (!window.__airborneLeftSplash && splashMusic && splashMusic.dataset.wasPlaying === "1") {
