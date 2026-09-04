@@ -534,7 +534,7 @@
         document.body.appendChild(n);
       }
       n.textContent = String(title).toUpperCase();
-      n.style.cssText = "position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);z-index:999999;"
+      n.style.cssText = "position:fixed;left:50%;top:46%;transform:translate(-50%,-50%);z-index:999999;"
         + "padding:8px 18px;border-radius:12px;pointer-events:none;"
         + "background:rgba(18,10,4,0.94);border:3px solid #ffc84a;"
         + "color:#ffe566;font:800 clamp(15px,4.8vw,26px) Rockwell,Georgia,serif;"

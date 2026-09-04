@@ -443,100 +443,121 @@
     });
   }
   function drawDroneScout(o, drawY) {
-    if (!o || (o.type !== "drone_scout" && !o.isDrone)) return false;
-    var img = null;
-    try { img = ensureDroneSheet(); } catch (e) {}
-    if (!img) {
-      try {
-        if (typeof images !== "undefined" && images) img = images.drone_scout_sheet;
-      } catch (e2) {}
-    }
-    if (!img) img = window.__droneSheetImg || null;
+    if (!o) return false;
+    try { ensureDroneSheet(); } catch (e) {}
+    var img = window.__droneSheetImg || null;
+    try {
+      if (!img && typeof images !== "undefined" && images) img = images.drone_scout_sheet;
+    } catch (e) {}
 
-    var dw = o.w || 70;
-    var dh = o.h || dw;
-    var cx = o.x + dw / 2;
-    var cy = drawY + dh / 2;
+    var dw = Math.max(56, o.w || 80);
+    var dh = Math.max(56, o.h || dw);
+    o.w = dw; o.h = dh;
+    var x = (typeof o.x === "number" && o.x === o.x) ? o.x : 0;
+    var y = (typeof drawY === "number" && drawY === drawY) ? drawY : ((typeof o.y === "number") ? o.y : 100);
+    var cx = x + dw / 2;
+    var cy = y + dh / 2;
 
     ctx.save();
-    // Wind streaks behind drone
-    ctx.globalAlpha = 0.35;
-    ctx.strokeStyle = "rgba(180,220,255,0.7)";
-    ctx.lineWidth = 2;
-    for (var wi = 0; wi < 3; wi++) {
-      var wy = cy - 8 + wi * 8;
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = "source-over";
+
+    // Wind streaks (visible motion cue)
+    ctx.strokeStyle = "rgba(200,230,255,0.55)";
+    ctx.lineWidth = 2.5;
+    for (var wi = 0; wi < 4; wi++) {
+      var wy = cy - 12 + wi * 8;
       ctx.beginPath();
-      ctx.moveTo(cx - dw * 0.15, wy);
-      ctx.lineTo(cx - dw * 0.55 - wi * 6, wy + (wi - 1) * 3);
+      ctx.moveTo(cx - dw * 0.1, wy);
+      ctx.lineTo(cx - dw * 0.7 - wi * 5, wy + (wi - 1.5) * 2);
       ctx.stroke();
     }
-    ctx.globalAlpha = 1;
 
     // Trail
     if (o.droneTrail && o.droneTrail.length) {
       for (var ti = 0; ti < o.droneTrail.length; ti++) {
         var t = o.droneTrail[ti];
-        ctx.globalAlpha = 0.12 + 0.2 * (ti / o.droneTrail.length);
+        if (!t) continue;
+        ctx.globalAlpha = 0.15 + 0.25 * (ti / o.droneTrail.length);
         ctx.fillStyle = "#5eead4";
         ctx.beginPath();
-        ctx.arc(t.x, t.y, 2 + ti * 0.3, 0, Math.PI * 2);
+        ctx.arc(t.x, t.y, 2.5, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.globalAlpha = 1;
     }
 
-    if (img && img.complete && img.naturalWidth > 0) {
-      var cols = 6, rows = 6, n = 36;
-      var fr = (o.animFrame || 0) % n;
-      var col = fr % cols;
-      var row = Math.floor(fr / cols) % rows;
-      var fw = img.naturalWidth / cols;
-      var fh = img.naturalHeight / rows;
-      // Green glow
-      ctx.save();
-      ctx.globalAlpha = 0.4;
-      ctx.fillStyle = "#3dfe9a";
-      ctx.beginPath();
-      ctx.arc(cx, cy - dh * 0.28, dw * 0.18, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      if (o.rot) {
-        ctx.translate(cx, cy);
-        ctx.rotate(o.rot);
-        ctx.drawImage(img, col * fw, row * fh, fw, fh, -dw / 2, -dh / 2, dw, dh);
-      } else {
-        ctx.drawImage(img, col * fw, row * fh, fw, fh, o.x, drawY, dw, dh);
+    var drawnSheet = false;
+    if (img && img.complete && img.naturalWidth > 8) {
+      try {
+        var cols = 6, rows = 6, n = 36;
+        var fr = ((o.animFrame || 0) % n + n) % n;
+        var col = fr % cols;
+        var row = Math.floor(fr / cols) % rows;
+        var fw = img.naturalWidth / cols;
+        var fh = img.naturalHeight / rows;
+        // glow
+        ctx.globalAlpha = 0.45;
+        ctx.fillStyle = "#3dfe9a";
+        ctx.beginPath();
+        ctx.arc(cx, cy - dh * 0.3, dw * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.drawImage(img, col * fw, row * fh, fw, fh, x, y, dw, dh);
+        drawnSheet = true;
+      } catch (eImg) {
+        drawnSheet = false;
       }
-    } else {
-      // Always-visible brass body fallback
+    }
+
+    if (!drawnSheet) {
+      // Large, unmistakable steampunk drone fallback
       ctx.translate(cx, cy);
-      ctx.fillStyle = "#3a3530";
+      // body
+      var grd = ctx.createRadialGradient(-dw*0.1, -dh*0.1, 4, 0, 0, dw*0.42);
+      grd.addColorStop(0, "#5a534c");
+      grd.addColorStop(1, "#2a2622");
+      ctx.fillStyle = grd;
       ctx.beginPath();
-      ctx.arc(0, 0, dw * 0.38, 0, Math.PI * 2);
+      ctx.arc(0, 2, dw * 0.4, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = "#d4a84b";
+      ctx.strokeStyle = "#e0b85a";
       ctx.lineWidth = 3;
       ctx.stroke();
-      ctx.fillStyle = "#1a90c8";
+      // lens
+      ctx.fillStyle = "#1a9fd4";
       ctx.beginPath();
-      ctx.arc(0, 4, dw * 0.16, 0, Math.PI * 2);
+      ctx.arc(0, 6, dw * 0.17, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = "#3dfe9a";
-      ctx.fillRect(-4, -dh * 0.48, 8, dh * 0.28);
+      ctx.strokeStyle = "#8cf";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // tube light
+      ctx.fillStyle = "#2aff9a";
+      ctx.shadowColor = "#2aff9a";
+      ctx.shadowBlur = 12;
+      ctx.fillRect(-5, -dh * 0.5, 10, dh * 0.32);
+      ctx.shadowBlur = 0;
       // wings
-      ctx.fillStyle = "#c4a35a";
+      ctx.fillStyle = "#d4a84b";
       ctx.beginPath();
-      ctx.moveTo(-dw * 0.35, -4);
-      ctx.lineTo(-dw * 0.62, -18);
-      ctx.lineTo(-dw * 0.55, 6);
-      ctx.closePath();
+      ctx.moveTo(-dw*0.32, 0);
+      ctx.quadraticCurveTo(-dw*0.7, -dh*0.35, -dw*0.55, dh*0.1);
+      ctx.quadraticCurveTo(-dw*0.4, dh*0.05, -dw*0.32, 0);
       ctx.fill();
       ctx.beginPath();
-      ctx.moveTo(dw * 0.35, -4);
-      ctx.lineTo(dw * 0.62, -18);
-      ctx.lineTo(dw * 0.55, 6);
-      ctx.closePath();
+      ctx.moveTo(dw*0.32, 0);
+      ctx.quadraticCurveTo(dw*0.7, -dh*0.35, dw*0.55, dh*0.1);
+      ctx.quadraticCurveTo(dw*0.4, dh*0.05, dw*0.32, 0);
       ctx.fill();
+      // rivets
+      ctx.fillStyle = "#c9a227";
+      for (var ri = 0; ri < 6; ri++) {
+        var ang = ri * Math.PI / 3;
+        ctx.beginPath();
+        ctx.arc(Math.cos(ang)*dw*0.28, Math.sin(ang)*dw*0.28, 2.2, 0, Math.PI*2);
+        ctx.fill();
+      }
     }
     ctx.restore();
     return true;
@@ -1681,11 +1702,14 @@
         }
         o.x -= obstacleSpeed * birdSpdMul * (o.speedMult || 1) * dt;
         if (o.isDrone || o.type === "drone_scout") {
-          if (!o.droneBaseY) o.droneBaseY = o.y;
+          if (!(o.droneBaseY > 0)) o.droneBaseY = (typeof o.y === "number" && o.y === o.y) ? o.y : 200;
           o.droneZig = (o.droneZig || 0) + (o.droneZigSpd || 2) * dt;
           var zig = Math.sin(o.droneZig) * (o.droneZigAmp || 32);
           var zig2 = Math.sin(o.droneZig * 0.5) * (o.droneZigAmp || 32) * 0.35;
           o.y = o.droneBaseY + zig + zig2;
+          if (!(o.y === o.y)) o.y = o.droneBaseY;
+          o.bobPhase = 0;
+          o.bobAmount = 0;
           o.animT = (o.animT || 0) + dt;
           if (o.animT > 0.07) {
             o.animT = 0;
@@ -2162,8 +2186,12 @@
         o._ringFront = { cx: cx, cy: cy, rx: rx, ry: ry, rad: rad, passed: passed };
         return;
       }
-      const drawY = o.y + Math.sin(o.bobPhase) * o.bobAmount;
-      if ((o.type === "drone_scout" || o.isDrone) && typeof drawDroneScout === "function" && drawDroneScout(o, drawY)) {
+      var bobA = (typeof o.bobAmount === "number") ? o.bobAmount : 0;
+      var bobP = (typeof o.bobPhase === "number") ? o.bobPhase : 0;
+      var drawY = (typeof o.y === "number" ? o.y : 0) + Math.sin(bobP) * bobA;
+      if (!(drawY === drawY)) drawY = o.y || 0; // guard NaN
+      if (o.type === "drone_scout" || o.isDrone) {
+        try { drawDroneScout(o, drawY); } catch (eDr) { console.warn("drone draw", eDr); }
         return;
       }
       if (o.birdSpecies && typeof drawBirdFromSheet === "function" && drawBirdFromSheet(o, drawY)) {
