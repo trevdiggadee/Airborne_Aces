@@ -1728,25 +1728,152 @@
           }
         }
       }
-      if (o.isRing || o.type === "gold_ring") {
-        const cx = o.x + o.w / 2;
-        const cy = o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8);
-        const baseR = (o.r || o.w / 2) * 1.0;
-        const esc = o.expandScale || 1;
-        const rad = baseR * esc;
-        const passed = !!o.passed;
-        // Animate gear frames
-        o.animT = (o.animT || 0) + 0.016;
-        if (o.animT > 0.06) {
+
+      // Animation tick
+      if (!o.shockFall) {
+        o.animT = (o.animT || 0) + dt;
+        var fd = frameDuration;
+        if (o.isRing || o.type === "gold_ring") fd = 0.06;
+        if (o.isDrone || o.type === "drone_scout") fd = 0.07;
+        if (o.animT >= fd) {
           o.animT = 0;
-          o.animFrame = ((o.animFrame || 0) + 1) % 25;
+          var maxF = 36;
+          if (o.isRing || o.type === "gold_ring") maxF = 25;
+          else if (o.birdFrameCount) maxF = o.birdFrameCount;
+          else if (o.birdSpecies && o.birdSpecies.frames) maxF = o.birdSpecies.frames;
+          o.animFrame = ((o.animFrame || 0) + 1) % maxF;
         }
-        // BACK (far) half of steampunk gear — behind blimp
+      }
+      // Ring bob + pass detection
+      if (o.isRing || o.type === "gold_ring") {
+        o.bobPhase = (o.bobPhase || 0) + dt * 2.2;
+        if (!o.passed && typeof player !== "undefined" && player) {
+          var rcx = o.x + o.w / 2;
+          var rcy = o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8);
+          var dx = player.x + (player.w || 40) * 0.5 - rcx;
+          var dy = player.y - rcy;
+          var pr = (o.r || o.w / 2) * 0.85;
+          if (Math.abs(dx) < pr * 0.55 && Math.abs(dy) < pr * 1.1) {
+            o.passed = true;
+            o.collected = true;
+            try {
+              if (typeof window.__airborneOnRingCollect === "function") window.__airborneOnRingCollect();
+              else if (typeof sfxTrainingRing === "function") sfxTrainingRing();
+              else if (typeof sfxRing === "function") sfxRing();
+            } catch (eR) {}
+            try {
+              if (window.__airborneRuffOnEvent) window.__airborneRuffOnEvent("ring");
+            } catch (e2) {}
+            try {
+              if (typeof ruffStats !== "undefined" && ruffStats) ruffStats.rings = (ruffStats.rings || 0) + 1;
+            } catch (e3) {}
+          }
+        }
+      } else {
+        o.bobPhase = (o.bobPhase || 0) + dt * 3;
+      }
+      if (o.hitFlash) o.hitFlash = Math.max(0, o.hitFlash - dt * 3);
+    });
+
+    obstacles = obstacles.filter(function (o) {
+      if (!o) return false;
+      if (o.fromHitBurst) {
+        return o.burstLife > 0 && o.x > -120 && o.x < W + 120 && o.y > -120 && o.y < H + 120;
+      }
+      if (o.shockFall || o.electrified) {
+        return o.y < H + 100 && o.x > -80 && o.x < W + 80;
+      }
+      if (o.collected && (o.isRing || o.type === "gold_ring")) {
+        o.expandScale = (o.expandScale || 1) + dt * 2.5;
+        o.fade = (o.fade == null ? 1 : o.fade) - dt * 2;
+        return o.fade > 0;
+      }
+      return o.x > -150 && o.x < W + 200 && o.y > -150 && o.y < H + 150;
+    });
+  }
+
+  // Steampunk gear portal ring (5x5 sheet)
+  window.__ringGearSheet = null;
+  window.__ringGearLoading = false;
+  function ensureRingGearSheet() {
+    if (window.__ringGearSheet && window.__ringGearSheet.complete && window.__ringGearSheet.naturalWidth > 0) {
+      return window.__ringGearSheet;
+    }
+    if (window.__ringGearLoading) return window.__ringGearSheet;
+    window.__ringGearLoading = true;
+    var paths = ["ring_gear_sheet.png?v=ruff432", "ring_gear_sheet.png"];
+    var i = 0;
+    function next() {
+      if (i >= paths.length) { window.__ringGearLoading = false; return; }
+      var im = new Image();
+      im.onload = function () {
+        if (im.naturalWidth > 0) {
+          window.__ringGearSheet = im;
+          try { if (typeof images !== "undefined" && images) images.ring_gear_sheet = im; } catch (e) {}
+          window.__ringGearLoading = false;
+        } else next();
+      };
+      im.onerror = function () { next(); };
+      im.src = paths[i++];
+    }
+    next();
+    return null;
+  }
+  try { setTimeout(ensureRingGearSheet, 200); } catch (e) {}
+
+  function drawGearRingFrame(o, cx, cy, half) {
+    var img = ensureRingGearSheet() || window.__ringGearSheet;
+    if (!img || !img.naturalWidth) return false;
+    var cols = 5, rows = 5, n = 25;
+    var fr = ((o.animFrame || 0) % n + n) % n;
+    var col = fr % cols;
+    var row = Math.floor(fr / cols) % rows;
+    var fw = img.naturalWidth / cols;
+    var fh = img.naturalHeight / rows;
+    var rad = (o.r || o.w / 2 || 40) * (o.expandScale || 1);
+    var dw = rad * 1.55;
+    var dh = rad * 2.35;
+    var dx = cx - dw / 2;
+    var dy = cy - dh / 2;
+    var alpha = (o.fade != null) ? Math.max(0, o.fade) : 1;
+    ctx.save();
+    if (half === "back") {
+      ctx.beginPath();
+      ctx.rect(dx - 2, dy - 2, dw * 0.52, dh + 4);
+      ctx.clip();
+      ctx.globalAlpha = alpha * (o.passed ? 0.75 : 0.95);
+    } else if (half === "front") {
+      ctx.beginPath();
+      ctx.rect(dx + dw * 0.48, dy - 2, dw * 0.54, dh + 4);
+      ctx.clip();
+      ctx.globalAlpha = alpha;
+    }
+    if (half !== "back") {
+      ctx.shadowColor = o.passed ? "rgba(80,220,140,0.55)" : "rgba(255,170,60,0.5)";
+      ctx.shadowBlur = 14;
+    }
+    ctx.drawImage(img, col * fw, row * fh, fw, fh, dx, dy, dw, dh);
+    ctx.restore();
+    return true;
+  }
+
+  function drawObstacles() {
+    try { drawFirePower(); } catch (e) {}
+    try { drawHitCoins(); } catch (e) {}
+    if (typeof obstacles === "undefined" || !obstacles) return;
+    obstacles.forEach(function (o) {
+      if (!o) return;
+      if (o.isRing || o.type === "gold_ring") {
+        var cx = o.x + o.w / 2;
+        var cy = o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8);
+        var baseR = (o.r || o.w / 2) * 1.0;
+        var rad = baseR * (o.expandScale || 1);
+        var passed = !!o.passed;
         if (!drawGearRingFrame(o, cx, cy, "back")) {
-          // fallback stroke ring
-          const rx = rad * 0.32, ry = rad * 1.12;
+          var rx = rad * 0.32, ry = rad * 1.12;
           ctx.save();
           ctx.translate(cx, cy);
+          ctx.globalAlpha = (o.fade != null) ? o.fade : 1;
           ctx.strokeStyle = passed ? "#3dde8a" : "#d4a84b";
           ctx.lineWidth = Math.max(5, rad * 0.14);
           ctx.beginPath();
@@ -1761,190 +1888,31 @@
       var bobA = (typeof o.bobAmount === "number") ? o.bobAmount : 0;
       var bobP = (typeof o.bobPhase === "number") ? o.bobPhase : 0;
       var drawY = (typeof o.y === "number" ? o.y : 0) + Math.sin(bobP) * bobA;
-      if (!(drawY === drawY)) drawY = o.y || 0; // guard NaN
+      if (!(drawY === drawY)) drawY = o.y || 0;
       if (o.type === "drone_scout" || o.isDrone) {
-        try { drawDroneScout(o, drawY); } catch (eDr) { console.warn("drone draw", eDr); }
+        try { drawDroneScout(o, drawY); } catch (eDr) {}
         return;
       }
       if (o.birdSpecies && typeof drawBirdFromSheet === "function" && drawBirdFromSheet(o, drawY)) {
         return;
       }
-      const frames = OBSTACLE_ANIM_SETS[o.type];
+      var frames = OBSTACLE_ANIM_SETS[o.type];
       if (!frames) return;
-      const img = images[frames[o.animFrame % frames.length]];
+      var img = (typeof images !== "undefined" && images) ? images[frames[(o.animFrame || 0) % frames.length]] : null;
       if (!img || !img.naturalWidth) return;
-      const speed = obstacleSpeed * (o.speedMult || 1);
-      drawMotionBlur(img, o.x + o.w / 2, drawY + o.h / 2, o.w, o.h, 0, speed, 0);
-      if (o.electrified || o.shockFall) {
-        ctx.save();
-        ctx.translate(o.x + o.w / 2, drawY + o.h / 2);
-        ctx.rotate(o.rot || 0);
-        ctx.drawImage(img, -o.w / 2, -o.h / 2, o.w, o.h);
-        // Electric arcs / cyan-white crackle
-        ctx.globalCompositeOperation = "lighter";
-        var t = performance.now() * 0.012;
-        for (var ei = 0; ei < 5; ei++) {
-          var a0 = t + ei * 1.3;
-          var r0 = o.w * (0.15 + 0.2 * Math.sin(t * 2 + ei));
-          ctx.strokeStyle = ei % 2 === 0 ? "rgba(180,230,255,0.85)" : "rgba(120,180,255,0.7)";
-          ctx.lineWidth = 1.5 + (ei % 2);
-          ctx.beginPath();
-          ctx.moveTo(Math.cos(a0) * r0 * 0.3, Math.sin(a0) * r0 * 0.3);
-          for (var es = 1; es <= 4; es++) {
-            var aa = a0 + es * 0.45 + Math.sin(t * 3 + es) * 0.4;
-            var rr = r0 * (0.4 + es * 0.18);
-            ctx.lineTo(Math.cos(aa) * rr + (Math.random() - 0.5) * 3, Math.sin(aa) * rr + (Math.random() - 0.5) * 3);
-          }
-          ctx.stroke();
-        }
-        var eg = ctx.createRadialGradient(0, 0, 2, 0, 0, o.w * 0.55);
-        eg.addColorStop(0, "rgba(220,245,255,0.35)");
-        eg.addColorStop(0.5, "rgba(80,160,255,0.2)");
-        eg.addColorStop(1, "rgba(40,80,200,0)");
-        ctx.fillStyle = eg;
-        ctx.beginPath();
-        ctx.arc(0, 0, o.w * 0.55, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      } else if (o.onFire) {
-        ctx.save();
-        ctx.translate(o.x + o.w / 2, drawY + o.h / 2);
-        ctx.rotate(o.rot || 0);
-        ctx.drawImage(img, -o.w / 2, -o.h / 2, o.w, o.h);
-        ctx.globalCompositeOperation = "lighter";
-        const fg = ctx.createRadialGradient(0, -o.h * 0.15, 2, 0, 0, o.w * 0.7);
-        if (o.blueFire) {
-          // Aero Slicer — blue flames
-          fg.addColorStop(0, "rgba(220,245,255,0.65)");
-          fg.addColorStop(0.4, "rgba(56,189,248,0.4)");
-          fg.addColorStop(1, "rgba(2,100,200,0)");
-        } else if (o.greenFire) {
-          fg.addColorStop(0, "rgba(220,255,230,0.6)");
-          fg.addColorStop(0.45, "rgba(16,185,129,0.35)");
-          fg.addColorStop(1, "rgba(4,120,80,0)");
-        } else if (o.fireTint === "ivory") {
-          // Ivory Anchor — ivory-gold flames
-          fg.addColorStop(0, "rgba(255,252,245,0.75)");
-          fg.addColorStop(0.3, "rgba(255,230,160,0.55)");
-          fg.addColorStop(0.65, "rgba(255,175,60,0.35)");
-          fg.addColorStop(1, "rgba(180,80,20,0)");
+      var speed = obstacleSpeed * (o.speedMult || 1);
+      try {
+        if (typeof drawMotionBlur === "function") {
+          drawMotionBlur(img, o.x + o.w / 2, drawY + o.h / 2, o.w, o.h, 0, speed, 0);
         } else {
-          fg.addColorStop(0, "rgba(255,230,100,0.55)");
-          fg.addColorStop(0.45, "rgba(255,90,15,0.3)");
-          fg.addColorStop(1, "rgba(255,40,0,0)");
+          ctx.drawImage(img, o.x, drawY, o.w, o.h);
         }
-        ctx.fillStyle = fg;
-        ctx.beginPath();
-        ctx.arc(0, -o.h * 0.1, o.w * 0.6, 0, Math.PI * 2);
-        ctx.fill();
-        // Blue flame tongues for Aero Slicer burns
-        if (o.blueFire) {
-          for (var fi = 0; fi < 5; fi++) {
-            var fang = -Math.PI / 2 + (fi - 2) * 0.35 + Math.sin(performance.now() * 0.01 + fi) * 0.15;
-            var fl = o.h * (0.25 + 0.15 * Math.sin(performance.now() * 0.012 + fi));
-            ctx.strokeStyle = "rgba(120,210,255,0.7)";
-            ctx.lineWidth = 2.5;
-            ctx.beginPath();
-            ctx.moveTo((fi - 2) * 4, -o.h * 0.15);
-            ctx.lineTo((fi - 2) * 4 + Math.cos(fang) * fl * 0.3, -o.h * 0.15 + Math.sin(fang) * fl);
-            ctx.stroke();
-          }
-        }
-        // Ivory-gold flame tongues
-        if (o.fireTint === "ivory") {
-          for (var fi = 0; fi < 5; fi++) {
-            var fang = -Math.PI / 2 + (fi - 2) * 0.35 + Math.sin(performance.now() * 0.01 + fi) * 0.15;
-            var fl = o.h * (0.28 + 0.15 * Math.sin(performance.now() * 0.012 + fi));
-            ctx.strokeStyle = "rgba(255,235,180,0.85)";
-            ctx.lineWidth = 2.5;
-            ctx.beginPath();
-            ctx.moveTo((fi - 2) * 4, -o.h * 0.15);
-            ctx.lineTo((fi - 2) * 4 + Math.cos(fang) * fl * 0.3, -o.h * 0.15 + Math.sin(fang) * fl);
-            ctx.stroke();
-            ctx.strokeStyle = "rgba(255,255,250,0.7)";
-            ctx.lineWidth = 1.2;
-            ctx.stroke();
-          }
-        }
-        ctx.restore();
-      } else {
-        ctx.drawImage(img, o.x, drawY, o.w, o.h);
-      }
-      // Brief sprite brighten only — skip when power-sucked (white box artifact)
-      if (o.hitFlash && o.hitFlash > 0 && !o.powerAffected && img && img.naturalWidth && o.type !== "balloon_anim") {
-        ctx.save();
-        ctx.globalAlpha = Math.min(0.25, o.hitFlash * 0.3);
-        ctx.globalCompositeOperation = "source-atop";
-        ctx.fillStyle = "rgba(255,240,200,0.35)";
-        ctx.fillRect(o.x, drawY, o.w, o.h);
-        ctx.restore();
-      }
-
-      // draw jet engine flame + smoke trails behind mini blimps
-      if (o.type === "mini_blimp") {
-        // smoke first (behind flame)
-        if (o.smokeParticles) {
-          o.smokeParticles.forEach(p => {
-            const t = p.age / p.life;
-            const alpha = (1 - t) * 0.58;
-            ctx.save();
-            ctx.globalAlpha = alpha;
-            const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
-            grad.addColorStop(0, `rgba(${p.r},${p.g},${p.b},0.8)`);
-            grad.addColorStop(1, `rgba(${p.r},${p.g},${p.b},0)`);
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-          });
-        }
-        // flame on top
-        if (o.flameParticles) {
-          o.flameParticles.forEach(p => {
-            const t = p.age / p.life;
-            const alpha = (1 - t) * 0.9;
-            ctx.save();
-            ctx.globalAlpha = alpha;
-            const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
-            grad.addColorStop(0, `rgba(255,${p.g},${p.b},1)`);
-            grad.addColorStop(0.4, `rgba(255,${Math.floor(p.g * 0.6)},20,0.8)`);
-            grad.addColorStop(1, `rgba(255,60,10,0)`);
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fill();
-            // bright core
-            ctx.fillStyle = `rgba(255,255,220,${alpha * 0.9})`;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size * 0.35, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-          });
-        }
-      }
-
-      if (o.type === "mini_heli" && o.chargeArcs) {
-        ctx.save();
-        ctx.translate(o.x, drawY);
-        o.chargeArcs.forEach(points => {
-          ctx.save();
-          ctx.globalAlpha = 0.5 + Math.random() * 0.4;
-          ctx.strokeStyle = "rgba(150,210,255,0.95)";
-          ctx.lineWidth = 1.6;
-          ctx.shadowColor = "rgba(130,190,255,0.9)";
-          ctx.shadowBlur = 10;
-          ctx.beginPath();
-          points.forEach(([px, py], i) => {
-            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-          });
-          ctx.stroke();
-          ctx.restore();
-        });
-        ctx.restore();
+      } catch (eD) {
+        try { ctx.drawImage(img, o.x, drawY, o.w, o.h); } catch (e2) {}
       }
     });
   }
+  window.drawObstacles = drawObstacles;
 
   // ---------- Floating heal pickup — sporadic, restores 25% (1 heart) ----------
   let healPickup = null;

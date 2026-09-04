@@ -575,7 +575,7 @@ function loop(ts) {
     try { if (window.__airborneDrawTrainingBgBalloons) window.__airborneDrawTrainingBgBalloons(); } catch (e) {}
     // Platforms behind blimps, birds, ruff, coins
     try { if (window.__airborneDrawTrainingPlatforms) window.__airborneDrawTrainingPlatforms(); } catch (e) {}
-    drawObstacles();
+    try { if (typeof drawObstacles === "function") drawObstacles(); } catch (eObs) { console.warn("drawObstacles", eObs); }
 
     if (bossActive) {
       drawBoss();
