@@ -1782,51 +1782,45 @@
           var rcy = o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8);
           var pr = (o.r || o.w / 2) * 0.85;
           // Solid rim vs center hole only
-          // Liberal center hole; rim only at true outer top/bottom edge
-          var outerW = pr * 0.55;
-          var outerH = pr * 1.22;   // visual outer edge
-          var holeW = pr * 0.45;    // wide pass-through
-          var holeH = pr * 0.72;    // tall pass-through (easy entry)
-          var rimBand = pr * 0.14;  // thin solid band at outer edge only
-          var ph = (player.h || 36) * 0.22; // smaller hitbox so easier through hole
-          var pw = (player.w || 40) * 0.25;
+          // Balanced: solid rim matches visible metal; center = black hole
+          // Visual ring is tall ellipse; black opening ~ middle third of height
+          var outerW = pr * 0.52;
+          var outerH = pr * 1.18;
+          var holeW = pr * 0.34;   // middle of previous strict/liberal
+          var holeH = pr * 0.58;   // roomy but not whole face
+          var ph = (player.h || 36) * 0.28;
+          var pw = (player.w || 40) * 0.28;
           var px = player.x + (player.w || 40) * 0.5;
           var py = player.y;
           var dx = px - rcx;
           var dy = py - rcy;
           var absDy = Math.abs(dy);
 
-          // Only check when close to ring in X (depth of hoop)
-          var nearX = Math.abs(dx) < outerW + pw;
-          if (nearX) {
-            var holeTop = rcy - holeH;
-            var holeBot = rcy + holeH;
-            var rimTopInner = rcy - outerH + rimBand; // start of top rim band
-            var rimTopOuter = rcy - outerH;
-            var rimBotInner = rcy + outerH - rimBand;
-            var rimBotOuter = rcy + outerH;
+          // Depth: only when overlapping the hoop in X
+          if (Math.abs(dx) < outerW + pw) {
+            var inHole = absDy <= holeH && Math.abs(dx) <= holeW + pw * 0.5;
+            // Solid if within outer ellipse but outside hole
+            var nx = dx / Math.max(0.001, outerW);
+            var ny = dy / Math.max(0.001, outerH);
+            var inOuter = (nx * nx + ny * ny) <= 1.05;
+            var onRim = inOuter && !inHole;
 
-            // Generous hole — almost entire open area
-            var inHole = absDy <= holeH + ph * 0.35 && Math.abs(dx) < holeW + pw;
-
-            // Rim only if past hole and into thin outer edge band
-            var onTopRim = dy < -holeH - ph * 0.2 && dy > rimTopOuter - ph && dy < rimTopInner + ph * 0.5;
-            var onBotRim = dy > holeH + ph * 0.2 && dy < rimBotOuter + ph && dy > rimBotInner - ph * 0.5;
-
-            if (onTopRim) {
-              // Soft bounce at very top edge only
-              player.y = Math.min(player.y, holeTop - ph * 0.5);
-              if (player.vy > 0) player.vy = 0;
-              player.vy = -Math.max(90, Math.abs(player.vy || 0) * 0.5 + 70);
-              o.rimHitT = 0.2;
-            } else if (onBotRim) {
-              player.y = Math.max(player.y, holeBot + ph * 0.5);
-              if (player.vy < 0) player.vy = 0;
-              player.vy = Math.max(80, Math.abs(player.vy || 0) * 0.5 + 60);
-              o.rimHitT = 0.2;
+            if (onRim) {
+              // Bounce off top or bottom metal — keep out of solid pixels
+              if (dy < 0) {
+                // top half rim
+                var limitTop = rcy - holeH - ph * 0.15;
+                if (player.y > limitTop) player.y = limitTop;
+                player.vy = -Math.max(110, Math.abs(player.vy || 0) * 0.55 + 95);
+              } else {
+                var limitBot = rcy + holeH + ph * 0.15;
+                if (player.y < limitBot) player.y = limitBot;
+                player.vy = Math.max(100, Math.abs(player.vy || 0) * 0.55 + 85);
+              }
+              o.rimHitT = 0.25;
             } else if (inHole) {
-              // Soft assist toward center — no hard clamp/bounce
-              player.y += (rcy - py) * Math.min(0.18, 1.8 * dt);
+              // Through the middle — light center assist
+              player.y += (rcy - py) * Math.min(0.22, 2.2 * dt);
               if (!o.passed) {
                 o.passed = true;
                 o.passGlowT = 1.1;
