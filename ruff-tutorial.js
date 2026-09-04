@@ -234,23 +234,42 @@
 
   function playTrainingBossMusic() {
     try {
-      stopTrainingMusic(false);
-      var el = getTrainingBossMusicEl();
-      el.loop = true;
-      el.volume = TRAIN_BOSS_VOL;
-      var p = el.play();
-      if (p && p.then) {
-        p.then(function () {
-          try { el.volume = TRAIN_BOSS_VOL; } catch (e) {}
-        }).catch(function () {
-          try {
-            el.load();
-            el.volume = TRAIN_BOSS_VOL;
-            el.play().catch(function () {});
-          } catch (e2) {}
-        });
-      }
-    } catch (e) {}
+      var train = getTrainingMusicEl();
+      var boss = getTrainingBossMusicEl();
+      if (!boss) return;
+      boss.loop = true;
+      boss.volume = 0;
+      // Start boss under training track, then crossfade ~2s
+      var startBoss = function () {
+        var p = boss.play();
+        if (p && p.then) {
+          p.catch(function () {
+            try { boss.load(); boss.volume = 0; boss.play().catch(function () {}); } catch (e2) {}
+          });
+        }
+        var t0 = performance.now();
+        var dur = 2200;
+        var trainStart = 0;
+        try { trainStart = train ? (train.volume || TRAIN_BGM_VOL) : 0; } catch (e) { trainStart = TRAIN_BGM_VOL; }
+        if (window.__trainXfadeRaf) cancelAnimationFrame(window.__trainXfadeRaf);
+        (function step() {
+          var u = Math.min(1, (performance.now() - t0) / dur);
+          // smoothstep
+          var s = u * u * (3 - 2 * u);
+          try { if (train) train.volume = Math.max(0, trainStart * (1 - s)); } catch (e) {}
+          try { boss.volume = TRAIN_BOSS_VOL * s; } catch (e) {}
+          if (u < 1) {
+            window.__trainXfadeRaf = requestAnimationFrame(step);
+          } else {
+            try {
+              if (train) { train.pause(); train.volume = 0; }
+            } catch (e3) {}
+            try { boss.volume = TRAIN_BOSS_VOL; } catch (e4) {}
+          }
+        })();
+      };
+      startBoss();
+    } catch (e) { console.warn("playTrainingBossMusic", e); }
   }
 
   function stopTrainingBossMusic(hard) {
@@ -1147,7 +1166,7 @@
 
   // ---------- Floating training platforms (steampunk sky docks) ----------
   var ruffPlatforms = [];
-  var PLATFORM_SCROLL_SPEED = 26; // fixed — never changes with bird lesson
+  var PLATFORM_SCROLL_SPEED = 32.5; // +25% scroll speed
   var PLATFORM_KEYS = [
     "island_barrel_platform", "island_gear_wheel_platform", "island_ring_portal_blue",
     "island_market_stall", "island_tiny_rock_grass", "island_tiny_rock_mossy", "island_propeller_platform",
@@ -1286,36 +1305,45 @@
       // Dynamic motion: gentle bob + slow sway
       p.bobT = (p.bobT || Math.random() * 10) + dt;
       p.bobY = Math.sin(p.bobT * 1.4 + (p.phase || 0)) * 5 + (p.squash ? p.squash * 14 : 0);
-      // Dip recovery — platform sinks on hit then returns
+      // Symmetric dip — same speed down and up (~70 px/s)
       p.dipY = p.dipY || 0;
-      if (p.dipY > 0.15) {
-        p.dipY *= Math.exp(-1.2 * dt); // 50% slower return
-        if (p.dipY < 0.15) p.dipY = 0;
-      } else {
-        p.dipY = 0;
+      p.dipTarget = (p.dipTarget != null) ? p.dipTarget : 0;
+      var dipSpd = 70;
+      if (p.dipTarget > 0) {
+        // moving down toward target
+        if (p.dipY < p.dipTarget) {
+          p.dipY = Math.min(p.dipTarget, p.dipY + dipSpd * dt);
+          if (p.dipY >= p.dipTarget - 0.5) {
+            p.dipTarget = 0; // reached bottom — start return
+          }
+        }
+      } else if (p.dipY > 0) {
+        // moving back up
+        p.dipY = Math.max(0, p.dipY - dipSpd * dt);
       }
       p.bobY += p.dipY;
       p.sway = Math.sin(p.bobT * 0.7 + (p.phase || 0)) * 3;
-            // Floating dirt — 75% slower, raised 20%
+            // Soft dirt — 50% less volume, lighter drift
       p.dirt = p.dirt || [];
-      if (Math.random() < 0.05) {
+      if (Math.random() < 0.025) {
         p.dirt.push({
-          x: (Math.random() - 0.5) * p.w * 0.65,
+          x: (Math.random() - 0.5) * p.w * 0.55,
           y: p.h * 0.28,
-          vx: (Math.random() - 0.5) * 2.5,
-          vy: 1.2 + Math.random() * 2.8,
-          life: 2.4 + Math.random() * 1.8,
+          vx: (Math.random() - 0.5) * 1.4,
+          vy: 0.6 + Math.random() * 1.4,
+          life: 2.0 + Math.random() * 1.2,
           age: 0,
-          r: 1.0 + Math.random() * 1.6
+          r: 0.6 + Math.random() * 1.0,
+          soft: true
         });
       }
       for (var di = p.dirt.length - 1; di >= 0; di--) {
         var d = p.dirt[di];
         d.age += dt;
-        d.x += d.vx * dt * 0.22;
-        d.y += d.vy * dt * 0.22;
-        d.vy += 3.5 * dt;
-        d.vx *= (1 - 0.12 * dt);
+        d.x += d.vx * dt * 0.18;
+        d.y += d.vy * dt * 0.18;
+        d.vy += 1.8 * dt;
+        d.vx *= (1 - 0.1 * dt);
         if (d.age >= d.life) p.dirt.splice(di, 1);
       }
       // Soft steam puffs
@@ -1391,8 +1419,8 @@
             p.squash = 0.32;
             p.springT = 0.55;
             // Physical dip: move platform down, then ease back up
-            p.dipY = (p.dipY || 0) + Math.min(28, 12 + impact * 0.04);
-            if (p.dipY > 36) p.dipY = 36;
+            // Start a symmetric dip (down then up at same speed)
+            p.dipTarget = Math.min(30, Math.max(14, 12 + impact * 0.05));
             p.dirt = p.dirt || [];
             for (var di = 0; di < 10; di++) {
               p.dirt.push({
@@ -1576,11 +1604,15 @@
         c.restore();
         // Dirt
         (p.dirt || []).forEach(function (d) {
+          var lifeA = 1 - (d.age || 0) / Math.max(0.01, d.life || 1);
+          ctx.globalAlpha = 0.35 * lifeA;
+
+          // softer dirt
           if (!d || !(d.life > 0)) return;
           var t = 1 - d.age / d.life;
           if (t <= 0) return;
-          c.globalAlpha = t * 0.8;
-          c.fillStyle = d.r > 2.2 ? "#6b4a28" : "#8a6238";
+          c.globalAlpha = t * 0.4;
+          c.fillStyle = d.r > 2.2 ? "rgba(120,95,70,0.7)" : "rgba(150,120,90,0.55)";
           c.beginPath();
           c.arc(ox + w * 0.5 + d.x, oy + h * 0.55 + d.y, Math.max(0.6, d.r * t), 0, Math.PI * 2);
           c.fill();

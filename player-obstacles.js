@@ -362,7 +362,7 @@
   function pickObstacleType() {
     // Flight training: birds + scout drones
     if (window.__airborneAirfield || window.__airborneTrainingFlight) {
-      if (Math.random() < 0.28) return "drone_scout";
+      if (Math.random() < 0.38) return "drone_scout";
       return Math.random() < 0.5 ? "bird_a" : "bird_b";
     }
     const next = nextBossConfig();
@@ -391,6 +391,35 @@
     return list[Math.floor(Math.random() * list.length)];
   }
   window.__trainingBirdSheetImgs = window.__trainingBirdSheetImgs || {};
+  function ensureDroneSheet() {
+    if (typeof images === "undefined" || !images) return;
+    if (images.drone_scout_sheet && images.drone_scout_sheet.complete && images.drone_scout_sheet.naturalWidth) return;
+    if (window.__droneSheetLoading) return;
+    window.__droneSheetLoading = true;
+    var paths = [
+      "drone_scout_sheet.webp?v=ruff426",
+      "drone_scout_sheet.webp",
+      "drone_scout_sheet.png?v=ruff426",
+      "drone_scout_sheet.png"
+    ];
+    var i = 0;
+    function tryNext() {
+      if (i >= paths.length) { window.__droneSheetLoading = false; return; }
+      var im = new Image();
+      im.onload = function () {
+        if (im.naturalWidth > 0) {
+          images.drone_scout_sheet = im;
+          window.__droneSheetLoading = false;
+          console.log("[Assets] drone sheet loaded", paths[i-1], im.naturalWidth);
+        } else tryNext();
+      };
+      im.onerror = function () { tryNext(); };
+      im.src = paths[i++];
+    }
+    tryNext();
+  }
+  try { setTimeout(ensureDroneSheet, 300); } catch (e) {}
+
   function ensureTrainingBirdSheets() {
     var list = window.__TRAINING_BIRD_SHEETS || [];
     list.forEach(function(sp) {
@@ -405,6 +434,7 @@
   }
   function drawDroneScout(o, drawY) {
     if (!o || (o.type !== "drone_scout" && !o.isDrone)) return false;
+    try { ensureDroneSheet(); } catch (e) {}
     var img = (typeof images !== "undefined" && images) ? images.drone_scout_sheet : null;
     if (!img || !img.complete || !img.naturalWidth) {
       // procedural fallback
