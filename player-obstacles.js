@@ -1750,29 +1750,94 @@
       // Ring bob + pass detection
       if (o.isRing || o.type === "gold_ring") {
         o.bobPhase = (o.bobPhase || 0) + dt * 2.2;
+        o.spinT = (o.spinT || 0) + dt;
+        o.pulseT = (o.pulseT || 0) + dt;
         if (o.passGlowT > 0) o.passGlowT = Math.max(0, o.passGlowT - dt);
-        if (!o.passed && typeof player !== "undefined" && player) {
+        // Immersive FX timers
+        o.sparkT = (o.sparkT || 0) + dt;
+        if (o.sparkT > 0.12) {
+          o.sparkT = 0;
+          o.sparks = o.sparks || [];
+          if (o.sparks.length < 12) {
+            var sa = Math.random() * Math.PI * 2;
+            o.sparks.push({
+              a: sa,
+              r: 0.55 + Math.random() * 0.35,
+              life: 0.4 + Math.random() * 0.35,
+              age: 0,
+              spd: 0.4 + Math.random() * 0.6
+            });
+          }
+        }
+        if (o.sparks) {
+          for (var si = o.sparks.length - 1; si >= 0; si--) {
+            o.sparks[si].age += dt;
+            o.sparks[si].r += o.sparks[si].spd * dt * 0.25;
+            if (o.sparks[si].age >= o.sparks[si].life) o.sparks.splice(si, 1);
+          }
+        }
+
+        if (typeof player !== "undefined" && player) {
           var rcx = o.x + o.w / 2;
           var rcy = o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8);
-          var dx = player.x + (player.w || 40) * 0.5 - rcx;
-          var dy = player.y - rcy;
           var pr = (o.r || o.w / 2) * 0.85;
-          if (Math.abs(dx) < pr * 0.55 && Math.abs(dy) < pr * 1.1) {
-            o.passed = true;
-            o.passGlowT = 0.9;
-            // Stay on screen — no fade / no collected remove
-            try {
-              if (typeof window.__airborneOnRingCollect === "function") window.__airborneOnRingCollect();
-              else if (typeof sfxTrainingRing === "function") sfxTrainingRing();
-              else if (typeof sfxRing === "function") sfxRing();
-            } catch (eR) {}
-            try {
-              if (window.__airborneRuffOnEvent) window.__airborneRuffOnEvent("ring");
-            } catch (e2) {}
-            try {
-              if (typeof ruffStats !== "undefined" && ruffStats) ruffStats.rings = (ruffStats.rings || 0) + 1;
-            } catch (e3) {}
+          // Geometry: thin ring — outer ellipse vs inner hole
+          var outerW = pr * 0.58;   // half-width of solid ring depth
+          var outerH = pr * 1.25;   // half-height outer
+          var holeW = pr * 0.28;    // passable half-width
+          var holeH = pr * 0.55;    // passable half-height
+          var px = player.x + (player.w || 40) * 0.5;
+          var py = player.y;
+          var dx = px - rcx;
+          var dy = py - rcy;
+          var nx = dx / Math.max(0.001, outerW);
+          var ny = dy / Math.max(0.001, outerH);
+          var inOuter = (nx * nx + ny * ny) <= 1.0;
+          var hx = dx / Math.max(0.001, holeW);
+          var hy = dy / Math.max(0.001, holeH);
+          var inHole = (hx * hx + hy * hy) <= 1.0;
+
+          // Approaching ring column (within thickness along X)
+          if (Math.abs(dx) < outerW * 1.15) {
+            if (inOuter && !inHole) {
+              // Hit solid rim — push out of ring, don't allow entry
+              var ang = Math.atan2(dy / outerH, dx / outerW);
+              // Prefer vertical push when near top/bottom rim
+              if (Math.abs(ny) > Math.abs(nx) * 0.85) {
+                var pushY = (ny > 0 ? 1 : -1) * (outerH + 6 - Math.abs(dy));
+                player.y += pushY * Math.min(1, 14 * dt);
+                if (player.vy && ((ny > 0 && player.vy > 0) || (ny < 0 && player.vy < 0))) {
+                  player.vy *= -0.35;
+                }
+              } else {
+                // Side of rim — nudge Y toward hole center slightly + soft bounce
+                player.y += (rcy - py) * Math.min(0.15, 2 * dt);
+                if (player.vy) player.vy *= 0.85;
+              }
+              o.rimHitT = 0.25;
+            } else if (inHole) {
+              // Inside tunnel — gently keep blimp centered in hole
+              player.y += (rcy - py) * Math.min(0.35, 3.5 * dt);
+              if (!o.passed) {
+                o.passed = true;
+                o.passGlowT = 1.1;
+                o.passPulse = 1;
+                try {
+                  if (typeof window.__airborneOnRingCollect === "function") window.__airborneOnRingCollect();
+                  else if (typeof sfxTrainingRing === "function") sfxTrainingRing();
+                  else if (typeof sfxRing === "function") sfxRing();
+                } catch (eR) {}
+                try {
+                  if (window.__airborneRuffOnEvent) window.__airborneRuffOnEvent("ring");
+                } catch (e2) {}
+                try {
+                  if (typeof ruffStats !== "undefined" && ruffStats) ruffStats.rings = (ruffStats.rings || 0) + 1;
+                } catch (e3) {}
+              }
+            }
           }
+          if (o.rimHitT > 0) o.rimHitT = Math.max(0, o.rimHitT - dt);
+          if (o.passPulse > 0) o.passPulse = Math.max(0, o.passPulse - dt * 1.2);
         }
       } else {
         o.bobPhase = (o.bobPhase || 0) + dt * 3;
@@ -1824,70 +1889,128 @@
   try { setTimeout(ensureRingCheckered, 200); } catch (e) {}
 
   function drawCheckeredRing(o, cx, cy, layer) {
-    // layer: "full" — entire ring in FRONT of blimp
     var img = ensureRingCheckered() || window.__ringCheckeredImg;
     var rad = (o.r || o.w / 2 || 40) * (o.expandScale || 1);
-    // Thinner width, same height
-    var dw = rad * 1.15;
-    var dh = rad * 2.55;
+    // Thinner width, full height + subtle pulse scale
+    var pulse = 1 + 0.03 * Math.sin((o.pulseT || 0) * 3.2);
+    if (o.passPulse > 0) pulse += 0.08 * o.passPulse;
+    if (o.rimHitT > 0) pulse += 0.04 * Math.sin(o.rimHitT * 40);
+    var dw = rad * 1.15 * pulse;
+    var dh = rad * 2.55 * pulse;
     var dx = cx - dw / 2;
     var dy = cy - dh / 2;
+    var wobble = Math.sin((o.spinT || 0) * 1.5) * 0.04;
+
+    // Ambient rivet sparks along rim
+    if (o.sparks && o.sparks.length) {
+      ctx.save();
+      for (var si = 0; si < o.sparks.length; si++) {
+        var sp = o.sparks[si];
+        var t = 1 - sp.age / sp.life;
+        if (t <= 0) continue;
+        var sx = cx + Math.cos(sp.a + (o.spinT || 0) * 0.4) * (dw * 0.42 * sp.r);
+        var sy = cy + Math.sin(sp.a + (o.spinT || 0) * 0.4) * (dh * 0.42 * sp.r);
+        ctx.globalAlpha = t * 0.85;
+        ctx.fillStyle = o.passed ? "#ff6a4a" : "#ffd4a0";
+        ctx.beginPath();
+        ctx.arc(sx, sy, 1.2 + 2 * t, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // Soft outer aura (always)
+    ctx.save();
+    ctx.globalAlpha = 0.22 + 0.1 * Math.sin((o.pulseT || 0) * 2.5);
+    var aura = ctx.createRadialGradient(cx, cy, rad * 0.2, cx, cy, rad * 1.35);
+    aura.addColorStop(0, "rgba(255,200,160,0.15)");
+    aura.addColorStop(0.6, "rgba(200,60,40,0.12)");
+    aura.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = aura;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, dw * 0.75, dh * 0.58, wobble, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
 
     // Red pass-through glow
     if (o.passed && o.passGlowT > 0) {
       var gLife = Math.min(1, o.passGlowT / 0.85);
       ctx.save();
-      ctx.globalAlpha = 0.35 + 0.55 * gLife;
+      ctx.globalAlpha = 0.4 + 0.5 * gLife;
       ctx.shadowColor = "rgba(255,40,30,0.95)";
-      ctx.shadowBlur = 28 * gLife;
-      var grd = ctx.createRadialGradient(cx, cy, rad * 0.15, cx, cy, rad * 1.4);
-      grd.addColorStop(0, "rgba(255,80,60," + (0.55 * gLife) + ")");
+      ctx.shadowBlur = 30 * gLife;
+      var grd = ctx.createRadialGradient(cx, cy, rad * 0.12, cx, cy, rad * 1.5);
+      grd.addColorStop(0, "rgba(255,90,70," + (0.6 * gLife) + ")");
       grd.addColorStop(0.45, "rgba(220,30,20," + (0.35 * gLife) + ")");
       grd.addColorStop(1, "rgba(120,0,0,0)");
       ctx.fillStyle = grd;
       ctx.beginPath();
-      ctx.ellipse(cx, cy, dw * 0.7, dh * 0.55, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, cy, dw * 0.75, dh * 0.58, 0, 0, Math.PI * 2);
       ctx.fill();
+      // Expanding shock ring on pass
+      if (o.passPulse > 0) {
+        ctx.strokeStyle = "rgba(255,120,90," + (0.7 * o.passPulse) + ")";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, dw * (0.5 + 0.4 * (1 - o.passPulse)), dh * (0.4 + 0.35 * (1 - o.passPulse)), 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Rim hit flash
+    if (o.rimHitT > 0) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.55, o.rimHitT * 2);
+      ctx.strokeStyle = "#ff6644";
+      ctx.lineWidth = 4;
+      ctx.shadowColor = "#ff3300";
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, dw * 0.48, dh * 0.46, wobble, 0, Math.PI * 2);
+      ctx.stroke();
       ctx.restore();
     }
 
     ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(wobble);
     ctx.globalAlpha = 1;
     if (img && img.complete && img.naturalWidth > 0) {
       if (o.passed && o.passGlowT > 0) {
         ctx.shadowColor = "rgba(255,50,40,0.9)";
-        ctx.shadowBlur = 18;
+        ctx.shadowBlur = 16;
       }
-      ctx.drawImage(img, dx, dy, dw, dh);
+      ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
     } else {
       ctx.strokeStyle = o.passed ? "#e74c3c" : "#c0392b";
       ctx.lineWidth = Math.max(5, rad * 0.16);
       ctx.beginPath();
-      ctx.ellipse(cx, cy, dw * 0.35, dh * 0.42, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, dw * 0.35, dh * 0.42, 0, 0, Math.PI * 2);
       ctx.stroke();
-      // solid center
       ctx.fillStyle = "#0c0c0c";
       ctx.beginPath();
-      ctx.ellipse(cx, cy, dw * 0.18, dh * 0.18, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, dw * 0.18, dh * 0.18, 0, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
 
-    // Number — always visible; brightens when activated
+    // Number — 75% smaller
     var num = o.ringNum || 1;
     var active = !!o.passed;
+    var nSize = Math.max(7, Math.min(11, rad * 0.155)); // ~25% of previous
     ctx.save();
-    ctx.font = "900 " + Math.max(18, Math.min(32, rad * 0.62)) + "px Rockwell, Georgia, serif";
+    ctx.font = "900 " + nSize + "px Rockwell, Georgia, serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 2.5;
     ctx.strokeStyle = "rgba(0,0,0,0.85)";
     if (active) {
       ctx.fillStyle = "#ffe8e0";
-      ctx.shadowColor = "rgba(255,60,40,0.95)";
-      ctx.shadowBlur = 14;
+      ctx.shadowColor = "rgba(255,60,40,0.9)";
+      ctx.shadowBlur = 8;
     } else {
-      ctx.fillStyle = "#fff8e8";
+      ctx.fillStyle = "rgba(255,248,232,0.9)";
       ctx.shadowBlur = 0;
     }
     ctx.strokeText(String(num), cx, cy);
