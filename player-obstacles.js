@@ -2400,41 +2400,68 @@
       var py = (typeof player !== "undefined" && player) ? player.y + (player.h || 30) * 0.5 : 300;
       var t = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
 
-      // Path points: player -> each ring center (upcoming only)
-      var pts = [{ x: px, y: py }];
+      // Control points: slight lead from player, then ring centers
+      var pts = [];
+      pts.push({ x: px + 10, y: py });
       for (var r = 0; r < rings.length; r++) {
         var rg = rings[r];
-        if (rg.x + (rg.w || 0) * 0.5 < px - 20) continue; // behind player
         var rcx = rg.x + (rg.w || rg.r * 2 || 40) * 0.5;
+        if (rcx < px - 30) continue;
         var rcy = rg.y + (rg.h || rg.r * 2 || 40) * 0.5 + Math.sin(rg.bobPhase || 0) * (rg.bobAmount || 8);
         pts.push({ x: rcx, y: rcy });
-        if (pts.length >= 5) break; // limit path length
+        if (pts.length >= 4) break;
       }
       if (pts.length < 2) return;
 
-      // Sample arrows along polyline
-      var spacing = 36;
-      var arrows = [];
-      for (var s = 0; s < pts.length - 1; s++) {
-        var x0 = pts[s].x, y0 = pts[s].y;
-        var x1 = pts[s + 1].x, y1 = pts[s + 1].y;
-        var dx = x1 - x0, dy = y1 - y0;
-        var len = Math.sqrt(dx * dx + dy * dy) || 1;
-        var ux = dx / len, uy = dy / len;
-        var ang = Math.atan2(uy, ux);
-        // start a bit past segment start
-        var start = (s === 0) ? 28 : 10;
-        for (var d = start; d < len - 18; d += spacing) {
-          arrows.push({
-            x: x0 + ux * d,
-            y: y0 + uy * d,
-            ang: ang,
-            phase: d * 0.04 + s
-          });
+      // Catmull-Rom style smooth samples (curved flight path)
+      function catmull(p0, p1, p2, p3, u) {
+        var u2 = u * u, u3 = u2 * u;
+        return {
+          x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * u + (2*p0.x - 5*p1.x + 4*p2.x - p3.x) * u2 + (-p0.x + 3*p1.x - 3*p2.x + p3.x) * u3),
+          y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * u + (2*p0.y - 5*p1.y + 4*p2.y - p3.y) * u2 + (-p0.y + 3*p1.y - 3*p2.y + p3.y) * u3)
+        };
+      }
+      var curve = [];
+      var segs = pts.length - 1;
+      for (var s = 0; s < segs; s++) {
+        var p0 = pts[Math.max(0, s - 1)];
+        var p1 = pts[s];
+        var p2 = pts[Math.min(pts.length - 1, s + 1)];
+        var p3 = pts[Math.min(pts.length - 1, s + 2)];
+        var steps = 10;
+        for (var st = 0; st <= steps; st++) {
+          var u = st / steps;
+          if (s > 0 && st === 0) continue;
+          curve.push(catmull(p0, p1, p2, p3, u));
         }
       }
 
-      function drawChevron(cx, cy, ang, scale, alpha) {
+      // Fewer arrows — larger spacing along curve length
+      var spacing = 58;
+      var arrows = [];
+      var acc = 0;
+      for (var c = 1; c < curve.length; c++) {
+        var dx = curve[c].x - curve[c - 1].x;
+        var dy = curve[c].y - curve[c - 1].y;
+        var segLen = Math.sqrt(dx * dx + dy * dy) || 0.001;
+        var prevAcc = acc;
+        acc += segLen;
+        // place arrow when crossing spacing marks
+        var mark = Math.ceil(prevAcc / spacing) * spacing;
+        while (mark <= acc) {
+          var f = (mark - prevAcc) / segLen;
+          var ax = curve[c - 1].x + dx * f;
+          var ay = curve[c - 1].y + dy * f;
+          var ang = Math.atan2(dy, dx);
+          // only ahead of player, on-screen
+          if (ax > px - 5 && ax < (typeof W !== "undefined" ? W : 400) + 20) {
+            arrows.push({ x: ax, y: ay, ang: ang, idx: arrows.length });
+          }
+          mark += spacing;
+        }
+      }
+
+      function drawSteampunkChevron(cx, cy, ang, scale, alpha) {
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(ang);
@@ -2442,49 +2469,64 @@
         ctx.globalAlpha = alpha;
         ctx.lineJoin = "round";
         ctx.lineCap = "round";
-        // Outer glow
-        ctx.shadowColor = "rgba(255,200,60,0.95)";
-        ctx.shadowBlur = 16;
-        function chev(ox, fill, stroke, lw) {
+        // Copper / brass glow
+        ctx.shadowColor = "rgba(200,120,40,0.85)";
+        ctx.shadowBlur = 12;
+        function chev(ox) {
           ctx.beginPath();
-          ctx.moveTo(ox - 10, -12);
-          ctx.lineTo(ox + 6, 0);
-          ctx.lineTo(ox - 10, 12);
-          ctx.lineTo(ox - 4, 12);
-          ctx.lineTo(ox + 12, 0);
-          ctx.lineTo(ox - 4, -12);
+          ctx.moveTo(ox - 9, -11);
+          ctx.lineTo(ox + 5, 0);
+          ctx.lineTo(ox - 9, 11);
+          ctx.lineTo(ox - 3, 11);
+          ctx.lineTo(ox + 11, 0);
+          ctx.lineTo(ox - 3, -11);
           ctx.closePath();
-          if (fill) { ctx.fillStyle = fill; ctx.fill(); }
-          if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
         }
-        // Double chevron >>
-        chev(-6, "rgba(255,230,120,0.35)", null, 0);
-        chev(8, "rgba(255,230,120,0.35)", null, 0);
-        ctx.shadowBlur = 10;
-        chev(-6, "#ffe566", "#ffc84a", 1.5);
-        chev(8, "#fff6c8", "#ffb020", 1.5);
-        // Bright core
+        // Dark iron underlay
+        ctx.fillStyle = "rgba(40,28,16,0.55)";
+        chev(-5); ctx.fill();
+        chev(7); ctx.fill();
+        // Brass body
+        var g = ctx.createLinearGradient(-12, -12, 14, 12);
+        g.addColorStop(0, "#8a5a22");
+        g.addColorStop(0.35, "#d4a04a");
+        g.addColorStop(0.7, "#f0c878");
+        g.addColorStop(1, "#a86828");
+        ctx.fillStyle = g;
+        chev(-5); ctx.fill();
+        chev(7); ctx.fill();
+        // Copper rim
         ctx.shadowBlur = 0;
-        ctx.globalAlpha = alpha * 0.9;
-        chev(-6, "#fffbe8", null, 0);
-        chev(8, "#ffffff", null, 0);
+        ctx.strokeStyle = "#c47830";
+        ctx.lineWidth = 1.4;
+        chev(-5); ctx.stroke();
+        chev(7); ctx.stroke();
+        // Hot highlight
+        ctx.globalAlpha = alpha * 0.7;
+        ctx.fillStyle = "rgba(255,230,170,0.55)";
+        chev(-5); ctx.fill();
+        chev(7); ctx.fill();
+        // Tiny rivet dots
+        ctx.globalAlpha = alpha * 0.85;
+        ctx.fillStyle = "#5a3a18";
+        ctx.beginPath(); ctx.arc(-2, 0, 1.2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(10, 0, 1.2, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
       }
 
       for (var a = 0; a < arrows.length; a++) {
         var ar = arrows[a];
-        // Blink / pulse along path (traveling wave)
-        var wave = 0.55 + 0.45 * Math.sin(t * 5.5 - ar.phase * 1.2);
-        var blink = 0.65 + 0.35 * Math.sin(t * 8 + ar.phase);
-        var alpha = Math.max(0.25, Math.min(1, wave * blink));
-        var sc = 0.85 + 0.2 * wave;
-        drawChevron(ar.x, ar.y, ar.ang, sc, alpha);
+        // Soft blink only — never fully disappear (alpha 0.40–0.95)
+        var pulse = 0.5 + 0.5 * Math.sin(t * 3.2 - ar.idx * 0.55);
+        var alpha = 0.40 + 0.55 * pulse;
+        // Subtle size breath
+        var sc = 0.92 + 0.1 * pulse;
+        drawSteampunkChevron(ar.x, ar.y, ar.ang, sc, alpha);
       }
     } catch (e) {}
   }
   window.__airborneDrawRingGuideArrows = drawRingGuideArrows;
   window.drawRingGuideArrows = drawRingGuideArrows;
-
 
   function drawRingFronts() {
     if (typeof obstacles === "undefined" || !obstacles || !obstacles.length) return;
