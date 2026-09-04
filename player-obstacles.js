@@ -744,7 +744,7 @@
   window.drawHitCoins = drawHitCoins;
 
   function spawnGoldRing() {
-    const r = Math.min(42, W * 0.10); // +25% from prior half-size
+    const r = Math.min(48, W * 0.115); // gear portal size
     const groundY = groundLevelY();
     const minY = H * 0.12;
     const maxY = groundY - H * 0.22;
@@ -763,7 +763,9 @@
       bobPhase: Math.random() * Math.PI * 2,
       bobAmount: 8,
       speedMult: 1,
-      isRing: true
+      isRing: true,
+      animFrame: Math.floor(Math.random() * 25),
+      animT: 0
     });
   }
 
@@ -1727,463 +1729,33 @@
         }
       }
       if (o.isRing || o.type === "gold_ring") {
-        // Hit-burst rings fly outward from the blimp
-        if (o.fromHitBurst) {
-          o.x += (o.vx || 0) * dt;
-          o.y += (o.vy || 0) * dt;
-          o.vx = (o.vx || 0) * (1 - 0.35 * dt);
-          o.vy = (o.vy || 0) * (1 - 0.35 * dt);
-          o.burstLife = (o.burstLife || 2.5) - dt;
-          if (o.burstLife <= 0) {
-            o.x = -9999; // drop off next filter
-          }
-        }
-        o.spin = (o.spin || 0) + dt * 2.2;
-        o.bobPhase = (o.bobPhase || 0) + dt * 1.6;
-        // Expand pulse after blimp flies through
-        if (o.passed) {
-          o.expandT = Math.min(1, (o.expandT || 0) + dt / 0.45);
-          // ease out: grow to 1.38 then settle to 1.15
-          const t = o.expandT;
-          const peak = 1.38;
-          const settle = 1.15;
-          if (t < 0.55) {
-            const u = t / 0.55;
-            o.expandScale = 1 + (peak - 1) * (1 - Math.pow(1 - u, 2));
-          } else {
-            const u = (t - 0.55) / 0.45;
-            o.expandScale = peak + (settle - peak) * Math.min(1, u);
-          }
-          // Ghost trail samples — fading after-images as ring scrolls away
-          if (!o.ghosts) o.ghosts = [];
-          o.ghostSpawnT = (o.ghostSpawnT || 0) + dt;
-          if (o.ghostSpawnT >= 0.05 && o.ghosts.length < 8) {
-            o.ghostSpawnT = 0;
-            o.ghosts.push({
-              x: o.x + o.w / 2,
-              y: o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8),
-              scale: o.expandScale || 1,
-              life: 0.55
-            });
-          }
-          for (let gi = o.ghosts.length - 1; gi >= 0; gi--) {
-            o.ghosts[gi].life -= dt;
-            if (o.ghosts[gi].life <= 0) o.ghosts.splice(gi, 1);
-          }
-        }
-        // Collect ring by flying through center
-        if (!o.collected) {
-          const cx = o.x + o.w / 2;
-          const cy = o.y + o.h / 2 + Math.sin(o.bobPhase) * (o.bobAmount || 8);
-          const rx = (o.r || o.w / 2) * 0.45 + player.w * 0.2;
-          const ry = (o.r || o.w / 2) * 1.0 + player.h * 0.2;
-          const dx = (player.x - cx) / rx;
-          const dy = (player.y - cy) / ry;
-          if (dx * dx + dy * dy < 1) {
-            o.collected = true;
-            o.passed = true;
-            o.expandT = 0;       // expand anim 0→1
-            o.expandScale = 1;
-            o.ghosts = [];
-            o.ghostSpawnT = 0;
-            o.scored = true;
-            // Rings are counted separately — do not add to main dodge score
-            window.__airborneCollectRings = (window.__airborneCollectRings || 0) + 1;
-            if (typeof updateCollectDock === "function") updateCollectDock();
-            if (typeof sfxRingCollect === "function") sfxRingCollect();
-            else if (typeof sfxPowerup === "function") sfxPowerup();
-            if (typeof notifyRingCollect === "function") notifyRingCollect();
-            // Gold dust puffs on ring collect
-            o.burstT = 0.35;
-            o.burstX = cx;
-            o.burstY = cy;
-            if (typeof hitParticles !== "undefined" && hitParticles && Array.isArray(hitParticles)) {
-              for (let i = 0; i < 16; i++) {
-                const ang = Math.random() * Math.PI * 2;
-                const spd = 28 + Math.random() * 60;
-                const golds = ["#d4af37", "#c9a227", "#e6c35c", "#b8860b", "#f0d878"];
-                hitParticles.push({
-                  type: "dust",
-                  x: cx + (Math.random() - 0.5) * 8,
-                  y: cy + (Math.random() - 0.5) * 8,
-                  vx: Math.cos(ang) * spd,
-                  vy: Math.sin(ang) * spd - 18,
-                  life: 0.4 + Math.random() * 0.35,
-                  age: 0,
-                  r: 1.4 + Math.random() * 2.6,
-                  color: golds[i % golds.length]
-                });
-              }
-            }
-          }
-        }
-        return; // rings skip bird damage / anim
-      }
-      o.bobPhase += o.bobSpeed * dt;
-      o.animTimer += dt;
-      while (o.animTimer >= frameDuration) {
-        o.animTimer -= frameDuration;
-        var nFr = o.birdFrameCount || OBSTACLE_ANIM_FRAME_COUNT;
-        o.animFrame = (o.animFrame + 1) % nFr;
-      }
-      // Wind streaks on ALL obstacles (birds, balloons, mini-blimps, etc.)
-      maybeEmitWind(o.x + o.w * 0.70, o.y + o.h / 2, o.w * 0.35, o.h, 11.4, dt, "obstacle"); // +5% further right
-      maybeEmitWind(o.x + o.w * 0.55, o.y + o.h * 0.35, o.w * 0.25, o.h * 0.5, 5.7, dt, "obstacle");
-      // Wake turbulence when the player slices close past this flyer
-      const wakeDx = Math.abs(player.x - (o.x + o.w * 0.5));
-      const wakeDy = Math.abs(player.y - (o.y + o.h * 0.5));
-      if (wakeDx < player.w * 0.55 + WAKE_RANGE && wakeDy < player.h * 0.55 + WAKE_RANGE) {
-        maybeEmitWind(o.x + o.w * 0.2, o.y + o.h * 0.5, o.w * 0.5, o.h * 0.8, 28, dt, "obstacle");
-        maybeEmitWind(player.x - player.w * 0.4, player.y, player.w * 0.3, player.h, 12, dt, "player");
-      }
-      // Hit-flash decay
-      if (o.hitFlash) o.hitFlash = Math.max(0, o.hitFlash - dt * 4);
-
-      // birds bounce off with a little upward/downward kick when hit, instead of no reaction at all
-      if (o.deflectVx || o.deflectVy) {
-        o.x += (o.deflectVx || 0) * dt;
-        o.y += (o.deflectVy || 0) * dt;
-        if (o.spinVel) {
-          o.rot = (o.rot || 0) + o.spinVel * dt;
-          o.spinVel *= Math.max(0, 1 - 2.5 * dt);
-        }
-        o.deflectVx = (o.deflectVx || 0) * Math.max(0, 1 - 2.2 * dt);
-        o.deflectVy = (o.deflectVy || 0) * Math.max(0, 1 - 2.2 * dt);
-        if (Math.abs(o.deflectVx || 0) < 4) o.deflectVx = 0;
-        if (Math.abs(o.deflectVy || 0) < 4) o.deflectVy = 0;
-      }
-
-      // mini blimp jet engine flame + smoke trails
-      if (o.type === "mini_blimp") {
-        const speed = obstacleSpeed * (o.speedMult || 1);
-        // engine sits at the REAR of the sprite — it flies nose-first, right
-        // to left, so the trailing/rear edge is the right side of its box
-        const engineX = o.x + o.w * 0.85;
-        const engineY = o.y + o.h * 0.55;
-
-        // flame particles (hot, bright, short-lived) — denser + bigger for more presence
-        o.flameTimer -= dt;
-        if (o.flameTimer <= 0) {
-          o.flameTimer = 0.008 + Math.random() * 0.012;
-          const angle = Math.PI + (Math.random() - 0.5) * 0.6;
-          const flameSpeed = 60 + Math.random() * 80;
-          o.flameParticles.push({
-            x: engineX + (Math.random() - 0.5) * o.w * 0.12,
-            y: engineY + (Math.random() - 0.5) * o.h * 0.08,
-            vx: Math.cos(angle) * flameSpeed + speed * 0.3,
-            vy: Math.sin(angle) * flameSpeed * 0.3 + (Math.random() - 0.5) * 20,
-            size: 5 + Math.random() * 9,
-            life: 0.1 + Math.random() * 0.12,
-            age: 0,
-            r: 255,
-            g: 120 + Math.random() * 80,
-            b: 20 + Math.random() * 40
-          });
-        }
-
-        // smoke particles (cool, dark, longer-lived) — bigger + longer-lived
-        // so a full trailing "smoke screen" builds up behind it before fading
-        o.smokeTimer -= dt;
-        if (o.smokeTimer <= 0) {
-          o.smokeTimer = 0.02 + Math.random() * 0.02;
-          const angle = Math.PI + (Math.random() - 0.5) * 0.5;
-          const smokeSpeed = 40 + Math.random() * 50;
-          o.smokeParticles.push({
-            x: engineX + (Math.random() - 0.5) * o.w * 0.1,
-            y: engineY + (Math.random() - 0.5) * o.h * 0.06,
-            vx: Math.cos(angle) * smokeSpeed + speed * 0.2,
-            vy: Math.sin(angle) * smokeSpeed * 0.2 + (Math.random() - 0.5) * 15,
-            size: 7 + Math.random() * 13,
-            life: 0.5 + Math.random() * 0.35,
-            age: 0,
-            r: 80 + Math.random() * 40,
-            g: 75 + Math.random() * 35,
-            b: 70 + Math.random() * 30
-          });
-        }
-
-        // update flame particles
-        o.flameParticles.forEach(p => {
-          p.age += dt;
-          p.x += p.vx * dt;
-          p.y += p.vy * dt;
-          p.vx *= 0.92;
-          p.vy *= 0.92;
-          p.size += dt * 15;
-        });
-        o.flameParticles = o.flameParticles.filter(p => p.age < p.life);
-
-        // update smoke particles
-        o.smokeParticles.forEach(p => {
-          p.age += dt;
-          p.x += p.vx * dt;
-          p.y += p.vy * dt;
-          p.vx *= 0.95;
-          p.vy *= 0.95;
-          p.size += dt * 13;
-        });
-        o.smokeParticles = o.smokeParticles.filter(p => p.age < p.life);
-      }
-
-      // boss 4's mini crackles with a little electrical charge — refresh the
-      // arcs on a timer so they flicker rather than staying static
-      if (o.type === "mini_heli") {
-        o.chargeTimer = (o.chargeTimer == null ? 0 : o.chargeTimer) - dt;
-        if (o.chargeTimer <= 0) {
-          o.chargeTimer = 0.08 + Math.random() * 0.07;
-          const cx = o.w / 2, cy = o.h / 2;
-          const arcCount = 2 + Math.floor(Math.random() * 2);
-          o.chargeArcs = [];
-          for (let i = 0; i < arcCount; i++) {
-            const a1 = Math.random() * Math.PI * 2;
-            const a2 = a1 + Math.PI * (0.6 + Math.random() * 0.8);
-            const r = Math.max(o.w, o.h) * 0.58;
-            o.chargeArcs.push(buildLightningPath(
-              cx + Math.cos(a1) * r, cy + Math.sin(a1) * r * 0.7,
-              cx + Math.cos(a2) * r, cy + Math.sin(a2) * r * 0.7,
-              12
-            ));
-          }
-        }
-      }
-    });
-
-    obstacles = obstacles.filter(o => {
-      if (o.fromHitBurst) {
-        return o.burstLife > 0 && o.x > -120 && o.x < W + 120 && o.y > -120 && o.y < H + 120;
-      }
-      if (o.shockFall || o.electrified) {
-        return o.y < H + 100 && o.x > -80 && o.x < W + 80;
-      }
-      return o.x + o.w > -20 && (!o.onFire || o.y < H + 80);
-    });
-
-    // scoring + collision
-    obstacles.forEach(o => {
-      const drawY = o.y + Math.sin(o.bobPhase) * o.bobAmount;
-
-      const dx = Math.abs(player.x - (o.x + o.w / 2));
-      const dy = Math.abs(player.y - (drawY + o.h / 2));
-      let collideX = (player.w / 2) * 0.75 + (o.w / 2) * 0.75;
-      let collideY = (player.h / 2) * 0.75 + (o.h / 2) * 0.75;
-      // Zeppelin fire aura +5% reach
-      if (window.__airborneFirePowerActive) {
-        collideX *= 1.05;
-        collideY *= 1.05;
-      }
-
-      // track the closest non-colliding vertical gap while horizontally
-      // in range, so a dodge can be recognized as a "close call" (graze)
-      if (dx < collideX * 1.4) {
-        const gap = dy - collideY;
-        if (gap >= 0 && gap < GRAZE_THRESHOLD && (o.minGap === undefined || gap < o.minGap)) {
-          o.minGap = gap;
-        }
-      }
-
-      if (!o.scored && o.x + o.w < player.x - player.w / 2) {
-        o.scored = true;
-        // Main score + streak: only clean obstacle passes (not rings, power-kills, collectibles)
-        const isObstaclePass = !o.isRing && o.type !== "gold_ring" && o.type !== "ring"
-          && !o.shockFall && !o.onFire && !o.electrified && !o.fromHitBurst;
-        if (isObstaclePass) {
-          score++;
-          gameplayScore++; // boss pacing uses dodge-only score
-          document.getElementById("scoreVal").textContent = score;
-          bumpScorePop();
-          // ramp difficulty gently
-          obstacleSpeed = 220 + Math.min(160, score * 6);
-          spawnInterval = Math.max(0.95, 1.7 - score * 0.03);
-          if (!bossActive) {
-            const next = nextBossConfig();
-            if (window.__airborneAirfieldBlockBoss) {
-              // Airfield training — never start a boss or bonus chain
-            } else if (next && gameplayScore >= next.threshold) {
-              triggerBossWarning(next.num);
-              setTimeout(function() { if (state === 'playing' && !bossActive) startBossDialogue(next.num); }, BOSS_WARNING_DURATION);
-            }
-          }
-          // storm meter: one gas-tank notch every 25 points, until it's full
-          addStormChargeForScore(score);
-
-          dodgeStreak++;
-          if (o.minGap !== undefined) {
-            score += GRAZE_BONUS;
-            document.getElementById("scoreVal").textContent = score;
-            bumpScorePop();
-            sfxStreak();
-          }
-          if (dodgeStreak > 0 && dodgeStreak % STREAK_MILESTONE === 0) {
-            score += STREAK_BONUS;
-            document.getElementById("scoreVal").textContent = score;
-            bumpScorePop();
-            spawnComboPopup(player.x, player.y - player.h * 0.9, String(dodgeStreak), "#6b1c2a");
-            sfxStreak();
-          }
-        }
-      }
-
-      // ---- Collision decision tree ----
-      // Skip non-hazards and power-disabled targets (no damage, no coins)
-      if (
-        o.fromHitBurst ||
-        o.isRing || o.type === "gold_ring" || o.type === "ring" ||
-        o.isCollectible || o.collectible ||
-        o.type === "crystal" || o.type === "coin" || o.type === "diamond" ||
-        o.shockFall || o.electrified || o.powerAffected ||
-        o.onFire || o.blueFire || o.greenFire
-      ) {
-        return;
-      }
-
-      if (dx < collideX && dy < collideY) {
-        const isBird = (o.type === "bird_a" || o.type === "bird_b" || o.type === "drone_scout" || o.isDrone || !!o.birdSpecies);
-        const shielded = !!(shieldActive || window.__airborneShieldActive);
-
-        // 1) SHIELD — bounce only. No coins. No takeHit.
-        if (shielded) {
-          if (!o.hitDeflected) {
-            o.hitDeflected = true;
-            var awayX = (o.x + o.w * 0.5) - player.x;
-            var awayY = (drawY + o.h * 0.5) - player.y;
-            var alen = Math.hypot(awayX, awayY) || 1;
-            var knock = 320 + Math.random() * 180;
-            o.deflectVx = (awayX / alen) * knock + (Math.random() - 0.5) * 80;
-            o.deflectVy = (awayY / alen) * knock * 0.85 + (Math.random() < 0.5 ? -1 : 1) * (120 + Math.random() * 100);
-            o.spinVel = (Math.random() - 0.5) * 10;
-            o.hitFlash = 1.2;
-            spawnHitParticles(o.x + o.w / 2, drawY + o.h / 2);
-            if (isBird && typeof spawnFeathers === "function") {
-              spawnFeathers(o.x + o.w / 2, drawY + o.h / 2);
-            }
-            try { if (typeof triggerScreenShake === "function") triggerScreenShake(5, 140); } catch (e) {}
-            try {
-              if (window.PowerFX) window.PowerFX.burst(o.x + o.w * 0.5, drawY + o.h * 0.5, {
-                count: 14, colors: ["#e0f2fe", "#fff", "#7dd3fc"], speed: 120, life: 0.4, glow: true
-              });
-            } catch (e) {}
-            try { if (typeof sfxDeflect === "function") sfxDeflect(); } catch (e) {}
-          }
-          return; // critical: do not fall through to damage/coins
-        }
-
-        // 2) Fire aura power — ignite, no coins
-        if (window.__airborneFirePowerActive) {
-          o.onFire = true;
-          o.powerAffected = true;
-          o.vy = 80 + Math.random() * 40;
-          o.scored = true;
-          try {
-            score += 1;
-            if (typeof gameplayScore === "number") gameplayScore += 1;
-            var el = document.getElementById("scoreVal");
-            if (el) el.textContent = String(score);
-            if (typeof bumpScorePop === "function") bumpScorePop();
-            if (typeof addStormChargeForScore === "function") addStormChargeForScore(score);
-          } catch (e) {}
-          try {
-            if (typeof sfxExplosion === "function") sfxExplosion();
-            else if (typeof sfxCrash === "function") sfxCrash();
-            else if (typeof sfxHit === "function") sfxHit();
-          } catch (e) {}
-          try {
-            if (typeof window.__airborneEmitFireBurst === "function") {
-              window.__airborneEmitFireBurst(o.x + o.w * 0.5, o.y + o.h * 0.4);
-            }
-          } catch (e) {}
-          return;
-        }
-
-        // 3) Real hit — coins once, then damage (takeHit will not spawn coins again)
-        if (isBird && !o.hitDeflected) {
-          o.hitDeflected = true;
-          o.deflectVy = (Math.random() < 0.5 ? -1 : 1) * (150 + Math.random() * 90);
-          o.hitFlash = 1;
-          spawnHitParticles(o.x + o.w / 2, drawY + o.h / 2);
-          if (typeof spawnFeathers === "function") {
-            spawnFeathers(o.x + o.w / 2, drawY + o.h / 2);
-          }
-        }
-
-        if (!o._hitCoinBursted) {
-          o._hitCoinBursted = true;
-          try {
-            if (typeof window.spawnHitCoinBurst === "function") {
-              window.spawnHitCoinBurst({ fromCollision: true });
-            }
-          } catch (e) {}
-        }
-        try {
-          window.__airborneSkipTakeHitCoins = true;
-          takeHit();
-        } finally {
-          window.__airborneSkipTakeHitCoins = false;
-        }
-      }
-    });
-  }
-
-  function drawObstacles() {
-    try { drawFirePower(); } catch (e) {}
-    try { drawHitCoins(); } catch (e) {}
-    obstacles.forEach(o => {
-      if (o.isRing || o.type === "gold_ring") {
-        // BACK half only — front half drawn later (drawRingFronts) so blimp flies THROUGH
         const cx = o.x + o.w / 2;
         const cy = o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8);
-        // Larger hoop so the blimp clearly fits through
         const baseR = (o.r || o.w / 2) * 1.0;
         const esc = o.expandScale || 1;
         const rad = baseR * esc;
         const passed = !!o.passed;
-        const rx = rad * 0.32;
-        const ry = rad * 1.12;
-        const cOuter = passed ? "#2ecc71" : "#d4a84b";
-        const cMain  = passed ? "#3dde8a" : "#e8c060";
-        const cRim   = passed ? "#1a9e55" : "#b8860b";
-        const glow   = passed ? "rgba(46, 204, 113, 0.75)" : "rgba(212, 175, 55, 0.7)";
-        // Ghost trails
-        if (o.ghosts && o.ghosts.length) {
-          for (let gi = 0; gi < o.ghosts.length; gi++) {
-            const g = o.ghosts[gi];
-            const ga = Math.max(0, g.life / 0.55) * 0.4;
-            const gr = baseR * (g.scale || 1);
-            ctx.save();
-            ctx.translate(g.x, g.y);
-            ctx.globalAlpha = ga;
-            ctx.strokeStyle = "#3dde8a";
-            ctx.lineWidth = Math.max(3, gr * 0.12);
-            ctx.beginPath();
-            ctx.scale((gr * 0.32) / (gr * 1.12), 1);
-            ctx.arc(0, 0, gr * 1.12, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.restore();
-          }
+        // Animate gear frames
+        o.animT = (o.animT || 0) + 0.016;
+        if (o.animT > 0.06) {
+          o.animT = 0;
+          o.animFrame = ((o.animFrame || 0) + 1) % 25;
         }
-        // BACK half of hoop (left side — far edge, behind blimp)
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.shadowColor = glow;
-        ctx.shadowBlur = 12;
-        function strokeBack(lw, color, a) {
+        // BACK (far) half of steampunk gear — behind blimp
+        if (!drawGearRingFrame(o, cx, cy, "back")) {
+          // fallback stroke ring
+          const rx = rad * 0.32, ry = rad * 1.12;
           ctx.save();
-          ctx.globalAlpha = a != null ? a : 1;
-          ctx.strokeStyle = color;
-          ctx.lineWidth = lw;
+          ctx.translate(cx, cy);
+          ctx.strokeStyle = passed ? "#3dde8a" : "#d4a84b";
+          ctx.lineWidth = Math.max(5, rad * 0.14);
           ctx.beginPath();
           ctx.scale(rx / ry, 1);
-          // π/2 → 3π/2 = left/back half
           ctx.arc(0, 0, ry, Math.PI * 0.5, Math.PI * 1.5, false);
           ctx.stroke();
           ctx.restore();
         }
-        strokeBack(Math.max(7, rad * 0.2), cOuter, 0.55);
-        strokeBack(Math.max(5, rad * 0.14), cMain, 1);
-        strokeBack(Math.max(3, rad * 0.08), cRim, 0.7);
-        ctx.shadowBlur = 0;
-        ctx.restore();
-        // Stash for front-half pass after player
-        o._ringFront = { cx: cx, cy: cy, rx: rx, ry: ry, rad: rad, passed: passed };
+        o._ringFront = { cx: cx, cy: cy, rad: rad, passed: passed, gear: true };
         return;
       }
       var bobA = (typeof o.bobAmount === "number") ? o.bobAmount : 0;
@@ -2381,196 +1953,50 @@
   
   
   // Glowing chevron path guiding blimp through rings (JS-drawn)
-  function drawRingGuideArrows() {
+  function drawRingFronts() {
     try {
-      if (!(window.__airborneAirfield || window.__airborneTrainingFlight)) return;
-      if (!window.__airborneAirfieldRings) return;
-      if (typeof ctx === "undefined" || !ctx) return;
-      var list = (typeof obstacles !== "undefined" && obstacles) ? obstacles : [];
-      var rings = [];
-      for (var i = 0; i < list.length; i++) {
-        var o = list[i];
-        if (!o || o.collected) continue;
-        if (o.isRing || o.type === "gold_ring") rings.push(o);
-      }
-      if (!rings.length) return;
-      rings.sort(function (a, b) { return a.x - b.x; });
-
-      var px = (typeof player !== "undefined" && player) ? player.x + (player.w || 40) * 0.55 : 80;
-      var py = (typeof player !== "undefined" && player) ? player.y + (player.h || 30) * 0.5 : 300;
-      var t = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
-
-      // Control points: slight lead from player, then ring centers
-      var pts = [];
-      pts.push({ x: px + 10, y: py });
-      for (var r = 0; r < rings.length; r++) {
-        var rg = rings[r];
-        var rcx = rg.x + (rg.w || rg.r * 2 || 40) * 0.5;
-        if (rcx < px - 30) continue;
-        var rcy = rg.y + (rg.h || rg.r * 2 || 40) * 0.5 + Math.sin(rg.bobPhase || 0) * (rg.bobAmount || 8);
-        pts.push({ x: rcx, y: rcy });
-        if (pts.length >= 4) break;
-      }
-      if (pts.length < 2) return;
-
-      // Catmull-Rom style smooth samples (curved flight path)
-      function catmull(p0, p1, p2, p3, u) {
-        var u2 = u * u, u3 = u2 * u;
-        return {
-          x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * u + (2*p0.x - 5*p1.x + 4*p2.x - p3.x) * u2 + (-p0.x + 3*p1.x - 3*p2.x + p3.x) * u3),
-          y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * u + (2*p0.y - 5*p1.y + 4*p2.y - p3.y) * u2 + (-p0.y + 3*p1.y - 3*p2.y + p3.y) * u3)
-        };
-      }
-      var curve = [];
-      var segs = pts.length - 1;
-      for (var s = 0; s < segs; s++) {
-        var p0 = pts[Math.max(0, s - 1)];
-        var p1 = pts[s];
-        var p2 = pts[Math.min(pts.length - 1, s + 1)];
-        var p3 = pts[Math.min(pts.length - 1, s + 2)];
-        var steps = 10;
-        for (var st = 0; st <= steps; st++) {
-          var u = st / steps;
-          if (s > 0 && st === 0) continue;
-          curve.push(catmull(p0, p1, p2, p3, u));
-        }
-      }
-
-      // Fewer arrows — larger spacing along curve length
-      var spacing = 58;
-      var arrows = [];
-      var acc = 0;
-      for (var c = 1; c < curve.length; c++) {
-        var dx = curve[c].x - curve[c - 1].x;
-        var dy = curve[c].y - curve[c - 1].y;
-        var segLen = Math.sqrt(dx * dx + dy * dy) || 0.001;
-        var prevAcc = acc;
-        acc += segLen;
-        // place arrow when crossing spacing marks
-        var mark = Math.ceil(prevAcc / spacing) * spacing;
-        while (mark <= acc) {
-          var f = (mark - prevAcc) / segLen;
-          var ax = curve[c - 1].x + dx * f;
-          var ay = curve[c - 1].y + dy * f;
-          var ang = Math.atan2(dy, dx);
-          // only ahead of player, on-screen
-          if (ax > px - 5 && ax < (typeof W !== "undefined" ? W : 400) + 20) {
-            arrows.push({ x: ax, y: ay, ang: ang, idx: arrows.length });
+      if (typeof obstacles === "undefined" || !obstacles || !obstacles.length) return;
+      obstacles.forEach(function (o) {
+        if (!o || !(o.isRing || o.type === "gold_ring")) return;
+        if (!o._ringFront) return;
+        var rf = o._ringFront;
+        // FRONT (near) half of gear portal — drawn AFTER blimp so it passes through
+        if (rf.gear) {
+          if (!drawGearRingFrame(o, rf.cx, rf.cy, "front")) {
+            // fallback arc
+            var rad = rf.rad || 40;
+            var rx = rad * 0.32, ry = rad * 1.12;
+            ctx.save();
+            ctx.translate(rf.cx, rf.cy);
+            ctx.strokeStyle = rf.passed ? "#3dde8a" : "#e8c060";
+            ctx.lineWidth = Math.max(5, rad * 0.14);
+            ctx.shadowColor = "rgba(255,180,60,0.5)";
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.scale(rx / ry, 1);
+            ctx.arc(0, 0, ry, -Math.PI * 0.5, Math.PI * 0.5, false);
+            ctx.stroke();
+            ctx.restore();
           }
-          mark += spacing;
-        }
-      }
-
-      function drawSteampunkChevron(cx, cy, ang, scale, alpha) {
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(ang);
-        ctx.scale(scale, scale);
-        ctx.globalAlpha = alpha;
-        ctx.lineJoin = "round";
-        ctx.lineCap = "round";
-        // Copper / brass glow
-        ctx.shadowColor = "rgba(200,120,40,0.85)";
-        ctx.shadowBlur = 12;
-        function chev(ox) {
+        } else {
+          // legacy ellipse front
+          var rad2 = rf.rad || 40;
+          var rx2 = rf.rx || rad2 * 0.32, ry2 = rf.ry || rad2 * 1.12;
+          ctx.save();
+          ctx.translate(rf.cx, rf.cy);
+          ctx.strokeStyle = rf.passed ? "#3dde8a" : "#e8c060";
+          ctx.lineWidth = Math.max(5, rad2 * 0.14);
           ctx.beginPath();
-          ctx.moveTo(ox - 9, -11);
-          ctx.lineTo(ox + 5, 0);
-          ctx.lineTo(ox - 9, 11);
-          ctx.lineTo(ox - 3, 11);
-          ctx.lineTo(ox + 11, 0);
-          ctx.lineTo(ox - 3, -11);
-          ctx.closePath();
+          ctx.scale(rx2 / ry2, 1);
+          ctx.arc(0, 0, ry2, -Math.PI * 0.5, Math.PI * 0.5, false);
+          ctx.stroke();
+          ctx.restore();
         }
-        // Dark iron underlay
-        ctx.fillStyle = "rgba(40,28,16,0.55)";
-        chev(-5); ctx.fill();
-        chev(7); ctx.fill();
-        // Brass body
-        var g = ctx.createLinearGradient(-12, -12, 14, 12);
-        g.addColorStop(0, "#8a5a22");
-        g.addColorStop(0.35, "#d4a04a");
-        g.addColorStop(0.7, "#f0c878");
-        g.addColorStop(1, "#a86828");
-        ctx.fillStyle = g;
-        chev(-5); ctx.fill();
-        chev(7); ctx.fill();
-        // Copper rim
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = "#c47830";
-        ctx.lineWidth = 1.4;
-        chev(-5); ctx.stroke();
-        chev(7); ctx.stroke();
-        // Hot highlight
-        ctx.globalAlpha = alpha * 0.7;
-        ctx.fillStyle = "rgba(255,230,170,0.55)";
-        chev(-5); ctx.fill();
-        chev(7); ctx.fill();
-        // Tiny rivet dots
-        ctx.globalAlpha = alpha * 0.85;
-        ctx.fillStyle = "#5a3a18";
-        ctx.beginPath(); ctx.arc(-2, 0, 1.2, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(10, 0, 1.2, 0, Math.PI * 2); ctx.fill();
-        ctx.restore();
-      }
-
-      for (var a = 0; a < arrows.length; a++) {
-        var ar = arrows[a];
-        // Soft blink only — never fully disappear (alpha 0.40–0.95)
-        var pulse = 0.5 + 0.5 * Math.sin(t * 3.2 - ar.idx * 0.55);
-        var alpha = 0.40 + 0.55 * pulse;
-        // Subtle size breath
-        var sc = 0.92 + 0.1 * pulse;
-        drawSteampunkChevron(ar.x, ar.y, ar.ang, sc, alpha);
-      }
+      });
     } catch (e) {}
   }
-  window.__airborneDrawRingGuideArrows = drawRingGuideArrows;
-  window.drawRingGuideArrows = drawRingGuideArrows;
-
-  function drawRingFronts() {
-    if (typeof obstacles === "undefined" || !obstacles || !obstacles.length) return;
-    if (typeof ctx === "undefined") return;
-    obstacles.forEach(function (o) {
-      if (!(o.isRing || o.type === "gold_ring")) return;
-      const f = o._ringFront;
-      if (!f) return;
-      const cOuter = f.passed ? "#2ecc71" : "#d4a84b";
-      const cMain  = f.passed ? "#4aee9a" : "#f0d070";
-      const cRim   = f.passed ? "#1a9e55" : "#b8860b";
-      const glow   = f.passed ? "rgba(46, 204, 113, 0.85)" : "rgba(255, 210, 80, 0.75)";
-      ctx.save();
-      ctx.translate(f.cx, f.cy);
-      ctx.shadowColor = glow;
-      ctx.shadowBlur = 14;
-      function strokeFront(lw, color, a) {
-        ctx.save();
-        ctx.globalAlpha = a != null ? a : 1;
-        ctx.strokeStyle = color;
-        ctx.lineWidth = lw;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.scale(f.rx / f.ry, 1);
-        // -π/2 → π/2 = right/front half (drawn ON TOP of blimp)
-        ctx.arc(0, 0, f.ry, -Math.PI * 0.5, Math.PI * 0.5, false);
-        ctx.stroke();
-        ctx.restore();
-      }
-      strokeFront(Math.max(8, f.rad * 0.22), cOuter, 0.65);
-      strokeFront(Math.max(6, f.rad * 0.16), cMain, 1);
-      strokeFront(Math.max(3, f.rad * 0.09), cRim, 0.85);
-      // Bright highlight on the near rim
-      ctx.globalAlpha = 0.9;
-      ctx.strokeStyle = f.passed ? "#d8ffe8" : "#fff4c8";
-      ctx.lineWidth = Math.max(2, f.rad * 0.05);
-      ctx.beginPath();
-      ctx.scale(f.rx / f.ry, 1);
-      ctx.arc(0, 0, f.ry, -0.35, 0.35, false);
-      ctx.stroke();
-      ctx.restore();
-    });
-  }
   window.__airborneDrawRingFronts = drawRingFronts;
+
 
 function spawnHealPickup() {
     if (window.__airborneAirfield) return; // no hearts during training
