@@ -1782,69 +1782,51 @@
           var rcy = o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8);
           var pr = (o.r || o.w / 2) * 0.85;
           // Solid rim vs center hole only
-          var outerW = pr * 0.62;
-          var outerH = pr * 1.28;
-          var holeW = pr * 0.26;
-          var holeH = pr * 0.48;
-          var ph = (player.h || 36) * 0.35;
-          var pw = (player.w || 40) * 0.35;
+          // Liberal center hole; rim only at true outer top/bottom edge
+          var outerW = pr * 0.55;
+          var outerH = pr * 1.22;   // visual outer edge
+          var holeW = pr * 0.45;    // wide pass-through
+          var holeH = pr * 0.72;    // tall pass-through (easy entry)
+          var rimBand = pr * 0.14;  // thin solid band at outer edge only
+          var ph = (player.h || 36) * 0.22; // smaller hitbox so easier through hole
+          var pw = (player.w || 40) * 0.25;
           var px = player.x + (player.w || 40) * 0.5;
           var py = player.y;
           var dx = px - rcx;
           var dy = py - rcy;
+          var absDy = Math.abs(dy);
 
-          // Player body as small box vs ring zones
+          // Only check when close to ring in X (depth of hoop)
           var nearX = Math.abs(dx) < outerW + pw;
           if (nearX) {
-            var absDy = Math.abs(dy);
-            var inHoleY = absDy < holeH - ph * 0.15;
-            var inHoleX = Math.abs(dx) < holeW + pw * 0.25;
-            var inHole = inHoleX && inHoleY;
-            var inOuterY = absDy < outerH + ph;
-            var onTopRim = dy < -holeH + ph && dy > -outerH - ph;
-            var onBotRim = dy > holeH - ph && dy < outerH + ph;
+            var holeTop = rcy - holeH;
+            var holeBot = rcy + holeH;
+            var rimTopInner = rcy - outerH + rimBand; // start of top rim band
+            var rimTopOuter = rcy - outerH;
+            var rimBotInner = rcy + outerH - rimBand;
+            var rimBotOuter = rcy + outerH;
 
-            if (!inHole && inOuterY) {
-              // TOP or BOTTOM rim — hard bounce, cannot pass through
-              if (onTopRim || (dy < 0 && absDy >= holeH - ph)) {
-                // Snap just above inner hole / below outer contact
-                var topEdge = rcy - holeH - ph;
-                if (player.y > topEdge - 2 && player.y < rcy) {
-                  player.y = topEdge - 2;
-                }
-                // Bounce upward
-                if (!player.vy || player.vy > -120) {
-                  player.vy = -Math.max(180, Math.abs(player.vy || 0) * 0.85 + 140);
-                } else {
-                  player.vy = -Math.abs(player.vy) * 0.9;
-                }
-                o.rimHitT = 0.3;
-              } else if (onBotRim || (dy > 0 && absDy >= holeH - ph)) {
-                var botEdge = rcy + holeH + ph;
-                if (player.y < botEdge + 2 && player.y > rcy) {
-                  player.y = botEdge + 2;
-                }
-                // Bounce downward
-                if (!player.vy || player.vy < 120) {
-                  player.vy = Math.max(160, Math.abs(player.vy || 0) * 0.85 + 120);
-                } else {
-                  player.vy = Math.abs(player.vy) * 0.9;
-                }
-                o.rimHitT = 0.3;
-              }
+            // Generous hole — almost entire open area
+            var inHole = absDy <= holeH + ph * 0.35 && Math.abs(dx) < holeW + pw;
+
+            // Rim only if past hole and into thin outer edge band
+            var onTopRim = dy < -holeH - ph * 0.2 && dy > rimTopOuter - ph && dy < rimTopInner + ph * 0.5;
+            var onBotRim = dy > holeH + ph * 0.2 && dy < rimBotOuter + ph && dy > rimBotInner - ph * 0.5;
+
+            if (onTopRim) {
+              // Soft bounce at very top edge only
+              player.y = Math.min(player.y, holeTop - ph * 0.5);
+              if (player.vy > 0) player.vy = 0;
+              player.vy = -Math.max(90, Math.abs(player.vy || 0) * 0.5 + 70);
+              o.rimHitT = 0.2;
+            } else if (onBotRim) {
+              player.y = Math.max(player.y, holeBot + ph * 0.5);
+              if (player.vy < 0) player.vy = 0;
+              player.vy = Math.max(80, Math.abs(player.vy || 0) * 0.5 + 60);
+              o.rimHitT = 0.2;
             } else if (inHole) {
-              // Only middle opening — keep centered, count pass
-              player.y += (rcy - py) * Math.min(0.4, 4 * dt);
-              // Clamp inside hole so you can't drift into rim while inside
-              var maxOff = holeH - ph * 0.5;
-              if (player.y < rcy - maxOff) {
-                player.y = rcy - maxOff;
-                if (player.vy < 0) player.vy *= -0.4;
-              }
-              if (player.y > rcy + maxOff) {
-                player.y = rcy + maxOff;
-                if (player.vy > 0) player.vy *= -0.4;
-              }
+              // Soft assist toward center — no hard clamp/bounce
+              player.y += (rcy - py) * Math.min(0.18, 1.8 * dt);
               if (!o.passed) {
                 o.passed = true;
                 o.passGlowT = 1.1;
