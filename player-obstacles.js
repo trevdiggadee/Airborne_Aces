@@ -2379,6 +2379,113 @@
   let healSpawnTimer = 6 + Math.random() * 5; // first one arrives a little sooner
 
   
+  
+  // Glowing chevron path guiding blimp through rings (JS-drawn)
+  function drawRingGuideArrows() {
+    try {
+      if (!(window.__airborneAirfield || window.__airborneTrainingFlight)) return;
+      if (!window.__airborneAirfieldRings) return;
+      if (typeof ctx === "undefined" || !ctx) return;
+      var list = (typeof obstacles !== "undefined" && obstacles) ? obstacles : [];
+      var rings = [];
+      for (var i = 0; i < list.length; i++) {
+        var o = list[i];
+        if (!o || o.collected) continue;
+        if (o.isRing || o.type === "gold_ring") rings.push(o);
+      }
+      if (!rings.length) return;
+      rings.sort(function (a, b) { return a.x - b.x; });
+
+      var px = (typeof player !== "undefined" && player) ? player.x + (player.w || 40) * 0.55 : 80;
+      var py = (typeof player !== "undefined" && player) ? player.y + (player.h || 30) * 0.5 : 300;
+      var t = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
+
+      // Path points: player -> each ring center (upcoming only)
+      var pts = [{ x: px, y: py }];
+      for (var r = 0; r < rings.length; r++) {
+        var rg = rings[r];
+        if (rg.x + (rg.w || 0) * 0.5 < px - 20) continue; // behind player
+        var rcx = rg.x + (rg.w || rg.r * 2 || 40) * 0.5;
+        var rcy = rg.y + (rg.h || rg.r * 2 || 40) * 0.5 + Math.sin(rg.bobPhase || 0) * (rg.bobAmount || 8);
+        pts.push({ x: rcx, y: rcy });
+        if (pts.length >= 5) break; // limit path length
+      }
+      if (pts.length < 2) return;
+
+      // Sample arrows along polyline
+      var spacing = 36;
+      var arrows = [];
+      for (var s = 0; s < pts.length - 1; s++) {
+        var x0 = pts[s].x, y0 = pts[s].y;
+        var x1 = pts[s + 1].x, y1 = pts[s + 1].y;
+        var dx = x1 - x0, dy = y1 - y0;
+        var len = Math.sqrt(dx * dx + dy * dy) || 1;
+        var ux = dx / len, uy = dy / len;
+        var ang = Math.atan2(uy, ux);
+        // start a bit past segment start
+        var start = (s === 0) ? 28 : 10;
+        for (var d = start; d < len - 18; d += spacing) {
+          arrows.push({
+            x: x0 + ux * d,
+            y: y0 + uy * d,
+            ang: ang,
+            phase: d * 0.04 + s
+          });
+        }
+      }
+
+      function drawChevron(cx, cy, ang, scale, alpha) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(ang);
+        ctx.scale(scale, scale);
+        ctx.globalAlpha = alpha;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        // Outer glow
+        ctx.shadowColor = "rgba(255,200,60,0.95)";
+        ctx.shadowBlur = 16;
+        function chev(ox, fill, stroke, lw) {
+          ctx.beginPath();
+          ctx.moveTo(ox - 10, -12);
+          ctx.lineTo(ox + 6, 0);
+          ctx.lineTo(ox - 10, 12);
+          ctx.lineTo(ox - 4, 12);
+          ctx.lineTo(ox + 12, 0);
+          ctx.lineTo(ox - 4, -12);
+          ctx.closePath();
+          if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+          if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+        }
+        // Double chevron >>
+        chev(-6, "rgba(255,230,120,0.35)", null, 0);
+        chev(8, "rgba(255,230,120,0.35)", null, 0);
+        ctx.shadowBlur = 10;
+        chev(-6, "#ffe566", "#ffc84a", 1.5);
+        chev(8, "#fff6c8", "#ffb020", 1.5);
+        // Bright core
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = alpha * 0.9;
+        chev(-6, "#fffbe8", null, 0);
+        chev(8, "#ffffff", null, 0);
+        ctx.restore();
+      }
+
+      for (var a = 0; a < arrows.length; a++) {
+        var ar = arrows[a];
+        // Blink / pulse along path (traveling wave)
+        var wave = 0.55 + 0.45 * Math.sin(t * 5.5 - ar.phase * 1.2);
+        var blink = 0.65 + 0.35 * Math.sin(t * 8 + ar.phase);
+        var alpha = Math.max(0.25, Math.min(1, wave * blink));
+        var sc = 0.85 + 0.2 * wave;
+        drawChevron(ar.x, ar.y, ar.ang, sc, alpha);
+      }
+    } catch (e) {}
+  }
+  window.__airborneDrawRingGuideArrows = drawRingGuideArrows;
+  window.drawRingGuideArrows = drawRingGuideArrows;
+
+
   function drawRingFronts() {
     if (typeof obstacles === "undefined" || !obstacles || !obstacles.length) return;
     if (typeof ctx === "undefined") return;
