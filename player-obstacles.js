@@ -1781,43 +1781,70 @@
           var rcx = o.x + o.w / 2;
           var rcy = o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8);
           var pr = (o.r || o.w / 2) * 0.85;
-          // Geometry: thin ring — outer ellipse vs inner hole
-          var outerW = pr * 0.58;   // half-width of solid ring depth
-          var outerH = pr * 1.25;   // half-height outer
-          var holeW = pr * 0.28;    // passable half-width
-          var holeH = pr * 0.55;    // passable half-height
+          // Solid rim vs center hole only
+          var outerW = pr * 0.62;
+          var outerH = pr * 1.28;
+          var holeW = pr * 0.26;
+          var holeH = pr * 0.48;
+          var ph = (player.h || 36) * 0.35;
+          var pw = (player.w || 40) * 0.35;
           var px = player.x + (player.w || 40) * 0.5;
           var py = player.y;
           var dx = px - rcx;
           var dy = py - rcy;
-          var nx = dx / Math.max(0.001, outerW);
-          var ny = dy / Math.max(0.001, outerH);
-          var inOuter = (nx * nx + ny * ny) <= 1.0;
-          var hx = dx / Math.max(0.001, holeW);
-          var hy = dy / Math.max(0.001, holeH);
-          var inHole = (hx * hx + hy * hy) <= 1.0;
 
-          // Approaching ring column (within thickness along X)
-          if (Math.abs(dx) < outerW * 1.15) {
-            if (inOuter && !inHole) {
-              // Hit solid rim — push out of ring, don't allow entry
-              var ang = Math.atan2(dy / outerH, dx / outerW);
-              // Prefer vertical push when near top/bottom rim
-              if (Math.abs(ny) > Math.abs(nx) * 0.85) {
-                var pushY = (ny > 0 ? 1 : -1) * (outerH + 6 - Math.abs(dy));
-                player.y += pushY * Math.min(1, 14 * dt);
-                if (player.vy && ((ny > 0 && player.vy > 0) || (ny < 0 && player.vy < 0))) {
-                  player.vy *= -0.35;
+          // Player body as small box vs ring zones
+          var nearX = Math.abs(dx) < outerW + pw;
+          if (nearX) {
+            var absDy = Math.abs(dy);
+            var inHoleY = absDy < holeH - ph * 0.15;
+            var inHoleX = Math.abs(dx) < holeW + pw * 0.25;
+            var inHole = inHoleX && inHoleY;
+            var inOuterY = absDy < outerH + ph;
+            var onTopRim = dy < -holeH + ph && dy > -outerH - ph;
+            var onBotRim = dy > holeH - ph && dy < outerH + ph;
+
+            if (!inHole && inOuterY) {
+              // TOP or BOTTOM rim — hard bounce, cannot pass through
+              if (onTopRim || (dy < 0 && absDy >= holeH - ph)) {
+                // Snap just above inner hole / below outer contact
+                var topEdge = rcy - holeH - ph;
+                if (player.y > topEdge - 2 && player.y < rcy) {
+                  player.y = topEdge - 2;
                 }
-              } else {
-                // Side of rim — nudge Y toward hole center slightly + soft bounce
-                player.y += (rcy - py) * Math.min(0.15, 2 * dt);
-                if (player.vy) player.vy *= 0.85;
+                // Bounce upward
+                if (!player.vy || player.vy > -120) {
+                  player.vy = -Math.max(180, Math.abs(player.vy || 0) * 0.85 + 140);
+                } else {
+                  player.vy = -Math.abs(player.vy) * 0.9;
+                }
+                o.rimHitT = 0.3;
+              } else if (onBotRim || (dy > 0 && absDy >= holeH - ph)) {
+                var botEdge = rcy + holeH + ph;
+                if (player.y < botEdge + 2 && player.y > rcy) {
+                  player.y = botEdge + 2;
+                }
+                // Bounce downward
+                if (!player.vy || player.vy < 120) {
+                  player.vy = Math.max(160, Math.abs(player.vy || 0) * 0.85 + 120);
+                } else {
+                  player.vy = Math.abs(player.vy) * 0.9;
+                }
+                o.rimHitT = 0.3;
               }
-              o.rimHitT = 0.25;
             } else if (inHole) {
-              // Inside tunnel — gently keep blimp centered in hole
-              player.y += (rcy - py) * Math.min(0.35, 3.5 * dt);
+              // Only middle opening — keep centered, count pass
+              player.y += (rcy - py) * Math.min(0.4, 4 * dt);
+              // Clamp inside hole so you can't drift into rim while inside
+              var maxOff = holeH - ph * 0.5;
+              if (player.y < rcy - maxOff) {
+                player.y = rcy - maxOff;
+                if (player.vy < 0) player.vy *= -0.4;
+              }
+              if (player.y > rcy + maxOff) {
+                player.y = rcy + maxOff;
+                if (player.vy > 0) player.vy *= -0.4;
+              }
               if (!o.passed) {
                 o.passed = true;
                 o.passGlowT = 1.1;
