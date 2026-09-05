@@ -1797,11 +1797,11 @@
           var dy = py - rcy;
           var pTop = dy - halfPh;
           var pBot = dy + halfPh;
-          var depth = Math.max(10, g.halfW * 0.55);
+          var depth = (g.depth != null) ? g.depth : 15;
           o._dbg.depth = depth;
           o._dbg.halfPw = halfPw;
 
-          if (Math.abs(dx) < depth + halfPw * 0.5) {
+          if (Math.abs(dx) < depth + halfPw * 0.35) {
             var inHole = (pTop >= -g.holeH * 0.92) && (pBot <= g.holeH * 0.92);
             var overlapsTopRim = (pTop < -g.holeH * 0.88) && (pBot > -g.rimH);
             var overlapsBotRim = (pBot > g.holeH * 0.88) && (pTop < g.rimH);
@@ -1898,17 +1898,18 @@
     var dh = rad * 2.55 * pulse;
     var halfH = dh * 0.5;
     var halfW = dw * 0.5;
-    // Black opening ~32% of half-height (matches asset hole); metal is outside that
-    var holeH = halfH * 0.36;
+    // User-tuned: hole ±45, front X depth 15
+    var holeH = 45;
     var holeW = halfW * 0.55;
-    // Outer rim = near visual edge of sprite
     var rimH = halfH * 0.92;
     var rimW = halfW * 0.95;
+    var depth = 15; // front X plane at center - 15
     return {
       rad: rad, dw: dw, dh: dh,
       halfH: halfH, halfW: halfW,
       holeH: holeH, holeW: holeW,
-      rimH: rimH, rimW: rimW
+      rimH: rimH, rimW: rimW,
+      depth: depth
     };
   }
 
@@ -2079,7 +2080,7 @@
       var outerW = d ? d.outerW : (g2 ? g2.rimW : 30);
       var outerH = d ? d.outerH : (g2 ? g2.rimH : 60);
       var holeW = d ? d.holeW : (g2 ? g2.holeW : 24);
-      var holeH = d ? d.holeH : (g2 ? g2.holeH : 50);
+      var holeH = 45; // HOLE ±45 fixed
       var midY = cy;
       var topOuter = cy - outerH;
       var botOuter = cy + outerH;
@@ -2163,8 +2164,8 @@
       ctx.fillRect(cx - outerW, botHole, outerW * 2, botOuter - botHole);
 
       // Vertical X depth lines (why collision fires before reaching the ring)
-      var depth = (d && d.depth != null) ? d.depth : outerW;
-      var frontX = cx - depth;   // first contact from the left (blimp approaches from left)
+      var depth = (d && d.depth != null) ? d.depth : 15;
+      var frontX = cx - depth;   // FRONT X = -15 from center
       var backX = cx + depth;
       var holeLeft = cx - holeW;
       var holeRight = cx + holeW;
