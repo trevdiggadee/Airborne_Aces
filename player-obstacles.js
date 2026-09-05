@@ -751,9 +751,18 @@
     const minY = H * 0.12;
     const maxY = groundY - H * 0.22;
     const y = minY + Math.random() * Math.max(40, maxY - minY);
+    // Extra horizontal spacing between rings
+    var lastRingX = -9999;
+    for (var ri = 0; ri < obstacles.length; ri++) {
+      if (obstacles[ri] && (obstacles[ri].isRing || obstacles[ri].type === "gold_ring")) {
+        if (obstacles[ri].x > lastRingX) lastRingX = obstacles[ri].x;
+      }
+    }
+    var spawnX = W + r * 2;
+    if (lastRingX > -9000) spawnX = Math.max(spawnX, lastRingX + Math.max(220, W * 0.55));
     obstacles.push({
       type: "gold_ring",
-      x: W + r * 2,
+      x: spawnX,
       y: y,
       w: r * 2,
       h: r * 2,
@@ -1894,7 +1903,7 @@
     var rad = (o.r || o.w / 2 || 40) * (o.expandScale || 1);
     var pulse = 1 + 0.03 * Math.sin((o.pulseT || 0) * 3.2);
     if (o.passPulse > 0) pulse += 0.08 * (o.passPulse || 0);
-    var dw = rad * 1.15 * pulse;
+    var dw = rad * 0.575 * pulse; // 50% thinner
     var dh = rad * 2.55 * pulse;
     var halfH = dh * 0.5;
     var halfW = dw * 0.5;

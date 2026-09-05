@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="airborne-build" content="ruff445 2026-09-02T04:50Z-platfix">
+<meta name="airborne-build" content="ruff446 2026-09-02T04:50Z-platfix">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="format-detection" content="telephone=no" />
 <title>Airborne Aces</title>
-<link rel="stylesheet" href="style.css?v=ruff445">
-<link rel="stylesheet" href="blimp-profile.css?v=ruff445">
-<link rel="stylesheet" href="launch-screens.css?v=ruff445">
+<link rel="stylesheet" href="style.css?v=ruff446">
+<link rel="stylesheet" href="blimp-profile.css?v=ruff446">
+<link rel="stylesheet" href="launch-screens.css?v=ruff446">
 <style id="otg-legacy-splash-hide">#splashScreen{visibility:hidden!important;pointer-events:none!important;}</style>
 </head>
 <body>
@@ -39,7 +39,7 @@
   <div class="otg-enter-wrap">
     <button class="otg-enter-btn" id="otg-enter-btn" type="button" aria-label="Enter Hangar">
     <span class="enterHangarShine" aria-hidden="true"></span>
-  <img class="enterHangarImg" src="enter_hangar_btn.png?v=ruff445" alt="Enter Hangar" draggable="false" />
+  <img class="enterHangarImg" src="enter_hangar_btn.png?v=ruff446" alt="Enter Hangar" draggable="false" />
   </button>
   </div>
   
@@ -108,7 +108,7 @@
   </div>
   <button class="enterHangarBtn" id="splashEnterBtn" type="button" aria-label="Enter Hangar">
   <span class="enterHangarShine" aria-hidden="true"></span>
-  <img class="enterHangarImg" src="enter_hangar_btn.png?v=ruff445" alt="Enter Hangar" draggable="false" />
+  <img class="enterHangarImg" src="enter_hangar_btn.png?v=ruff446" alt="Enter Hangar" draggable="false" />
 </button>
 </div>
 
@@ -282,7 +282,7 @@
 
 <div id="pauseOverlay" class="hidden" aria-hidden="true">
   <div class="pausePanel" role="dialog" aria-labelledby="pauseTitle">
-    <img class="pausePlateImg" src="pause_menu_plate.webp?v=ruff445" alt="" draggable="false" />
+    <img class="pausePlateImg" src="pause_menu_plate.webp?v=ruff446" alt="" draggable="false" />
     <div class="pauseHitLayer">
       <!-- visually hidden title for a11y; art shows PAUSED -->
       <h2 class="pauseTitle srOnly" id="pauseTitle">PAUSED</h2>
@@ -313,7 +313,7 @@
 </div>
 
 <div id="hudFrame">
-  <img id="hudFrameImg" crossorigin="anonymous" src="hudFrame.webp?v=ruff445" alt="" />
+  <img id="hudFrameImg" crossorigin="anonymous" src="hudFrame.webp?v=ruff446" alt="" />
   <div id="healthMeter">
     <img id="healthImg" crossorigin="anonymous" src="heartPickup.webp?cb=2" alt="Health" />
   </div>
@@ -347,36 +347,8 @@
   </div>
 
   <div id="timerFrame">
-    <div class="flip-clock" id="flipClock">
-      <div class="flip-unit" data-pos="m1">
-        <div class="flip-card-static" id="fc-m1-static">0</div>
-        <div class="flip-card" id="fc-m1" style="display:none;">
-          <div class="flip-card-top" id="fc-m1-top"><span class="digit">0</span></div>
-          <div class="flip-card-bottom" id="fc-m1-bottom"><span class="digit">0</span></div>
-        </div>
-      </div>
-      <div class="flip-unit" data-pos="m2">
-        <div class="flip-card-static" id="fc-m2-static">0</div>
-        <div class="flip-card" id="fc-m2" style="display:none;">
-          <div class="flip-card-top" id="fc-m2-top"><span class="digit">0</span></div>
-          <div class="flip-card-bottom" id="fc-m2-bottom"><span class="digit">0</span></div>
-        </div>
-      </div>
-      <div class="flip-separator"><span></span><span></span></div>
-      <div class="flip-unit" data-pos="s1">
-        <div class="flip-card-static" id="fc-s1-static">0</div>
-        <div class="flip-card" id="fc-s1" style="display:none;">
-          <div class="flip-card-top" id="fc-s1-top"><span class="digit">0</span></div>
-          <div class="flip-card-bottom" id="fc-s1-bottom"><span class="digit">0</span></div>
-        </div>
-      </div>
-      <div class="flip-unit" data-pos="s2">
-        <div class="flip-card-static" id="fc-s2-static">0</div>
-        <div class="flip-card" id="fc-s2" style="display:none;">
-          <div class="flip-card-top" id="fc-s2-top"><span class="digit">0</span></div>
-          <div class="flip-card-bottom" id="fc-s2-bottom"><span class="digit">0</span></div>
-        </div>
-      </div>
+    <div class="flip-clock nixie-alt-wrap" id="flipClock">
+      <canvas id="nixieAltCanvas" width="280" height="52" aria-label="Altimeter"></canvas>
     </div>
   </div>
 </div>
@@ -478,23 +450,23 @@
   </div>
 </div>
 
-<script src="assets-placeholders.js?v=ruff445"></script>
-<script src="blimp-profile.js?v=ruff445"></script>
-<script src="menu-intro.js?v=ruff445"></script>
-<script src="world-map.js?v=ruff445"></script>
-<script src="audio.js?v=ruff445"></script>
-<script src="asset-loading.js?v=ruff445"></script>
-<script src="ruff-tutorial.js?v=ruff445"></script>
-<script src="world-buildings.js?v=ruff445"></script>
-<script src="player-obstacles.js?v=ruff445"></script>
-<script src="power-fx.js?v=ruff445"></script>
-<script src="bosses.js?v=ruff445"></script>
-<script src="boss-dialogue.js?v=ruff445"></script>
-<script src="effects-combat.js?v=ruff445"></script>
-<script src="gamestate-ui.js?v=ruff445"></script>
-<script src="world-atmosphere.js?v=ruff445"></script>
-<script src="main-loop.js?v=ruff445"></script>
+<script src="assets-placeholders.js?v=ruff446"></script>
+<script src="blimp-profile.js?v=ruff446"></script>
+<script src="menu-intro.js?v=ruff446"></script>
+<script src="world-map.js?v=ruff446"></script>
+<script src="audio.js?v=ruff446"></script>
+<script src="asset-loading.js?v=ruff446"></script>
+<script src="ruff-tutorial.js?v=ruff446"></script>
+<script src="world-buildings.js?v=ruff446"></script>
+<script src="player-obstacles.js?v=ruff446"></script>
+<script src="power-fx.js?v=ruff446"></script>
+<script src="bosses.js?v=ruff446"></script>
+<script src="boss-dialogue.js?v=ruff446"></script>
+<script src="effects-combat.js?v=ruff446"></script>
+<script src="gamestate-ui.js?v=ruff446"></script>
+<script src="world-atmosphere.js?v=ruff446"></script>
+<script src="main-loop.js?v=ruff446"></script>
 
-<script src="launch-screens.js?v=ruff445"></script>
+<script src="launch-screens.js?v=ruff446"></script>
 </body>
 </html>

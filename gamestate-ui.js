@@ -152,30 +152,137 @@
 // ---------- Flip Clock logic — mechanical card flip animation ----------
   const flipClockState = { m1: '0', m2: '0', s1: '0', s2: '0' };
 
+
+  // ---------- Nixie-tube altimeter (JS-drawn) ----------
+  function formatAltFt(ft) {
+    ft = Math.max(0, Math.floor(ft || 0));
+    return String(ft).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+  function getPlayerAltitudeFt() {
+    try {
+      if (typeof player === "undefined" || !player) return 0;
+      var gy = (typeof groundLevelY === "function") ? groundLevelY() : (typeof H !== "undefined" ? H * 0.88 : 600);
+      var py = player.y || 0;
+      // Higher on screen = higher altitude; scale to readable feet
+      var raw = (gy - py) * 12.5;
+      return Math.max(0, Math.min(99999, Math.round(raw)));
+    } catch (e) { return 0; }
+  }
+  function drawNixieAltimeter(forceText) {
+    var canvas = document.getElementById("nixieAltCanvas");
+    if (!canvas) return;
+    var ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    var W = canvas.width, H = canvas.height;
+    var text = forceText || ("ALT: " + formatAltFt(getPlayerAltitudeFt()) + " FT");
+    ctx.clearRect(0, 0, W, H);
+    // Brass plate
+    var bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#4a3420");
+    bg.addColorStop(0.45, "#2a1c12");
+    bg.addColorStop(1, "#1a120a");
+    ctx.fillStyle = bg;
+    roundRect(ctx, 1, 1, W - 2, H - 2, 6);
+    ctx.fill();
+    // Outer brass rim
+    ctx.strokeStyle = "#c9a06a";
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, 1.5, 1.5, W - 3, H - 3, 6);
+    ctx.stroke();
+    ctx.strokeStyle = "#6a4a28";
+    ctx.lineWidth = 1;
+    roundRect(ctx, 4, 4, W - 8, H - 8, 4);
+    ctx.stroke();
+    // Tube bay
+    ctx.fillStyle = "rgba(0,0,0,0.72)";
+    roundRect(ctx, 8, 8, W - 16, H - 16, 3);
+    ctx.fill();
+    // Digits as individual "tubes"
+    var chars = text.split("");
+    var n = chars.length;
+    var pad = 12;
+    var usable = W - pad * 2;
+    var tw = usable / n;
+    var tubeW = Math.min(18, tw * 0.88);
+    var tubeH = H - 18;
+    for (var i = 0; i < n; i++) {
+      var ch = chars[i];
+      var cx = pad + (i + 0.5) * tw;
+      var tx = cx - tubeW / 2;
+      var ty = (H - tubeH) / 2;
+      // glass tube body
+      var tg = ctx.createLinearGradient(tx, ty, tx + tubeW, ty);
+      tg.addColorStop(0, "rgba(40,20,10,0.9)");
+      tg.addColorStop(0.5, "rgba(20,10,5,0.95)");
+      tg.addColorStop(1, "rgba(40,20,10,0.9)");
+      ctx.fillStyle = tg;
+      roundRect(ctx, tx, ty, tubeW, tubeH, 2);
+      ctx.fill();
+      // warm glow behind glyph
+      ctx.save();
+      ctx.shadowColor = "rgba(255,140,40,0.95)";
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = "rgba(255,120,30,0.15)";
+      roundRect(ctx, tx + 1, ty + 1, tubeW - 2, tubeH - 2, 2);
+      ctx.fill();
+      ctx.restore();
+      // glyph
+      ctx.save();
+      ctx.font = "600 " + Math.floor(tubeH * 0.55) + "px 'Courier New', ui-monospace, monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.shadowColor = "rgba(255,150,50,0.9)";
+      ctx.shadowBlur = 6;
+      ctx.fillStyle = "#ffb060";
+      ctx.fillText(ch, cx, H / 2 + 0.5);
+      // hot core
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#ffe0a8";
+      ctx.globalAlpha = 0.85;
+      ctx.fillText(ch, cx, H / 2 + 0.5);
+      ctx.restore();
+      // glass highlight
+      ctx.strokeStyle = "rgba(255,200,120,0.15)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(tx + 2, ty + 3);
+      ctx.lineTo(tx + 2, ty + tubeH - 3);
+      ctx.stroke();
+    }
+    // Rivets
+    ctx.fillStyle = "#8a6a38";
+    [[7, 7], [W - 7, 7], [7, H - 7], [W - 7, H - 7]].forEach(function (p) {
+      ctx.beginPath();
+      ctx.arc(p[0], p[1], 1.6, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  window.drawNixieAltimeter = drawNixieAltimeter;
+  window.getPlayerAltitudeFt = getPlayerAltitudeFt;
+
   function updateFlipClock(ms) {
     try {
+      var alt = getPlayerAltitudeFt();
+      var label = "ALT: " + formatAltFt(alt) + " FT";
+      drawNixieAltimeter(label);
       var el = document.getElementById("udTimerVal");
-      if (el) {
-        var totalSec2 = Math.max(0, Math.floor((ms || 0) / 1000));
-        var mm = Math.floor(totalSec2 / 60);
-        var ss = totalSec2 % 60;
-        el.textContent = mm + ":" + (ss < 10 ? "0" : "") + ss;
+      if (el) el.textContent = label;
+      var hub = document.getElementById("ruffFlightTracePct");
+      if (hub && (window.__airborneAirfield || window.__airborneTrainingFlight)) {
+        // keep flight time in progress hub; altitude is on main nixie
       }
-    } catch (e) {}
-    const totalSec = Math.floor(ms / 1000);
-    const m = Math.floor(totalSec / 60);
-    const s = totalSec % 60;
-    const mStr = String(m).padStart(2, '0');
-    const sStr = String(s).padStart(2, '0');
-    const newDigits = { m1: mStr[0], m2: mStr[1], s1: sStr[0], s2: sStr[1] };
-
-    Object.entries(newDigits).forEach(([pos, newVal]) => {
-      const oldVal = flipClockState[pos];
-      if (newVal !== oldVal) {
-        flipClockState[pos] = newVal;
-        animateFlip(pos, oldVal, newVal);
-      }
-    });
+    } catch (e) {
+      try { drawNixieAltimeter("ALT: 0 FT"); } catch (e2) {}
+    }
   }
 
   function animateFlip(pos, fromVal, toVal) {

@@ -980,7 +980,7 @@
     } else if (name === "rings") {
       window.__airborneAirfieldRings = true;
       window.__airborneAirfieldObstacles = false;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 1.15;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 2.05;
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 200;
     } else if (name === "platforms") {
       window.__airborneAirfieldObstacles = false;
@@ -3855,7 +3855,7 @@ function finishToMap() {
     } else if (ruffStage === "rings") {
       window.__airborneAirfieldRings = true;
       window.__airborneAirfieldObstacles = false;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 1.15;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 2.05;
       if (typeof obstacleSpeed !== "undefined" && obstacleSpeed < 180) obstacleSpeed = 200;
       if (ruffStageT > 28) {
         setStage("platforms");
