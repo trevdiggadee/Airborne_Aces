@@ -1781,48 +1781,32 @@
           var rcx = o.x + o.w / 2;
           var rcy = o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8);
           var pr = (o.r || o.w / 2) * 0.85;
-          // Solid rim vs center hole only
-          // User-tuned boundaries (px from center): rim ±60, hole ±50
-          var scale = pr / 40; // keep proportional if ring size changes
-          if (!(scale > 0.5 && scale < 2.5)) scale = 1;
-          var outerW = pr * 0.52;
-          var outerH = 60 * scale;
-          var holeW = pr * 0.34;
-          var holeH = 50 * scale;
-          o._dbg = { rcx: rcx, rcy: rcy, outerW: outerW, outerH: outerH, holeW: holeW, holeH: holeH, pr: pr };
-          var ph = (player.h || 36) * 0.28;
-          var pw = (player.w || 40) * 0.28;
+          // FIXED bounds from center (px): hole ±50, rim ±60
+          // No scaling — exact values so debug matches gameplay
+          var HOLE_H = 50;
+          var RIM_H = 60;
+          var outerW = Math.max(28, (o.r || 40) * 0.5);
+          o._dbg = {
+            rcx: rcx,
+            rcy: rcy,
+            outerW: outerW,
+            outerH: RIM_H,
+            holeW: outerW * 0.7,
+            holeH: HOLE_H,
+            pr: pr
+          };
+          var ph = (player.h || 36) * 0.2;
           var px = player.x + (player.w || 40) * 0.5;
           var py = player.y;
           var dx = px - rcx;
           var dy = py - rcy;
           var absDy = Math.abs(dy);
 
-          // Depth: only when overlapping the hoop in X
-          if (Math.abs(dx) < outerW + pw) {
-            var inHole = absDy <= holeH && Math.abs(dx) <= holeW + pw * 0.5;
-            // Solid if within outer ellipse but outside hole
-            var nx = dx / Math.max(0.001, outerW);
-            var ny = dy / Math.max(0.001, outerH);
-            var inOuter = (nx * nx + ny * ny) <= 1.05;
-            var onRim = inOuter && !inHole;
-
-            if (onRim) {
-              // Bounce off top or bottom metal — keep out of solid pixels
-              if (dy < 0) {
-                // top half rim
-                var limitTop = rcy - holeH - ph * 0.15;
-                if (player.y > limitTop) player.y = limitTop;
-                player.vy = -Math.max(110, Math.abs(player.vy || 0) * 0.55 + 95);
-              } else {
-                var limitBot = rcy + holeH + ph * 0.15;
-                if (player.y < limitBot) player.y = limitBot;
-                player.vy = Math.max(100, Math.abs(player.vy || 0) * 0.55 + 85);
-              }
-              o.rimHitT = 0.25;
-            } else if (inHole) {
-              // Through the middle — light center assist
-              player.y += (rcy - py) * Math.min(0.22, 2.2 * dt);
+          // Only while overlapping ring in X (depth)
+          if (Math.abs(dx) < outerW + (player.w || 40) * 0.3) {
+            if (absDy <= HOLE_H) {
+              // INSIDE HOLE — pass through
+              player.y += (rcy - py) * Math.min(0.2, 2.0 * dt);
               if (!o.passed) {
                 o.passed = true;
                 o.passGlowT = 1.1;
@@ -1839,6 +1823,16 @@
                   if (typeof ruffStats !== "undefined" && ruffStats) ruffStats.rings = (ruffStats.rings || 0) + 1;
                 } catch (e3) {}
               }
+            } else if (absDy <= RIM_H + ph) {
+              // RIM BAND (50..60 from center) — bounce off
+              if (dy < 0) {
+                player.y = rcy - HOLE_H - 1;
+                player.vy = -Math.max(120, Math.abs(player.vy || 0) * 0.6 + 100);
+              } else {
+                player.y = rcy + HOLE_H + 1;
+                player.vy = Math.max(110, Math.abs(player.vy || 0) * 0.6 + 90);
+              }
+              o.rimHitT = 0.28;
             }
           }
           if (o.rimHitT > 0) o.rimHitT = Math.max(0, o.rimHitT - dt);
@@ -2026,10 +2020,10 @@
     if (window.__airborneRingDebug !== false) {
       var d = o._dbg;
       var pr = (o.r || o.w / 2 || 40) * 0.85;
-      var outerW = d ? d.outerW : pr * 0.52;
-      var outerH = d ? d.outerH : 60;
-      var holeW = d ? d.holeW : pr * 0.34;
-      var holeH = d ? d.holeH : 50;
+      var outerW = d ? d.outerW : 30;
+      var outerH = 60; // FIXED rim ±60
+      var holeW = d ? d.holeW : 24;
+      var holeH = 50; // FIXED hole ±50
       var midY = cy;
       var topOuter = cy - outerH;
       var botOuter = cy + outerH;
@@ -2053,7 +2047,7 @@
       ctx.moveTo(left, topOuter);
       ctx.lineTo(right, topOuter);
       ctx.stroke();
-      ctx.fillText("TOP RIM  y=" + Math.round(topOuter - midY), right + 4, topOuter);
+      ctx.fillText("TOP RIM -60", right + 4, topOuter);
 
       // HOLE top (inside boundary) — lime
       ctx.strokeStyle = "#44ff88";
@@ -2062,7 +2056,7 @@
       ctx.moveTo(left, topHole);
       ctx.lineTo(right, topHole);
       ctx.stroke();
-      ctx.fillText("HOLE TOP  y=" + Math.round(topHole - midY), right + 4, topHole);
+      ctx.fillText("HOLE TOP -50", right + 4, topHole);
 
       // CENTER zero — cyan
       ctx.strokeStyle = "#33ccff";
@@ -2082,7 +2076,7 @@
       ctx.moveTo(left, botHole);
       ctx.lineTo(right, botHole);
       ctx.stroke();
-      ctx.fillText("HOLE BOT  y=+" + Math.round(botHole - midY), right + 4, botHole);
+      ctx.fillText("HOLE BOT +50", right + 4, botHole);
 
       // OUTER bottom (rim) — red
       ctx.strokeStyle = "#ff2244";
@@ -2091,7 +2085,7 @@
       ctx.moveTo(left, botOuter);
       ctx.lineTo(right, botOuter);
       ctx.stroke();
-      ctx.fillText("BOT RIM  y=+" + Math.round(botOuter - midY), right + 4, botOuter);
+      ctx.fillText("BOT RIM +60", right + 4, botOuter);
 
       // Vertical center line
       ctx.strokeStyle = "#33ccff";
