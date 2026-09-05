@@ -1800,8 +1800,12 @@
           var pTop = dy - halfPh;
           var pBot = dy + halfPh;
 
-          // Must be within ring depth (X)
-          if (Math.abs(dx) < g.rimW + halfPw) {
+          // Must be within ring depth (X) — thin hoop only (not far in front)
+          // rimW is half sprite width; allow only a tight depth band
+          var depth = Math.max(10, g.halfW * 0.55);
+          o._dbg.depth = depth;
+          o._dbg.halfPw = halfPw;
+          if (Math.abs(dx) < depth + halfPw * 0.5) {
             // Fully inside hole vertically?
             var inHole = (pTop >= -g.holeH) && (pBot <= g.holeH) && (Math.abs(dx) < g.holeW + halfPw);
             // Overlaps solid metal above hole?
@@ -2137,11 +2141,58 @@
       ctx.fillRect(cx - outerW, topOuter, outerW * 2, topHole - topOuter);
       ctx.fillRect(cx - outerW, botHole, outerW * 2, botOuter - botHole);
 
+      // Vertical X depth lines (why collision fires before reaching the ring)
+      var depth = (d && d.depth != null) ? d.depth : outerW;
+      var frontX = cx - depth;   // first contact from the left (blimp approaches from left)
+      var backX = cx + depth;
+      var holeLeft = cx - holeW;
+      var holeRight = cx + holeW;
+
+      ctx.globalAlpha = 0.95;
+      ctx.lineWidth = 2;
+
+      // FRONT collision plane (magenta) — blimp hits this X first
+      ctx.strokeStyle = "#ff44ff";
+      ctx.fillStyle = "#ff44ff";
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(frontX, topOuter - 12);
+      ctx.lineTo(frontX, botOuter + 12);
+      ctx.stroke();
+      ctx.font = "bold 11px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("FRONT X", frontX, topOuter - 18);
+      ctx.fillText(String(Math.round(frontX - cx)), frontX, botOuter + 22);
+
+      // BACK plane
+      ctx.strokeStyle = "#cc66ff";
+      ctx.beginPath();
+      ctx.moveTo(backX, topOuter - 12);
+      ctx.lineTo(backX, botOuter + 12);
+      ctx.stroke();
+
+      // Hole X bounds (green vertical)
+      ctx.strokeStyle = "#44ff88";
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(holeLeft, topHole);
+      ctx.lineTo(holeLeft, botHole);
+      ctx.moveTo(holeRight, topHole);
+      ctx.lineTo(holeRight, botHole);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Tint depth zone in front of ring center
+      ctx.globalAlpha = 0.08;
+      ctx.fillStyle = "#ff44ff";
+      ctx.fillRect(frontX, topOuter, depth * 2, botOuter - topOuter);
+
       // Legend
       ctx.globalAlpha = 0.9;
       ctx.font = "bold 10px monospace";
       ctx.fillStyle = "#fff";
-      ctx.fillText("GREEN=pass  RED=bounce  CYAN=center 0", left, botOuter + 16);
+      ctx.textAlign = "left";
+      ctx.fillText("GREEN=pass  RED=bounce  CYAN=center  MAGENTA=front X depth", left, botOuter + 16);
 
       ctx.restore();
     }
