@@ -745,6 +745,7 @@ window.__airborneRingDebug = false;
   window.drawHitCoins = drawHitCoins;
 
   function spawnGoldRing() {
+
     var target = window.__airborneRingTotalTarget || 20;
     if ((window.__airborneRingSpawned || 0) >= target) return;
     window.__airborneRingSpawned = (window.__airborneRingSpawned || 0) + 1;
@@ -763,7 +764,7 @@ window.__airborneRingDebug = false;
       }
     }
     var spawnX = W + r * 2;
-    if (lastRingX > -9000) spawnX = Math.max(spawnX, lastRingX + Math.max(220, W * 0.55));
+    if (lastRingX > -9000) spawnX = Math.max(spawnX, lastRingX + Math.max(180, W * 0.42));
     obstacles.push({
       type: "gold_ring",
       x: spawnX,
@@ -784,6 +785,7 @@ window.__airborneRingDebug = false;
       animT: 0
     });
   }
+  window.spawnGoldRing = spawnGoldRing;
 
   function spawnObstacle() {
     // Airfield training rings

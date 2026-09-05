@@ -1150,11 +1150,13 @@
       try { spawnAltitudeMarkers(); } catch (e) {}
       try { spawnTrainingCoins(6); spawnCrystals(3); } catch (e) {}
     } else if (name === "rings") {
+      try { showLessonBanner("Flight Training"); } catch (e) {}
       window.__airborneAirfieldRings = true;
       window.__airborneAirfieldObstacles = false;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 1.85;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 220; // +10%
       window.__airborneRingSpawned = 0;
+      window.__airborneRingSpawnT = 1.4; // first ring soon
       window.__airborneRingMult = 1;
       ruffStats.rings = 0;
       ruffStats.ringMisses = 0;
@@ -4040,38 +4042,47 @@ function finishToMap() {
       }
     } else if (ruffStage === "rings") {
       window.__airborneAirfieldObstacles = false;
+      window.__airborneAirfieldRings = true;
       var ringTarget = window.__airborneRingTotalTarget || 20;
       var spawned = window.__airborneRingSpawned || 0;
-      // Keep spawning until all 20 are out; then stop
-      if (spawned < ringTarget) {
-        window.__airborneAirfieldRings = true;
-        if (typeof spawnInterval !== "undefined") spawnInterval = 1.85; // slightly faster cadence with spacing
-      } else {
-        window.__airborneAirfieldRings = false;
-        if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-      }
-      // +10% ring scroll speed
+      // +10% ring scroll speed (keep pinned every frame)
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 220;
-      // Count rings still on screen
+      // Block generic obstacle spawns — we spawn rings ourselves
+      if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+
+      // Dedicated timer: spawn one ring every ~1.55s until 20
+      window.__airborneRingSpawnT = (window.__airborneRingSpawnT || 0) + dt;
+      if (spawned < ringTarget && window.__airborneRingSpawnT >= 1.55) {
+        window.__airborneRingSpawnT = 0;
+        try {
+          if (typeof spawnGoldRing === "function") spawnGoldRing();
+          else if (typeof window.spawnGoldRing === "function") window.spawnGoldRing();
+        } catch (eSp) { console.warn("ring spawn", eSp); }
+        spawned = window.__airborneRingSpawned || spawned;
+      }
+      if (spawned >= ringTarget) {
+        window.__airborneAirfieldRings = false;
+      }
+
       var ringsLeft = 0;
       try {
         if (typeof obstacles !== "undefined" && obstacles) {
           for (var ri = 0; ri < obstacles.length; ri++) {
             var ro = obstacles[ri];
-            if (ro && (ro.isRing || ro.type === "gold_ring") && ro.x > -120) ringsLeft++;
+            if (ro && (ro.isRing || ro.type === "gold_ring") && ro.x > -140) ringsLeft++;
           }
         }
       } catch (eRL) {}
-      // Advance only when all 20 spawned and every ring has left play
-      if (spawned >= ringTarget && ringsLeft === 0 && ruffStageT > 6) {
+
+      // Only leave after all 20 exist and none remain on screen
+      if (spawned >= ringTarget && ringsLeft === 0 && ruffStageT > 8) {
         try { if (window.__airborneComputeRingRank) window.__airborneComputeRingRank(); } catch (e) {}
         setStage("platforms");
-        console.log("[R.U.F.F.] rings → platforms (20 complete)");
-      } else if (ruffStageT > 120) {
-        // hard safety so training never soft-locks
+        console.log("[R.U.F.F.] rings → platforms (20 complete, spawned=" + spawned + ")");
+      } else if (ruffStageT > 150) {
         try { if (window.__airborneComputeRingRank) window.__airborneComputeRingRank(); } catch (e) {}
         setStage("platforms");
-        console.log("[R.U.F.F.] rings → platforms (timeout)");
+        console.log("[R.U.F.F.] rings → platforms (timeout spawned=" + spawned + ")");
       }
     } else if (ruffStage === "crystals" || ruffStage === "powerup") {
       setStage("obstacles");
