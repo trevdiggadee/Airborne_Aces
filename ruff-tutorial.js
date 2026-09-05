@@ -187,7 +187,8 @@
     var col = ringStreakColor(hud.streak || 0);
     ctx.save();
     // Streak / mult panel top-center
-    var label = "STREAK " + (hud.streak || 0) + "   x" + (hud.mult || 1);
+    var st = hud.streak || 0;
+    var label = (st > 0 ? ("+" + st + "  ") : "") + "STREAK " + st + "   x" + (hud.mult || 1);
     ctx.font = "900 18px Rockwell, Georgia, serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -207,7 +208,8 @@
       ctx.fillStyle = col.core;
       ctx.shadowBlur = 16;
       var popY = y + 36 + (1 - a) * 20;
-      var t = (hud.title ? hud.title + "  " : "") + "+" + hud.lastPts;
+      var stN = hud.streak || 0;
+      var t = (stN > 0 ? ("+" + stN + "  ") : "") + (hud.title ? hud.title + "  " : "") + "+" + hud.lastPts;
       ctx.fillText(t, W * 0.5, popY);
       ctx.font = "700 14px Rockwell, Georgia, serif";
       ctx.fillStyle = "#ffe8c0";
@@ -707,7 +709,10 @@
 
   function showFlightTraceBanner() {
     // Use only the smaller lesson banner style (no large double title)
-    try { showLessonBanner("Flight Training"); } catch (e) {}
+    try {
+      showLessonBanner("Flight Training");
+      window.__airborneFlightTitleShown = true;
+    } catch (e) {}
   }
   function updateFlightTrainingBanner(dt) {
     var b = window.__airborneFtBanner;
@@ -1147,8 +1152,8 @@
     } else if (name === "rings") {
       window.__airborneAirfieldRings = true;
       window.__airborneAirfieldObstacles = false;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 2.05;
-      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 200;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 1.85;
+      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 220; // +10%
       window.__airborneRingSpawned = 0;
       window.__airborneRingMult = 1;
       ruffStats.rings = 0;
@@ -4034,13 +4039,39 @@ function finishToMap() {
         console.log("[R.U.F.F.] altitude → rings");
       }
     } else if (ruffStage === "rings") {
-      window.__airborneAirfieldRings = true;
       window.__airborneAirfieldObstacles = false;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 2.05;
-      if (typeof obstacleSpeed !== "undefined" && obstacleSpeed < 180) obstacleSpeed = 200;
-      if (ruffStageT > 28) {
+      var ringTarget = window.__airborneRingTotalTarget || 20;
+      var spawned = window.__airborneRingSpawned || 0;
+      // Keep spawning until all 20 are out; then stop
+      if (spawned < ringTarget) {
+        window.__airborneAirfieldRings = true;
+        if (typeof spawnInterval !== "undefined") spawnInterval = 1.85; // slightly faster cadence with spacing
+      } else {
+        window.__airborneAirfieldRings = false;
+        if (typeof spawnInterval !== "undefined") spawnInterval = 999;
+      }
+      // +10% ring scroll speed
+      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 220;
+      // Count rings still on screen
+      var ringsLeft = 0;
+      try {
+        if (typeof obstacles !== "undefined" && obstacles) {
+          for (var ri = 0; ri < obstacles.length; ri++) {
+            var ro = obstacles[ri];
+            if (ro && (ro.isRing || ro.type === "gold_ring") && ro.x > -120) ringsLeft++;
+          }
+        }
+      } catch (eRL) {}
+      // Advance only when all 20 spawned and every ring has left play
+      if (spawned >= ringTarget && ringsLeft === 0 && ruffStageT > 6) {
+        try { if (window.__airborneComputeRingRank) window.__airborneComputeRingRank(); } catch (e) {}
         setStage("platforms");
-        console.log("[R.U.F.F.] rings → platforms");
+        console.log("[R.U.F.F.] rings → platforms (20 complete)");
+      } else if (ruffStageT > 120) {
+        // hard safety so training never soft-locks
+        try { if (window.__airborneComputeRingRank) window.__airborneComputeRingRank(); } catch (e) {}
+        setStage("platforms");
+        console.log("[R.U.F.F.] rings → platforms (timeout)");
       }
     } else if (ruffStage === "crystals" || ruffStage === "powerup") {
       setStage("obstacles");
@@ -4174,23 +4205,8 @@ function finishToMap() {
         requestNextStage();
       }
     } else if (ruffStage === "rings") {
+      // Handled above — full 20-ring gate (do not early-exit here)
       if (typeof powerup !== "undefined") powerup = null;
-      if (typeof window.__airborneRingCollects === "number") {
-        ruffStats.rings = window.__airborneRingCollects;
-        if (ruffStats.rings > ruffStats.bestCombo) ruffStats.bestCombo = ruffStats.rings;
-      }
-      if (ruffStageT > 30) {
-        window.__airborneAirfieldRings = false;
-        if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-      }
-      const ringLeft = (typeof obstacles !== "undefined" && obstacles)
-        ? obstacles.filter(function (o) { return o && (o.isRing || o.type === "gold_ring") && !o.collected; }).length
-        : 0;
-      // Rings lesson ~35s (+15s longer)
-      if ((ruffStats.rings >= 4 && ringLeft === 0 && ruffStageT > 12) || ruffStageT > 28) {
-        setStage("platforms");
-        console.log("[R.U.F.F.] rings → platforms");
-      }
     } else if (ruffStage === "airship") {
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;

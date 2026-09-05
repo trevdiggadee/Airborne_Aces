@@ -777,7 +777,7 @@ window.__airborneRingDebug = false;
       spin: Math.random() * Math.PI * 2,
       bobPhase: Math.random() * Math.PI * 2,
       bobAmount: 8,
-      speedMult: 1,
+      speedMult: 1.10, // +10% ring speed
       isRing: true,
       ringNum: window.__airborneRingSerial || 1,
       animFrame: 0,
