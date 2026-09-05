@@ -3604,3 +3604,11 @@ canvas {
   height: auto;
 }
 #timerFrame { overflow: visible; }
+
+/* Hide altimeter / timer — power-up progress only */
+#timerFrame {
+  display: none !important;
+}
+#udTimerVal {
+  display: none !important;
+}

@@ -1,3 +1,4 @@
+window.__airborneRingDebug = false;
 "use strict";
 
   // ---------- Player ----------
@@ -1904,7 +1905,7 @@
     var pulse = 1 + 0.03 * Math.sin((o.pulseT || 0) * 3.2);
     if (o.passPulse > 0) pulse += 0.08 * (o.passPulse || 0);
     var dw = rad * 0.575 * pulse; // 50% thinner
-    var dh = rad * 2.55 * pulse;
+    var dh = rad * 3.1875 * pulse; // +25% height
     var halfH = dh * 0.5;
     var halfW = dw * 0.5;
     // User-tuned: hole ±45, front X depth 15
@@ -2082,7 +2083,7 @@
     ctx.restore();
 
     // Debug collision boundaries (toggle: window.__airborneRingDebug = false to hide)
-    if (window.__airborneRingDebug !== false) {
+    if (window.__airborneRingDebug === true) { // off unless explicitly enabled
       var d = o._dbg;
       var pr = (o.r || o.w / 2 || 40) * 0.85;
       var g2 = (typeof getRingGeom === "function") ? getRingGeom(o) : null;
