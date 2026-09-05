@@ -1779,9 +1779,9 @@
 
         if (typeof player !== "undefined" && player) {
           var rcx = o.x + o.w / 2;
-          var rcy = o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8);
+          var rcy = o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8) + (o.dipY || 0);
           var pr = (o.r || o.w / 2) * 0.85;
-          // Geometry-linked collision (matches drawn sprite)
+          // Geometry-linked collision — smooth tunnel + platform-style bounce
           var g = getRingGeom(o);
           o._dbg = {
             rcx: rcx, rcy: rcy,
@@ -1789,43 +1789,50 @@
             holeW: g.holeW, holeH: g.holeH,
             pr: pr, dw: g.dw, dh: g.dh
           };
-          // Blimp AABB (player.y is center)
-          var halfPh = (player.h || 40) * 0.38;
-          var halfPw = (player.w || 48) * 0.32;
+          var halfPh = (player.h || 40) * 0.36;
+          var halfPw = (player.w || 48) * 0.30;
           var px = player.x + (player.w || 40) * 0.5;
           var py = player.y;
           var dx = px - rcx;
           var dy = py - rcy;
-          // Vertical span of blimp relative to ring center
           var pTop = dy - halfPh;
           var pBot = dy + halfPh;
-
-          // Must be within ring depth (X) — thin hoop only (not far in front)
-          // rimW is half sprite width; allow only a tight depth band
           var depth = Math.max(10, g.halfW * 0.55);
           o._dbg.depth = depth;
           o._dbg.halfPw = halfPw;
-          if (Math.abs(dx) < depth + halfPw * 0.5) {
-            // Fully inside hole vertically?
-            var inHole = (pTop >= -g.holeH) && (pBot <= g.holeH) && (Math.abs(dx) < g.holeW + halfPw);
-            // Overlaps solid metal above hole?
-            var hitTopRim = (pTop < -g.holeH) && (pBot > -g.rimH) && (pTop < -g.holeH + (g.rimH - g.holeH) + halfPh * 2);
-            // More precise: any blimp pixel in rim band [-rimH, -holeH] or [holeH, rimH]
-            var overlapsTopRim = (pTop < -g.holeH) && (pBot > -g.rimH);
-            var overlapsBotRim = (pBot > g.holeH) && (pTop < g.rimH);
 
-            if (overlapsTopRim && !inHole) {
-              // Push below? No — top rim means blimp is too high: push up out of metal / bounce up
-              player.y = rcy - g.holeH - halfPh - 1;
-              player.vy = -Math.max(130, Math.abs(player.vy || 0) * 0.65 + 110);
-              o.rimHitT = 0.3;
-            } else if (overlapsBotRim && !inHole) {
-              player.y = rcy + g.holeH + halfPh + 1;
-              player.vy = Math.max(120, Math.abs(player.vy || 0) * 0.65 + 100);
-              o.rimHitT = 0.3;
-            } else if (inHole || (Math.abs(dy) <= g.holeH && Math.abs(dx) < g.holeW + halfPw)) {
-              // Center tunnel
-              player.y += (rcy - py) * Math.min(0.2, 2.0 * dt);
+          if (Math.abs(dx) < depth + halfPw * 0.5) {
+            var inHole = (pTop >= -g.holeH * 0.92) && (pBot <= g.holeH * 0.92);
+            var overlapsTopRim = (pTop < -g.holeH * 0.88) && (pBot > -g.rimH);
+            var overlapsBotRim = (pBot > g.holeH * 0.88) && (pTop < g.rimH);
+
+            // Cooldown so we don't multi-bounce / chop in one frame stream
+            o.rimCool = o.rimCool || 0;
+            if (o.rimCool > 0) o.rimCool -= dt;
+
+            if (overlapsTopRim && !inHole && o.rimCool <= 0) {
+              // Platform-style bounce: soft, based on impact speed
+              var impact = Math.max(40, Math.abs(player.vy || 0));
+              var bounce = Math.min(195, Math.max(70, impact * 0.62 + 55));
+              player.vy = -bounce;
+              // Gentle separation without hard snap
+              player.y += (rcy - g.holeH - halfPh - py) * Math.min(0.45, 6 * dt);
+              o.rimHitT = 0.35;
+              o.rimCool = 0.18;
+              o.dipTarget = Math.min(18, 8 + impact * 0.03);
+            } else if (overlapsBotRim && !inHole && o.rimCool <= 0) {
+              var impactB = Math.max(40, Math.abs(player.vy || 0));
+              var bounceB = Math.min(180, Math.max(65, impactB * 0.62 + 50));
+              player.vy = bounceB;
+              player.y += (rcy + g.holeH + halfPh - py) * Math.min(0.45, 6 * dt);
+              o.rimHitT = 0.35;
+              o.rimCool = 0.18;
+              o.dipTarget = Math.min(18, 8 + impactB * 0.03);
+            } else if (inHole || (Math.abs(dy) <= g.holeH * 0.9)) {
+              // Smooth tunnel: light centering + damp vertical speed (no snap)
+              var pull = (rcy - py) * Math.min(0.12, 1.4 * dt);
+              player.y += pull;
+              if (player.vy) player.vy *= (1 - Math.min(0.55, 3.2 * dt));
               if (!o.passed) {
                 o.passed = true;
                 o.passGlowT = 1.1;
@@ -1844,6 +1851,20 @@
               }
             }
           }
+
+          // Ring visual dip (same idea as platforms — symmetric down/up)
+          o.dipY = o.dipY || 0;
+          o.dipTarget = (o.dipTarget != null) ? o.dipTarget : 0;
+          var dipSpd = 70;
+          if (o.dipTarget > 0) {
+            if (o.dipY < o.dipTarget) {
+              o.dipY = Math.min(o.dipTarget, o.dipY + dipSpd * dt);
+              if (o.dipY >= o.dipTarget - 0.5) o.dipTarget = 0;
+            }
+          } else if (o.dipY > 0) {
+            o.dipY = Math.max(0, o.dipY - dipSpd * dt);
+          }
+
           if (o.rimHitT > 0) o.rimHitT = Math.max(0, o.rimHitT - dt);
           if (o.passPulse > 0) o.passPulse = Math.max(0, o.passPulse - dt * 1.2);
         }
@@ -2208,7 +2229,7 @@
       if (o.isRing || o.type === "gold_ring") {
         // Full ring drawn in front of blimp (drawRingFronts)
         var cx = o.x + o.w / 2;
-        var cy = o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8);
+        var cy = o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8) + (o.dipY || 0);
         var baseR = (o.r || o.w / 2) * 1.0;
         var rad = baseR * (o.expandScale || 1);
         o._ringFront = { cx: cx, cy: cy, rad: rad, passed: !!o.passed, checkered: true };
