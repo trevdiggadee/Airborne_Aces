@@ -270,19 +270,13 @@
   window.getPlayerAltitudeFt = getPlayerAltitudeFt;
 
   function updateFlipClock(ms) {
+    // Altimeter removed — power-up progress UI only
     try {
-      var alt = getPlayerAltitudeFt();
-      var label = "ALT: " + formatAltFt(alt) + " FT";
-      drawNixieAltimeter(label);
       var el = document.getElementById("udTimerVal");
-      if (el) el.textContent = label;
-      var hub = document.getElementById("ruffFlightTracePct");
-      if (hub && (window.__airborneAirfield || window.__airborneTrainingFlight)) {
-        // keep flight time in progress hub; altitude is on main nixie
-      }
-    } catch (e) {
-      try { drawNixieAltimeter("ALT: 0 FT"); } catch (e2) {}
-    }
+      if (el) { el.textContent = ""; el.style.display = "none"; }
+      var tf = document.getElementById("timerFrame");
+      if (tf) tf.style.display = "none";
+    } catch (e) {}
   }
 
   function animateFlip(pos, fromVal, toVal) {

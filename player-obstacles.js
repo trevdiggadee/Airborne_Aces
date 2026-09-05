@@ -1909,11 +1909,11 @@ window.__airborneRingDebug = false;
     var halfH = dh * 0.5;
     var halfW = dw * 0.5;
     // User-tuned: hole ±45, front X depth 15
-    var holeH = 45;
+    var holeH = 49.5; // +10% from 45
     var holeW = halfW * 0.55;
-    var rimH = halfH * 0.92;
+    var rimH = halfH * 0.92 * 1.10; // +10% outer
     var rimW = halfW * 0.95;
-    var depth = 15; // front X plane at center - 15
+    var depth = 16.5; // +10% from 15
     return {
       rad: rad, dw: dw, dh: dh,
       halfH: halfH, halfW: halfW,
@@ -2023,14 +2023,12 @@ window.__airborneRingDebug = false;
       ctx.restore();
     }
 
-    // Rim hit flash
-    if (o.rimHitT > 0) {
+    // Rim hit: subtle only (no red glow unless passed through hole)
+    if (o.rimHitT > 0 && o.passed) {
       ctx.save();
-      ctx.globalAlpha = Math.min(0.55, o.rimHitT * 2);
+      ctx.globalAlpha = Math.min(0.4, o.rimHitT * 1.5);
       ctx.strokeStyle = "#ff6644";
-      ctx.lineWidth = 4;
-      ctx.shadowColor = "#ff3300";
-      ctx.shadowBlur = 12;
+      ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.ellipse(cx, cy, dw * 0.48, dh * 0.46, wobble, 0, Math.PI * 2);
       ctx.stroke();
@@ -2060,23 +2058,28 @@ window.__airborneRingDebug = false;
     }
     ctx.restore();
 
-    // Number — 75% smaller
+    // Black disc + number (+25% size)
     var num = o.ringNum || 1;
     var active = !!o.passed;
-    var nSize = Math.max(7, Math.min(11, rad * 0.155)); // ~25% of previous
+    var nSize = Math.max(9, Math.min(14, rad * 0.194)); // +25% vs prior
+    var discR = Math.max(nSize * 0.85, rad * 0.22);
     ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, discR, 0, Math.PI * 2);
+    ctx.fillStyle = "#0a0a0a";
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = active ? "rgba(255,180,120,0.5)" : "rgba(80,80,80,0.6)";
+    ctx.stroke();
     ctx.font = "900 " + nSize + "px Rockwell, Georgia, serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = "rgba(0,0,0,0.85)";
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(0,0,0,0.9)";
+    ctx.fillStyle = active ? "#ffe8e0" : "#f5f0e6";
     if (active) {
-      ctx.fillStyle = "#ffe8e0";
-      ctx.shadowColor = "rgba(255,60,40,0.9)";
-      ctx.shadowBlur = 8;
-    } else {
-      ctx.fillStyle = "rgba(255,248,232,0.9)";
-      ctx.shadowBlur = 0;
+      ctx.shadowColor = "rgba(255,80,40,0.85)";
+      ctx.shadowBlur = 6;
     }
     ctx.strokeText(String(num), cx, cy);
     ctx.fillText(String(num), cx, cy);
@@ -2090,7 +2093,7 @@ window.__airborneRingDebug = false;
       var outerW = d ? d.outerW : (g2 ? g2.rimW : 30);
       var outerH = d ? d.outerH : (g2 ? g2.rimH : 60);
       var holeW = d ? d.holeW : (g2 ? g2.holeW : 24);
-      var holeH = 45; // HOLE ±45 fixed
+      var holeH = 49.5; // +10% from 45 // HOLE ±45 fixed
       var midY = cy;
       var topOuter = cy - outerH;
       var botOuter = cy + outerH;
