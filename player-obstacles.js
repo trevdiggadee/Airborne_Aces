@@ -1791,62 +1791,59 @@ window.__airborneRingDebug = false;
           var rcx = o.x + o.w / 2;
           var rcy = o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8) + (o.dipY || 0);
           var pr = (o.r || o.w / 2) * 0.85;
-          // Geometry-linked collision — smooth tunnel + platform-style bounce
+          // Arcade ring tunnel — center-based, generous hole, soft rim
           var g = getRingGeom(o);
           o._dbg = {
             rcx: rcx, rcy: rcy,
             outerW: g.rimW, outerH: g.rimH,
             holeW: g.holeW, holeH: g.holeH,
-            pr: pr, dw: g.dw, dh: g.dh
+            depth: g.depth, dw: g.dw, dh: g.dh
           };
-          var halfPh = (player.h || 40) * 0.36;
-          var halfPw = (player.w || 48) * 0.30;
-          var px = player.x + (player.w || 40) * 0.5;
+          // Use blimp CENTER for gate tests (AABB was too tall → false rim hits)
+          var px = player.x; // player drawn centered at x,y
           var py = player.y;
           var dx = px - rcx;
           var dy = py - rcy;
-          var pTop = dy - halfPh;
-          var pBot = dy + halfPh;
-          var depth = (g.depth != null) ? g.depth : 15;
-          o._dbg.depth = depth;
-          o._dbg.halfPw = halfPw;
+          var absDy = Math.abs(dy);
+          var depth = g.depth;
+          var approach = Math.abs(dx);
 
-          if (Math.abs(dx) < depth + halfPw * 0.35) {
-            var inHole = (pTop >= -g.holeH * 0.92) && (pBot <= g.holeH * 0.92);
-            var overlapsTopRim = (pTop < -g.holeH * 0.88) && (pBot > -g.rimH);
-            var overlapsBotRim = (pBot > g.holeH * 0.88) && (pTop < g.rimH);
+          // Funnel assist: when near and roughly aligned, gently guide into hole
+          if (approach < depth * 4.5 && approach > depth * 0.15 && absDy < g.rimH * 1.05) {
+            var align = 1 - Math.min(1, absDy / (g.rimH + 1));
+            var strength = 0.55 * align * align;
+            // stronger pull only when already inside the hole band
+            if (absDy < g.holeH * 1.15) {
+              player.y += (rcy - py) * Math.min(0.22, strength * 2.4 * dt);
+              if (player.vy) player.vy *= (1 - Math.min(0.35, 2.2 * dt * align));
+            } else if (absDy < g.rimH) {
+              // mild nudge away from deep metal toward hole
+              var toward = (dy > 0 ? -1 : 1);
+              player.vy += toward * 40 * dt;
+            }
+          }
 
-            // Cooldown so we don't multi-bounce / chop in one frame stream
-            o.rimCool = o.rimCool || 0;
-            if (o.rimCool > 0) o.rimCool -= dt;
+          o.rimCool = o.rimCool || 0;
+          if (o.rimCool > 0) o.rimCool -= dt;
 
-            if (overlapsTopRim && !inHole && o.rimCool <= 0) {
-              // Platform-style bounce: soft, based on impact speed
-              var impact = Math.max(40, Math.abs(player.vy || 0));
-              var bounce = Math.min(195, Math.max(70, impact * 0.62 + 55));
-              player.vy = -bounce;
-              // Gentle separation without hard snap
-              player.y += (rcy - g.holeH - halfPh - py) * Math.min(0.45, 6 * dt);
-              o.rimHitT = 0.35;
-              o.rimCool = 0.18;
-              o.dipTarget = Math.min(18, 8 + impact * 0.03);
-            } else if (overlapsBotRim && !inHole && o.rimCool <= 0) {
-              var impactB = Math.max(40, Math.abs(player.vy || 0));
-              var bounceB = Math.min(180, Math.max(65, impactB * 0.62 + 50));
-              player.vy = bounceB;
-              player.y += (rcy + g.holeH + halfPh - py) * Math.min(0.45, 6 * dt);
-              o.rimHitT = 0.35;
-              o.rimCool = 0.18;
-              o.dipTarget = Math.min(18, 8 + impactB * 0.03);
-            } else if (inHole || (Math.abs(dy) <= g.holeH * 0.9)) {
-              // Smooth tunnel: light centering + damp vertical speed (no snap)
-              var pull = (rcy - py) * Math.min(0.12, 1.4 * dt);
-              player.y += pull;
-              if (player.vy) player.vy *= (1 - Math.min(0.55, 3.2 * dt));
+          // Active contact slab (thin hoop)
+          if (approach < depth + 8) {
+            var inHole = absDy <= g.holeH;
+            var inRimBand = absDy > g.holeH && absDy <= g.rimH;
+
+            if (inHole) {
+              // Silky tunnel: damp vertical, light center lock
+              player.y += (rcy - py) * Math.min(0.28, 3.0 * dt);
+              if (player.vy) player.vy *= (1 - Math.min(0.65, 4.5 * dt));
+              // One-time satisfying pass when crossing center plane
+              if (!o.passed && dx <= 0 && (o._wasAhead !== false)) {
+                // was on the right side of ring, now at/ past center
+              }
               if (!o.passed) {
                 o.passed = true;
-                o.passGlowT = 1.1;
+                o.passGlowT = 0.85;
                 o.passPulse = 1;
+                o.passWhoosh = 1;
                 try {
                   if (typeof window.__airborneOnRingCollect === "function") window.__airborneOnRingCollect();
                   else if (typeof sfxTrainingRing === "function") sfxTrainingRing();
@@ -1858,11 +1855,33 @@ window.__airborneRingDebug = false;
                 try {
                   if (typeof ruffStats !== "undefined" && ruffStats) ruffStats.rings = (ruffStats.rings || 0) + 1;
                 } catch (e3) {}
+                // Small forward joy boost
+                try {
+                  if (typeof player.vx === "number") player.vx += 20;
+                } catch (e4) {}
               }
+            } else if (inRimBand && o.rimCool <= 0) {
+              // Soft trampoline off metal — only if clearly outside hole
+              var impact = Math.max(30, Math.abs(player.vy || 0));
+              var bounce = Math.min(160, Math.max(55, impact * 0.5 + 45));
+              if (dy < 0) {
+                player.vy = -bounce;
+                // ease out of rim without teleport
+                player.y += Math.min(0, (rcy - g.holeH - 2) - py) * Math.min(0.35, 5 * dt);
+              } else {
+                player.vy = bounce;
+                player.y += Math.max(0, (rcy + g.holeH + 2) - py) * Math.min(0.35, 5 * dt);
+              }
+              o.rimHitT = 0.22;
+              o.rimCool = 0.22;
+              o.dipTarget = Math.min(14, 6 + impact * 0.02);
             }
           }
 
-          // Ring visual dip (same idea as platforms — symmetric down/up)
+          // Track side of ring for whoosh (optional)
+          o._wasAhead = dx > 0;
+
+          // Ring visual dip
           o.dipY = o.dipY || 0;
           o.dipTarget = (o.dipTarget != null) ? o.dipTarget : 0;
           var dipSpd = 70;
@@ -1876,7 +1895,8 @@ window.__airborneRingDebug = false;
           }
 
           if (o.rimHitT > 0) o.rimHitT = Math.max(0, o.rimHitT - dt);
-          if (o.passPulse > 0) o.passPulse = Math.max(0, o.passPulse - dt * 1.2);
+          if (o.passPulse > 0) o.passPulse = Math.max(0, o.passPulse - dt * 1.4);
+          if (o.passWhoosh > 0) o.passWhoosh = Math.max(0, o.passWhoosh - dt * 2.2);
         }
       } else {
         o.bobPhase = (o.bobPhase || 0) + dt * 3;
@@ -1902,18 +1922,19 @@ window.__airborneRingDebug = false;
   // Single source of truth for checkered-ring geometry (draw + collision)
   function getRingGeom(o) {
     var rad = (o.r || o.w / 2 || 40) * (o.expandScale || 1);
-    var pulse = 1 + 0.03 * Math.sin((o.pulseT || 0) * 3.2);
-    if (o.passPulse > 0) pulse += 0.08 * (o.passPulse || 0);
-    var dw = rad * 0.575 * pulse; // 50% thinner
-    var dh = rad * 3.1875 * pulse; // +25% height
+    var pulse = 1 + 0.025 * Math.sin((o.pulseT || 0) * 2.8);
+    if (o.passPulse > 0) pulse += 0.06 * (o.passPulse || 0);
+    var dw = rad * 0.575 * pulse;
+    var dh = rad * 3.1875 * pulse;
     var halfH = dh * 0.5;
     var halfW = dw * 0.5;
-    // User-tuned: hole ±45, front X depth 15
-    var holeH = 49.5; // +10% from 45
-    var holeW = halfW * 0.55;
-    var rimH = halfH * 0.92 * 1.10; // +10% outer
-    var rimW = halfW * 0.95;
-    var depth = 16.5; // +10% from 15
+    // Hole = open black center (generous for blimp). Rim = outer metal band only.
+    // ~52% of visual half-height keeps a clear metal rim while staying flyable
+    var holeH = halfH * 0.52;
+    var holeW = Math.max(halfW * 0.85, 14);
+    var rimH = halfH * 0.96;
+    var rimW = halfW * 0.98;
+    var depth = Math.max(12, halfW * 0.9); // contact near the thin hoop
     return {
       rad: rad, dw: dw, dh: dh,
       halfH: halfH, halfW: halfW,
@@ -1997,27 +2018,26 @@ window.__airborneRingDebug = false;
     ctx.fill();
     ctx.restore();
 
-    // Red pass-through glow
+    // Pass-through celebration (only after successful hole pass)
     if (o.passed && o.passGlowT > 0) {
       var gLife = Math.min(1, o.passGlowT / 0.85);
       ctx.save();
-      ctx.globalAlpha = 0.4 + 0.5 * gLife;
-      ctx.shadowColor = "rgba(255,40,30,0.95)";
-      ctx.shadowBlur = 30 * gLife;
-      var grd = ctx.createRadialGradient(cx, cy, rad * 0.12, cx, cy, rad * 1.5);
-      grd.addColorStop(0, "rgba(255,90,70," + (0.6 * gLife) + ")");
-      grd.addColorStop(0.45, "rgba(220,30,20," + (0.35 * gLife) + ")");
+      ctx.globalAlpha = 0.35 + 0.45 * gLife;
+      ctx.shadowColor = "rgba(255,90,50,0.9)";
+      ctx.shadowBlur = 22 * gLife;
+      var grd = ctx.createRadialGradient(cx, cy, rad * 0.1, cx, cy, rad * 1.35);
+      grd.addColorStop(0, "rgba(255,200,120," + (0.35 * gLife) + ")");
+      grd.addColorStop(0.4, "rgba(255,90,50," + (0.4 * gLife) + ")");
       grd.addColorStop(1, "rgba(120,0,0,0)");
       ctx.fillStyle = grd;
       ctx.beginPath();
-      ctx.ellipse(cx, cy, dw * 0.75, dh * 0.58, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, cy, dw * 0.7, dh * 0.55, 0, 0, Math.PI * 2);
       ctx.fill();
-      // Expanding shock ring on pass
       if (o.passPulse > 0) {
-        ctx.strokeStyle = "rgba(255,120,90," + (0.7 * o.passPulse) + ")";
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = "rgba(255,210,150," + (0.75 * o.passPulse) + ")";
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.ellipse(cx, cy, dw * (0.5 + 0.4 * (1 - o.passPulse)), dh * (0.4 + 0.35 * (1 - o.passPulse)), 0, 0, Math.PI * 2);
+        ctx.ellipse(cx, cy, dw * (0.45 + 0.5 * (1 - o.passPulse)), dh * (0.38 + 0.4 * (1 - o.passPulse)), 0, 0, Math.PI * 2);
         ctx.stroke();
       }
       ctx.restore();
