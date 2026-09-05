@@ -1781,31 +1781,46 @@
           var rcx = o.x + o.w / 2;
           var rcy = o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8);
           var pr = (o.r || o.w / 2) * 0.85;
-          // FIXED bounds from center (px): hole ±50, rim ±60
-          // No scaling — exact values so debug matches gameplay
-          var HOLE_H = 50;
-          var RIM_H = 60;
-          var outerW = Math.max(28, (o.r || 40) * 0.5);
+          // Geometry-linked collision (matches drawn sprite)
+          var g = getRingGeom(o);
           o._dbg = {
-            rcx: rcx,
-            rcy: rcy,
-            outerW: outerW,
-            outerH: RIM_H,
-            holeW: outerW * 0.7,
-            holeH: HOLE_H,
-            pr: pr
+            rcx: rcx, rcy: rcy,
+            outerW: g.rimW, outerH: g.rimH,
+            holeW: g.holeW, holeH: g.holeH,
+            pr: pr, dw: g.dw, dh: g.dh
           };
-          var ph = (player.h || 36) * 0.2;
+          // Blimp AABB (player.y is center)
+          var halfPh = (player.h || 40) * 0.38;
+          var halfPw = (player.w || 48) * 0.32;
           var px = player.x + (player.w || 40) * 0.5;
           var py = player.y;
           var dx = px - rcx;
           var dy = py - rcy;
-          var absDy = Math.abs(dy);
+          // Vertical span of blimp relative to ring center
+          var pTop = dy - halfPh;
+          var pBot = dy + halfPh;
 
-          // Only while overlapping ring in X (depth)
-          if (Math.abs(dx) < outerW + (player.w || 40) * 0.3) {
-            if (absDy <= HOLE_H) {
-              // INSIDE HOLE — pass through
+          // Must be within ring depth (X)
+          if (Math.abs(dx) < g.rimW + halfPw) {
+            // Fully inside hole vertically?
+            var inHole = (pTop >= -g.holeH) && (pBot <= g.holeH) && (Math.abs(dx) < g.holeW + halfPw);
+            // Overlaps solid metal above hole?
+            var hitTopRim = (pTop < -g.holeH) && (pBot > -g.rimH) && (pTop < -g.holeH + (g.rimH - g.holeH) + halfPh * 2);
+            // More precise: any blimp pixel in rim band [-rimH, -holeH] or [holeH, rimH]
+            var overlapsTopRim = (pTop < -g.holeH) && (pBot > -g.rimH);
+            var overlapsBotRim = (pBot > g.holeH) && (pTop < g.rimH);
+
+            if (overlapsTopRim && !inHole) {
+              // Push below? No — top rim means blimp is too high: push up out of metal / bounce up
+              player.y = rcy - g.holeH - halfPh - 1;
+              player.vy = -Math.max(130, Math.abs(player.vy || 0) * 0.65 + 110);
+              o.rimHitT = 0.3;
+            } else if (overlapsBotRim && !inHole) {
+              player.y = rcy + g.holeH + halfPh + 1;
+              player.vy = Math.max(120, Math.abs(player.vy || 0) * 0.65 + 100);
+              o.rimHitT = 0.3;
+            } else if (inHole || (Math.abs(dy) <= g.holeH && Math.abs(dx) < g.holeW + halfPw)) {
+              // Center tunnel
               player.y += (rcy - py) * Math.min(0.2, 2.0 * dt);
               if (!o.passed) {
                 o.passed = true;
@@ -1823,16 +1838,6 @@
                   if (typeof ruffStats !== "undefined" && ruffStats) ruffStats.rings = (ruffStats.rings || 0) + 1;
                 } catch (e3) {}
               }
-            } else if (absDy <= RIM_H + ph) {
-              // RIM BAND (50..60 from center) — bounce off
-              if (dy < 0) {
-                player.y = rcy - HOLE_H - 1;
-                player.vy = -Math.max(120, Math.abs(player.vy || 0) * 0.6 + 100);
-              } else {
-                player.y = rcy + HOLE_H + 1;
-                player.vy = Math.max(110, Math.abs(player.vy || 0) * 0.6 + 90);
-              }
-              o.rimHitT = 0.28;
             }
           }
           if (o.rimHitT > 0) o.rimHitT = Math.max(0, o.rimHitT - dt);
@@ -1858,7 +1863,31 @@
   }
 
 
-  // Checkered flight ring asset
+  
+  // Single source of truth for checkered-ring geometry (draw + collision)
+  function getRingGeom(o) {
+    var rad = (o.r || o.w / 2 || 40) * (o.expandScale || 1);
+    var pulse = 1 + 0.03 * Math.sin((o.pulseT || 0) * 3.2);
+    if (o.passPulse > 0) pulse += 0.08 * (o.passPulse || 0);
+    var dw = rad * 1.15 * pulse;
+    var dh = rad * 2.55 * pulse;
+    var halfH = dh * 0.5;
+    var halfW = dw * 0.5;
+    // Black opening ~32% of half-height (matches asset hole); metal is outside that
+    var holeH = halfH * 0.36;
+    var holeW = halfW * 0.55;
+    // Outer rim = near visual edge of sprite
+    var rimH = halfH * 0.92;
+    var rimW = halfW * 0.95;
+    return {
+      rad: rad, dw: dw, dh: dh,
+      halfH: halfH, halfW: halfW,
+      holeH: holeH, holeW: holeW,
+      rimH: rimH, rimW: rimW
+    };
+  }
+
+// Checkered flight ring asset
   window.__ringCheckeredImg = null;
   window.__ringCheckeredLoading = false;
   function ensureRingCheckered() {
@@ -1889,13 +1918,14 @@
 
   function drawCheckeredRing(o, cx, cy, layer) {
     var img = ensureRingCheckered() || window.__ringCheckeredImg;
-    var rad = (o.r || o.w / 2 || 40) * (o.expandScale || 1);
-    // Thinner width, full height + subtle pulse scale
-    var pulse = 1 + 0.03 * Math.sin((o.pulseT || 0) * 3.2);
-    if (o.passPulse > 0) pulse += 0.08 * o.passPulse;
-    if (o.rimHitT > 0) pulse += 0.04 * Math.sin(o.rimHitT * 40);
-    var dw = rad * 1.15 * pulse;
-    var dh = rad * 2.55 * pulse;
+    var g = getRingGeom(o);
+    var rad = g.rad;
+    var dw = g.dw;
+    var dh = g.dh;
+    if (o.rimHitT > 0) {
+      var p2 = 1 + 0.04 * Math.sin(o.rimHitT * 40);
+      dw *= p2; dh *= p2;
+    }
     var dx = cx - dw / 2;
     var dy = cy - dh / 2;
     var wobble = Math.sin((o.spinT || 0) * 1.5) * 0.04;
@@ -2020,10 +2050,11 @@
     if (window.__airborneRingDebug !== false) {
       var d = o._dbg;
       var pr = (o.r || o.w / 2 || 40) * 0.85;
-      var outerW = d ? d.outerW : 30;
-      var outerH = 60; // FIXED rim ±60
-      var holeW = d ? d.holeW : 24;
-      var holeH = 50; // FIXED hole ±50
+      var g2 = (typeof getRingGeom === "function") ? getRingGeom(o) : null;
+      var outerW = d ? d.outerW : (g2 ? g2.rimW : 30);
+      var outerH = d ? d.outerH : (g2 ? g2.rimH : 60);
+      var holeW = d ? d.holeW : (g2 ? g2.holeW : 24);
+      var holeH = d ? d.holeH : (g2 ? g2.holeH : 50);
       var midY = cy;
       var topOuter = cy - outerH;
       var botOuter = cy + outerH;
@@ -2047,7 +2078,7 @@
       ctx.moveTo(left, topOuter);
       ctx.lineTo(right, topOuter);
       ctx.stroke();
-      ctx.fillText("TOP RIM -60", right + 4, topOuter);
+      ctx.fillText("TOP RIM " + Math.round(topOuter - midY), right + 4, topOuter);
 
       // HOLE top (inside boundary) — lime
       ctx.strokeStyle = "#44ff88";
@@ -2056,7 +2087,7 @@
       ctx.moveTo(left, topHole);
       ctx.lineTo(right, topHole);
       ctx.stroke();
-      ctx.fillText("HOLE TOP -50", right + 4, topHole);
+      ctx.fillText("HOLE TOP " + Math.round(topHole - midY), right + 4, topHole);
 
       // CENTER zero — cyan
       ctx.strokeStyle = "#33ccff";
@@ -2076,7 +2107,7 @@
       ctx.moveTo(left, botHole);
       ctx.lineTo(right, botHole);
       ctx.stroke();
-      ctx.fillText("HOLE BOT +50", right + 4, botHole);
+      ctx.fillText("HOLE BOT +" + Math.round(botHole - midY), right + 4, botHole);
 
       // OUTER bottom (rim) — red
       ctx.strokeStyle = "#ff2244";
@@ -2085,7 +2116,7 @@
       ctx.moveTo(left, botOuter);
       ctx.lineTo(right, botOuter);
       ctx.stroke();
-      ctx.fillText("BOT RIM +60", right + 4, botOuter);
+      ctx.fillText("BOT RIM +" + Math.round(botOuter - midY), right + 4, botOuter);
 
       // Vertical center line
       ctx.strokeStyle = "#33ccff";
