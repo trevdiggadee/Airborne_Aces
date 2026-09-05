@@ -1159,12 +1159,17 @@
       window.__airborneRingSpawnT = 0;
       window.__airborneRingsPreSpawned = false;
       window.__airborneRingTotalTarget = 20;
-      try {
-        if (typeof window.spawnAllTrainingRings === "function") {
-          window.spawnAllTrainingRings(20);
-          window.__airborneRingsPreSpawned = true;
-        }
-      } catch (ePS2) {}
+      function __doRingPrespawn() {
+        try {
+          if (typeof window.spawnAllTrainingRings === "function") {
+            window.spawnAllTrainingRings(20);
+            window.__airborneRingsPreSpawned = true;
+            console.log("[R.U.F.F.] rings prespawn done", window.__airborneRingSpawned);
+          }
+        } catch (ePS2) { console.warn(ePS2); }
+      }
+      __doRingPrespawn();
+      setTimeout(__doRingPrespawn, 50);
       window.__airborneRingMult = 1;
       ruffStats.rings = 0;
       ruffStats.ringMisses = 0;
@@ -4057,12 +4062,11 @@ function finishToMap() {
       // Ensure full set exists (once)
       var ringTarget = 20;
       window.__airborneRingTotalTarget = 20;
-      if (!window.__airborneRingsPreSpawned) {
+      if (!window.__airborneRingsPreSpawned || (window.__airborneRingSpawned || 0) < 20) {
         try {
           if (typeof window.spawnAllTrainingRings === "function") window.spawnAllTrainingRings(20);
-          else if (typeof spawnAllTrainingRings === "function") spawnAllTrainingRings(20);
         } catch (ePS) { console.warn("prespawn", ePS); }
-        window.__airborneRingsPreSpawned = true;
+        if ((window.__airborneRingSpawned || 0) >= 20) window.__airborneRingsPreSpawned = true;
       }
 
       var spawned = window.__airborneRingSpawned || 0;

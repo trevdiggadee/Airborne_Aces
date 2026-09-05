@@ -750,24 +750,19 @@ window.__airborneRingDebug = false;
     window.__airborneRingSpawned = (window.__airborneRingSpawned || 0) + 1;
     window.__airborneRingSerial = (window.__airborneRingSerial || 0) + 1;
 
-    const r = Math.min(48, W * 0.115);
-    const groundY = groundLevelY();
-    const minY = H * 0.14;
-    const maxY = groundY - H * 0.20;
-    // Gentle wave of heights so path is interesting but flyable
+    var Ww = (typeof W === "number" && W > 50) ? W : (window.innerWidth || 400);
+    var Hh = (typeof H === "number" && H > 50) ? H : (window.innerHeight || 700);
+    var r = Math.min(48, Ww * 0.115);
+    if (!(r > 0)) r = 42;
+    var groundY = Hh * 0.88;
+    try { if (typeof groundLevelY === "function") groundY = groundLevelY(); } catch (e) {}
+    var minY = Hh * 0.16;
+    var maxY = groundY - Hh * 0.18;
+    if (!(maxY > minY)) { minY = Hh * 0.22; maxY = Hh * 0.68; }
     var idx = window.__airborneRingSpawned;
     var wave = Math.sin(idx * 0.55) * 0.35 + Math.sin(idx * 0.21) * 0.2;
-    const y = minY + (maxY - minY) * (0.5 + wave * 0.45);
-    var spawnX = (typeof optX === "number") ? optX : (W + r * 2);
-    if (typeof optX !== "number") {
-      var lastRingX = -9999;
-      for (var ri = 0; ri < obstacles.length; ri++) {
-        if (obstacles[ri] && (obstacles[ri].isRing || obstacles[ri].type === "gold_ring")) {
-          if (obstacles[ri].x > lastRingX) lastRingX = obstacles[ri].x;
-        }
-      }
-      if (lastRingX > -9000) spawnX = Math.max(spawnX, lastRingX + Math.max(170, W * 0.40));
-    }
+    var y = minY + (maxY - minY) * (0.5 + wave * 0.45);
+    var spawnX = (typeof optX === "number") ? optX : (Ww + r * 2);
     var ring = {
       type: "gold_ring",
       x: spawnX,
@@ -788,30 +783,34 @@ window.__airborneRingDebug = false;
       animT: 0
     };
     obstacles.push(ring);
+    window.__airborneObstacles = obstacles;
     return ring;
   }
   window.spawnGoldRing = spawnGoldRing;
 
   /** Pre-place all training rings so the lesson always gets exactly N. */
   function spawnAllTrainingRings(n) {
-    n = n || (window.__airborneRingTotalTarget || 20);
+    n = n || 20;
     window.__airborneRingTotalTarget = n;
     window.__airborneRingSpawned = 0;
     window.__airborneRingSerial = 0;
-    // Clear existing rings only
-    if (typeof obstacles !== "undefined" && obstacles) {
-      obstacles = obstacles.filter(function (o) {
-        return !(o && (o.isRing || o.type === "gold_ring"));
-      });
+    // Strip old rings in place — never reassign the obstacles array
+    for (var i = obstacles.length - 1; i >= 0; i--) {
+      var oo = obstacles[i];
+      if (oo && (oo.isRing || oo.type === "gold_ring")) obstacles.splice(i, 1);
     }
-    var gap = Math.max(175, (typeof W !== "undefined" ? W : 400) * 0.40);
-    var startX = (typeof W !== "undefined" ? W : 400) + 80;
-    for (var i = 0; i < n; i++) {
-      spawnGoldRing(startX + i * gap);
+    var Ww = (typeof W === "number" && W > 50) ? W : (window.innerWidth || 400);
+    var Hh = (typeof H === "number" && H > 50) ? H : (window.innerHeight || 700);
+    var gap = Math.max(155, Ww * 0.36);
+    var startX = Ww + 100;
+    for (var k = 0; k < n; k++) {
+      spawnGoldRing(startX + k * gap, Ww, Hh);
     }
-    console.log("[Rings] pre-spawned", window.__airborneRingSpawned, "target", n);
+    window.__airborneObstacles = obstacles;
+    console.log("[Rings] pre-spawned", window.__airborneRingSpawned, "/", n, "obstacles", obstacles.length);
   }
   window.spawnAllTrainingRings = spawnAllTrainingRings;
+
 
 
   function spawnObstacle() {
@@ -1942,24 +1941,29 @@ window.__airborneRingDebug = false;
       if (o.hitFlash) o.hitFlash = Math.max(0, o.hitFlash - dt * 3);
     });
 
-    obstacles = obstacles.filter(function (o) {
-      if (!o) return false;
+    // In-place prune (never reassign obstacles — keeps shared references valid)
+    for (var fi = obstacles.length - 1; fi >= 0; fi--) {
+      var o = obstacles[fi];
+      if (!o) { obstacles.splice(fi, 1); continue; }
+      var drop = false;
       if (o.fromHitBurst) {
-        return o.burstLife > 0 && o.x > -120 && o.x < W + 120 && o.y > -120 && o.y < H + 120;
-      }
-      if (o.shockFall || o.electrified) {
-        return o.y < H + 100 && o.x > -80 && o.x < W + 80;
-      }
-      // Rings: count miss if scrolled off without pass
-      if ((o.isRing || o.type === "gold_ring") && o.x < -120) {
+        drop = !(o.burstLife > 0 && o.x > -120 && o.x < (W || 400) + 120 && o.y > -120 && o.y < (H || 700) + 120);
+      } else if (o.shockFall || o.electrified) {
+        drop = !(o.y < (H || 700) + 100 && o.x > -80 && o.x < (W || 400) + 80);
+      } else if ((o.isRing || o.type === "gold_ring") && o.x < -120) {
         if (!o.passed && !o._missed) {
           o._missed = true;
           try { if (window.__airborneOnRingMiss) window.__airborneOnRingMiss(); } catch (eM) {}
         }
-        return false;
+        drop = true;
+      } else {
+        var Ww = (typeof W === "number") ? W : 400;
+        var Hh = (typeof H === "number") ? H : 700;
+        drop = !(o.x > -150 && o.x < Ww + 400 && o.y > -150 && o.y < Hh + 150);
       }
-      return o.x > -150 && o.x < W + 200 && o.y > -150 && o.y < H + 150;
-    });
+      if (drop) obstacles.splice(fi, 1);
+    }
+    window.__airborneObstacles = obstacles;
   }
 
 
