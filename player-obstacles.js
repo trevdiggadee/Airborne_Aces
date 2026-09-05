@@ -744,28 +744,31 @@ window.__airborneRingDebug = false;
   window.updateHitCoins = updateHitCoins;
   window.drawHitCoins = drawHitCoins;
 
-  function spawnGoldRing() {
-
+  function spawnGoldRing(optX) {
     var target = window.__airborneRingTotalTarget || 20;
-    if ((window.__airborneRingSpawned || 0) >= target) return;
+    if ((window.__airborneRingSpawned || 0) >= target) return null;
     window.__airborneRingSpawned = (window.__airborneRingSpawned || 0) + 1;
     window.__airborneRingSerial = (window.__airborneRingSerial || 0) + 1;
 
-    const r = Math.min(48, W * 0.115); // gear portal size
+    const r = Math.min(48, W * 0.115);
     const groundY = groundLevelY();
-    const minY = H * 0.12;
-    const maxY = groundY - H * 0.22;
-    const y = minY + Math.random() * Math.max(40, maxY - minY);
-    // Extra horizontal spacing between rings
-    var lastRingX = -9999;
-    for (var ri = 0; ri < obstacles.length; ri++) {
-      if (obstacles[ri] && (obstacles[ri].isRing || obstacles[ri].type === "gold_ring")) {
-        if (obstacles[ri].x > lastRingX) lastRingX = obstacles[ri].x;
+    const minY = H * 0.14;
+    const maxY = groundY - H * 0.20;
+    // Gentle wave of heights so path is interesting but flyable
+    var idx = window.__airborneRingSpawned;
+    var wave = Math.sin(idx * 0.55) * 0.35 + Math.sin(idx * 0.21) * 0.2;
+    const y = minY + (maxY - minY) * (0.5 + wave * 0.45);
+    var spawnX = (typeof optX === "number") ? optX : (W + r * 2);
+    if (typeof optX !== "number") {
+      var lastRingX = -9999;
+      for (var ri = 0; ri < obstacles.length; ri++) {
+        if (obstacles[ri] && (obstacles[ri].isRing || obstacles[ri].type === "gold_ring")) {
+          if (obstacles[ri].x > lastRingX) lastRingX = obstacles[ri].x;
+        }
       }
+      if (lastRingX > -9000) spawnX = Math.max(spawnX, lastRingX + Math.max(170, W * 0.40));
     }
-    var spawnX = W + r * 2;
-    if (lastRingX > -9000) spawnX = Math.max(spawnX, lastRingX + Math.max(180, W * 0.42));
-    obstacles.push({
+    var ring = {
       type: "gold_ring",
       x: spawnX,
       y: y,
@@ -777,15 +780,39 @@ window.__airborneRingDebug = false;
       collected: false,
       spin: Math.random() * Math.PI * 2,
       bobPhase: Math.random() * Math.PI * 2,
-      bobAmount: 8,
-      speedMult: 1.10, // +10% ring speed
+      bobAmount: 6,
+      speedMult: 1.10,
       isRing: true,
-      ringNum: window.__airborneRingSerial || 1,
+      ringNum: window.__airborneRingSerial || idx,
       animFrame: 0,
       animT: 0
-    });
+    };
+    obstacles.push(ring);
+    return ring;
   }
   window.spawnGoldRing = spawnGoldRing;
+
+  /** Pre-place all training rings so the lesson always gets exactly N. */
+  function spawnAllTrainingRings(n) {
+    n = n || (window.__airborneRingTotalTarget || 20);
+    window.__airborneRingTotalTarget = n;
+    window.__airborneRingSpawned = 0;
+    window.__airborneRingSerial = 0;
+    // Clear existing rings only
+    if (typeof obstacles !== "undefined" && obstacles) {
+      obstacles = obstacles.filter(function (o) {
+        return !(o && (o.isRing || o.type === "gold_ring"));
+      });
+    }
+    var gap = Math.max(175, (typeof W !== "undefined" ? W : 400) * 0.40);
+    var startX = (typeof W !== "undefined" ? W : 400) + 80;
+    for (var i = 0; i < n; i++) {
+      spawnGoldRing(startX + i * gap);
+    }
+    console.log("[Rings] pre-spawned", window.__airborneRingSpawned, "target", n);
+  }
+  window.spawnAllTrainingRings = spawnAllTrainingRings;
+
 
   function spawnObstacle() {
     // Airfield training rings
