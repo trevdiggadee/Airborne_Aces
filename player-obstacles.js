@@ -1782,12 +1782,13 @@
           var rcy = o.y + o.h / 2 + Math.sin(o.bobPhase || 0) * (o.bobAmount || 8);
           var pr = (o.r || o.w / 2) * 0.85;
           // Solid rim vs center hole only
-          // Balanced: solid rim matches visible metal; center = black hole
+          // User-tuned boundaries (px from center): rim ±60, hole ±50
+          var scale = pr / 40; // keep proportional if ring size changes
+          if (!(scale > 0.5 && scale < 2.5)) scale = 1;
           var outerW = pr * 0.52;
-          var outerH = pr * 1.18;
+          var outerH = 60 * scale;
           var holeW = pr * 0.34;
-          var holeH = pr * 0.58;
-          // Stash for debug overlay (same numbers as collision)
+          var holeH = 50 * scale;
           o._dbg = { rcx: rcx, rcy: rcy, outerW: outerW, outerH: outerH, holeW: holeW, holeH: holeH, pr: pr };
           var ph = (player.h || 36) * 0.28;
           var pw = (player.w || 40) * 0.28;
@@ -2026,9 +2027,9 @@
       var d = o._dbg;
       var pr = (o.r || o.w / 2 || 40) * 0.85;
       var outerW = d ? d.outerW : pr * 0.52;
-      var outerH = d ? d.outerH : pr * 1.18;
+      var outerH = d ? d.outerH : 60;
       var holeW = d ? d.holeW : pr * 0.34;
-      var holeH = d ? d.holeH : pr * 0.58;
+      var holeH = d ? d.holeH : 50;
       var midY = cy;
       var topOuter = cy - outerH;
       var botOuter = cy + outerH;
