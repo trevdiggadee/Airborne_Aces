@@ -66,8 +66,163 @@
     powerups: 0,
     obstaclesAvoided: 0,
     bestCombo: 0,
-    landingStars: 3
+    landingStars: 3,
+    ringMisses: 0,
+    ringStreak: 0,
+    ringBestStreak: 0,
+    ringPerfects: 0,
+    ringScore: 0,
+    ringRank: "",
+    ringPerfectFlight: false
   };
+
+  // ---- Ring streak / scoring (20-ring run) ----
+  window.__airborneRingTotalTarget = 20;
+  window.__airborneRingSpawned = 0;
+  window.__airborneRingMult = 1;
+  window.__airborneRingHud = { streak: 0, mult: 1, score: 0, lastPts: 0, flash: 0, title: "" };
+
+  function ringStreakMult(streak) {
+    if (streak >= 12) return 5;
+    if (streak >= 8) return 4;
+    if (streak >= 5) return 3;
+    if (streak >= 3) return 2;
+    return 1;
+  }
+  function ringStreakColor(streak) {
+    // progressive glow identity
+    if (streak >= 12) return { core: "#fff6c8", mid: "#ff44ee", outer: "#8800ff", name: "LEGEND" };
+    if (streak >= 8) return { core: "#ffe8a0", mid: "#ff8a20", outer: "#ff2200", name: "BLAZE" };
+    if (streak >= 5) return { core: "#e8fff0", mid: "#40ff90", outer: "#00aa55", name: "ACE" };
+    if (streak >= 3) return { core: "#e8f4ff", mid: "#40b0ff", outer: "#2060cc", name: "HOT" };
+    return { core: "#ffe8d0", mid: "#ff9040", outer: "#cc4010", name: "" };
+  }
+  function onRingPassed(quality) {
+    // quality 0..1 — 1 = perfect center
+    ruffStats.rings = (ruffStats.rings || 0) + 1;
+    ruffStats.ringStreak = (ruffStats.ringStreak || 0) + 1;
+    if (ruffStats.ringStreak > (ruffStats.ringBestStreak || 0)) {
+      ruffStats.ringBestStreak = ruffStats.ringStreak;
+    }
+    if (quality >= 0.72) ruffStats.ringPerfects = (ruffStats.ringPerfects || 0) + 1;
+    var mult = ringStreakMult(ruffStats.ringStreak);
+    window.__airborneRingMult = mult;
+    var base = 100;
+    var perfectBonus = quality >= 0.72 ? 50 : 0;
+    var pts = (base + perfectBonus) * mult;
+    ruffStats.ringScore = (ruffStats.ringScore || 0) + pts;
+    try {
+      if (typeof score !== "undefined") score = (score || 0) + pts;
+      if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
+    } catch (e) {}
+    window.__airborneRingHud = {
+      streak: ruffStats.ringStreak,
+      mult: mult,
+      score: ruffStats.ringScore,
+      lastPts: pts,
+      flash: 1.15,
+      title: quality >= 0.72 ? "PERFECT" : (mult >= 3 ? "STREAK x" + mult : "RING")
+    };
+    ruffStats.bestCombo = Math.max(ruffStats.bestCombo || 0, ruffStats.ringStreak);
+    return { mult: mult, pts: pts, streak: ruffStats.ringStreak, colors: ringStreakColor(ruffStats.ringStreak) };
+  }
+  function onRingMissed() {
+    ruffStats.ringMisses = (ruffStats.ringMisses || 0) + 1;
+    ruffStats.ringStreak = 0;
+    window.__airborneRingMult = 1;
+    window.__airborneRingHud = window.__airborneRingHud || {};
+    window.__airborneRingHud.streak = 0;
+    window.__airborneRingHud.mult = 1;
+    window.__airborneRingHud.flash = 0.6;
+    window.__airborneRingHud.title = "MISS";
+    window.__airborneRingHud.lastPts = 0;
+  }
+  function computeRingRank() {
+    var total = window.__airborneRingTotalTarget || 20;
+    var got = ruffStats.rings || 0;
+    var misses = ruffStats.ringMisses || 0;
+    var best = ruffStats.ringBestStreak || 0;
+    var perfects = ruffStats.ringPerfects || 0;
+    var pct = total > 0 ? (got / total) * 100 : 0;
+    var perfectPct = got > 0 ? (perfects / Math.max(got, 1)) * 100 : 0;
+    var rank = "Rookie";
+    var perfectFlight = false;
+    if (got >= total && misses === 0 && perfectPct >= 75 && best >= total) {
+      rank = "Legendary";
+      perfectFlight = true;
+    } else if (pct >= 90 && perfects >= 5 && misses <= 2) {
+      rank = "Elite Ace";
+    } else if (pct >= 80 && best >= 3) {
+      rank = "Ace";
+    } else if (pct >= 60) {
+      rank = "Rookie";
+    } else {
+      rank = "Rookie";
+    }
+    ruffStats.ringRank = rank;
+    ruffStats.ringPerfectFlight = perfectFlight;
+    if (perfectFlight) {
+      ruffStats.ringScore = (ruffStats.ringScore || 0) + 1000;
+      try {
+        if (typeof score !== "undefined") score = (score || 0) + 1000;
+        if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
+      } catch (e) {}
+    }
+    return rank;
+  }
+  window.__airborneOnRingCollect = function (quality) {
+    return onRingPassed(typeof quality === "number" ? quality : 0.5);
+  };
+  window.__airborneOnRingMiss = onRingMissed;
+  window.__airborneComputeRingRank = computeRingRank;
+  window.__airborneRingStreakColor = ringStreakColor;
+
+  function drawRingStreakHud(ctx) {
+    if (!ctx) return;
+    var hud = window.__airborneRingHud;
+    if (!hud) return;
+    if (!(window.__airborneAirfieldRings || (hud.flash > 0))) return;
+    var W = ctx.canvas.width, H = ctx.canvas.height;
+    if (hud.flash > 0) hud.flash = Math.max(0, hud.flash - 0.016);
+    var col = ringStreakColor(hud.streak || 0);
+    ctx.save();
+    // Streak / mult panel top-center
+    var label = "STREAK " + (hud.streak || 0) + "   x" + (hud.mult || 1);
+    ctx.font = "900 18px Rockwell, Georgia, serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    var y = H * 0.11;
+    ctx.shadowColor = col.mid;
+    ctx.shadowBlur = 12 + (hud.streak || 0);
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    var tw = ctx.measureText(label).width + 36;
+    ctx.fillRect(W * 0.5 - tw / 2, y - 16, tw, 32);
+    ctx.fillStyle = col.core;
+    ctx.fillText(label, W * 0.5, y);
+    // Score pop after ring
+    if (hud.flash > 0 && hud.lastPts > 0) {
+      var a = Math.min(1, hud.flash);
+      ctx.globalAlpha = a;
+      ctx.font = "900 " + (22 + (1 - a) * 10) + "px Rockwell, Georgia, serif";
+      ctx.fillStyle = col.core;
+      ctx.shadowBlur = 16;
+      var popY = y + 36 + (1 - a) * 20;
+      var t = (hud.title ? hud.title + "  " : "") + "+" + hud.lastPts;
+      ctx.fillText(t, W * 0.5, popY);
+      ctx.font = "700 14px Rockwell, Georgia, serif";
+      ctx.fillStyle = "#ffe8c0";
+      ctx.fillText("RING SCORE " + (hud.score || 0), W * 0.5, popY + 22);
+    } else if (window.__airborneAirfieldRings) {
+      ctx.globalAlpha = 0.85;
+      ctx.font = "700 13px Rockwell, Georgia, serif";
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#f0e0c0";
+      ctx.fillText("RING SCORE " + (hud.score || 0) + "   " + (ruffStats.rings || 0) + "/" + (window.__airborneRingTotalTarget || 20), W * 0.5, y + 28);
+    }
+    ctx.restore();
+  }
+  window.__airborneDrawRingStreakHud = drawRingStreakHud;
+
   let ruffCrystals = [];
   window.__airborneRuffMuted = true; // mute Ruff dialog for now
   let ruffLandingCelebrated = false;
@@ -844,6 +999,18 @@
 
   // ---------- Stage control ----------
   function setStage(name) {
+    try {
+      if (ruffStage === "rings" && name !== "rings" && window.__airborneComputeRingRank) {
+        window.__airborneComputeRingRank();
+        var rk = ruffStats.ringRank || "";
+        if (ruffStats.ringPerfectFlight) {
+          try { showLessonBanner("🏆 PERFECT FLIGHT"); } catch (e) {}
+        } else if (rk) {
+          try { showLessonBanner(rk); } catch (e) {}
+        }
+      }
+    } catch (eRank) {}
+
     if (!name) return;
     // Boss BGM continues through landing/report until hangar reset
     // (only stopped by stopAllTrainingAudio / hangar)
@@ -982,6 +1149,17 @@
       window.__airborneAirfieldObstacles = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 2.05;
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 200;
+      window.__airborneRingSpawned = 0;
+      window.__airborneRingMult = 1;
+      ruffStats.rings = 0;
+      ruffStats.ringMisses = 0;
+      ruffStats.ringStreak = 0;
+      ruffStats.ringBestStreak = 0;
+      ruffStats.ringPerfects = 0;
+      ruffStats.ringScore = 0;
+      ruffStats.ringRank = "";
+      ruffStats.ringPerfectFlight = false;
+      window.__airborneRingHud = { streak: 0, mult: 1, score: 0, lastPts: 0, flash: 0, title: "" };
     } else if (name === "platforms") {
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
@@ -3059,7 +3237,10 @@
       rows.innerHTML =
         row("SKY CRYSTALS", "×" + ruffStats.crystals) +
         row("COINS", "×" + (ruffStats.coins || 0)) +
-        row("RINGS", "×" + ruffStats.rings) +
+        row("RINGS", "×" + ruffStats.rings + " / " + (window.__airborneRingTotalTarget || 20)) +
+        row("RING STREAK", "best ×" + (ruffStats.ringBestStreak || 0)) +
+        row("RING SCORE", String(ruffStats.ringScore || 0)) +
+        row("RING RANK", (ruffStats.ringRank || "—") + (ruffStats.ringPerfectFlight ? "  PERFECT FLIGHT" : "")) +
         row("POWER-UPS", "×" + ruffStats.powerups) +
         row("OBSTACLES AVOIDED", "×" + ruffStats.obstaclesAvoided) +
         row("BEST COMBO", "×" + ruffStats.bestCombo) +

@@ -576,6 +576,7 @@ function loop(ts) {
     // Platforms behind blimps, birds, ruff, coins
     try { if (window.__airborneDrawTrainingPlatforms) window.__airborneDrawTrainingPlatforms(); } catch (e) {}
     try { if (typeof drawObstacles === "function") drawObstacles(); } catch (eObs) { console.warn("drawObstacles", eObs); }
+    try { if (window.__airborneDrawRingStreakHud) window.__airborneDrawRingStreakHud(ctx); } catch (eHud) {}
 
     if (bossActive) {
       drawBoss();

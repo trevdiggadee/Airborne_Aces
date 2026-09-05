@@ -745,6 +745,9 @@ window.__airborneRingDebug = false;
   window.drawHitCoins = drawHitCoins;
 
   function spawnGoldRing() {
+    var target = window.__airborneRingTotalTarget || 20;
+    if ((window.__airborneRingSpawned || 0) >= target) return;
+    window.__airborneRingSpawned = (window.__airborneRingSpawned || 0) + 1;
     window.__airborneRingSerial = (window.__airborneRingSerial || 0) + 1;
 
     const r = Math.min(48, W * 0.115); // gear portal size
@@ -1841,24 +1844,30 @@ window.__airborneRingDebug = false;
               }
               if (!o.passed) {
                 o.passed = true;
-                o.passGlowT = 0.85;
+                o.passGlowT = 0.95;
                 o.passPulse = 1;
                 o.passWhoosh = 1;
+                // Center quality 1 = dead center
+                var quality = 1 - Math.min(1, absDy / Math.max(8, g.holeH));
+                o.passQuality = quality;
+                var streakInfo = null;
                 try {
-                  if (typeof window.__airborneOnRingCollect === "function") window.__airborneOnRingCollect();
-                  else if (typeof sfxTrainingRing === "function") sfxTrainingRing();
-                  else if (typeof sfxRing === "function") sfxRing();
+                  if (typeof window.__airborneOnRingCollect === "function") {
+                    streakInfo = window.__airborneOnRingCollect(quality);
+                  }
                 } catch (eR) {}
+                if (streakInfo && streakInfo.colors) o.streakColors = streakInfo.colors;
+                else if (window.__airborneRingStreakColor) {
+                  o.streakColors = window.__airborneRingStreakColor((window.__airborneRingHud && window.__airborneRingHud.streak) || 1);
+                }
+                o.streakMult = (streakInfo && streakInfo.mult) || (window.__airborneRingMult || 1);
+                try {
+                  if (typeof sfxTrainingRing === "function") sfxTrainingRing();
+                  else if (typeof sfxRing === "function") sfxRing();
+                } catch (eS) {}
                 try {
                   if (window.__airborneRuffOnEvent) window.__airborneRuffOnEvent("ring");
                 } catch (e2) {}
-                try {
-                  if (typeof ruffStats !== "undefined" && ruffStats) ruffStats.rings = (ruffStats.rings || 0) + 1;
-                } catch (e3) {}
-                // Small forward joy boost
-                try {
-                  if (typeof player.vx === "number") player.vx += 20;
-                } catch (e4) {}
               }
             } else if (inRimBand && o.rimCool <= 0) {
               // Soft trampoline off metal — only if clearly outside hole
@@ -1912,7 +1921,14 @@ window.__airborneRingDebug = false;
       if (o.shockFall || o.electrified) {
         return o.y < H + 100 && o.x > -80 && o.x < W + 80;
       }
-      // Rings stay until they scroll off — no fade-out
+      // Rings: count miss if scrolled off without pass
+      if ((o.isRing || o.type === "gold_ring") && o.x < -120) {
+        if (!o.passed && !o._missed) {
+          o._missed = true;
+          try { if (window.__airborneOnRingMiss) window.__airborneOnRingMiss(); } catch (eM) {}
+        }
+        return false;
+      }
       return o.x > -150 && o.x < W + 200 && o.y > -150 && o.y < H + 150;
     });
   }
@@ -2018,27 +2034,47 @@ window.__airborneRingDebug = false;
     ctx.fill();
     ctx.restore();
 
-    // Pass-through celebration (only after successful hole pass)
+    // Streak-colored pass celebration
     if (o.passed && o.passGlowT > 0) {
       var gLife = Math.min(1, o.passGlowT / 0.85);
+      var sc = o.streakColors || { core: "#ffe8d0", mid: "#ff9040", outer: "#cc4010" };
+      var mult = o.streakMult || 1;
       ctx.save();
-      ctx.globalAlpha = 0.35 + 0.45 * gLife;
-      ctx.shadowColor = "rgba(255,90,50,0.9)";
-      ctx.shadowBlur = 22 * gLife;
-      var grd = ctx.createRadialGradient(cx, cy, rad * 0.1, cx, cy, rad * 1.35);
-      grd.addColorStop(0, "rgba(255,200,120," + (0.35 * gLife) + ")");
-      grd.addColorStop(0.4, "rgba(255,90,50," + (0.4 * gLife) + ")");
-      grd.addColorStop(1, "rgba(120,0,0,0)");
+      ctx.globalAlpha = 0.3 + 0.5 * gLife;
+      ctx.shadowColor = sc.mid;
+      ctx.shadowBlur = (18 + mult * 6) * gLife;
+      var grd = ctx.createRadialGradient(cx, cy, rad * 0.08, cx, cy, rad * (1.2 + mult * 0.08));
+      grd.addColorStop(0, sc.core);
+      grd.addColorStop(0.45, sc.mid);
+      grd.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = grd;
       ctx.beginPath();
-      ctx.ellipse(cx, cy, dw * 0.7, dh * 0.55, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, cy, dw * (0.65 + mult * 0.04), dh * (0.5 + mult * 0.03), 0, 0, Math.PI * 2);
       ctx.fill();
-      if (o.passPulse > 0) {
-        ctx.strokeStyle = "rgba(255,210,150," + (0.75 * o.passPulse) + ")";
-        ctx.lineWidth = 2.5;
+      // Extra shock rings at high streak
+      var ringsN = Math.min(4, 1 + Math.floor(mult));
+      for (var ri = 0; ri < ringsN; ri++) {
+        var t = (o.passPulse || 0) - ri * 0.12;
+        if (t <= 0) continue;
+        ctx.globalAlpha = 0.55 * t * gLife;
+        ctx.strokeStyle = sc.core;
+        ctx.lineWidth = 2 + mult * 0.4;
         ctx.beginPath();
-        ctx.ellipse(cx, cy, dw * (0.45 + 0.5 * (1 - o.passPulse)), dh * (0.38 + 0.4 * (1 - o.passPulse)), 0, 0, Math.PI * 2);
+        var grow = 0.4 + (1 - t) * (0.55 + ri * 0.12);
+        ctx.ellipse(cx, cy, dw * grow, dh * grow * 0.85, 0, 0, Math.PI * 2);
         ctx.stroke();
+      }
+      // Spark bursts at high mult
+      if (mult >= 3 && o.passWhoosh > 0) {
+        ctx.globalAlpha = o.passWhoosh * 0.9;
+        for (var si = 0; si < 6 + mult * 2; si++) {
+          var ang = (si / 12) * Math.PI * 2 + (1 - o.passWhoosh) * 2;
+          var rr = rad * (0.6 + (1 - o.passWhoosh) * 1.2);
+          ctx.fillStyle = sc.core;
+          ctx.beginPath();
+          ctx.arc(cx + Math.cos(ang) * rr, cy + Math.sin(ang) * rr * 1.2, 2 + mult * 0.3, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
       ctx.restore();
     }
