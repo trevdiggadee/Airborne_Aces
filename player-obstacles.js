@@ -1783,11 +1783,12 @@
           var pr = (o.r || o.w / 2) * 0.85;
           // Solid rim vs center hole only
           // Balanced: solid rim matches visible metal; center = black hole
-          // Visual ring is tall ellipse; black opening ~ middle third of height
           var outerW = pr * 0.52;
           var outerH = pr * 1.18;
-          var holeW = pr * 0.34;   // middle of previous strict/liberal
-          var holeH = pr * 0.58;   // roomy but not whole face
+          var holeW = pr * 0.34;
+          var holeH = pr * 0.58;
+          // Stash for debug overlay (same numbers as collision)
+          o._dbg = { rcx: rcx, rcy: rcy, outerW: outerW, outerH: outerH, holeW: holeW, holeH: holeH, pr: pr };
           var ph = (player.h || 36) * 0.28;
           var pw = (player.w || 40) * 0.28;
           var px = player.x + (player.w || 40) * 0.5;
@@ -2019,6 +2020,105 @@
     ctx.strokeText(String(num), cx, cy);
     ctx.fillText(String(num), cx, cy);
     ctx.restore();
+
+    // Debug collision boundaries (toggle: window.__airborneRingDebug = false to hide)
+    if (window.__airborneRingDebug !== false) {
+      var d = o._dbg;
+      var pr = (o.r || o.w / 2 || 40) * 0.85;
+      var outerW = d ? d.outerW : pr * 0.52;
+      var outerH = d ? d.outerH : pr * 1.18;
+      var holeW = d ? d.holeW : pr * 0.34;
+      var holeH = d ? d.holeH : pr * 0.58;
+      var midY = cy;
+      var topOuter = cy - outerH;
+      var botOuter = cy + outerH;
+      var topHole = cy - holeH;
+      var botHole = cy + holeH;
+      var left = cx - Math.max(outerW, holeW) - 20;
+      var right = cx + Math.max(outerW, holeW) + 20;
+      var span = right - left;
+
+      ctx.save();
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.95;
+      ctx.font = "bold 11px monospace";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+
+      // OUTER top (rim) — red
+      ctx.strokeStyle = "#ff2244";
+      ctx.fillStyle = "#ff2244";
+      ctx.beginPath();
+      ctx.moveTo(left, topOuter);
+      ctx.lineTo(right, topOuter);
+      ctx.stroke();
+      ctx.fillText("TOP RIM  y=" + Math.round(topOuter - midY), right + 4, topOuter);
+
+      // HOLE top (inside boundary) — lime
+      ctx.strokeStyle = "#44ff88";
+      ctx.fillStyle = "#44ff88";
+      ctx.beginPath();
+      ctx.moveTo(left, topHole);
+      ctx.lineTo(right, topHole);
+      ctx.stroke();
+      ctx.fillText("HOLE TOP  y=" + Math.round(topHole - midY), right + 4, topHole);
+
+      // CENTER zero — cyan
+      ctx.strokeStyle = "#33ccff";
+      ctx.fillStyle = "#33ccff";
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(left, midY);
+      ctx.lineTo(right, midY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillText("CENTER 0", right + 4, midY);
+
+      // HOLE bottom — lime
+      ctx.strokeStyle = "#44ff88";
+      ctx.fillStyle = "#44ff88";
+      ctx.beginPath();
+      ctx.moveTo(left, botHole);
+      ctx.lineTo(right, botHole);
+      ctx.stroke();
+      ctx.fillText("HOLE BOT  y=+" + Math.round(botHole - midY), right + 4, botHole);
+
+      // OUTER bottom (rim) — red
+      ctx.strokeStyle = "#ff2244";
+      ctx.fillStyle = "#ff2244";
+      ctx.beginPath();
+      ctx.moveTo(left, botOuter);
+      ctx.lineTo(right, botOuter);
+      ctx.stroke();
+      ctx.fillText("BOT RIM  y=+" + Math.round(botOuter - midY), right + 4, botOuter);
+
+      // Vertical center line
+      ctx.strokeStyle = "#33ccff";
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(cx, topOuter - 8);
+      ctx.lineTo(cx, botOuter + 8);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Hole zone fill (green tint)
+      ctx.globalAlpha = 0.12;
+      ctx.fillStyle = "#44ff88";
+      ctx.fillRect(cx - holeW, topHole, holeW * 2, holeH * 2);
+
+      // Rim zones fill (red tint) top + bottom
+      ctx.fillStyle = "#ff2244";
+      ctx.fillRect(cx - outerW, topOuter, outerW * 2, topHole - topOuter);
+      ctx.fillRect(cx - outerW, botHole, outerW * 2, botOuter - botHole);
+
+      // Legend
+      ctx.globalAlpha = 0.9;
+      ctx.font = "bold 10px monospace";
+      ctx.fillStyle = "#fff";
+      ctx.fillText("GREEN=pass  RED=bounce  CYAN=center 0", left, botOuter + 16);
+
+      ctx.restore();
+    }
     return true;
   }
 
