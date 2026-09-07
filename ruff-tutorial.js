@@ -137,35 +137,61 @@
   
   function showRingResultsBanner() {
     try {
-      if (window.__airborneRingResultsShown) return;
       window.__airborneRingResultsShown = true;
-      var rings = (ruffStats.rings || 0) + " / " + (window.__airborneRingTotalTarget || 20);
+      var n = (ruffStats && ruffStats.rings) ? ruffStats.rings : 0;
+      var totN = window.__airborneRingTotalTarget || 20;
+      var text = n + " / " + totN;
       var el = document.getElementById("aaRingResults");
-      if (!el) {
-        el = document.createElement("div");
-        el.id = "aaRingResults";
-        document.body.appendChild(el);
-      }
-      el.innerHTML =
-        '<div class="rr-banner">' +
-        '<div class="rr-total">' + rings + '</div>' +
-        '</div>';
-      el.style.cssText = "position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:80;pointer-events:none;";
+      if (el && el.parentNode) el.parentNode.removeChild(el);
+      el = document.createElement("div");
+      el.id = "aaRingResults";
+      el.setAttribute("role", "status");
+      el.innerHTML = '<div class="rr-banner"><div class="rr-total">' + text + '</div></div>';
+      el.style.cssText = [
+        "position:fixed", "left:0", "top:0", "right:0", "bottom:0",
+        "display:flex", "align-items:center", "justify-content:center",
+        "z-index:2147483646", "pointer-events:none",
+        "background:rgba(0,0,0,0.35)"
+      ].join(";");
+      document.body.appendChild(el);
       var b = el.querySelector(".rr-banner");
       if (b) {
-        b.style.cssText = "background:linear-gradient(160deg,#2a1c10,#1a1208);border:2px solid #c9a06a;border-radius:14px;padding:18px 28px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,0.55),0 0 24px rgba(200,140,60,0.25);color:#f5e6c8;font-family:Rockwell,Georgia,serif;min-width:220px;opacity:0;transform:scale(0.86);transition:opacity 0.35s ease,transform 0.35s ease;";
+        b.style.cssText = [
+          "background:linear-gradient(165deg,#3a2814,#1a1208)",
+          "border:3px solid #e0b060",
+          "border-radius:16px",
+          "padding:22px 36px",
+          "text-align:center",
+          "box-shadow:0 16px 48px rgba(0,0,0,0.65),0 0 28px rgba(255,180,60,0.35)",
+          "opacity:0",
+          "transform:scale(0.8)",
+          "transition:opacity 0.3s ease, transform 0.3s ease"
+        ].join(";");
+      }
+      var tot = el.querySelector(".rr-total");
+      if (tot) {
+        tot.textContent = text;
+        tot.style.cssText = [
+          "font:900 42px Rockwell,Georgia,serif",
+          "color:#ffe8b0",
+          "letter-spacing:0.08em",
+          "text-shadow:0 2px 8px #000,0 0 18px rgba(255,180,80,0.55)",
+          "line-height:1.1"
+        ].join(";");
       }
       requestAnimationFrame(function () {
-        if (b) { b.style.opacity = "1"; b.style.transform = "scale(1)"; }
+        requestAnimationFrame(function () {
+          if (b) { b.style.opacity = "1"; b.style.transform = "scale(1)"; }
+        });
       });
-      // Style children
-      var tot = el.querySelector(".rr-total");
-      if (tot) tot.style.cssText = "font-size:36px;font-weight:900;color:#ffe8b0;letter-spacing:0.06em;text-shadow:0 0 16px rgba(255,180,80,0.5);";
+      console.log("[Rings] results banner", text);
       setTimeout(function () {
-        if (b) { b.style.opacity = "0"; b.style.transform = "scale(0.92)"; }
-        setTimeout(function () { if (el && el.parentNode) el.parentNode.removeChild(el); }, 400);
-      }, 3200);
-    } catch (e) { console.warn("ring results", e); }
+        if (b) { b.style.opacity = "0"; b.style.transform = "scale(0.9)"; }
+        setTimeout(function () {
+          try { if (el && el.parentNode) el.parentNode.removeChild(el); } catch (e) {}
+        }, 350);
+      }, 3400);
+    } catch (e) { console.warn("ring results", e); window.__airborneRingResultsShown = true; }
   }
   window.showRingResultsBanner = showRingResultsBanner;
 
@@ -3295,10 +3321,14 @@
     // Score report keeps rank medal (medal_badge) — NOT boss weapon asset
 
     if (rows) {
+      var ringTxt = (ruffStats.rings || 0) + " / " + (window.__airborneRingTotalTarget || 20);
       rows.innerHTML =
-        '<div class="ruffRow" style="justify-content:center;font-size:1.35em;font-weight:900;letter-spacing:0.04em;">' +
-        (ruffStats.rings || 0) + " / " + (window.__airborneRingTotalTarget || 20) +
-        '</div>';
+        '<div class="row" style="justify-content:center;flex:1;align-items:center;">' +
+        '<span></span><span style="display:block!important;font-size:1.6em;font-weight:900;color:#2c1f0e;text-align:center;width:100%;">' +
+        ringTxt + '</span></div>';
+      rows.style.pointerEvents = "none";
+      rows.style.opacity = "1";
+      rows.style.visibility = "visible";
     }
 
     // Prefer live score; if zero, derive a training score from stats so popup isn't stuck at 0
@@ -3312,11 +3342,13 @@
       var derived = (ruffStats.crystals || 0) * 25
         + (ruffStats.coins || 0) * 10
         + (ruffStats.rings || 0) * 50
-        + (ruffStats.powerups || 0) * 100
+        + (ruffStats.ringScore || 0)
         + (ruffStats.obstaclesAvoided || 0) * 15
         + (ruffStats.bestCombo || 0) * 20
         + Math.max(1, ruffStats.landingStars || 3) * 50;
-      if (sc < derived) sc = derived;
+      if (!(sc > 0)) sc = derived;
+      else if (sc < derived) sc = derived;
+      if (!(sc > 0)) sc = Math.max(1, (ruffStats.rings || 0) * 50);
       if (typeof score === "number" && score < sc) {
         score = sc;
         try {
@@ -3351,9 +3383,7 @@
 
     if (final) {
       final.innerHTML = '<span class="fsLabel">FINAL SCORE</span><span class="fsValue">0</span>';
-      final.style.opacity = "1";
-      final.style.filter = "none";
-      final.style.color = "#f0d878";
+      final.style.cssText = "position:absolute;left:10%;right:10%;top:52%;height:22%;display:flex!important;flex-direction:column;align-items:center;justify-content:center;text-align:center;opacity:1!important;visibility:visible!important;z-index:20;color:#f0d878;pointer-events:none;";
       final.classList.remove("fadeOut");
     }
     if (rankBanner) {
@@ -3546,16 +3576,15 @@
       var layer = document.getElementById("platDomLayer");
       if (layer) { layer.innerHTML = ""; layer.remove(); }
     } catch (e) {}
+    try { if (window.__airborneClearObstacles) window.__airborneClearObstacles(); } catch (e) {}
     try {
-      if (typeof obstacles !== "undefined") obstacles = [];
-      if (typeof birdFlocks !== "undefined") birdFlocks = [];
-      if (typeof bombs !== "undefined") bombs = [];
-      if (typeof rockets !== "undefined") rockets = [];
+      if (typeof birdFlocks !== "undefined" && birdFlocks && birdFlocks.length) birdFlocks.length = 0;
+      if (typeof bombs !== "undefined" && bombs && bombs.length) bombs.length = 0;
+      if (typeof rockets !== "undefined" && rockets && rockets.length) rockets.length = 0;
       if (typeof powerup !== "undefined") powerup = null;
       if (typeof shieldPickup !== "undefined") shieldPickup = null;
-      if (typeof particles !== "undefined") particles = [];
+      if (typeof particles !== "undefined" && particles && particles.length) particles.length = 0;
     } catch (e) {}
-    try { if (window.__airborneClearObstacles) window.__airborneClearObstacles(); } catch (e) {}
 
     try {
       ruffActive = false;
@@ -3598,6 +3627,29 @@
     window.__airborneAirfieldAllowPowerup = true;
     window.__airborneEndCelebrationDone = false;
     window.__airborneEndCelebration = null;
+    window.__airborneRingResultsShown = false;
+    window.__airborneRingResultsHoldT = 0;
+    window.__airborneRingSpawned = 0;
+    window.__airborneRingSerial = 0;
+    window.__airborneRingsPreSpawned = false;
+    window.__airborneRingTotalTarget = 20;
+    window.__airborneRankUpPlayed = false;
+    window.__airborneAirfield = false;
+    window.__airborneTrainingFlight = false;
+    window.__airborneAirfieldInvuln = false;
+    window.__airborneAirfieldObstacles = false;
+    window.__airborneAirfieldRings = false;
+    window.__airborneAirfieldPhase = "idle";
+    window.__airborneTaxiUntil = 0;
+    try {
+      if (typeof score !== "undefined") score = 0;
+      if (typeof health !== "undefined" && typeof MAX_HEALTH !== "undefined") health = MAX_HEALTH;
+      if (typeof invulnerableUntil !== "undefined") invulnerableUntil = 0;
+    } catch (e) {}
+    try {
+      var rr = document.getElementById("aaRingResults");
+      if (rr && rr.parentNode) rr.parentNode.removeChild(rr);
+    } catch (e) {}
     window.__airborneRankUpPlayed = false;
     window.__airborneLandTouchAt = 0;
     window.__airborneTaxiUntil = 0;
@@ -3663,6 +3715,13 @@
   function finishToHangar_mark(){ try { window.__airborneOneShotUsed = {}; } catch(e) {} }
   function finishToHangar() {
     window.__airborneReturnToHangar = true;
+    try {
+      var po = document.getElementById("pauseOverlay");
+      if (po) { po.classList.add("hidden"); po.setAttribute("aria-hidden", "true"); }
+      document.body.classList.remove("pause-open");
+      window.__airborneAirfieldPaused = false;
+      if (typeof state !== "undefined" && state === "paused") state = "menu";
+    } catch (e) {}
     try { hardResetTrainingState(); } catch (e) {}
     try { stopAllTrainingAudio(); } catch (e) {}
     try { hideFlightTrace(); } catch (e) {}
@@ -3888,6 +3947,29 @@ function finishToMap() {
     // Large centered FLIGHT TRAINING banner
     window.__airborneEndCelebrationDone = false;
     window.__airborneEndCelebration = null;
+    window.__airborneRingResultsShown = false;
+    window.__airborneRingResultsHoldT = 0;
+    window.__airborneRingSpawned = 0;
+    window.__airborneRingSerial = 0;
+    window.__airborneRingsPreSpawned = false;
+    window.__airborneRingTotalTarget = 20;
+    window.__airborneRankUpPlayed = false;
+    window.__airborneAirfield = false;
+    window.__airborneTrainingFlight = false;
+    window.__airborneAirfieldInvuln = false;
+    window.__airborneAirfieldObstacles = false;
+    window.__airborneAirfieldRings = false;
+    window.__airborneAirfieldPhase = "idle";
+    window.__airborneTaxiUntil = 0;
+    try {
+      if (typeof score !== "undefined") score = 0;
+      if (typeof health !== "undefined" && typeof MAX_HEALTH !== "undefined") health = MAX_HEALTH;
+      if (typeof invulnerableUntil !== "undefined") invulnerableUntil = 0;
+    } catch (e) {}
+    try {
+      var rr = document.getElementById("aaRingResults");
+      if (rr && rr.parentNode) rr.parentNode.removeChild(rr);
+    } catch (e) {}
     window.__airborneTrainingReportShown = false;
     window.__airborneTrainingReportReady = false;
     try {

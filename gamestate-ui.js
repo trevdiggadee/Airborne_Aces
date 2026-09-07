@@ -1036,6 +1036,8 @@
       try {
         if (typeof window.__airborneFinishToHangar === "function") {
           window.__airborneFinishToHangar();
+        } else if (typeof window.__airborneFinishToHangar === "function") {
+          window.__airborneFinishToHangar();
         } else if (typeof finishToHangar === "function") {
           finishToHangar();
         }

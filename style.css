@@ -3660,3 +3660,24 @@ canvas {
 #heroStage img, .stageBlimp, #blimpHero {
   filter: drop-shadow(0 18px 14px rgba(0,0,0,0.45)) drop-shadow(0 6px 6px rgba(0,0,0,0.25));
 }
+
+#ruffReportRows .row span:last-child {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  color: #2c1f0e !important;
+  font-weight: 900 !important;
+}
+#ruffFinalScore .fsValue {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  color: #f0d878 !important;
+  font-size: 1.5em !important;
+}
+#ruffReport.visible {
+  z-index: 120 !important;
+}
+#aaRingResults {
+  z-index: 2147483646 !important;
+}
