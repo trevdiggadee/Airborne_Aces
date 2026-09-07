@@ -756,12 +756,22 @@ window.__airborneRingDebug = false;
     if (!(r > 0)) r = 42;
     var groundY = Hh * 0.88;
     try { if (typeof groundLevelY === "function") groundY = groundLevelY(); } catch (e) {}
-    var minY = Hh * 0.16;
-    var maxY = groundY - Hh * 0.18;
-    if (!(maxY > minY)) { minY = Hh * 0.22; maxY = Hh * 0.68; }
-    var idx = window.__airborneRingSpawned;
-    var wave = Math.sin(idx * 0.55) * 0.35 + Math.sin(idx * 0.21) * 0.2;
-    var y = minY + (maxY - minY) * (0.5 + wave * 0.45);
+    // Full flyable band — top, high, mid, low, bottom lanes
+    var minY = Hh * 0.12;
+    var maxY = groundY - Hh * 0.14;
+    if (!(maxY > minY + 40)) { minY = Hh * 0.14; maxY = Hh * 0.78; }
+    var idx = window.__airborneRingSpawned; // 1..20 after increment
+    // Deliberate path: climb / dive / weave so each ring is in a different zone
+    var lanes = [
+      0.18, 0.72, 0.35, 0.88, 0.50,
+      0.12, 0.65, 0.42, 0.80, 0.28,
+      0.55, 0.15, 0.90, 0.38, 0.70,
+      0.22, 0.60, 0.85, 0.45, 0.32
+    ];
+    var t = lanes[(Math.max(1, idx) - 1) % lanes.length];
+    // Small jitter so it never looks robotic
+    t = Math.max(0.08, Math.min(0.92, t + (Math.random() - 0.5) * 0.06));
+    var y = minY + (maxY - minY) * t;
     var spawnX = (typeof optX === "number") ? optX : (Ww + r * 2);
     var ring = {
       type: "gold_ring",

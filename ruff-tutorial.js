@@ -4063,15 +4063,26 @@ function finishToMap() {
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 220;
       window.__airborneRingTotalTarget = 20;
 
-      // Sequential spawn: 1 ring every 1.25s until 20 total
+      // Sequential spawn: 1 ring every 1.15s until exactly 20
       window.__airborneRingSpawnT = (window.__airborneRingSpawnT || 0) + dt;
       var spawned = window.__airborneRingSpawned || 0;
-      if (spawned < 20 && window.__airborneRingSpawnT >= 1.25) {
+      var spawnEvery = 1.15;
+      // If we're short near the end, spawn faster so we always hit 20
+      if (spawned >= 15 && spawned < 20) spawnEvery = 0.85;
+      if (spawned < 20 && window.__airborneRingSpawnT >= spawnEvery) {
         window.__airborneRingSpawnT = 0;
         try {
           if (typeof window.spawnNextTrainingRing === "function") window.spawnNextTrainingRing();
           else if (typeof window.spawnGoldRing === "function") window.spawnGoldRing();
         } catch (eSp) { console.warn("ring seq", eSp); }
+        spawned = window.__airborneRingSpawned || 0;
+      }
+      // Hard guarantee: if timer somehow skips the 20th, force it
+      if (spawned === 19 && ruffStageT > 22) {
+        try {
+          if (typeof window.spawnNextTrainingRing === "function") window.spawnNextTrainingRing();
+          else if (typeof window.spawnGoldRing === "function") window.spawnGoldRing();
+        } catch (e20) {}
         spawned = window.__airborneRingSpawned || 0;
       }
 
@@ -4091,7 +4102,7 @@ function finishToMap() {
 
       // Must release all 20 AND wait until none remain on screen
       // Also require enough time for the sequence (20 * 1.25 ≈ 25s min)
-      if (spawned >= 20 && ringsLeft === 0 && ruffStageT > 28) {
+      if (spawned >= 20 && ringsLeft === 0 && ruffStageT > 26) {
         try { if (window.__airborneComputeRingRank) window.__airborneComputeRingRank(); } catch (e) {}
         setStage("platforms");
         console.log("[R.U.F.F.] rings → platforms (20 done, spawned=" + spawned + ")");
