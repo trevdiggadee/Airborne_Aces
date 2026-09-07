@@ -1159,17 +1159,20 @@
       window.__airborneRingSpawnT = 0;
       window.__airborneRingsPreSpawned = false;
       window.__airborneRingTotalTarget = 20;
-      function __doRingPrespawn() {
-        try {
-          if (typeof window.spawnAllTrainingRings === "function") {
-            window.spawnAllTrainingRings(20);
-            window.__airborneRingsPreSpawned = true;
-            console.log("[R.U.F.F.] rings prespawn done", window.__airborneRingSpawned);
+      window.__airborneRingSpawned = 0;
+      window.__airborneRingSerial = 0;
+      window.__airborneRingSpawnT = 1.2; // first ring almost immediately
+      // Clear any leftover rings via real API
+      try {
+        var arr = window.__airborneGetObstacles && window.__airborneGetObstacles();
+        if (arr && arr.length) {
+          for (var zi = arr.length - 1; zi >= 0; zi--) {
+            var zo = arr[zi];
+            if (zo && (zo.isRing || zo.type === "gold_ring")) arr.splice(zi, 1);
           }
-        } catch (ePS2) { console.warn(ePS2); }
-      }
-      __doRingPrespawn();
-      setTimeout(__doRingPrespawn, 50);
+        }
+      } catch (eClr) {}
+      console.log("[R.U.F.F.] rings stage start — sequential 20");
       window.__airborneRingMult = 1;
       ruffStats.rings = 0;
       ruffStats.ringMisses = 0;
@@ -4055,40 +4058,47 @@ function finishToMap() {
       }
     } else if (ruffStage === "rings") {
       window.__airborneAirfieldObstacles = false;
-      window.__airborneAirfieldRings = false; // don't use generic spawn path
+      window.__airborneAirfieldRings = false; // dedicated spawner only
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 220; // +10%
-
-      // Ensure full set exists (once)
-      var ringTarget = 20;
+      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 220;
       window.__airborneRingTotalTarget = 20;
-      if (!window.__airborneRingsPreSpawned || (window.__airborneRingSpawned || 0) < 20) {
+
+      // Sequential spawn: 1 ring every 1.25s until 20 total
+      window.__airborneRingSpawnT = (window.__airborneRingSpawnT || 0) + dt;
+      var spawned = window.__airborneRingSpawned || 0;
+      if (spawned < 20 && window.__airborneRingSpawnT >= 1.25) {
+        window.__airborneRingSpawnT = 0;
         try {
-          if (typeof window.spawnAllTrainingRings === "function") window.spawnAllTrainingRings(20);
-        } catch (ePS) { console.warn("prespawn", ePS); }
-        if ((window.__airborneRingSpawned || 0) >= 20) window.__airborneRingsPreSpawned = true;
+          if (typeof window.spawnNextTrainingRing === "function") window.spawnNextTrainingRing();
+          else if (typeof window.spawnGoldRing === "function") window.spawnGoldRing();
+        } catch (eSp) { console.warn("ring seq", eSp); }
+        spawned = window.__airborneRingSpawned || 0;
       }
 
-      var spawned = window.__airborneRingSpawned || 0;
+      // Count rings from the REAL obstacles list
       var ringsLeft = 0;
       try {
-        if (typeof obstacles !== "undefined" && obstacles) {
-          for (var ri = 0; ri < obstacles.length; ri++) {
-            var ro = obstacles[ri];
-            if (ro && (ro.isRing || ro.type === "gold_ring") && (ro.x + (ro.w || 40) > -20)) ringsLeft++;
+        if (typeof window.__airborneCountTrainingRings === "function") {
+          ringsLeft = window.__airborneCountTrainingRings();
+        } else if (typeof window.__airborneGetObstacles === "function") {
+          var arr = window.__airborneGetObstacles() || [];
+          for (var ri = 0; ri < arr.length; ri++) {
+            var ro = arr[ri];
+            if (ro && (ro.isRing || ro.type === "gold_ring") && (ro.x + (ro.w || 40) > -30)) ringsLeft++;
           }
         }
       } catch (eRL) {}
 
-      // Advance only when every pre-spawned ring has scrolled off
-      if (spawned >= 20 && ringsLeft === 0 && ruffStageT > 5) {
+      // Must release all 20 AND wait until none remain on screen
+      // Also require enough time for the sequence (20 * 1.25 ≈ 25s min)
+      if (spawned >= 20 && ringsLeft === 0 && ruffStageT > 28) {
         try { if (window.__airborneComputeRingRank) window.__airborneComputeRingRank(); } catch (e) {}
         setStage("platforms");
-        console.log("[R.U.F.F.] rings → platforms (20 complete, left=0)");
-      } else if (ruffStageT > 180) {
+        console.log("[R.U.F.F.] rings → platforms (20 done, spawned=" + spawned + ")");
+      } else if (ruffStageT > 200) {
         try { if (window.__airborneComputeRingRank) window.__airborneComputeRingRank(); } catch (e) {}
         setStage("platforms");
-        console.log("[R.U.F.F.] rings → platforms (timeout)");
+        console.log("[R.U.F.F.] rings → platforms (timeout spawned=" + spawned + " left=" + ringsLeft + ")");
       }
     } else if (ruffStage === "crystals" || ruffStage === "powerup") {
       setStage("obstacles");

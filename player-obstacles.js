@@ -236,8 +236,8 @@ window.__airborneRingDebug = false;
   // ---------- Obstacles ----------
   let obstacles = [];
   window.__airborneClearObstacles = function () {
-    try { obstacles.length = 0; obstacles = []; } catch (e) {}
-    try { if (typeof hearts !== "undefined") { hearts.length = 0; hearts = []; } } catch (e) {}
+    try { obstacles.length = 0; } catch (e) {}
+    try { if (typeof hearts !== "undefined") hearts.length = 0; } catch (e) {}
     try {
       window.__airborneFirePowerActive = false;
       window.__airborneFirePickup = null;
@@ -789,27 +789,56 @@ window.__airborneRingDebug = false;
   window.spawnGoldRing = spawnGoldRing;
 
   /** Pre-place all training rings so the lesson always gets exactly N. */
+  function countTrainingRings() {
+    var n = 0;
+    for (var i = 0; i < obstacles.length; i++) {
+      var o = obstacles[i];
+      if (o && (o.isRing || o.type === "gold_ring")) n++;
+    }
+    return n;
+  }
+  window.__airborneCountTrainingRings = countTrainingRings;
+
   function spawnAllTrainingRings(n) {
     n = n || 20;
     window.__airborneRingTotalTarget = n;
+    // Do NOT wipe spawned counter if rings already in play mid-stage
+    // Only used for full reset at stage start
     window.__airborneRingSpawned = 0;
     window.__airborneRingSerial = 0;
-    // Strip old rings in place — never reassign the obstacles array
     for (var i = obstacles.length - 1; i >= 0; i--) {
       var oo = obstacles[i];
       if (oo && (oo.isRing || oo.type === "gold_ring")) obstacles.splice(i, 1);
     }
     var Ww = (typeof W === "number" && W > 50) ? W : (window.innerWidth || 400);
     var Hh = (typeof H === "number" && H > 50) ? H : (window.innerHeight || 700);
-    var gap = Math.max(155, Ww * 0.36);
-    var startX = Ww + 100;
+    var gap = Math.max(150, Ww * 0.34);
+    var startX = Ww + 120;
     for (var k = 0; k < n; k++) {
-      spawnGoldRing(startX + k * gap, Ww, Hh);
+      spawnGoldRing(startX + k * gap);
     }
     window.__airborneObstacles = obstacles;
-    console.log("[Rings] pre-spawned", window.__airborneRingSpawned, "/", n, "obstacles", obstacles.length);
+    console.log("[Rings] pre-spawned", window.__airborneRingSpawned, "/", n, "live", countTrainingRings());
   }
   window.spawnAllTrainingRings = spawnAllTrainingRings;
+
+  /** Spawn the next single ring in the 20-ring sequence (safe, one at a time). */
+  function spawnNextTrainingRing() {
+    var target = window.__airborneRingTotalTarget || 20;
+    if ((window.__airborneRingSpawned || 0) >= target) return false;
+    var Ww = (typeof W === "number" && W > 50) ? W : (window.innerWidth || 400);
+    var gap = Math.max(150, Ww * 0.34);
+    var lastX = Ww + 40;
+    for (var i = 0; i < obstacles.length; i++) {
+      var o = obstacles[i];
+      if (o && (o.isRing || o.type === "gold_ring") && o.x > lastX) lastX = o.x;
+    }
+    var x = Math.max(Ww + 100, lastX + gap);
+    spawnGoldRing(x);
+    return true;
+  }
+  window.spawnNextTrainingRing = spawnNextTrainingRing;
+
 
 
 
