@@ -1525,12 +1525,12 @@ html, body {
   /* STORM POWER-UP — bottom-left corner, icon only, no box */
   #stormMeter.trainingPos {
     position: fixed !important;
-    left: 50% !important;
-    right: auto !important;
-    bottom: 22px !important;
+    left: auto !important;
+    right: 12px !important;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 6px) !important;
     top: auto !important;
-    transform: translateX(-50%) !important;
-    z-index: 45 !important;
+    transform: none !important;
+    z-index: 50 !important;
   }
   #stormMeter.trainingPos #stormIcon {
     width: 100%;
@@ -3632,28 +3632,25 @@ canvas {
   height: auto !important;
 }
 
-/* Force power/progress dock bottom-center */
+/* Power/progress — far right, lowered */
 #unifiedDock.trainingShow,
 #unifiedDock.gameActive.trainingShow {
   position: fixed !important;
-  left: 50% !important;
-  right: auto !important;
-  bottom: 20px !important;
+  left: auto !important;
+  right: 12px !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 6px) !important;
   top: auto !important;
-  transform: translateX(-50%) !important;
-  margin: 0 !important;
+  transform: none !important;
   z-index: 50 !important;
   display: flex !important;
-  justify-content: center !important;
-  align-items: flex-end !important;
   width: auto !important;
 }
 #stormMeter.trainingPos {
-  position: relative !important;
+  position: fixed !important;
   left: auto !important;
-  right: auto !important;
-  bottom: auto !important;
+  right: 12px !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 6px) !important;
   top: auto !important;
   transform: none !important;
-  margin: 0 auto !important;
+  z-index: 50 !important;
 }

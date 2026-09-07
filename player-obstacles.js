@@ -1833,7 +1833,14 @@ window.__airborneRingDebug = false;
         if (window.__airborneAirfield && window.__airborneAirfieldObstacles) {
           birdSpdMul = (window.__airborneRuffStage === "obstacles") ? 0.90 : 1.18; // -10% on first bird lesson
         }
-        o.x -= obstacleSpeed * birdSpdMul * (o.speedMult || 1) * dt;
+        if (o.reflecting) {
+          o.x += (o.vx || 0) * dt;
+          o.y += (o.vy || 0) * dt;
+          o.vy = (o.vy || 0) + 420 * dt;
+          o.rot = (o.rot || 0) + (o.spinVel || 8) * dt;
+        } else {
+          o.x -= obstacleSpeed * birdSpdMul * (o.speedMult || 1) * dt;
+        }
         if (o.isDrone || o.type === "drone_scout") {
           if (!(o.droneBaseY > 0)) o.droneBaseY = (typeof o.y === "number" && o.y === o.y) ? o.y : 200;
           o.droneZig = (o.droneZig || 0) + (o.droneZigSpd || 2) * dt;
