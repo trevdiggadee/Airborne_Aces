@@ -121,6 +121,7 @@
       title: quality >= 0.72 ? "PERFECT" : (mult >= 3 ? "STREAK x" + mult : "RING")
     };
     ruffStats.bestCombo = Math.max(ruffStats.bestCombo || 0, ruffStats.ringStreak);
+    try { maybeFinishRingsLesson(); } catch (e) {}
     return { mult: mult, pts: pts, streak: ruffStats.ringStreak, colors: ringStreakColor(ruffStats.ringStreak) };
   }
   function onRingMissed() {
@@ -133,6 +134,7 @@
     window.__airborneRingHud.flash = 0.6;
     window.__airborneRingHud.title = "MISS";
     window.__airborneRingHud.lastPts = 0;
+    try { maybeFinishRingsLesson(); } catch (e) {}
   }
   
   function showRingResultsBanner() {
@@ -141,59 +143,64 @@
       var n = (ruffStats && ruffStats.rings) ? ruffStats.rings : 0;
       var totN = window.__airborneRingTotalTarget || 20;
       var text = n + " / " + totN;
-      var el = document.getElementById("aaRingResults");
-      if (el && el.parentNode) el.parentNode.removeChild(el);
-      el = document.createElement("div");
-      el.id = "aaRingResults";
-      el.setAttribute("role", "status");
-      el.innerHTML = '<div class="rr-banner"><div class="rr-total">' + text + '</div></div>';
-      el.style.cssText = [
-        "position:fixed", "left:0", "top:0", "right:0", "bottom:0",
-        "display:flex", "align-items:center", "justify-content:center",
-        "z-index:2147483646", "pointer-events:none",
-        "background:rgba(0,0,0,0.35)"
-      ].join(";");
-      document.body.appendChild(el);
-      var b = el.querySelector(".rr-banner");
-      if (b) {
-        b.style.cssText = [
-          "background:linear-gradient(165deg,#3a2814,#1a1208)",
-          "border:3px solid #e0b060",
-          "border-radius:16px",
-          "padding:22px 36px",
-          "text-align:center",
-          "box-shadow:0 16px 48px rgba(0,0,0,0.65),0 0 28px rgba(255,180,60,0.35)",
-          "opacity:0",
-          "transform:scale(0.8)",
-          "transition:opacity 0.3s ease, transform 0.3s ease"
-        ].join(";");
-      }
-      var tot = el.querySelector(".rr-total");
-      if (tot) {
-        tot.textContent = text;
-        tot.style.cssText = [
-          "font:900 42px Rockwell,Georgia,serif",
-          "color:#ffe8b0",
-          "letter-spacing:0.08em",
-          "text-shadow:0 2px 8px #000,0 0 18px rgba(255,180,80,0.55)",
-          "line-height:1.1"
-        ].join(";");
-      }
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-          if (b) { b.style.opacity = "1"; b.style.transform = "scale(1)"; }
-        });
+
+      // Remove any old
+      ["aaRingResults", "aaRingSummary"].forEach(function (id) {
+        var old = document.getElementById(id);
+        if (old && old.parentNode) old.parentNode.removeChild(old);
       });
-      console.log("[Rings] results banner", text);
+
+      var el = document.createElement("div");
+      el.id = "aaRingSummary";
+      el.innerHTML = '<div style="font:900 48px/1.1 Rockwell,Georgia,serif;color:#ffe8b0;' +
+        'text-shadow:0 3px 0 #5a3a10,0 0 24px rgba(255,200,80,0.7),0 8px 28px rgba(0,0,0,0.6);' +
+        'letter-spacing:0.06em;padding:16px 28px;border-radius:16px;' +
+        'background:rgba(20,12,6,0.72);border:3px solid #e0b060;' +
+        'box-shadow:0 12px 40px rgba(0,0,0,0.55);">' + text + '</div>';
+      el.style.cssText = "position:fixed;left:0;top:0;right:0;bottom:0;display:flex;" +
+        "align-items:center;justify-content:center;z-index:2147483647;pointer-events:none;" +
+        "opacity:0;transition:opacity 0.35s ease;";
+      document.body.appendChild(el);
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { el.style.opacity = "1"; });
+      });
+      window.__airborneRingResultsCanvas = { t: 0, life: 3.8, text: text };
+      console.log("[Rings] SUMMARY", text);
       setTimeout(function () {
-        if (b) { b.style.opacity = "0"; b.style.transform = "scale(0.9)"; }
-        setTimeout(function () {
-          try { if (el && el.parentNode) el.parentNode.removeChild(el); } catch (e) {}
-        }, 350);
-      }, 3400);
-    } catch (e) { console.warn("ring results", e); window.__airborneRingResultsShown = true; }
+        try {
+          el.style.opacity = "0";
+          setTimeout(function () {
+            try { if (el.parentNode) el.parentNode.removeChild(el); } catch (e) {}
+          }, 400);
+        } catch (e) {}
+      }, 3600);
+    } catch (e) {
+      console.warn("ring summary", e);
+      window.__airborneRingResultsShown = true;
+    }
   }
   window.showRingResultsBanner = showRingResultsBanner;
+
+  function maybeFinishRingsLesson() {
+    try {
+      if (window.__airborneRingResultsShown) return;
+      if ((window.__airborneRuffStage || ruffStage) !== "rings") return;
+      var target = window.__airborneRingTotalTarget || 20;
+      var spawned = window.__airborneRingSpawned || 0;
+      var resolved = (ruffStats.rings || 0) + (ruffStats.ringMisses || 0);
+      if (spawned >= target && resolved >= target) {
+        try { if (window.__airborneComputeRingRank) window.__airborneComputeRingRank(); } catch (e) {}
+        showRingResultsBanner();
+        // Continue flying into next lesson under the banner
+        setTimeout(function () {
+          try {
+            if ((window.__airborneRuffStage || ruffStage) === "rings") setStage("platforms");
+          } catch (e) {}
+        }, 400);
+      }
+    } catch (e) {}
+  }
+
 
   function computeRingRank() {
     var total = window.__airborneRingTotalTarget || 20;
@@ -1094,9 +1101,9 @@
         combined: "Combined Practice",
         boss1: "Boss Fight",
         landing: "Landing",
-        report: "Flight Report"
+        // report: no lesson banner
       };
-      if (lessonTitles[name]) showLessonBanner(lessonTitles[name]);
+      if (name !== "report" && lessonTitles[name]) showLessonBanner(lessonTitles[name]);
     } catch (eBan) {}
 
     ruffStageT = 0;
@@ -4263,6 +4270,8 @@ function finishToMap() {
         console.log("[R.U.F.F.] platforms → obstacles (timeout)");
       }
     } else if (ruffStage === "obstacles") {
+      window.__airborneAirfieldInvuln = false;
+      window.__airborneAirfieldObstacles = true;
       // Keep platform-attached coins until platforms scroll off
       try {
         ruffCoins = (ruffCoins || []).filter(function (c) { return c && c.fixedToPlatform && !c.collected; });

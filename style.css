@@ -3686,19 +3686,7 @@ canvas {
 #ruffReportLabel,
 #ruffFinalScore .fsLabel { display: none !important; }
 
-/* Cover baked-in FLIGHT REPORT title on panel art */
-#ruffReport .flightReportPanel::before {
-  content: "";
-  position: absolute;
-  left: 6%;
-  right: 6%;
-  top: 2.5%;
-  height: 7.5%;
-  background: linear-gradient(180deg, #e8d4a8 0%, #dcc890 40%, #d4c088 100%);
-  border-radius: 4px;
-  z-index: 5;
-  pointer-events: none;
-}
+/* title cover removed */
 #ruffReport .flightReportPanel h2,
 #ruffReportLabel,
 #ruffFinalScore .fsLabel,

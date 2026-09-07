@@ -433,18 +433,22 @@
   function takeHit() {
     if (state !== "playing") return;
     if (bonusActive) return;
-    // Scripted airfield phases — no damage
-    if (window.__airborneAirfieldInvuln ||
-        (window.__airborneAirfield &&
-         (window.__airborneAirfieldPhase === "taxi" ||
-          window.__airborneAirfieldPhase === "accel" ||
-          window.__airborneAirfieldPhase === "climb" ||
-          window.__airborneAirfieldPhase === "land" ||
-          window.__airborneAirfieldPhase === "rollout" ||
-          window.__airborneAirfieldPhase === "skid" ||
-          window.__airborneAirfieldPhase === "score" ||
-          window.__airborneAirfieldPhase === "done"))) {
-      return;
+    // Scripted airfield phases — no damage (except obstacle combat lessons)
+    var stHit = window.__airborneRuffStage || "";
+    var combatLesson = (stHit === "obstacles" || stHit === "shield" || stHit === "combined");
+    if (!combatLesson) {
+      if (window.__airborneAirfieldInvuln ||
+          (window.__airborneAirfield &&
+           (window.__airborneAirfieldPhase === "taxi" ||
+            window.__airborneAirfieldPhase === "accel" ||
+            window.__airborneAirfieldPhase === "climb" ||
+            window.__airborneAirfieldPhase === "land" ||
+            window.__airborneAirfieldPhase === "rollout" ||
+            window.__airborneAirfieldPhase === "skid" ||
+            window.__airborneAirfieldPhase === "score" ||
+            window.__airborneAirfieldPhase === "done"))) {
+        return;
+      }
     }
     if (shieldActive || window.__airborneShieldActive) {
       spawnHitParticles(player.x, player.y);

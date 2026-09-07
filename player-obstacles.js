@@ -2048,15 +2048,13 @@ window.__airborneRingDebug = false;
           var dx = Math.abs(player.x - cx);
           var dy = Math.abs(player.y - cy);
           // Classic tighter hitbox (felt best historically)
-          var hw = (player.w || 48) * 0.35 + (co.w || 40) * 0.32;
-          var hh = (player.h || 36) * 0.35 + (co.h || 40) * 0.32;
+          var hw = (player.w || 48) * 0.40 + (co.w || 40) * 0.36;
+          var hh = (player.h || 36) * 0.40 + (co.h || 40) * 0.36;
           if (dx < hw && dy < hh) {
-            if (window.__airborneAirfieldInvuln &&
-                window.__airborneRuffStage !== "obstacles" &&
-                window.__airborneRuffStage !== "shield" &&
-                window.__airborneRuffStage !== "combined") {
-              continue;
-            }
+            // Combat lessons always collide; ignore sticky invuln flag
+            var stC = window.__airborneRuffStage || "";
+            var combat = (stC === "obstacles" || stC === "shield" || stC === "combined");
+            if (!combat && window.__airborneAirfieldInvuln) continue;
             if (typeof shieldActive !== "undefined" && shieldActive) {
               // Shield absorbs: mark scored so no re-trigger, path unchanged
               co.scored = true;
