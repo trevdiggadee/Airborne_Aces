@@ -177,6 +177,8 @@ window.__airborneRingDebug = false;
 
   function drawBlimpSurfaceShadow() {
     try {
+      // In-game shadow disabled — menu blimp uses separate soft shadow
+      if (!(window.__airborneMenuBlimpShadow)) return;
       if (typeof ctx === "undefined" || typeof player === "undefined" || !player) return;
       if (window.__airborneRuffStage === "report") return;
       var groundY = (typeof groundLevelY === "function") ? groundLevelY() : ((typeof H !== "undefined" ? H : 700) * 0.88);
@@ -2036,42 +2038,46 @@ window.__airborneRingDebug = false;
     });
 
 
-    // --- Player vs obstacle collision (birds etc.) ---
+    // --- Player vs obstacle collision + bounce/reflect ---
     try {
       if (typeof player !== "undefined" && player &&
-          !(typeof bossActive !== "undefined" && bossActive) &&
-          performance.now() >= (typeof invulnerableUntil === "number" ? invulnerableUntil : 0)) {
-        var phit = false;
+          !(typeof bossActive !== "undefined" && bossActive)) {
         for (var ci = 0; ci < obstacles.length; ci++) {
           var co = obstacles[ci];
-          if (!co || co.scored || co.isRing || co.type === "gold_ring" || co.type === "ring") continue;
-          if (co.shockFall || co.onFire || co.powerAffected) continue;
+          if (!co || co.isRing || co.type === "gold_ring" || co.type === "ring") continue;
+          if (co.shockFall || co.onFire || co.powerAffected || co.reflecting) continue;
           var cx = co.x + (co.w || 40) * 0.5;
           var cy = co.y + (co.h || 40) * 0.5 + Math.sin(co.bobPhase || 0) * (co.bobAmount || 0);
-          var dx = Math.abs(player.x - cx);
-          var dy = Math.abs(player.y - cy);
-          var hw = (player.w || 48) * 0.32 + (co.w || 40) * 0.35;
-          var hh = (player.h || 36) * 0.32 + (co.h || 40) * 0.35;
-          if (dx < hw && dy < hh) {
-            // Training: allow hits during lesson flight (not invuln forever)
+          var dx = player.x - cx;
+          var dy = player.y - cy;
+          var hw = (player.w || 48) * 0.38 + (co.w || 40) * 0.40;
+          var hh = (player.h || 36) * 0.38 + (co.h || 40) * 0.40;
+          if (Math.abs(dx) < hw && Math.abs(dy) < hh) {
             if (window.__airborneAirfieldInvuln && window.__airborneRuffStage !== "obstacles" &&
                 window.__airborneRuffStage !== "shield" && window.__airborneRuffStage !== "combined") {
               continue;
             }
+            // Bounce bird away from blimp
+            var nx = (dx === 0) ? -1 : (dx > 0 ? -1 : 1);
+            var ny = (dy === 0) ? -1 : (dy > 0 ? -1 : 1);
+            co.reflecting = true;
+            co.vx = nx * (320 + Math.random() * 160);
+            co.vy = ny * (200 + Math.random() * 160) - 60;
+            co.spinVel = (Math.random() - 0.5) * 16;
+            co.bobAmount = 0;
+            co.x += nx * 24;
+            co.y += ny * 16;
+
             if (typeof shieldActive !== "undefined" && shieldActive) {
-              // bounce off shield
-              try {
-                co.vx = (co.vx || 0) - 120;
-                co.vy = (player.y < cy ? 80 : -80);
-              } catch (e) {}
+              co.vx *= 1.4;
+              co.vy *= 1.3;
+              try { if (typeof shieldImpactTime !== "undefined") shieldImpactTime = performance.now(); } catch (e) {}
               continue;
             }
-            co.scored = true;
-            try {
-              if (typeof takeHit === "function") takeHit();
-            } catch (eH) {}
-            phit = true;
-            break;
+            if (!co.scored && performance.now() >= (typeof invulnerableUntil === "number" ? invulnerableUntil : 0)) {
+              co.scored = true;
+              try { if (typeof takeHit === "function") takeHit(); } catch (eH) {}
+            }
           }
         }
       }

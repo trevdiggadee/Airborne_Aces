@@ -192,7 +192,7 @@
       try { ensureTaxiRunwayStrip(); } catch (e) {
         try { ensureAirfieldStripVisible(); } catch (e2) {}
       }
-      window.__airborneTaxiUntil = performance.now() + 1800; // faster score
+      window.__airborneTaxiUntil = performance.now() + 5000; // score after 5s
       if (typeof player !== "undefined" && player && typeof H !== "undefined") {
         var th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
         var landY = H - Math.max(40, th * 0.28) - (player.h ? player.h * 0.22 : 10);
@@ -1210,7 +1210,7 @@
           airfieldTip = "Taxiing…";
           airfieldTiles = [];
           try { ensureTaxiRunwayStrip(); } catch (eTr) {}
-          window.__airborneTaxiUntil = performance.now() + 1800; // faster score
+          window.__airborneTaxiUntil = performance.now() + 5000; // score after 5s
           try { syncAirfieldGlobals(); } catch (eSync) {}
           try {
             if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
@@ -1701,7 +1701,7 @@
         ctx.fill();
         ctx.restore();
       }
-      if ((airfieldScoreT || 0) < 0.35) {
+      if ((airfieldScoreT || 0) < 0.15) {
         ctx.save();
         ctx.textAlign = "center";
         const fs = Math.floor((typeof W !== "undefined" ? W : 400) * 0.065);

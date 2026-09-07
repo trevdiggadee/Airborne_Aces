@@ -20,9 +20,9 @@
     { id: 1, name: "Air Scout",       title: "Learning the skies", minScore: 500 },
     { id: 2, name: "Sky Ranger",      title: "Proven pilot",     minScore: 1200 },
     { id: 3, name: "Squadron Leader", title: "Experienced ace",  minScore: 2500 },
-    { id: 4, name: "Ace Pilot",       title: "Elite flyer",      minScore: 4000 },
+    { id: 4, name: "Pilot",           title: "Elite flyer",      minScore: 4000 },
     { id: 5, name: "Sky Marshal",     title: "Master of the air", minScore: 6000 },
-    { id: 6, name: "Legendary Ace",   title: "Ultimate rank",    minScore: 10000 }
+    { id: 6, name: "Legendary",       title: "Ultimate rank",    minScore: 10000 }
   ];
 
   function getPilotRank(totalScore, stats) {
@@ -139,11 +139,7 @@
     try {
       if (window.__airborneRingResultsShown) return;
       window.__airborneRingResultsShown = true;
-      var rank = ruffStats.ringRank || "Rookie";
       var rings = (ruffStats.rings || 0) + " / " + (window.__airborneRingTotalTarget || 20);
-      var streak = ruffStats.ringBestStreak || 0;
-      var pts = ruffStats.ringScore || 0;
-      var perfect = ruffStats.ringPerfectFlight ? "  🏆 PERFECT FLIGHT" : "";
       var el = document.getElementById("aaRingResults");
       if (!el) {
         el = document.createElement("div");
@@ -152,11 +148,7 @@
       }
       el.innerHTML =
         '<div class="rr-banner">' +
-        '<div class="rr-title">RING RESULTS</div>' +
-        '<div class="rr-rank">' + rank + perfect + '</div>' +
-        '<div class="rr-line">RINGS <b>' + rings + '</b></div>' +
-        '<div class="rr-line">BEST STREAK <b>×' + streak + '</b></div>' +
-        '<div class="rr-line">RING SCORE <b>' + pts + '</b></div>' +
+        '<div class="rr-total">' + rings + '</div>' +
         '</div>';
       el.style.cssText = "position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:80;pointer-events:none;";
       var b = el.querySelector(".rr-banner");
@@ -167,13 +159,8 @@
         if (b) { b.style.opacity = "1"; b.style.transform = "scale(1)"; }
       });
       // Style children
-      var t = el.querySelector(".rr-title");
-      if (t) t.style.cssText = "font-size:13px;letter-spacing:0.18em;color:#c9a06a;margin-bottom:8px;";
-      var rk = el.querySelector(".rr-rank");
-      if (rk) rk.style.cssText = "font-size:22px;font-weight:900;color:#ffe8b0;margin-bottom:10px;text-shadow:0 0 12px rgba(255,180,80,0.45);";
-      el.querySelectorAll(".rr-line").forEach(function (n) {
-        n.style.cssText = "font-size:14px;margin:4px 0;color:#e8d8b8;";
-      });
+      var tot = el.querySelector(".rr-total");
+      if (tot) tot.style.cssText = "font-size:36px;font-weight:900;color:#ffe8b0;letter-spacing:0.06em;text-shadow:0 0 16px rgba(255,180,80,0.5);";
       setTimeout(function () {
         if (b) { b.style.opacity = "0"; b.style.transform = "scale(0.92)"; }
         setTimeout(function () { if (el && el.parentNode) el.parentNode.removeChild(el); }, 400);
@@ -196,9 +183,9 @@
       rank = "Legendary";
       perfectFlight = true;
     } else if (pct >= 90 && perfects >= 5 && misses <= 2) {
-      rank = "Elite Ace";
+      rank = "Elite";
     } else if (pct >= 80 && best >= 3) {
-      rank = "Ace";
+      rank = "Skilled";
     } else if (pct >= 60) {
       rank = "Rookie";
     } else {
@@ -2972,7 +2959,7 @@
     if (typeof player === "undefined" || !player) return;
     // Behind + above with clear gap so sprites never touch
     const gapX = player.w * 0.50 + 28;
-    const gapY = (player.h * 0.15 + 8) * 1.20; // +20% higher behind blimp
+    const gapY = player.h * 0.30 + 18; // 30% of blimp height above
     const H0 = (typeof H !== "undefined" ? H : 600);
     const W0 = (typeof W !== "undefined" ? W : 400);
     let targetX = player.x - gapX;
@@ -3309,15 +3296,9 @@
 
     if (rows) {
       rows.innerHTML =
-        row("SKY CRYSTALS", "×" + (ruffStats.crystals || 0)) +
-        row("COINS", "×" + (ruffStats.coins || 0)) +
-        row("RINGS", "×" + (ruffStats.rings || 0) + " / " + (window.__airborneRingTotalTarget || 20)) +
-        row("RING STREAK", "best ×" + (ruffStats.ringBestStreak || 0)) +
-        row("RING SCORE", String(ruffStats.ringScore || 0)) +
-        row("RING RANK", (ruffStats.ringRank || "—") + (ruffStats.ringPerfectFlight ? "  PERFECT FLIGHT" : "")) +
-        row("OBSTACLES AVOIDED", "×" + (ruffStats.obstaclesAvoided || 0)) +
-        row("BEST COMBO", "×" + (ruffStats.bestCombo || 0)) +
-        row("LANDING", "★".repeat(Math.max(1, ruffStats.landingStars || 3)));
+        '<div class="ruffRow" style="justify-content:center;font-size:1.35em;font-weight:900;letter-spacing:0.04em;">' +
+        (ruffStats.rings || 0) + " / " + (window.__airborneRingTotalTarget || 20) +
+        '</div>';
     }
 
     // Prefer live score; if zero, derive a training score from stats so popup isn't stuck at 0
@@ -4481,7 +4462,7 @@ function finishToMap() {
           }
         } catch (eRep) {}
         nextStage(); // → report
-      } else if (ruffStageT > 22) {
+      } else if (ruffStageT > 8) {
         // Failsafe only after full land + drive window
         try {
           window.__airborneTrainingReportShown = true;
