@@ -3330,7 +3330,6 @@
         row("COINS", "×" + (ruffStats.coins || 0)) +
         row("RINGS", (ruffStats.rings || 0) + " / " + (window.__airborneRingTotalTarget || 20)) +
         row("RING STREAK", "×" + (ruffStats.ringBestStreak || 0)) +
-        row("RING SCORE", String(ruffStats.ringScore || 0)) +
         row("OBSTACLES AVOIDED", "×" + (ruffStats.obstaclesAvoided || 0)) +
         row("BEST COMBO", "×" + (ruffStats.bestCombo || 0)) +
         row("LANDING", "★".repeat(Math.max(1, ruffStats.landingStars || 3)));
@@ -4146,7 +4145,16 @@ function finishToMap() {
       }
     }
 
-    // Stage logic — every stage has a hard timeout so training never freezes
+    
+  // Keep ring results overlay alive across stage change
+  if (window.__airborneRingResultsCanvas) {
+    window.__airborneRingResultsCanvas.t = (window.__airborneRingResultsCanvas.t || 0) + dt;
+    if (window.__airborneRingResultsCanvas.t > (window.__airborneRingResultsCanvas.life || 3.6) + 0.2) {
+      window.__airborneRingResultsCanvas = null;
+    }
+  }
+
+// Stage logic — every stage has a hard timeout so training never freezes
     if (ruffStage === "takeoff") {
       const ph = window.__airborneAirfieldPhase;
       window.__airborneTrainingFlight = true;
@@ -4221,27 +4229,17 @@ function finishToMap() {
         }
       } catch (eRL) {}
 
-      // Must release all 20 AND wait until none remain on screen
-      // Also require enough time for the sequence (20 * 1.25 ≈ 25s min)
-      if ((spawned >= 20 && ringsLeft === 0 && ruffStageT > 20) || ruffStageT > 120) {
+      // After all 20 out and off-screen (or timeout): show N/20 and keep flying into platforms
+      if ((spawned >= 20 && ringsLeft === 0 && ruffStageT > 18) || ruffStageT > 110) {
         if (!window.__airborneRingResultsShown) {
           try { if (window.__airborneComputeRingRank) window.__airborneComputeRingRank(); } catch (e) {}
+          var rtxt = ((ruffStats.rings || 0) + " / " + (window.__airborneRingTotalTarget || 20));
+          window.__airborneRingResultsCanvas = { t: 0, life: 3.6, text: rtxt };
           try { showRingResultsBanner(); } catch (e) {}
-          window.__airborneRingResultsHoldT = 0;
-          window.__airborneRingResultsCanvas = {
-            t: 0,
-            text: ((ruffStats.rings || 0) + " / " + (window.__airborneRingTotalTarget || 20))
-          };
-        } else {
-          window.__airborneRingResultsHoldT = (window.__airborneRingResultsHoldT || 0) + dt;
-          if (window.__airborneRingResultsCanvas) {
-            window.__airborneRingResultsCanvas.t += dt;
-          }
-          if (window.__airborneRingResultsHoldT >= 3.5) {
-            window.__airborneRingResultsCanvas = null;
-            setStage("platforms");
-            console.log("[R.U.F.F.] rings → platforms");
-          }
+          window.__airborneRingResultsShown = true;
+          // Advance immediately so blimp keeps flying into next lesson under the banner
+          setStage("platforms");
+          console.log("[R.U.F.F.] rings → platforms + results", rtxt);
         }
       }
     } else if (ruffStage === "crystals" || ruffStage === "powerup") {

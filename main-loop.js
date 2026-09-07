@@ -608,9 +608,12 @@ function loop(ts) {
       try {
         var rr = window.__airborneRingResultsCanvas;
         if (rr && typeof ctx !== "undefined" && ctx) {
+          rr.t = (rr.t || 0) + (typeof dt === "number" ? dt : 0.016);
+          var life = rr.life || 3.6;
           var a = 1;
-          if (rr.t < 0.25) a = rr.t / 0.25;
-          else if (rr.t > 3.0) a = Math.max(0, 1 - (rr.t - 3.0) / 0.5);
+          if (rr.t < 0.3) a = rr.t / 0.3;
+          else if (rr.t > life - 0.5) a = Math.max(0, 1 - (rr.t - (life - 0.5)) / 0.5);
+          if (rr.t >= life) { window.__airborneRingResultsCanvas = null; a = 0; }
           ctx.save();
           ctx.globalAlpha = a * 0.45;
           ctx.fillStyle = "#000";

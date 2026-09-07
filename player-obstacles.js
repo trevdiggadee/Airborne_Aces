@@ -1836,19 +1836,7 @@ window.__airborneRingDebug = false;
         if (window.__airborneAirfield && window.__airborneAirfieldObstacles) {
           birdSpdMul = (window.__airborneRuffStage === "obstacles") ? 0.90 : 1.18; // -10% on first bird lesson
         }
-        // Always continue leftward path
         o.x -= obstacleSpeed * birdSpdMul * (o.speedMult || 1) * dt;
-        if (o.hitKnockT > 0) {
-          o.hitKnockT -= dt;
-          o.y += (o.vy || 0) * dt;
-          o.vy = (o.vy || 0) * (1 - 3 * dt); // damp vertical knock
-          if (o.hitKnockT <= 0) o.vy = 0;
-        }
-        if (o.reflecting) {
-          // legacy flag: clear, do not reverse
-          o.reflecting = false;
-          o.vx = 0;
-        }
         if (o.isDrone || o.type === "drone_scout") {
           if (!(o.droneBaseY > 0)) o.droneBaseY = (typeof o.y === "number" && o.y === o.y) ? o.y : 200;
           o.droneZig = (o.droneZig || 0) + (o.droneZigSpd || 2) * dt;
@@ -2044,46 +2032,43 @@ window.__airborneRingDebug = false;
     });
 
 
-    // --- Player vs obstacle collision + bounce/reflect ---
+    // --- Classic obstacle collision (simple, no bounce/knock) ---
+    // On hit: take damage once, obstacle keeps normal leftward path.
     try {
       if (typeof player !== "undefined" && player &&
           !(typeof bossActive !== "undefined" && bossActive)) {
+        var nowHit = performance.now();
         for (var ci = 0; ci < obstacles.length; ci++) {
           var co = obstacles[ci];
-          if (!co || co.isRing || co.type === "gold_ring" || co.type === "ring") continue;
-          if (co.shockFall || co.onFire || co.powerAffected || co.reflecting) continue;
+          if (!co || co.scored) continue;
+          if (co.isRing || co.type === "gold_ring" || co.type === "ring") continue;
+          if (co.shockFall || co.onFire || co.powerAffected) continue;
           var cx = co.x + (co.w || 40) * 0.5;
           var cy = co.y + (co.h || 40) * 0.5 + Math.sin(co.bobPhase || 0) * (co.bobAmount || 0);
-          var dx = player.x - cx;
-          var dy = player.y - cy;
-          var hw = (player.w || 48) * 0.38 + (co.w || 40) * 0.40;
-          var hh = (player.h || 36) * 0.38 + (co.h || 40) * 0.40;
-          if (Math.abs(dx) < hw && Math.abs(dy) < hh) {
-            if (window.__airborneAirfieldInvuln && window.__airborneRuffStage !== "obstacles" &&
-                window.__airborneRuffStage !== "shield" && window.__airborneRuffStage !== "combined") {
+          var dx = Math.abs(player.x - cx);
+          var dy = Math.abs(player.y - cy);
+          // Classic tighter hitbox (felt best historically)
+          var hw = (player.w || 48) * 0.35 + (co.w || 40) * 0.32;
+          var hh = (player.h || 36) * 0.35 + (co.h || 40) * 0.32;
+          if (dx < hw && dy < hh) {
+            if (window.__airborneAirfieldInvuln &&
+                window.__airborneRuffStage !== "obstacles" &&
+                window.__airborneRuffStage !== "shield" &&
+                window.__airborneRuffStage !== "combined") {
               continue;
             }
-            // Soft knock: keep scrolling left (do NOT reverse path)
-            // 80% less force than prior bounce
-            var ny = (dy === 0) ? (Math.random() < 0.5 ? -1 : 1) : (dy > 0 ? -1 : 1);
-            co.hitKnockT = 0.35;
-            co.vy = (co.vy || 0) + ny * (40 + Math.random() * 32); // was ~200, now ~20%
-            co.y += ny * 4;
-            // slight extra left push so they keep forward path, never go backwards
-            co.x -= 10 + Math.random() * 8;
-            co.bobAmount = Math.max(0, (co.bobAmount || 8) * 0.5);
-
             if (typeof shieldActive !== "undefined" && shieldActive) {
-              co.vy *= 1.15;
-              co.x -= 6;
-              try { if (typeof shieldImpactTime !== "undefined") shieldImpactTime = performance.now(); } catch (e) {}
-              // shield: no damage, obstacle continues left
+              // Shield absorbs: mark scored so no re-trigger, path unchanged
+              co.scored = true;
+              co.hitFlash = 0.35;
+              try { if (typeof shieldImpactTime !== "undefined") shieldImpactTime = nowHit; } catch (e) {}
               continue;
             }
-            if (!co.scored && performance.now() >= (typeof invulnerableUntil === "number" ? invulnerableUntil : 0)) {
-              co.scored = true;
-              try { if (typeof takeHit === "function") takeHit(); } catch (eH) {}
-            }
+            if (nowHit < (typeof invulnerableUntil === "number" ? invulnerableUntil : 0)) continue;
+            co.scored = true;
+            co.hitFlash = 0.4;
+            try { if (typeof takeHit === "function") takeHit(); } catch (eH) {}
+            break; // one hit per frame
           }
         }
       }
