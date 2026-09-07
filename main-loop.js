@@ -604,7 +604,36 @@ function loop(ts) {
     try { ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; } catch (e) {}
     try { if (window.__airborneDrawRoyalBehind) window.__airborneDrawRoyalBehind(); } catch (e) {}
     drawPlayer();
-      try { if (window.drawBlimpSurfaceShadow) window.drawBlimpSurfaceShadow(); } catch (eSh) {} try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePowerVisual(); } catch(e) {};
+      try { if (window.drawBlimpSurfaceShadow) window.drawBlimpSurfaceShadow(); } catch (eSh) {}
+      try {
+        var rr = window.__airborneRingResultsCanvas;
+        if (rr && typeof ctx !== "undefined" && ctx) {
+          var a = 1;
+          if (rr.t < 0.25) a = rr.t / 0.25;
+          else if (rr.t > 3.0) a = Math.max(0, 1 - (rr.t - 3.0) / 0.5);
+          ctx.save();
+          ctx.globalAlpha = a * 0.45;
+          ctx.fillStyle = "#000";
+          ctx.fillRect(0, 0, W || 400, H || 700);
+          ctx.globalAlpha = a;
+          ctx.fillStyle = "#ffe8b0";
+          ctx.strokeStyle = "#c9a06a";
+          ctx.lineWidth = 3;
+          var bw = Math.min(280, (W || 400) * 0.7), bh = 70;
+          var bx = ((W || 400) - bw) / 2, by = ((H || 700) - bh) / 2;
+          ctx.fillStyle = "rgba(30,20,10,0.92)";
+          ctx.strokeStyle = "#e0b060";
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, 14); else ctx.rect(bx, by, bw, bh);
+          ctx.fill(); ctx.stroke();
+          ctx.fillStyle = "#ffe8b0";
+          ctx.font = "900 36px Rockwell,Georgia,serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(rr.text || "0 / 20", (W || 400) / 2, (H || 700) / 2);
+          ctx.restore();
+        }
+      } catch (eRR) {} try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePowerVisual(); } catch(e) {};
     try { if (window.drawHitCoins) window.drawHitCoins(); } catch (e) {}
     try { if (typeof drawRingFronts === "function") drawRingFronts(); else if (window.__airborneDrawRingFronts) window.__airborneDrawRingFronts(); } catch (e) {}
     // Soft clouds FRONT layer OFF for now

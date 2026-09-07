@@ -1214,7 +1214,7 @@
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 209; // rings -5% from prior
+      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 199; // rings -5% again
       window.__airborneRingSpawned = 0;
       window.__airborneRingSpawnT = 0;
       window.__airborneRingsPreSpawned = false;
@@ -3311,8 +3311,9 @@
     const rows = document.getElementById("ruffReportRows");
     const final = document.getElementById("ruffFinalScore");
     try {
-      var rtTitle = document.querySelector("#ruffReport .panel h2, #ruffReport .title, #ruffReportLabel");
-      if (rtTitle) rtTitle.style.display = "none";
+      ["#ruffReport .panel h2", "#ruffReport .title", "#ruffReportLabel", "#ruffReport .fsLabel"].forEach(function (sel) {
+        document.querySelectorAll(sel).forEach(function (n) { n.style.display = "none"; });
+      });
     } catch (e) {}
     const rankBanner = document.getElementById("ruffRankBanner");
     const rankNameEl = document.getElementById("ruffRankName");
@@ -3321,12 +3322,18 @@
     // Score report keeps rank medal (medal_badge) — NOT boss weapon asset
 
     if (rows) {
-      var ringTxt = (ruffStats.rings || 0) + " / " + (window.__airborneRingTotalTarget || 20);
+      function row(label, val) {
+        return '<div class="row"><span>' + label + '</span><span>' + val + '</span></div>';
+      }
       rows.innerHTML =
-        '<div class="row" style="justify-content:center;flex:1;align-items:center;">' +
-        '<span></span><span style="display:block!important;font-size:1.6em;font-weight:900;color:#2c1f0e;text-align:center;width:100%;">' +
-        ringTxt + '</span></div>';
-      rows.style.pointerEvents = "none";
+        row("SKY CRYSTALS", "×" + (ruffStats.crystals || 0)) +
+        row("COINS", "×" + (ruffStats.coins || 0)) +
+        row("RINGS", (ruffStats.rings || 0) + " / " + (window.__airborneRingTotalTarget || 20)) +
+        row("RING STREAK", "×" + (ruffStats.ringBestStreak || 0)) +
+        row("RING SCORE", String(ruffStats.ringScore || 0)) +
+        row("OBSTACLES AVOIDED", "×" + (ruffStats.obstaclesAvoided || 0)) +
+        row("BEST COMBO", "×" + (ruffStats.bestCombo || 0)) +
+        row("LANDING", "★".repeat(Math.max(1, ruffStats.landingStars || 3)));
       rows.style.opacity = "1";
       rows.style.visibility = "visible";
     }
@@ -3382,7 +3389,7 @@
     }
 
     if (final) {
-      final.innerHTML = '<span class="fsLabel">FINAL SCORE</span><span class="fsValue">0</span>';
+      final.innerHTML = '<span class="fsValue">0</span>';
       final.style.cssText = "position:absolute;left:10%;right:10%;top:52%;height:22%;display:flex!important;flex-direction:column;align-items:center;justify-content:center;text-align:center;opacity:1!important;visibility:visible!important;z-index:20;color:#f0d878;pointer-events:none;";
       final.classList.remove("fadeOut");
     }
@@ -3410,7 +3417,7 @@
       if (final) {
         var fv = final.querySelector(".fsValue");
         if (fv) fv.textContent = String(n);
-        else final.innerHTML = '<span class="fsLabel">FINAL SCORE</span><span class="fsValue">' + n + '</span>';
+        else final.innerHTML = '<span class="fsValue">' + n + '</span>';
       }
       if (u < 1) {
         requestAnimationFrame(tick);
@@ -3418,7 +3425,7 @@
         if (final) {
           var fv2 = final.querySelector(".fsValue");
           if (fv2) fv2.textContent = String(sc);
-          else final.innerHTML = '<span class="fsLabel">FINAL SCORE</span><span class="fsValue">' + sc + '</span>';
+          else final.innerHTML = '<span class="fsValue">' + sc + '</span>';
         }
         // RANK UP pops big over medal area first, then fades; medal + rank name reveal
         if (rankBanner && !window.__airborneRankUpPlayed) {
@@ -3715,6 +3722,7 @@
   function finishToHangar_mark(){ try { window.__airborneOneShotUsed = {}; } catch(e) {} }
   function finishToHangar() {
     window.__airborneReturnToHangar = true;
+    try { if (typeof lastTime !== "undefined") lastTime = null; } catch (e) {}
     try {
       var po = document.getElementById("pauseOverlay");
       if (po) { po.classList.add("hidden"); po.setAttribute("aria-hidden", "true"); }
@@ -4173,7 +4181,7 @@ function finishToMap() {
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false; // dedicated spawner only
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 209;
+      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 199;
       window.__airborneRingTotalTarget = 20;
 
       // Sequential spawn: 1 ring every 1.15s until exactly 20
@@ -4215,23 +4223,26 @@ function finishToMap() {
 
       // Must release all 20 AND wait until none remain on screen
       // Also require enough time for the sequence (20 * 1.25 ≈ 25s min)
-      if (spawned >= 20 && ringsLeft === 0 && ruffStageT > 26) {
+      if ((spawned >= 20 && ringsLeft === 0 && ruffStageT > 20) || ruffStageT > 120) {
         if (!window.__airborneRingResultsShown) {
           try { if (window.__airborneComputeRingRank) window.__airborneComputeRingRank(); } catch (e) {}
           try { showRingResultsBanner(); } catch (e) {}
           window.__airborneRingResultsHoldT = 0;
+          window.__airborneRingResultsCanvas = {
+            t: 0,
+            text: ((ruffStats.rings || 0) + " / " + (window.__airborneRingTotalTarget || 20))
+          };
         } else {
           window.__airborneRingResultsHoldT = (window.__airborneRingResultsHoldT || 0) + dt;
-          if (window.__airborneRingResultsHoldT >= 3.2) {
+          if (window.__airborneRingResultsCanvas) {
+            window.__airborneRingResultsCanvas.t += dt;
+          }
+          if (window.__airborneRingResultsHoldT >= 3.5) {
+            window.__airborneRingResultsCanvas = null;
             setStage("platforms");
-            console.log("[R.U.F.F.] rings → platforms (20 done)");
+            console.log("[R.U.F.F.] rings → platforms");
           }
         }
-      } else if (ruffStageT > 200) {
-        try { if (window.__airborneComputeRingRank) window.__airborneComputeRingRank(); } catch (e) {}
-        try { showRingResultsBanner(); } catch (e) {}
-        setStage("platforms");
-        console.log("[R.U.F.F.] rings → platforms (timeout)");
       }
     } else if (ruffStage === "crystals" || ruffStage === "powerup") {
       setStage("obstacles");
@@ -4458,7 +4469,7 @@ function finishToMap() {
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = true;
       ruffAirship = null;
-      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 209;
+      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 199;
       // No rings in combined
       if ((!ruffPlatforms || !ruffPlatforms.length) && ruffStageT < 2) {
         try { spawnTrainingPlatformsLesson(); } catch (e) {}

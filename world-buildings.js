@@ -339,6 +339,25 @@
     try { if (typeof state !== "undefined") state = "playing"; } catch (eSt) {}
     try { if (typeof lastTime !== "undefined") lastTime = null; } catch (eLt) {}
     try {
+      window.__airborneBossCamPause = false;
+      window.__airborneAirfieldPaused = false;
+      window.__airborneWorldFrozen = false;
+      if (window.__airborneCam) {
+        window.__airborneCam.phase = "idle";
+        window.__airborneCam.z = 1;
+        window.__airborneCam.paused = false;
+      }
+      var po = document.getElementById("pauseOverlay");
+      if (po) { po.classList.add("hidden"); po.setAttribute("aria-hidden", "true"); }
+      document.body.classList.remove("pause-open");
+      var gsEl = document.getElementById("gameScreen");
+      if (gsEl) {
+        gsEl.style.display = "block";
+        gsEl.style.visibility = "visible";
+        gsEl.style.opacity = "1";
+      }
+    } catch (eUnfreeze) {}
+    try {
       var po = document.getElementById("pauseOverlay");
       if (po) { po.classList.add("hidden"); po.setAttribute("aria-hidden", "true"); }
       var gsEl = document.getElementById("gameScreen");

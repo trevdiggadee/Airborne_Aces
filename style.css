@@ -3681,3 +3681,7 @@ canvas {
 #aaRingResults {
   z-index: 2147483646 !important;
 }
+
+#ruffReport .panel h2,
+#ruffReportLabel,
+#ruffFinalScore .fsLabel { display: none !important; }

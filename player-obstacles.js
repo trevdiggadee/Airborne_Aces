@@ -301,7 +301,7 @@ window.__airborneRingDebug = false;
 
   let spawnTimer = 0;
   let spawnInterval = 1.7; // seconds, decreases slightly as score rises
-  let obstacleSpeed = 209; // rings/base -5%
+  let obstacleSpeed = 199; // rings -5% again
 
   // ---------- Dodge combo / graze system ----------
   const GRAZE_THRESHOLD = 16;  // px — how close a non-collision counts as a "graze"
@@ -627,12 +627,13 @@ window.__airborneRingDebug = false;
     var fw = img.naturalWidth / cols;
     var fh = img.naturalHeight / rows;
     ctx.save();
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = "source-over";
     if (o.powerAffected || o.onFire || o.rot) {
       ctx.translate(o.x + o.w / 2, drawY + o.h / 2);
       ctx.rotate(o.rot || 0);
       ctx.drawImage(img, col * fw, row * fh, fw, fh, -o.w / 2, -o.h / 2, o.w, o.h);
     } else {
-      // No motion-blur on sheets (avoids white box artifacts)
       ctx.drawImage(img, col * fw, row * fh, fw, fh, o.x, drawY, o.w, o.h);
     }
     ctx.restore();
@@ -836,7 +837,7 @@ window.__airborneRingDebug = false;
       spin: Math.random() * Math.PI * 2,
       bobPhase: Math.random() * Math.PI * 2,
       bobAmount: 6,
-      speedMult: 1.045, // rings -5% from prior
+      speedMult: 0.993, // rings another -5%
       isRing: true,
       ringNum: window.__airborneRingSerial || idx,
       animFrame: 0,
@@ -1835,13 +1836,18 @@ window.__airborneRingDebug = false;
         if (window.__airborneAirfield && window.__airborneAirfieldObstacles) {
           birdSpdMul = (window.__airborneRuffStage === "obstacles") ? 0.90 : 1.18; // -10% on first bird lesson
         }
-        if (o.reflecting) {
-          o.x += (o.vx || 0) * dt;
+        // Always continue leftward path
+        o.x -= obstacleSpeed * birdSpdMul * (o.speedMult || 1) * dt;
+        if (o.hitKnockT > 0) {
+          o.hitKnockT -= dt;
           o.y += (o.vy || 0) * dt;
-          o.vy = (o.vy || 0) + 420 * dt;
-          o.rot = (o.rot || 0) + (o.spinVel || 8) * dt;
-        } else {
-          o.x -= obstacleSpeed * birdSpdMul * (o.speedMult || 1) * dt;
+          o.vy = (o.vy || 0) * (1 - 3 * dt); // damp vertical knock
+          if (o.hitKnockT <= 0) o.vy = 0;
+        }
+        if (o.reflecting) {
+          // legacy flag: clear, do not reverse
+          o.reflecting = false;
+          o.vx = 0;
         }
         if (o.isDrone || o.type === "drone_scout") {
           if (!(o.droneBaseY > 0)) o.droneBaseY = (typeof o.y === "number" && o.y === o.y) ? o.y : 200;
@@ -2057,21 +2063,21 @@ window.__airborneRingDebug = false;
                 window.__airborneRuffStage !== "shield" && window.__airborneRuffStage !== "combined") {
               continue;
             }
-            // Bounce bird away from blimp
-            var nx = (dx === 0) ? -1 : (dx > 0 ? -1 : 1);
-            var ny = (dy === 0) ? -1 : (dy > 0 ? -1 : 1);
-            co.reflecting = true;
-            co.vx = nx * (320 + Math.random() * 160);
-            co.vy = ny * (200 + Math.random() * 160) - 60;
-            co.spinVel = (Math.random() - 0.5) * 16;
-            co.bobAmount = 0;
-            co.x += nx * 24;
-            co.y += ny * 16;
+            // Soft knock: keep scrolling left (do NOT reverse path)
+            // 80% less force than prior bounce
+            var ny = (dy === 0) ? (Math.random() < 0.5 ? -1 : 1) : (dy > 0 ? -1 : 1);
+            co.hitKnockT = 0.35;
+            co.vy = (co.vy || 0) + ny * (40 + Math.random() * 32); // was ~200, now ~20%
+            co.y += ny * 4;
+            // slight extra left push so they keep forward path, never go backwards
+            co.x -= 10 + Math.random() * 8;
+            co.bobAmount = Math.max(0, (co.bobAmount || 8) * 0.5);
 
             if (typeof shieldActive !== "undefined" && shieldActive) {
-              co.vx *= 1.4;
-              co.vy *= 1.3;
+              co.vy *= 1.15;
+              co.x -= 6;
               try { if (typeof shieldImpactTime !== "undefined") shieldImpactTime = performance.now(); } catch (e) {}
+              // shield: no damage, obstacle continues left
               continue;
             }
             if (!co.scored && performance.now() >= (typeof invulnerableUntil === "number" ? invulnerableUntil : 0)) {
