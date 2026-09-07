@@ -111,10 +111,7 @@
     var perfectBonus = quality >= 0.72 ? 50 : 0;
     var pts = (base + perfectBonus) * mult;
     ruffStats.ringScore = (ruffStats.ringScore || 0) + pts;
-    try {
-      if (typeof score !== "undefined") score = (score || 0) + pts;
-      if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
-    } catch (e) {}
+    // Ring points stay on ring score only — do not add to main score
     window.__airborneRingHud = {
       streak: ruffStats.ringStreak,
       mult: mult,
@@ -137,6 +134,54 @@
     window.__airborneRingHud.title = "MISS";
     window.__airborneRingHud.lastPts = 0;
   }
+  
+  function showRingResultsBanner() {
+    try {
+      if (window.__airborneRingResultsShown) return;
+      window.__airborneRingResultsShown = true;
+      var rank = ruffStats.ringRank || "Rookie";
+      var rings = (ruffStats.rings || 0) + " / " + (window.__airborneRingTotalTarget || 20);
+      var streak = ruffStats.ringBestStreak || 0;
+      var pts = ruffStats.ringScore || 0;
+      var perfect = ruffStats.ringPerfectFlight ? "  🏆 PERFECT FLIGHT" : "";
+      var el = document.getElementById("aaRingResults");
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "aaRingResults";
+        document.body.appendChild(el);
+      }
+      el.innerHTML =
+        '<div class="rr-banner">' +
+        '<div class="rr-title">RING RESULTS</div>' +
+        '<div class="rr-rank">' + rank + perfect + '</div>' +
+        '<div class="rr-line">RINGS <b>' + rings + '</b></div>' +
+        '<div class="rr-line">BEST STREAK <b>×' + streak + '</b></div>' +
+        '<div class="rr-line">RING SCORE <b>' + pts + '</b></div>' +
+        '</div>';
+      el.style.cssText = "position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:80;pointer-events:none;";
+      var b = el.querySelector(".rr-banner");
+      if (b) {
+        b.style.cssText = "background:linear-gradient(160deg,#2a1c10,#1a1208);border:2px solid #c9a06a;border-radius:14px;padding:18px 28px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,0.55),0 0 24px rgba(200,140,60,0.25);color:#f5e6c8;font-family:Rockwell,Georgia,serif;min-width:220px;opacity:0;transform:scale(0.86);transition:opacity 0.35s ease,transform 0.35s ease;";
+      }
+      requestAnimationFrame(function () {
+        if (b) { b.style.opacity = "1"; b.style.transform = "scale(1)"; }
+      });
+      // Style children
+      var t = el.querySelector(".rr-title");
+      if (t) t.style.cssText = "font-size:13px;letter-spacing:0.18em;color:#c9a06a;margin-bottom:8px;";
+      var rk = el.querySelector(".rr-rank");
+      if (rk) rk.style.cssText = "font-size:22px;font-weight:900;color:#ffe8b0;margin-bottom:10px;text-shadow:0 0 12px rgba(255,180,80,0.45);";
+      el.querySelectorAll(".rr-line").forEach(function (n) {
+        n.style.cssText = "font-size:14px;margin:4px 0;color:#e8d8b8;";
+      });
+      setTimeout(function () {
+        if (b) { b.style.opacity = "0"; b.style.transform = "scale(0.92)"; }
+        setTimeout(function () { if (el && el.parentNode) el.parentNode.removeChild(el); }, 400);
+      }, 3200);
+    } catch (e) { console.warn("ring results", e); }
+  }
+  window.showRingResultsBanner = showRingResultsBanner;
+
   function computeRingRank() {
     var total = window.__airborneRingTotalTarget || 20;
     var got = ruffStats.rings || 0;
@@ -163,10 +208,6 @@
     ruffStats.ringPerfectFlight = perfectFlight;
     if (perfectFlight) {
       ruffStats.ringScore = (ruffStats.ringScore || 0) + 1000;
-      try {
-        if (typeof score !== "undefined") score = (score || 0) + 1000;
-        if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
-      } catch (e) {}
     }
     return rank;
   }
@@ -1154,7 +1195,7 @@
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 220; // +10%
+      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 209; // rings -5% from prior
       window.__airborneRingSpawned = 0;
       window.__airborneRingSpawnT = 0;
       window.__airborneRingsPreSpawned = false;
@@ -1172,6 +1213,7 @@
           }
         }
       } catch (eClr) {}
+      window.__airborneRingResultsShown = false;
       console.log("[R.U.F.F.] rings stage start — sequential 20");
       window.__airborneRingMult = 1;
       ruffStats.rings = 0;
@@ -1191,6 +1233,7 @@
     } else if (name === "obstacles") {
       window.__airborneAirfieldObstacles = true;
       window.__airborneAirfieldRings = false;
+      window.__airborneAirfieldInvuln = false; // allow collision damage
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.60;
       try { if (typeof spawnTrainingPlatformsLesson === "function") spawnTrainingPlatformsLesson(); } catch (e) {}
       try { if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 198; } catch (e) {}
@@ -3253,6 +3296,10 @@
 
     const rows = document.getElementById("ruffReportRows");
     const final = document.getElementById("ruffFinalScore");
+    try {
+      var rtTitle = document.querySelector("#ruffReport .panel h2, #ruffReport .title, #ruffReportLabel");
+      if (rtTitle) rtTitle.style.display = "none";
+    } catch (e) {}
     const rankBanner = document.getElementById("ruffRankBanner");
     const rankNameEl = document.getElementById("ruffRankName");
     const rankTitleEl = document.getElementById("ruffRankTitle");
@@ -3261,16 +3308,7 @@
 
     if (rows) {
       rows.innerHTML =
-        row("SKY CRYSTALS", "×" + ruffStats.crystals) +
-        row("COINS", "×" + (ruffStats.coins || 0)) +
-        row("RINGS", "×" + ruffStats.rings + " / " + (window.__airborneRingTotalTarget || 20)) +
-        row("RING STREAK", "best ×" + (ruffStats.ringBestStreak || 0)) +
-        row("RING SCORE", String(ruffStats.ringScore || 0)) +
-        row("RING RANK", (ruffStats.ringRank || "—") + (ruffStats.ringPerfectFlight ? "  PERFECT FLIGHT" : "")) +
-        row("POWER-UPS", "×" + ruffStats.powerups) +
-        row("OBSTACLES AVOIDED", "×" + ruffStats.obstaclesAvoided) +
-        row("BEST COMBO", "×" + ruffStats.bestCombo) +
-        row("LANDING", "★".repeat(Math.max(1, ruffStats.landingStars || 3)));
+        row("RINGS", "×" + (ruffStats.rings || 0) + " / " + (window.__airborneRingTotalTarget || 20));
     }
 
     // Prefer live score; if zero, derive a training score from stats so popup isn't stuck at 0
@@ -4063,7 +4101,7 @@ function finishToMap() {
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false; // dedicated spawner only
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
-      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 220;
+      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 209;
       window.__airborneRingTotalTarget = 20;
 
       // Sequential spawn: 1 ring every 1.15s until exactly 20
@@ -4107,6 +4145,7 @@ function finishToMap() {
       // Also require enough time for the sequence (20 * 1.25 ≈ 25s min)
       if (spawned >= 20 && ringsLeft === 0 && ruffStageT > 26) {
         try { if (window.__airborneComputeRingRank) window.__airborneComputeRingRank(); } catch (e) {}
+        try { showRingResultsBanner(); } catch (e) {}
         setStage("platforms");
         console.log("[R.U.F.F.] rings → platforms (20 done, spawned=" + spawned + ")");
       } else if (ruffStageT > 200) {
@@ -4339,7 +4378,7 @@ function finishToMap() {
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = true;
       ruffAirship = null;
-      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 220;
+      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 209;
       // 20 sequential rings during combined
       window.__airborneRingTotalTarget = 20;
       window.__airborneRingSpawnT = (window.__airborneRingSpawnT || 0) + dt;

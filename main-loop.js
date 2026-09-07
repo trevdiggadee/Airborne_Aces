@@ -602,7 +602,8 @@ function loop(ts) {
     // Ensure power-up fade never leaves the blimp transparent
     try { ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; } catch (e) {}
     try { if (window.__airborneDrawRoyalBehind) window.__airborneDrawRoyalBehind(); } catch (e) {}
-    drawPlayer(); try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePowerVisual(); } catch(e) {};
+    drawPlayer();
+      try { if (window.drawBlimpSurfaceShadow) window.drawBlimpSurfaceShadow(); } catch (eSh) {} try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePowerVisual(); } catch(e) {};
     try { if (window.drawHitCoins) window.drawHitCoins(); } catch (e) {}
     try { if (typeof drawRingFronts === "function") drawRingFronts(); else if (window.__airborneDrawRingFronts) window.__airborneDrawRingFronts(); } catch (e) {}
     // Soft clouds FRONT layer OFF for now

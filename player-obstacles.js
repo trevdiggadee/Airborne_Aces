@@ -174,6 +174,52 @@ window.__airborneRingDebug = false;
   
     updateBlimpPersonality(dt);}
 
+
+  function drawBlimpSurfaceShadow() {
+    try {
+      if (typeof ctx === "undefined" || typeof player === "undefined" || !player) return;
+      if (window.__airborneRuffStage === "report") return;
+      var groundY = (typeof groundLevelY === "function") ? groundLevelY() : ((typeof H !== "undefined" ? H : 700) * 0.88);
+      var nearest = groundY;
+      // Platforms
+      try {
+        var plats = (typeof ruffPlatforms !== "undefined" && ruffPlatforms) ? ruffPlatforms
+          : (window.__airborneRuffPlatforms || []);
+        for (var i = 0; i < plats.length; i++) {
+          var p = plats[i];
+          if (!p) continue;
+          var top = (p.y != null ? p.y : 0) + (p.bobY || 0);
+          // only if roughly above platform in X
+          var pl = p.x, pr = p.x + (p.w || 80);
+          if (player.x > pl - 20 && player.x < pr + 20 && top > player.y) {
+            if (top < nearest) nearest = top;
+          }
+        }
+      } catch (e) {}
+      var dist = nearest - (player.y + (player.h || 40) * 0.45);
+      if (dist < 0) dist = 0;
+      // Shadow only when within ~180px of surface
+      if (dist > 180) return;
+      var prox = 1 - dist / 180; // 1 = on surface, 0 = far
+      prox = Math.max(0, Math.min(1, prox));
+      var alpha = 0.08 + 0.32 * prox * prox;
+      var scaleX = 0.35 + 0.65 * prox;
+      var scaleY = 0.18 + 0.22 * prox;
+      var bw = (player.w || 48) * scaleX;
+      var bh = (player.h || 28) * scaleY;
+      var sx = player.x;
+      var sy = nearest - 2;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "#000";
+      ctx.beginPath();
+      ctx.ellipse(sx, sy, bw * 0.55, Math.max(3, bh * 0.35), 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } catch (e) {}
+  }
+  window.drawBlimpSurfaceShadow = drawBlimpSurfaceShadow;
+
   function drawPlayer() {
     try {
     // Hide blimp during the end-of-level black fade (overlay draws after player)
@@ -253,7 +299,7 @@ window.__airborneRingDebug = false;
 
   let spawnTimer = 0;
   let spawnInterval = 1.7; // seconds, decreases slightly as score rises
-  let obstacleSpeed = 220; // px/s, increases with score
+  let obstacleSpeed = 209; // rings/base -5%
 
   // ---------- Dodge combo / graze system ----------
   const GRAZE_THRESHOLD = 16;  // px — how close a non-collision counts as a "graze"
@@ -788,7 +834,7 @@ window.__airborneRingDebug = false;
       spin: Math.random() * Math.PI * 2,
       bobPhase: Math.random() * Math.PI * 2,
       bobAmount: 6,
-      speedMult: 1.10,
+      speedMult: 1.045, // rings -5% from prior
       isRing: true,
       ringNum: window.__airborneRingSerial || idx,
       animFrame: 0,
@@ -1981,6 +2027,48 @@ window.__airborneRingDebug = false;
       }
       if (o.hitFlash) o.hitFlash = Math.max(0, o.hitFlash - dt * 3);
     });
+
+
+    // --- Player vs obstacle collision (birds etc.) ---
+    try {
+      if (typeof player !== "undefined" && player &&
+          !(typeof bossActive !== "undefined" && bossActive) &&
+          performance.now() >= (typeof invulnerableUntil === "number" ? invulnerableUntil : 0)) {
+        var phit = false;
+        for (var ci = 0; ci < obstacles.length; ci++) {
+          var co = obstacles[ci];
+          if (!co || co.scored || co.isRing || co.type === "gold_ring" || co.type === "ring") continue;
+          if (co.shockFall || co.onFire || co.powerAffected) continue;
+          var cx = co.x + (co.w || 40) * 0.5;
+          var cy = co.y + (co.h || 40) * 0.5 + Math.sin(co.bobPhase || 0) * (co.bobAmount || 0);
+          var dx = Math.abs(player.x - cx);
+          var dy = Math.abs(player.y - cy);
+          var hw = (player.w || 48) * 0.32 + (co.w || 40) * 0.35;
+          var hh = (player.h || 36) * 0.32 + (co.h || 40) * 0.35;
+          if (dx < hw && dy < hh) {
+            // Training: allow hits during lesson flight (not invuln forever)
+            if (window.__airborneAirfieldInvuln && window.__airborneRuffStage !== "obstacles" &&
+                window.__airborneRuffStage !== "shield" && window.__airborneRuffStage !== "combined") {
+              continue;
+            }
+            if (typeof shieldActive !== "undefined" && shieldActive) {
+              // bounce off shield
+              try {
+                co.vx = (co.vx || 0) - 120;
+                co.vy = (player.y < cy ? 80 : -80);
+              } catch (e) {}
+              continue;
+            }
+            co.scored = true;
+            try {
+              if (typeof takeHit === "function") takeHit();
+            } catch (eH) {}
+            phit = true;
+            break;
+          }
+        }
+      }
+    } catch (eCol) {}
 
     // In-place prune (never reassign obstacles — keeps shared references valid)
     for (var fi = obstacles.length - 1; fi >= 0; fi--) {

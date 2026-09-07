@@ -3631,3 +3631,29 @@ canvas {
   width: auto !important;
   height: auto !important;
 }
+
+/* Force power/progress dock bottom-center */
+#unifiedDock.trainingShow,
+#unifiedDock.gameActive.trainingShow {
+  position: fixed !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: 20px !important;
+  top: auto !important;
+  transform: translateX(-50%) !important;
+  margin: 0 !important;
+  z-index: 50 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: flex-end !important;
+  width: auto !important;
+}
+#stormMeter.trainingPos {
+  position: relative !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  top: auto !important;
+  transform: none !important;
+  margin: 0 auto !important;
+}
