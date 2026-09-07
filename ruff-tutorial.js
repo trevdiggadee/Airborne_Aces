@@ -1192,6 +1192,7 @@
       window.__airborneAirfieldObstacles = true;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.60;
+      try { if (typeof spawnTrainingPlatformsLesson === "function") spawnTrainingPlatformsLesson(); } catch (e) {}
       try { if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 198; } catch (e) {}
       try {
         ruffCoins = (ruffCoins || []).filter(function (c) { return c && c.fixedToPlatform && !c.collected; });
@@ -1218,13 +1219,15 @@
       window.__airborneRuffStage = "combined";
     } else if (name === "combined") {
       window.__airborneTrainingBoss = false;
-    window.__airborneRingSerial = 0;
-
-      window.__airborneAirfieldRings = true;
+      window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = true;
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.95;
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 200;
       ruffAirship = null;
+      window.__airborneRingTotalTarget = 20;
+      window.__airborneRingSpawned = 0;
+      window.__airborneRingSerial = 0;
+      window.__airborneRingSpawnT = 1.0;
       try { ruffCoins = []; ruffCrystals = []; } catch (e) {}
       try { spawnTrainingPlatformsLesson(); } catch (e) { console.warn("combined plats", e); }
     } else if (name === "boss1") {
@@ -2925,7 +2928,7 @@
     if (typeof player === "undefined" || !player) return;
     // Behind + above with clear gap so sprites never touch
     const gapX = player.w * 0.50 + 28;
-    const gapY = player.h * 0.15 + 8; // stay close above blimp, not high
+    const gapY = (player.h * 0.15 + 8) * 1.20; // +20% higher behind blimp
     const H0 = (typeof H !== "undefined" ? H : 600);
     const W0 = (typeof W !== "undefined" ? W : 400);
     let targetX = player.x - gapX;
@@ -4328,30 +4331,44 @@ function finishToMap() {
         }
       }
     } else if (ruffStage === "combined") {
-      // Never run campaign boss during combined practice
       window.__airborneTrainingBoss = false;
-    window.__airborneRingSerial = 0;
-
       try {
-        if (typeof bossActive !== "undefined" && bossActive) {
-          bossActive = false;
-          boss = null;
-        }
+        if (typeof bossActive !== "undefined" && bossActive) { bossActive = false; boss = null; }
       } catch (e) {}
       window.__airborneFirePickup = null;
-      window.__airborneAirfieldRings = true;
+      window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = true;
-      ruffAirship = null; // airship removed
+      ruffAirship = null;
+      if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 220;
+      // 20 sequential rings during combined
+      window.__airborneRingTotalTarget = 20;
+      window.__airborneRingSpawnT = (window.__airborneRingSpawnT || 0) + dt;
+      var cSpawned = window.__airborneRingSpawned || 0;
+      if (cSpawned < 20 && window.__airborneRingSpawnT >= 1.15) {
+        window.__airborneRingSpawnT = 0;
+        try {
+          if (typeof window.spawnNextTrainingRing === "function") window.spawnNextTrainingRing();
+          else if (typeof window.spawnGoldRing === "function") window.spawnGoldRing();
+        } catch (eSp) {}
+        cSpawned = window.__airborneRingSpawned || 0;
+      }
       if ((!ruffPlatforms || !ruffPlatforms.length) && ruffStageT < 2) {
         try { spawnTrainingPlatformsLesson(); } catch (e) {}
       }
       try { updateTrainingPlatforms(dt); } catch (e) {}
-      // Wait for platforms to fully scroll off before boss
       var platsLeftC = (ruffPlatforms || []).length;
-      if (!ruffLessonPendingNext && ((ruffStageT > 12 && platsLeftC === 0) || ruffStageT > 90)) {
+      var ringsLeftC = 0;
+      try {
+        if (typeof window.__airborneCountTrainingRings === "function") ringsLeftC = window.__airborneCountTrainingRings();
+      } catch (e) {}
+      // Advance when platforms clear AND 20 rings finished (or long timeout)
+      if (!ruffLessonPendingNext && ruffStageT > 30 && platsLeftC === 0 && cSpawned >= 20 && ringsLeftC === 0) {
         ruffPlatforms = [];
         window.__airborneRuffPlatforms = [];
-        requestNextStage(); // → boss1
+        requestNextStage();
+      } else if (!ruffLessonPendingNext && ruffStageT > 120) {
+        ruffPlatforms = [];
+        requestNextStage();
       }
     } else if (ruffStage === "landing") {
       // Sweep collectibles off as descent begins
@@ -4418,9 +4435,16 @@ function finishToMap() {
         } catch (e) {}
       }
       // Report when world-buildings signals ready, or failsafe
-      if (window.__airborneTrainingReportReady || ph === "done" || window.__airborneTrainingReportShown) {
-        nextStage(); // → report → showFlightReport
-      } else if (ruffStageT > 35) {
+      if (ph === "score" || ph === "done" || window.__airborneTrainingReportReady || window.__airborneTrainingReportShown) {
+        try {
+          if (!window.__airborneTrainingReportShown) {
+            window.__airborneTrainingReportShown = true;
+            if (typeof showFlightReport === "function") showFlightReport();
+            else if (typeof window.__airborneShowRuffReport === "function") window.__airborneShowRuffReport();
+          }
+        } catch (eRep) {}
+        nextStage(); // → report
+      } else if (ruffStageT > 22) {
         // Failsafe only after full land + drive window
         try {
           window.__airborneTrainingReportShown = true;

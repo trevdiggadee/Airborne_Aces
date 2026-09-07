@@ -714,7 +714,8 @@
           window.__airborneTaxiUntil = 0;
           airfieldTip = "";
           airfieldPhase = "score";
-          airfieldScoreT = 0.2; // skip wait — report next frames
+          airfieldScoreT = 0.05;
+          window.__airborneTrainingReportReady = true;
           airfieldFireworkT = 0;
           syncAirfieldGlobals();
         }

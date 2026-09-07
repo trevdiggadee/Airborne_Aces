@@ -304,6 +304,7 @@ function drawTrainingRuffEmergency(dt) {
     try {
       if (!(window.__airborneAirfield || window.__airborneTrainingFlight || window.__airborneRuffActive)) return;
       if (window.__airborneRuffStage === "report") return;
+      // Keep drawing through landing/score
       if (typeof ctx === "undefined" || !ctx) return;
       var W0 = (typeof W !== "undefined" && W > 0) ? W : 400;
       var H0 = (typeof H !== "undefined" && H > 0) ? H : 600;
@@ -327,7 +328,7 @@ function drawTrainingRuffEmergency(dt) {
         var fx = W0 * 0.20, fy = H0 * 0.35;
         if (typeof player !== "undefined" && player && player.x > 0) {
           fx = player.x - ((player.w || 60) * 0.50 + 28);
-          fy = player.y - ((player.h || 40) * 0.12 + 6) + Math.sin((performance.now() / 1000) * 2.0) * 5;
+          fy = player.y - ((player.h || 40) * 0.12 + 6) * 1.20 + Math.sin((performance.now() / 1000) * 2.0) * 5;
         }
         var ox = (window.__airborneRuffX > 0) ? window.__airborneRuffX : fx;
         var oy = (window.__airborneRuffY > 0) ? window.__airborneRuffY : fy;
@@ -354,7 +355,7 @@ function drawTrainingRuffEmergency(dt) {
           if (images && images[k] && images[k].naturalWidth) { img = images[k]; break; }
         }
       }
-      var size = 92;
+      var size = 78; // -15%
       ctx.save();
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "source-over";

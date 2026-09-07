@@ -177,7 +177,10 @@ window.__airborneRingDebug = false;
   function drawPlayer() {
     try {
     // Hide blimp during the end-of-level black fade (overlay draws after player)
-    if (typeof levelEndPhase === "string" && levelEndPhase === "fadeOut") return;
+    // Keep blimp visible during training landing/score
+    if (typeof levelEndPhase === "string" && levelEndPhase === "fadeOut" &&
+        !(window.__airborneAirfield && (window.__airborneAirfieldPhase === "land" ||
+          window.__airborneAirfieldPhase === "skid" || window.__airborneAirfieldPhase === "score"))) return;
     const img = currentPlayerImage();
     if (!img || !img.naturalWidth) {
       // Never let the player silently vanish — draw a simple visible
@@ -363,7 +366,6 @@ window.__airborneRingDebug = false;
   function pickObstacleType() {
     // Flight training: birds + scout drones
     if (window.__airborneAirfield || window.__airborneTrainingFlight) {
-      if (Math.random() < 0.45) return "drone_scout";
       return Math.random() < 0.5 ? "bird_a" : "bird_b";
     }
     const next = nextBossConfig();

@@ -270,12 +270,19 @@
   window.getPlayerAltitudeFt = getPlayerAltitudeFt;
 
   function updateFlipClock(ms) {
-    // Altimeter removed — power-up progress UI only
     try {
-      var el = document.getElementById("udTimerVal");
-      if (el) { el.textContent = ""; el.style.display = "none"; }
       var tf = document.getElementById("timerFrame");
       if (tf) tf.style.display = "none";
+      var el = document.getElementById("udTimerVal");
+      if (el) {
+        var totalSec = Math.max(0, Math.floor((ms || 0) / 1000));
+        var mm = Math.floor(totalSec / 60);
+        var ss = totalSec % 60;
+        el.textContent = mm + ":" + (ss < 10 ? "0" : "") + ss;
+        el.style.display = "block";
+        el.style.visibility = "visible";
+        el.removeAttribute("hidden");
+      }
     } catch (e) {}
   }
 

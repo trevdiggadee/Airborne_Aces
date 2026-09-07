@@ -1524,16 +1524,13 @@ html, body {
 
   /* STORM POWER-UP — bottom-left corner, icon only, no box */
   #stormMeter.trainingPos {
+    position: fixed !important;
     left: 50% !important;
     right: auto !important;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 18px) !important;
-    transform: translateX(-50%);
-    width: 88px !important;
-    display: flex !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-    pointer-events: auto;
-    z-index: 40;
+    bottom: 22px !important;
+    top: auto !important;
+    transform: translateX(-50%) !important;
+    z-index: 45 !important;
   }
   #stormMeter.trainingPos #stormIcon {
     width: 100%;
@@ -3614,12 +3611,23 @@ canvas {
 }
 
 /* Force-hide any remaining altimeter / timer chrome */
-#timerFrame, #flipClock, #nixieAltCanvas, .nixie-alt-wrap, #udTimerVal, .udTime {
+#timerFrame, #flipClock, #nixieAltCanvas, .nixie-alt-wrap {
   display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
+}
+#udTimerVal, .udTime {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: absolute !important;
+  left: 50% !important;
+  bottom: 0 !important;
+  transform: translateX(-50%) translateY(100%) !important;
+  margin-top: 4px !important;
+  font: 700 12px Rockwell, Georgia, serif !important;
+  color: #ffe8b0 !important;
+  text-shadow: 0 1px 4px #000 !important;
+  white-space: nowrap !important;
   pointer-events: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  overflow: hidden !important;
+  width: auto !important;
+  height: auto !important;
 }
