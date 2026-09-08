@@ -1880,6 +1880,12 @@ window.__airborneRingDebug = false;
           birdSpdMul = (window.__airborneRuffStage === "obstacles") ? 0.90 : 1.18; // -10% on first bird lesson
         }
         o.x -= obstacleSpeed * birdSpdMul * (o.speedMult || 1) * dt;
+        if (o.hitKnockT > 0) {
+          o.hitKnockT -= dt;
+          o.y += (o.knockVy || 0) * dt;
+          o.knockVy = (o.knockVy || 0) * (1 - 4 * dt);
+          if (o.hitKnockT <= 0) o.knockVy = 0;
+        }
         if (o.isDrone || o.type === "drone_scout") {
           if (!(o.droneBaseY > 0)) o.droneBaseY = (typeof o.y === "number" && o.y === o.y) ? o.y : 200;
           o.droneZig = (o.droneZig || 0) + (o.droneZigSpd || 2) * dt;
@@ -2111,20 +2117,38 @@ window.__airborneRingDebug = false;
             if (Math.abs(px - ox) > (pHalfW + oHalfW)) continue;
             if (Math.abs(py - oy) > (pHalfH + oHalfH)) continue;
 
-            // Overlap
+            // Overlap — slight mutual bounce, then damage
+            var nx = px - ox;
+            var ny = py - oy;
+            var len = Math.sqrt(nx * nx + ny * ny) || 1;
+            nx /= len;
+            ny /= len;
+            // Separate bodies a little so they don't stick
+            player.x += nx * 6;
+            player.y += ny * 8;
+            co.x -= nx * 10; // bird nudged away (still scrolls left overall)
+            co.y -= ny * 10;
+            // Mild velocity response
+            player.vy += ny * -140;
+            if (player.vy > 280) player.vy = 280;
+            if (player.vy < -360) player.vy = -360;
+            co.hitKnockT = 0.28;
+            co.knockVy = ny * -90;
+            co.hitFlash = 0.4;
+
             if ((typeof shieldActive !== "undefined" && shieldActive) || window.__airborneShieldActive) {
               co.scored = true;
-              co.hitFlash = 0.35;
               try { if (typeof shieldImpactTime !== "undefined") shieldImpactTime = nowHit; } catch (e) {}
               try { if (typeof sfxDeflect === "function") sfxDeflect(); } catch (e) {}
               continue;
             }
-            if (nowHit < (typeof invulnerableUntil === "number" ? invulnerableUntil : 0)) continue;
+            if (nowHit < (typeof invulnerableUntil === "number" ? invulnerableUntil : 0)) {
+              // still bounced above; no damage during i-frames
+              continue;
+            }
 
-            // Apply damage then mark so we don't multi-hit same bird
             try { if (typeof takeHit === "function") takeHit(); } catch (eH) { console.warn(eH); }
             co.scored = true;
-            co.hitFlash = 0.5;
             break;
           }
         }

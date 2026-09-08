@@ -648,11 +648,7 @@ function loop(ts) {
             ctx.fillStyle = "#ffe8b0";
             ctx.font = "900 " + Math.round(R * 0.48) + "px Rockwell,Georgia,serif";
             ctx.fillText(rr.text || ((rr.n || 0) + " / " + (rr.total || 20)), cx, cy + R * 0.12);
-            // Decorative small rings
-            ctx.strokeStyle = "rgba(232,192,96,0.45)";
-            ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.arc(cx - R * 1.25, cy, R * 0.18, 0, Math.PI * 2); ctx.stroke();
-            ctx.beginPath(); ctx.arc(cx + R * 1.25, cy, R * 0.18, 0, Math.PI * 2); ctx.stroke();
+            // (no side decorative rings)
             ctx.restore();
           }
         }
@@ -713,11 +709,7 @@ function loop(ts) {
             ctx.fillStyle = "#ffe8b0";
             ctx.font = "900 " + Math.round(R * 0.48) + "px Rockwell,Georgia,serif";
             ctx.fillText(rr.text || ((rr.n || 0) + " / " + (rr.total || 20)), cx, cy + R * 0.12);
-            // Decorative small rings
-            ctx.strokeStyle = "rgba(232,192,96,0.45)";
-            ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.arc(cx - R * 1.25, cy, R * 0.18, 0, Math.PI * 2); ctx.stroke();
-            ctx.beginPath(); ctx.arc(cx + R * 1.25, cy, R * 0.18, 0, Math.PI * 2); ctx.stroke();
+            // (no side decorative rings)
             ctx.restore();
           }
         }

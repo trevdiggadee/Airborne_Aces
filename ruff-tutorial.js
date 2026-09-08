@@ -729,7 +729,6 @@
     shield: "Shield",
     powerup: "Power-up",
     rings: "Rings",
-    platforms: "Sky Platforms",
     combined: "Combined",
     landing: "Landing",
     report: "Flight report"
@@ -1088,7 +1087,6 @@
         takeoff: "Takeoff",
         // cruise: skip — already shown at intro
         // altitude / rings: no banner
-        platforms: "Sky Platforms",
         obstacles: "Obstacles",
         shield: "Shield",
         combined: "Combined Practice",
@@ -1096,7 +1094,7 @@
         landing: "Landing",
         // report: no lesson banner
       };
-      if (name !== "report" && lessonTitles[name]) showLessonBanner(lessonTitles[name]);
+      if (name !== "report" && name !== "platforms" && lessonTitles[name]) showLessonBanner(lessonTitles[name]);
     } catch (eBan) {}
 
     ruffStageT = 0;
