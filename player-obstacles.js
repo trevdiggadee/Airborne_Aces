@@ -1885,10 +1885,11 @@ window.__airborneRingDebug = false;
           o.hitKnockT -= dt;
           o.x += (o.knockVx || 0) * dt;
           o.y += (o.knockVy || 0) * dt;
-          o.knockVx = (o.knockVx || 0) * (1 - 2.8 * dt);
-          o.knockVy = (o.knockVy || 0) * (1 - 3.2 * dt);
-          o.rot = (o.rot || 0) + (o.knockSpin || 0) * dt;
-          if (o.hitKnockT <= 0) { o.knockVx = 0; o.knockVy = 0; o.knockSpin = 0; }
+          o.knockVx = (o.knockVx || 0) * (1 - 3.5 * dt);
+          o.knockVy = (o.knockVy || 0) * (1 - 4.0 * dt);
+          o.rot = 0;
+          o.knockSpin = 0;
+          if (o.hitKnockT <= 0) { o.knockVx = 0; o.knockVy = 0; }
         }
         if (o.squashT > 0) o.squashT = Math.max(0, o.squashT - dt);
         if (o.isDrone || o.type === "drone_scout") {
@@ -2160,14 +2161,15 @@ window.__airborneRingDebug = false;
             if (player.vy > 300) player.vy = 300;
             if (player.vy < -380) player.vy = -380;
 
-            // Bird reflects away smoothly (extra left bias so path stays natural)
-            co.hitKnockT = useShield ? 0.55 : 0.4;
-            co.knockVx = -nx * (useShield ? 140 : 70) - 30; // always a bit more left
-            co.knockVy = -ny * (useShield ? 180 : 120);
-            co.knockSpin = (nx > 0 ? -1 : 1) * (6 + Math.random() * 8);
-            co.hitFlash = useShield ? 0.45 : 0.35;
-            co.squashT = 0.28;
-            co.bounceCool = 0.2; // prevent multi-trigger chatter
+            // Stay on path — small deflection only (no flip/spin)
+            co.hitKnockT = useShield ? 0.4 : 0.28;
+            co.knockVx = -20 - Math.abs(nx) * 15; // slight extra left, keep scrolling
+            co.knockVy = -ny * (useShield ? 70 : 45); // soft vertical nudge
+            co.knockSpin = 0;
+            co.rot = 0;
+            co.hitFlash = 0;
+            co.squashT = 0;
+            co.bounceCool = 0.22;
 
             try {
               if (typeof particles !== "undefined" && particles) {
@@ -2637,22 +2639,7 @@ window.__airborneRingDebug = false;
         ctx.globalAlpha = 1;
         ctx.globalCompositeOperation = "source-over";
         try {
-          var cxb = o.x + o.w * 0.5, cyb = drawY + o.h * 0.5;
-          ctx.translate(cxb, cyb);
-          if (o.rot) ctx.rotate(o.rot);
-          var sx = 1, sy = 1;
-          if (o.squashT > 0) {
-            var sq = o.squashT / 0.35;
-            sx = 1 + 0.25 * sq;
-            sy = 1 - 0.22 * sq;
-          }
-          ctx.scale(sx, sy);
-          ctx.drawImage(imgB, -o.w * 0.5, -o.h * 0.5, o.w, o.h);
-          if (o.hitFlash > 0) {
-            ctx.globalAlpha = Math.min(0.55, o.hitFlash);
-            ctx.fillStyle = "#fff";
-            ctx.fillRect(-o.w * 0.5, -o.h * 0.5, o.w, o.h);
-          }
+          ctx.drawImage(imgB, o.x, drawY, o.w, o.h);
         } catch (eD) {}
         ctx.restore();
         return;

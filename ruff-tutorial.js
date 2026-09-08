@@ -1436,7 +1436,7 @@
 
   // ---------- Floating training platforms (steampunk sky docks) ----------
   var ruffPlatforms = [];
-  var PLATFORM_SCROLL_SPEED = 32.5; // +25% scroll speed
+  var PLATFORM_SCROLL_SPEED = 35.75; // +10% from 32.5
   var PLATFORM_KEYS = [
     "island_barrel_platform", "island_gear_wheel_platform", "island_ring_portal_blue",
     "island_market_stall", "island_tiny_rock_grass", "island_tiny_rock_mossy", "island_propeller_platform",
