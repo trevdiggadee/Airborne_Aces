@@ -1,76 +1,469 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>RepLog Data Recovery</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-*{box-sizing:border-box}body{margin:0;background:#111;color:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.card{width:100%;max-width:480px;background:#1b1b1b;border:1px solid #333;border-radius:22px;padding:28px;box-shadow:0 20px 60px #0008}h1{margin:0 0 8px;font-size:28px}h2{font-size:20px;margin:22px 0 8px}.sub{color:#aaa;line-height:1.5;margin-bottom:24px}.warning{background:#302814;border:1px solid #69551e;border-radius:14px;padding:14px;color:#eadb9a;line-height:1.45;margin:16px 0}.success{background:#17351f;border:1px solid #28633a;border-radius:14px;padding:16px;line-height:1.5}.error{background:#3a1919;border:1px solid #733333;border-radius:14px;padding:16px;line-height:1.5}.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}.stat{background:#242424;border-radius:12px;padding:14px}.num{font-size:24px;font-weight:700}.label{color:#999;font-size:12px;margin-top:3px}label{display:block;color:#bbb;font-size:13px;margin:14px 0 6px}input{width:100%;padding:14px;border-radius:12px;border:1px solid #444;background:#111;color:#fff;font-size:16px}button{width:100%;padding:15px;border:0;border-radius:13px;background:#fff;color:#111;font-size:16px;font-weight:700;margin-top:18px}button:disabled{opacity:.45}button.secondary{background:#333;color:#fff}.small{font-size:13px;color:#999;margin-top:16px;line-height:1.5}.hidden{display:none}.check{display:flex;gap:10px;align-items:flex-start;color:#ddd;margin-top:16px;line-height:1.4}.check input{width:20px;height:20px;margin:1px 0 0}.spinner{display:inline-block;width:15px;height:15px;border:2px solid #777;border-top-color:#111;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:7px}@keyframes spin{to{transform:rotate(360deg)}}
-</style></head>
-<body><main class="card">
-<h1>RepLog Data Recovery</h1>
-<div class="sub">This temporary page copies your old RepLog data from Supabase into the same local database used by the new Supabase-free app.</div>
-<div class="warning"><b>Read this first:</b> This page only reads your old Supabase data. It does not delete, update, or overwrite anything in Supabase.</div>
-<section id="loginBox">
-<label>Email</label><input id="email" type="email" autocomplete="username" placeholder="Your old RepLog email">
-<label>Password</label><input id="password" type="password" autocomplete="current-password" placeholder="Your old RepLog password">
-<button id="loginBtn">Sign in & Recover My Data</button>
-<div id="loginMsg" class="small"></div>
-</section>
-<section id="resultBox" class="hidden">
-<div id="result"></div>
-<div id="stats" class="stats hidden"></div>
-<label id="replaceWrap" class="check hidden"><input id="replaceExisting" type="checkbox"><span>I understand that this will replace the RepLog data currently stored on this device with the recovered Supabase data.</span></label>
-<button id="recoverBtn" class="hidden">Copy Recovered Data to This Device</button>
-<div class="small">After recovery succeeds, replace this temporary <b>index.html</b> with your normal Supabase-free RepLog <b>index.html</b>. Do not edit workouts on this recovery page.</div>
-</section>
-</main>
-<script>
-const SUPABASE_URL='https://ijqbrtmuejwujsupfmye.supabase.co';
-const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlqcWJydG11ZWp3dWpzdXBmbXllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2NDg0NjIsImV4cCI6MjEwNDIyNDQ2Mn0.NP_94r907-MMxOM-XrFFpmyuXLkg__cblWEn0kFhgrQ';
-const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
-const DB_NAME='RepLogLocalDB', DB_VERSION=1, STORE='state', KEY='replog';
-let recovered=null;
-function isValidDaysShape(d){return Array.isArray(d)&&d.length>=1&&d.every(w=>w&&Array.isArray(w.days));}
-function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB_NAME,DB_VERSION);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE)};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error||new Error('Could not open local database.'));});}
-async function readLocal(){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readonly'),r=tx.objectStore(STORE).get(KEY);r.onsuccess=()=>resolve(r.result||null);r.onerror=()=>reject(r.error);});}
-async function writeLocal(state){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(state,KEY);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error||new Error('Could not save local data.'));});}
-function setMsg(el,html,cls='small'){el.className=cls;el.innerHTML=html;}
-function showRecovered(days,history,user,existing){
- recovered={days,history,user};
- document.getElementById('loginBox').classList.add('hidden');document.getElementById('resultBox').classList.remove('hidden');
- const rb=document.getElementById('result'), stats=document.getElementById('stats'), rw=document.getElementById('replaceWrap'), btn=document.getElementById('recoverBtn');
- const weeks=Array.isArray(days)?days.length:0;const historyCount=Array.isArray(history)?history.length:0;
- let sets=0;try{for(const w of days||[])for(const d of w.days||[])for(const ex of (d.exercises||[]))for(const set of (ex.sets||[]))if(set.completed||set.done||set.weight||set.reps)sets++;}catch(e){}
- stats.innerHTML='<div class="stat"><div class="num">'+weeks+'</div><div class="label">Program weeks</div></div><div class="stat"><div class="num">'+historyCount+'</div><div class="label">Workout history entries</div></div><div class="stat"><div class="num">'+sets+'</div><div class="label">Set records found</div></div><div class="stat"><div class="num">✓</div><div class="label">Supabase read successful</div></div>';stats.classList.remove('hidden');
- if(existing&&isValidDaysShape(existing.days)){
-   setMsg(rb,'<b>Recovered data found.</b><br>Your device already has RepLog data, so nothing has been overwritten. Check the box below only if you want the recovered Supabase data to replace the current local data.','warning');
-   rw.classList.remove('hidden');btn.classList.remove('hidden');
- }else{
-   setMsg(rb,'<b>Your old RepLog data was found.</b><br>Everything is ready to copy into this device.','success');rw.classList.add('hidden');btn.classList.remove('hidden');
- }
-}
-async function fetchCloud(user){
- const p=await supabaseClient.from('program_state').select('days,updated_at').eq('user_id',user.id).order('updated_at',{ascending:false}).limit(1);
- if(p.error)throw new Error('Program data could not be read: '+p.error.message);
- const h=await supabaseClient.from('workout_history').select('id,entry').eq('user_id',user.id).order('created_at',{ascending:false});
- if(h.error)throw new Error('Workout history could not be read: '+h.error.message);
- const days=p.data&&p.data[0]?p.data[0].days:null;
- if(!isValidDaysShape(days))throw new Error('Supabase did not return a valid RepLog 4-week program. No local data was changed.');
- const history=(h.data||[]).map(row=>Object.assign({},row.entry||{},{id:row.id}));
- return {days,history};
-}
-document.getElementById('loginBtn').onclick=async()=>{
- const email=document.getElementById('email').value.trim(),password=document.getElementById('password').value,btn=document.getElementById('loginBtn'),msg=document.getElementById('loginMsg');
- if(!email||!password){setMsg(msg,'Enter the email and password you used for the old RepLog.','error');return;}
- btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Signing in and reading data…';
- try{const {data,error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)throw new Error(error.message);const user=data.user;const cloud=await fetchCloud(user);const existing=await readLocal();showRecovered(cloud.days,cloud.history,user,existing);}catch(e){setMsg(msg,'<b>Recovery stopped.</b><br>'+String(e.message||e)+'<br><br>No local data was changed.','error');btn.disabled=false;btn.textContent='Sign in & Recover My Data';}}
-document.getElementById('recoverBtn').onclick=async()=>{
- const btn=document.getElementById('recoverBtn'),replace=document.getElementById('replaceExisting').checked;btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Copying data…';
- try{const existing=await readLocal();if(existing&&isValidDaysShape(existing.days)&&!replace)throw new Error('Local data already exists. Check the replacement box if you want to replace it.');
-   const state={version:1,user:recovered.user,days:recovered.days,history:recovered.history,updatedAt:new Date().toISOString(),recoverySource:'RepLog Supabase one-time recovery'};
-   if(existing&&isValidDaysShape(existing.days)){state.preRecoveryBackup=existing;state.preRecoveryBackupAt=new Date().toISOString();}
-   await writeLocal(state);const verify=await readLocal();if(!verify||!isValidDaysShape(verify.days))throw new Error('Verification failed after saving.');
-   setMsg(document.getElementById('result'),'<b>RECOVERY COMPLETE ✓</b><br>Your program and workout history are now stored in this device’s RepLog local database. Supabase was not modified.<br><br><b>Next:</b> replace this recovery index.html with your normal Supabase-free RepLog index.html and open the app.','success');btn.classList.add('hidden');document.getElementById('replaceWrap').classList.add('hidden');
- }catch(e){setMsg(document.getElementById('result'),'<b>Nothing was overwritten.</b><br>'+String(e.message||e),'error');btn.disabled=false;btn.textContent='Copy Recovered Data to This Device';}}
-</script></body></html>
+<!-- build ruff465 rings20 -->
+<meta name="airborne-build" content="ruff465 2026-09-02T04:50Z-platfix">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="format-detection" content="telephone=no" />
+<title>Airborne Aces</title>
+<link rel="stylesheet" href="style.css?v=ruff465">
+<link rel="stylesheet" href="blimp-profile.css?v=ruff465">
+<link rel="stylesheet" href="launch-screens.css?v=ruff465">
+<style id="otg-legacy-splash-hide">#splashScreen{visibility:hidden!important;pointer-events:none!important;}</style>
+</head>
+<body>
+
+<!-- ===== LAUNCH SCREENS (One Thumb Gaming) ===== -->
+<div id="otg-loading">
+  <img class="otg-logo-full" src="one_thumb_gaming_logo.png" alt="">
+  <div class="otg-ring-wrap">
+    <svg class="otg-progress-ring" viewBox="0 0 120 120" width="226" height="226" aria-hidden="true">
+      <circle class="otg-ring-bg" cx="60" cy="60" r="52" fill="none" stroke-width="3.5"/>
+      <circle class="otg-ring-fill" id="otg-progress-fill" cx="60" cy="60" r="52" fill="none" stroke-width="3.5"
+        stroke-linecap="round" transform="rotate(-90 60 60)"/>
+    </svg>
+    <div class="otg-progress-pct" id="otg-progress-pct">0%</div>
+  </div>
+  <div class="otg-loading-area">
+    <div class="otg-loading-text">WARMING THE ENGINES</div>
+    <div class="otg-dots"><span></span><span></span><span></span></div>
+  </div>
+</div>
+
+<div id="otg-splash">
+  <div class="otg-poster"></div>
+  <div class="otg-crystal-aura"></div>
+  <div class="otg-crystal-glow" id="otg-crystal-glow"><div class="otg-core"></div></div>
+  <div class="otg-enter-wrap">
+    <button class="otg-enter-btn" id="otg-enter-btn" type="button" aria-label="Enter Hangar">
+    <span class="enterHangarShine" aria-hidden="true"></span>
+  <img class="enterHangarImg" src="enter_hangar_btn.png?v=ruff465" alt="Enter Hangar" draggable="false" />
+  </button>
+  </div>
+  
+</div>
+<!-- ===== END LAUNCH SCREENS ===== -->
+
+
+<!-- Screen Effects Overlay Layers -->
+<div id="screenChromatic" class="screen-chromatic"></div>
+<div id="screenGrain" class="screen-grain"></div>
+<div id="screenScanlines" class="screen-scanlines"></div>
+<div id="screenFlash" class="screen-flash"></div>
+
+<div id="tutorialGuide" class="hidden">
+  <div class="tutGuideChar">
+    <img src="" alt="" id="tutGuideImg">
+  </div>
+  <div class="tutBubble">
+    <p id="tutBubbleText"></p>
+    <button type="button" id="tutSkipBtn">GOT IT ▶</button>
+  </div>
+</div>
+
+
+
+<div id="splashScreen">
+  <div class="splashSandGlow" aria-hidden="true"></div>
+  <div class="splashRadar" aria-hidden="true">
+    <svg class="splashRadarSvg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="radarGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="rgba(255,255,255,0.35)"/>
+          <stop offset="40%" stop-color="rgba(255,255,255,0.12)"/>
+          <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+        </radialGradient>
+        <linearGradient id="sweepGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="rgba(255,255,255,0)"/>
+          <stop offset="70%" stop-color="rgba(255,255,255,0.08)"/>
+          <stop offset="100%" stop-color="rgba(255,255,255,0.45)"/>
+        </linearGradient>
+      </defs>
+      <circle class="radarRing thick" cx="200" cy="200" r="196"/>
+      <circle class="radarRing" cx="200" cy="200" r="157"/>
+      <circle class="radarRing" cx="200" cy="200" r="118"/>
+      <circle class="radarRing" cx="200" cy="200" r="78"/>
+      <circle class="radarRing" cx="200" cy="200" r="39"/>
+      <line class="radarCross" x1="200" y1="10" x2="200" y2="390"/>
+      <line class="radarCross" x1="10" y1="200" x2="390" y2="200"/>
+      <line class="radarCross" x1="58" y1="58" x2="342" y2="342"/>
+      <line class="radarCross" x1="342" y1="58" x2="58" y2="342"/>
+      <g class="radarSweep">
+        <path class="radarSweepFan" d="M200,200 L200,10 A190,190 0 0,1 340,70 Z" fill="url(#sweepGrad)"/>
+        <line x1="200" y1="200" x2="200" y2="12" stroke="rgba(255,255,255,0.7)" stroke-width="2"/>
+      </g>
+      <g class="radarBlimp b1" transform="translate(258,118)">
+        <ellipse class="blimpGlow" cx="0" cy="0" rx="10" ry="7"/>
+        <ellipse class="blimpBody" cx="0" cy="0" rx="7" ry="3.2"/>
+        <rect class="blimpBody" x="-1.5" y="2.5" width="3" height="2.2" rx="0.4"/>
+        <line class="blimpBody" x1="6" y1="0" x2="9" y2="-1.5" stroke="rgba(255,255,255,0.7)" stroke-width="0.8"/>
+      </g>
+    </svg>
+  </div>
+  <div class="splashParticles" id="splashParticles" aria-hidden="true"></div>
+  <div class="splashStage">
+    <div class="splashTitle">AIRBORNE ACES</div>
+  </div>
+  <button class="enterHangarBtn" id="splashEnterBtn" type="button" aria-label="Enter Hangar">
+  <span class="enterHangarShine" aria-hidden="true"></span>
+  <img class="enterHangarImg" src="enter_hangar_btn.png?v=ruff465" alt="Enter Hangar" draggable="false" />
+</button>
+</div>
+
+<div id="menuScreen">
+<audio id="splashMusic" loop preload="auto" src="Splash_page.mp3"></audio>
+<audio id="menuMusic" loop preload="auto" src="Menu.mp3"></audio>
+<audio id="gameplayMusic" loop preload="auto" src="skyward-march%202.mp3"></audio>
+<audio id="trainingMusic" loop preload="auto" playsinline webkit-playsinline src="Cloud_Cruisers.mp3"></audio>
+<audio id="trainingBossMusic" loop preload="auto" src="the_engine_s_decree.mp3"></audio>
+<div class="stage">
+  <img class="stageBg" crossorigin="anonymous" src="hangar_bg_v2.jpg" alt="Airborne Aces" />
+
+  <!-- Cloud overlays disabled — new hangar art is a full scene -->
+
+  <div class="menuBanner">
+    <img crossorigin="anonymous" src="menuBanner.webp?cb=2" alt="" />
+  </div>
+
+  <div class="heroBlimpWrap">
+    <canvas id="heroFireCanvasBack" class="heroFireCanvas heroFireCanvasBack" width="400" height="300" aria-hidden="true"></canvas>
+    <canvas id="heroFireCanvas" class="heroFireCanvas heroFireCanvasFront" width="400" height="300" aria-hidden="true"></canvas>
+    <div class="heroPowerPreview" id="heroPowerPreview" aria-hidden="true">
+      <div class="hpp-ring"></div>
+      <div class="hpp-bolt" style="--r:-25deg"></div>
+      <div class="hpp-bolt" style="--r:15deg"></div>
+      <div class="hpp-bolt" style="--r:40deg"></div>
+      <div class="hpp-flame"></div>
+      <div class="hpp-burst"></div>
+    </div>
+    <img id="heroBlimpImgA" class="heroBlimpLayer" crossorigin="anonymous" src="player_blimp_01.webp" alt="" />
+    <img id="heroBlimpImgB" class="heroBlimpLayer heroBlimpLayerB" crossorigin="anonymous" src="" alt="" />
+    <div class="propBlur" id="propBlur"></div>
+    <div class="smokeParticles" id="smokeParticles">
+      <span class="puff p1"></span>
+      <span class="puff p2"></span>
+      <span class="puff p3"></span>
+      <span class="puff p4"></span>
+      <span class="puff p5"></span>
+    </div>
+  </div>
+  <div class="heroBlimpName" id="heroBlimpName">Zeppelin Ace</div>
+
+  
+  <!-- Blimp Profile Panel -->
+  <div class="blimpProfile" id="blimpProfile">
+    <div class="bpBadge" aria-hidden="true">
+      <svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 20 Q20 8 32 20 Q20 18 8 20Z" fill="#c9a66b" opacity="0.85"/>
+        <path d="M56 20 Q44 8 32 20 Q44 18 56 20Z" fill="#c9a66b" opacity="0.85"/>
+        <circle cx="32" cy="20" r="10" fill="#2a1c10" stroke="#c9a66b" stroke-width="1.5"/>
+        <path d="M32 14 L33.5 18.5 L38 19 L34.5 22 L35.5 26.5 L32 24 L28.5 26.5 L29.5 22 L26 19 L30.5 18.5Z" fill="#c9a66b"/>
+      </svg>
+    </div>
+    <div class="bpMk" id="bpMk">Mk I</div>
+    <div class="bpDivider"></div>
+    <div class="bpSection">Power Up</div>
+    <div class="bpAbility">
+      <div class="bpAbilityText">
+        <div class="bpAbilityName" id="bpAbilityName">—</div>
+        <div class="bpAbilityDesc" id="bpAbilityDesc">—</div>
+      </div>
+    </div>
+    <div class="bpPowerIconWrap">
+      <img id="bpPowerIcon" class="bpPowerIcon" src="power_icon_blimp9.webp" alt="Power up" />
+    </div>
+    <div class="bpDivider"></div>
+    <div class="bpSection">Next Rank</div>
+    <div class="bpUpgrade">
+      <div class="bpUpgradeRow"><span id="bpUpgrade">—</span></div>
+      <div class="bpXpTrack"><div class="bpXpFill" id="bpXpFill"></div></div>
+      <div class="bpXpLabel" id="bpXpLabel">0 / 0 XP</div>
+    </div>
+  </div>
+
+  <button class="flyBtn" id="flyBtn" type="button" aria-label="Take Flight">
+  <img class="flyBtnImg" src="take_flight_btn.png" alt="Take Flight" draggable="false" />
+</button>
+
+  <button class="numBtn n1 active" onclick="selectBlimp('blimp1', this)" aria-label="Zeppelin Ace">
+    <img crossorigin="anonymous" src="player_blimp_01.webp" alt="" />
+  </button>
+  <button class="numBtn n2" onclick="selectBlimp('blimp2', this)" aria-label="Deco Liner">
+    <img crossorigin="anonymous" src="blimp2_flight_01.webp" alt="" />
+  </button>
+  <button class="numBtn n3" onclick="selectBlimp('blimp3', this)" aria-label="Aero Slicer">
+    <img crossorigin="anonymous" src="blimp3_flight_01.webp" alt="" />
+  </button>
+  <button class="numBtn n4" onclick="selectBlimp('blimp4', this)" aria-label="Steampunk">
+    <img crossorigin="anonymous" src="blimp4_flight_01.webp" alt="" />
+  </button>
+
+  <button class="numBtn n5" onclick="selectBlimp('blimp5', this)" aria-label="Jade Voyager">
+    <img crossorigin="anonymous" src="blimp5_flight_01.webp" alt="" />
+  </button>
+  <button class="numBtn n6" onclick="selectBlimp('blimp6', this)" aria-label="Little Spy">
+    <img crossorigin="anonymous" src="ship_wood_01.webp" alt="" />
+  </button>
+  <button class="numBtn n7" onclick="selectBlimp('blimp7', this)" aria-label="Storm Chaser">
+    <img crossorigin="anonymous" src="ship_lightning_01.webp" alt="" />
+  </button>
+  <button class="numBtn n8" onclick="selectBlimp('blimp8', this)" aria-label="Ironworks">
+    <img crossorigin="anonymous" src="ship_cargo_01.webp" alt="" />
+  </button>
+  <button class="numBtn n9" onclick="selectBlimp('blimp9', this)" aria-label="Jolly Rogers">
+    <img crossorigin="anonymous" src="ship_pirate_01.webp" alt="" />
+  </button>
+  <button class="numBtn n10" onclick="selectBlimp('blimp10', this)" aria-label="Ivory Anchor">
+    <img crossorigin="anonymous" src="ship_ivory_01.webp" alt="" />
+  </button>
+  <button class="numBtn n11" onclick="selectBlimp('blimp11', this)" aria-label="War Shark">
+    <img crossorigin="anonymous" src="blimp11_flight_01.webp" alt="" />
+  </button>
+  <button class="numBtn n12" onclick="selectBlimp('blimp12', this)" aria-label="Sky Rocket">
+    <img crossorigin="anonymous" src="blimp12_flight_01.webp" alt="" />
+  </button>
+  <button class="numBtn n13" onclick="selectBlimp('blimp13', this)" aria-label="Iron Lattice">
+    <img crossorigin="anonymous" src="blimp13_flight_01.webp" alt="" />
+  </button>
+  <button class="numBtn n14" onclick="selectBlimp('blimp14', this)" aria-label="Pirate Rocket">
+    <img crossorigin="anonymous" src="blimp14_flight_01.webp" alt="" />
+  </button>
+  <button class="numBtn n15" onclick="selectBlimp('blimp15', this)" aria-label="Royal Stripe">
+    <img crossorigin="anonymous" src="blimp15_flight_01.webp" alt="" />
+  </button>
+
+</div>
+</div>
+
+<!-- World Map (after cutscene / between levels) -->
+<div id="worldMapScreen" style="display:none;">
+  <div class="wm-chrome">
+    <div class="wm-title" id="worldMapTitle">CHART YOUR COURSE</div>
+    <div class="wm-hint" id="worldMapHint">Tap an unlocked post to take flight.</div>
+  </div>
+  <div id="worldMapContainer">
+    <div class="wm-player-blimp" id="worldMapBlimp">
+      <img src="player_blimp.png" alt="" />
+    </div>
+  </div>
+</div>
+
+<div id="cutsceneScreen" class="cutsceneScreen" style="display:none;">
+  <div class="cutsceneStage">
+    <div class="cutsceneBg"></div>
+    <img class="cutsceneCloud cc1" crossorigin="anonymous" src="asset_extra_04.webp?cb=2" alt="" />
+    <img class="cutsceneCloud cc2" crossorigin="anonymous" src="asset_extra_05.webp?cb=2" alt="" />
+    <div class="cutsceneGlow left"></div>
+    <div class="cutsceneGlow right"></div>
+
+    <div class="cutsceneBlimpWrap" id="cutsceneBlimpWrap">
+      <img id="cutsceneBlimpImg" crossorigin="anonymous" src="" alt="" />
+    </div>
+
+    <div class="cutsceneTutorWrap" id="cutsceneTutorWrap"></div>
+
+    <div class="cutsceneVignette"></div>
+
+    <button class="cutsceneSkip" id="cutsceneSkip" type="button">Skip &#9654;</button>
+
+    <div class="cutsceneDialogue" id="cutsceneDialogue">
+      <span class="cutsceneNameplate">Flight Tutor</span>
+      <p class="cutsceneText" id="cutsceneText"></p>
+      <span class="cutsceneTapHint">Tap to continue</span>
+    </div>
+  </div>
+</div>
+
+<div id="gameScreen" style="display:none;">
+<canvas id="gameCanvas"></canvas>
+
+
+<div id="pauseOverlay" class="hidden" aria-hidden="true">
+  <div class="pausePanel" role="dialog" aria-labelledby="pauseTitle">
+    <img class="pausePlateImg" src="pause_menu_plate.webp?v=ruff465" alt="" draggable="false" />
+    <div class="pauseHitLayer">
+      <!-- visually hidden title for a11y; art shows PAUSED -->
+      <h2 class="pauseTitle srOnly" id="pauseTitle">PAUSED</h2>
+
+      <div class="pauseSliderRow pauseRowMusic">
+        <label class="pauseHitLabel" for="pauseMusicSlider">Music</label>
+        <span class="pauseVal" id="pauseMusicVal">25%</span>
+        <input type="range" id="pauseMusicSlider" class="pauseSlider" min="0" max="100" value="25" aria-label="Music volume" />
+      </div>
+
+      <div class="pauseSliderRow pauseRowSfx">
+        <label class="pauseHitLabel" for="pauseSfxSlider">Sound FX</label>
+        <span class="pauseVal" id="pauseSfxVal">100%</span>
+        <input type="range" id="pauseSfxSlider" class="pauseSlider" min="0" max="100" value="100" aria-label="Sound effects volume" />
+      </div>
+
+      <button type="button" id="pauseMuteToggle" class="pauseBtnHit pauseBtnMute" aria-label="Mute All">
+        <span class="pauseBtnLabel srOnly">Mute All</span>
+      </button>
+      <button type="button" id="pauseHangarBtn" class="pauseBtnHit pauseBtnHangar pauseHangarBtn" aria-label="Return to Hangar">
+        <span class="pauseBtnLabel srOnly">Return to Hangar</span>
+      </button>
+      <button type="button" id="pauseResumeBtn" class="pauseBtnHit pauseBtnResume pausePrimaryBtn" aria-label="Resume Flight">
+        <span class="pauseBtnLabel srOnly">Resume Flight</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="hudFrame">
+  <img id="hudFrameImg" crossorigin="anonymous" src="hudFrame.webp?v=ruff465" alt="" />
+  <div id="healthMeter">
+    <img id="healthImg" crossorigin="anonymous" src="heartPickup.webp?cb=2" alt="Health" />
+  </div>
+
+  <div id="bonusHearts"></div>
+
+  <div class="hudRank">
+    <div class="hudRankName" id="hudRankName">CADET</div>
+  </div>
+
+  <div class="scoreFrame">
+    <div class="scoreLabel">SCORE</div>
+    <div class="scoreValue"><span id="scoreVal">0</span></div>
+  </div>
+
+  <div class="hudStats">
+    <div class="hudStatRow" title="Rings">
+      <span class="hudStatVal" id="collectRings">0</span>
+    </div>
+    <div class="hudStatRow" title="Sky Crystals">
+      <span class="hudStatVal" id="collectCrystals">0</span>
+    </div>
+    <div class="hudStatRow" title="Coins">
+      <span class="hudStatVal" id="collectPowerPct">0</span>
+    </div>
+  </div>
+
+  <div class="hudAudio">
+    <button type="button" id="musicBtn" class="hudAudioBtn" aria-label="Music"></button>
+    <button type="button" id="muteBtn" class="hudAudioBtn" aria-label="Pause and settings"></button>
+  </div>
+
+  <!-- timerFrame / altimeter removed — power progress only -->
+</div>
+
+<div id="unifiedDock" class="menuHidden" aria-label="Flight status">
+  <div class="udCircle" id="stormMeter">
+    <div class="udRing udRingProgress" id="udProgressRing"></div>
+    <div class="udRing udRingPower" id="udPowerRing"></div>
+    <div class="udCore">
+      <img id="stormIcon" crossorigin="anonymous" src="storm_icon_1.webp?cb=2" alt="Power Up" data-stage="0" />
+    </div>
+    <div class="udTime" id="udTimerVal">0:00</div>
+  </div>
+</div>
+
+<div id="startOverlay" class="overlay hidden" style="display:none;" aria-hidden="true">
+  <h1>AIRBORNE ACES</h1>
+  <p>Tap anywhere to climb.<br/>Dodge the balloons and birds!</p>
+  <button class="gameFlyBtn" id="startBtn">FLY!</button>
+</div>
+
+<div id="gameOverOverlay" class="overlay hidden">
+  <span class="ember" style="left:8%; animation-duration:3.4s; animation-delay:0s; --drift:18px;"></span>
+  <span class="ember" style="left:22%; animation-duration:2.8s; animation-delay:0.6s; --drift:-14px;"></span>
+  <span class="ember" style="left:38%; animation-duration:3.8s; animation-delay:0.2s; --drift:22px;"></span>
+  <span class="ember" style="left:58%; animation-duration:3.1s; animation-delay:1.1s; --drift:-20px;"></span>
+  <span class="ember" style="left:74%; animation-duration:3.6s; animation-delay:0.4s; --drift:16px;"></span>
+  <span class="ember" style="left:88%; animation-duration:2.9s; animation-delay:0.9s; --drift:-18px;"></span>
+  <span class="ember" style="left:50%; animation-duration:4.1s; animation-delay:1.5s; --drift:10px;"></span>
+  <div class="overlayPanel">
+    <h1>CRASHED!</h1>
+    <div class="bigScore" id="finalScore">0</div>
+    <div class="bestScore" id="bestScoreLine">Best: 0</div>
+    <button class="gameFlyBtn" id="retryBtn">RETRY</button>
+    <button class="gameFlyBtn secondaryBtn hidden" id="checkpointBtn">CHECKPOINT</button>
+    <button class="gameFlyBtn secondaryBtn" id="menuBtn">CHANGE BLIMP</button>
+  </div>
+</div>
+
+<div id="bossDialogueOverlay" class="hidden">
+  <div class="dlgStage">
+    <div class="dlgPortrait dlgPortraitPlayer">
+      <div class="dlgPortraitFrame"><img id="dlgPlayerImg" src="" alt=""></div>
+      <div class="dlgNamePlate">YOU</div>
+    </div>
+    <div class="dlgVs">VS</div>
+    <div class="dlgPortrait dlgPortraitBoss">
+      <div class="dlgPortraitFrame"><img id="dlgBossImg" src="" alt=""></div>
+      <div class="dlgNamePlate" id="dlgBossName">BOSS</div>
+    </div>
+  </div>
+  <div class="dlgDialogueArea">
+    <div class="dlgBubble dlgBubbleBoss hidden" id="dlgBossBubble">
+      <p id="dlgBossText"></p>
+    </div>
+    <div class="dlgBubble dlgBubblePlayer hidden" id="dlgPlayerBubble">
+      <p id="dlgPlayerText"></p>
+    </div>
+    <button type="button" id="dlgSkipBtn" class="dlgSkipBtn">SKIP ▶</button>
+    <div class="dlgTapHint">TAP TO CONTINUE</div>
+  </div>
+</div>
+</div>
+
+
+
+<div id="ruffRadio" aria-live="polite">
+  <div class="ruffCard">
+    <div class="ruffName">
+      <span class="ruffLabel">R.U.F.F.</span>
+      <span class="ruffWaveIcon" aria-hidden="true" title="Speaking">
+        <span class="ruffWaves"><span></span><span></span><span></span><span></span><span></span></span>
+      </span>
+    </div>
+    <p class="ruffText" id="ruffText"></p>
+    <button type="button" class="ruffSkip" id="ruffSkipBtn">SKIP ▶</button>
+  </div>
+</div>
+<div id="ruffFlightTrace" aria-hidden="true">
+  <div class="ft-meter" id="ruffFlightTraceMeter">
+    <div class="ft-track"></div>
+    <div class="ft-fill" id="ruffFlightTraceFill"></div>
+    <div class="ft-hub"><span id="ruffFlightTracePct">0</span></div>
+  </div>
+  <div class="ft-label" id="ruffFlightTraceLabel">Stand by…</div>
+</div>
+<div id="ruffTitleBanner"></div>
+<div id="ruffReport">
+  <div class="panel flightReportPanel">
+    <div id="ruffReportRows"></div>
+    <div class="final" id="ruffFinalScore"></div>
+    <div id="ruffRankBanner" class="rankBanner">
+      <div class="rankUp">RANK UP</div>
+      <img id="ruffMedalImg" class="rankMedal" alt="Medal" width="160" height="160">
+      <div class="rankName" id="ruffRankName">CADET</div>
+      <div class="rankTitle" id="ruffRankTitle">Starting pilot</div>
+    </div>
+    <button type="button" class="continueBtn" id="ruffContinueBtn" aria-label="Return to Hangar"></button>
+  </div>
+</div>
+
+<script src="assets-placeholders.js?v=ruff465"></script>
+<script src="blimp-profile.js?v=ruff465"></script>
+<script src="menu-intro.js?v=ruff465"></script>
+<script src="world-map.js?v=ruff465"></script>
+<script src="audio.js?v=ruff465"></script>
+<script src="asset-loading.js?v=ruff465"></script>
+<script src="ruff-tutorial.js?v=ruff465"></script>
+<script src="world-buildings.js?v=ruff465"></script>
+<script src="player-obstacles.js?v=ruff465"></script>
+<script src="power-fx.js?v=ruff465"></script>
+<script src="bosses.js?v=ruff465"></script>
+<script src="boss-dialogue.js?v=ruff465"></script>
+<script src="effects-combat.js?v=ruff465"></script>
+<script src="gamestate-ui.js?v=ruff465"></script>
+<script src="world-atmosphere.js?v=ruff465"></script>
+<script src="main-loop.js?v=ruff465"></script>
+
+<script src="launch-screens.js?v=ruff465"></script>
+</body>
+</html>
