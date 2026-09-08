@@ -1041,19 +1041,16 @@ window.__airborneRingDebug = false;
       // force square-ish size after later assignments
     }
     if (type === "bird_a" || type === "bird_b") {
-      // Mix original frame birds with new spritesheet species
-      if (Math.random() < 0.55) {
-        birdSpecies = pickTrainingBirdSpecies();
-        birdFrameCount = birdSpecies.frames || 36;
-        var sheetImg = (typeof images !== "undefined" && images) ? images[birdSpecies.key] : null;
-        if (sheetImg && sheetImg.naturalWidth) {
-          var sc = birdSpecies.cols || 6, sr = birdSpecies.rows || 6;
-          aspect = (sheetImg.naturalHeight / sr) / (sheetImg.naturalWidth / sc);
-        }
+      // ORIGINAL two bird assets only (frame sequences bird_a / bird_b)
+      birdSpecies = null;
+      birdFrameCount = OBSTACLE_ANIM_FRAME_COUNT || 28;
+      var fr0 = (typeof images !== "undefined" && images) ? images[type + "_01"] : null;
+      if (fr0 && fr0.naturalWidth && fr0.naturalHeight) {
+        aspect = fr0.naturalHeight / fr0.naturalWidth;
       } else {
-        birdSpecies = null; // classic bird_a / bird_b animation frames
+        aspect = 0.85;
       }
-      dispW = Math.min(86, W * 0.176); // +10% bird size
+      dispW = Math.min(86, W * 0.176);
     }
     const dispH2 = (type === "bird_a" || type === "bird_b") ? dispW * aspect : dispH;
     if (type === "bird_a" || type === "bird_b") {
@@ -2078,50 +2075,61 @@ window.__airborneRingDebug = false;
     });
 
 
-    // --- Original-style obstacle collision ---
-    // AABB vs player center; damage once; obstacle keeps scrolling left.
+    // === REBUILT bird/obstacle vs blimp collision ===
+    // player.x/y = CENTER; obstacle x/y = top-left of sprite
     try {
-      if (typeof player === "undefined" || !player) { /* skip */ }
-      else if (typeof bossActive !== "undefined" && bossActive) { /* skip */ }
-      else {
-        var nowHit = performance.now();
-        var stC = window.__airborneRuffStage || "";
-        // Only block damage outside flight combat (takeoff/land/etc.)
+      var obsList = obstacles;
+      try {
+        if (typeof window.__airborneGetObstacles === "function") {
+          var gl = window.__airborneGetObstacles();
+          if (gl && gl.length) obsList = gl;
+        }
+      } catch (eG) {}
+      if (typeof player !== "undefined" && player && obsList && obsList.length &&
+          !(typeof bossActive !== "undefined" && bossActive)) {
         var phase = window.__airborneAirfieldPhase || "";
-        var scripted = (phase === "taxi" || phase === "accel" || phase === "climb" ||
-                        phase === "land" || phase === "skid" || phase === "score" || phase === "done");
-        if (!scripted) {
-          for (var ci = 0; ci < obstacles.length; ci++) {
-            var co = obstacles[ci];
+        var block = (phase === "taxi" || phase === "accel" || phase === "climb" ||
+                     phase === "land" || phase === "skid" || phase === "score" || phase === "done");
+        if (!block) {
+          var nowHit = performance.now();
+          // Player half-extents (center-based)
+          var pHalfW = (player.w || 84) * 0.40;
+          var pHalfH = (player.h || 50) * 0.40;
+          var px = player.x;
+          var py = player.y;
+          for (var ci = 0; ci < obsList.length; ci++) {
+            var co = obsList[ci];
             if (!co || co.scored) continue;
             if (co.isRing || co.type === "gold_ring" || co.type === "ring") continue;
             if (co.shockFall || co.onFire || co.powerAffected) continue;
             var bob = Math.sin(co.bobPhase || 0) * (co.bobAmount || 0);
-            var cx = co.x + (co.w || 40) * 0.5;
-            var cy = co.y + (co.h || 40) * 0.5 + bob;
-            var dx = Math.abs(player.x - cx);
-            var dy = Math.abs(player.y - cy);
-            var hw = (player.w || 48) * 0.38 + (co.w || 40) * 0.34;
-            var hh = (player.h || 36) * 0.38 + (co.h || 40) * 0.34;
-            if (dx >= hw || dy >= hh) continue;
+            // Obstacle center from top-left
+            var ox = (co.x || 0) + (co.w || 40) * 0.5;
+            var oy = (co.y || 0) + (co.h || 40) * 0.5 + bob;
+            var oHalfW = (co.w || 40) * 0.36;
+            var oHalfH = (co.h || 40) * 0.36;
+            if (Math.abs(px - ox) > (pHalfW + oHalfW)) continue;
+            if (Math.abs(py - oy) > (pHalfH + oHalfH)) continue;
 
+            // Overlap
             if ((typeof shieldActive !== "undefined" && shieldActive) || window.__airborneShieldActive) {
               co.scored = true;
-              co.hitFlash = 0.3;
+              co.hitFlash = 0.35;
               try { if (typeof shieldImpactTime !== "undefined") shieldImpactTime = nowHit; } catch (e) {}
               try { if (typeof sfxDeflect === "function") sfxDeflect(); } catch (e) {}
               continue;
             }
             if (nowHit < (typeof invulnerableUntil === "number" ? invulnerableUntil : 0)) continue;
 
+            // Apply damage then mark so we don't multi-hit same bird
+            try { if (typeof takeHit === "function") takeHit(); } catch (eH) { console.warn(eH); }
             co.scored = true;
-            co.hitFlash = 0.45;
-            try { if (typeof takeHit === "function") takeHit(); } catch (eH) {}
+            co.hitFlash = 0.5;
             break;
           }
         }
       }
-    } catch (eCol) { console.warn("obst collision", eCol); }
+    } catch (eCol) { console.warn("collision rebuild", eCol); }
 
     // In-place prune (never reassign obstacles — keeps shared references valid)
     for (var fi = obstacles.length - 1; fi >= 0; fi--) {
@@ -2528,7 +2536,35 @@ window.__airborneRingDebug = false;
         try { drawDroneScout(o, drawY); } catch (eDr) {}
         return;
       }
-      if (o.birdSpecies && typeof drawBirdFromSheet === "function" && drawBirdFromSheet(o, drawY)) {
+      // Classic bird_a / bird_b frame draw (no species sheets)
+      if (o.type === "bird_a" || o.type === "bird_b") {
+        var framesB = OBSTACLE_ANIM_SETS[o.type];
+        var imgB = null;
+        if (framesB && framesB.length && typeof images !== "undefined" && images) {
+          imgB = images[framesB[(o.animFrame || 0) % framesB.length]];
+        }
+        if (!imgB || !imgB.naturalWidth) {
+          // Fallback solid silhouette so birds are NEVER invisible
+          ctx.save();
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = o.type === "bird_b" ? "#c45c2a" : "#3a6ea5";
+          ctx.beginPath();
+          ctx.ellipse(o.x + o.w * 0.5, drawY + o.h * 0.5, o.w * 0.42, o.h * 0.32, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#2a2a2a";
+          ctx.beginPath();
+          ctx.ellipse(o.x + o.w * 0.72, drawY + o.h * 0.42, o.w * 0.18, o.h * 0.12, -0.3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          return;
+        }
+        ctx.save();
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = "source-over";
+        try {
+          ctx.drawImage(imgB, o.x, drawY, o.w, o.h);
+        } catch (eD) {}
+        ctx.restore();
         return;
       }
       var frames = OBSTACLE_ANIM_SETS[o.type];

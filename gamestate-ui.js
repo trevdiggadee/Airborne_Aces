@@ -431,7 +431,11 @@
   window.pulseHealthMeter = pulseHealthMeter;
 
   function takeHit() {
-    if (state !== "playing") return;
+    // During training combat, force-allow even if state flickered
+    var trainingCombat = window.__airborneRuffActive &&
+      (window.__airborneRuffStage === "obstacles" || window.__airborneRuffStage === "shield" ||
+       window.__airborneRuffStage === "combined");
+    if (state !== "playing" && !trainingCombat) return;
     if (bonusActive) return;
     // Only fully block damage during scripted takeoff/landing phases
     var phase = window.__airborneAirfieldPhase || "";

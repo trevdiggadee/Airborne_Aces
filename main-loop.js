@@ -608,33 +608,53 @@ function loop(ts) {
       try {
         var rr = window.__airborneRingResultsCanvas;
         if (rr && typeof ctx !== "undefined" && ctx) {
-          rr.t = (rr.t || 0) + (typeof dt === "number" ? dt : 0.016);
-          var life = rr.life || 3.6;
+          var Ww = (typeof W === "number" && W > 0) ? W : (ctx.canvas ? ctx.canvas.clientWidth : 400);
+          var Hh = (typeof H === "number" && H > 0) ? H : (ctx.canvas ? ctx.canvas.clientHeight : 700);
+          rr.t = (rr.t || 0) + (typeof dt === "number" ? Math.min(dt, 0.05) : 0.016);
+          var life = rr.life || 4.2;
           var a = 1;
-          if (rr.t < 0.3) a = rr.t / 0.3;
+          if (rr.t < 0.35) a = rr.t / 0.35;
           else if (rr.t > life - 0.5) a = Math.max(0, 1 - (rr.t - (life - 0.5)) / 0.5);
           if (rr.t >= life) { window.__airborneRingResultsCanvas = null; a = 0; }
-          ctx.save();
-          ctx.globalAlpha = a * 0.45;
-          ctx.fillStyle = "#000";
-          ctx.fillRect(0, 0, W || 400, H || 700);
-          ctx.globalAlpha = a;
-          ctx.fillStyle = "#ffe8b0";
-          ctx.strokeStyle = "#c9a06a";
-          ctx.lineWidth = 3;
-          var bw = Math.min(280, (W || 400) * 0.7), bh = 70;
-          var bx = ((W || 400) - bw) / 2, by = ((H || 700) - bh) / 2;
-          ctx.fillStyle = "rgba(30,20,10,0.92)";
-          ctx.strokeStyle = "#e0b060";
-          ctx.beginPath();
-          if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, 14); else ctx.rect(bx, by, bw, bh);
-          ctx.fill(); ctx.stroke();
-          ctx.fillStyle = "#ffe8b0";
-          ctx.font = "900 36px Rockwell,Georgia,serif";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(rr.text || "0 / 20", (W || 400) / 2, (H || 700) / 2);
-          ctx.restore();
+          if (a > 0.02) {
+            ctx.save();
+            ctx.globalAlpha = a;
+            var cx = Ww * 0.5, cy = Hh * 0.38;
+            var R = Math.min(Ww, Hh) * 0.16;
+            // Soft vignette band
+            ctx.fillStyle = "rgba(0,0,0," + (0.35 * a) + ")";
+            ctx.fillRect(0, cy - R * 1.6, Ww, R * 3.2);
+            // Outer gold ring
+            ctx.beginPath();
+            ctx.arc(cx, cy, R, 0, Math.PI * 2);
+            ctx.strokeStyle = "#e8c060";
+            ctx.lineWidth = Math.max(6, R * 0.12);
+            ctx.stroke();
+            // Inner dark disc
+            ctx.beginPath();
+            ctx.arc(cx, cy, R * 0.82, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(28,16,6,0.92)";
+            ctx.fill();
+            ctx.strokeStyle = "#f0d878";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            // Label
+            ctx.fillStyle = "#c9a06a";
+            ctx.font = "bold " + Math.round(R * 0.22) + "px Rockwell,Georgia,serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("RINGS", cx, cy - R * 0.32);
+            // Big score
+            ctx.fillStyle = "#ffe8b0";
+            ctx.font = "900 " + Math.round(R * 0.48) + "px Rockwell,Georgia,serif";
+            ctx.fillText(rr.text || ((rr.n || 0) + " / " + (rr.total || 20)), cx, cy + R * 0.12);
+            // Decorative small rings
+            ctx.strokeStyle = "rgba(232,192,96,0.45)";
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(cx - R * 1.25, cy, R * 0.18, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(cx + R * 1.25, cy, R * 0.18, 0, Math.PI * 2); ctx.stroke();
+            ctx.restore();
+          }
         }
       } catch (eRR) {} try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePowerVisual(); } catch(e) {};
     try { if (window.drawHitCoins) window.drawHitCoins(); } catch (e) {}
@@ -649,41 +669,61 @@ function loop(ts) {
     try { if (window.__airborneDrawTrainingCoins) window.__airborneDrawTrainingCoins(); } catch (e) {}
 
     try { drawTrainingRuffEmergency(typeof dt === "number" ? dt : 0.016); } catch (eER) {}
-    // RING SUMMARY TOP LAYER (always last)
-    try {
-      var rr2 = window.__airborneRingResultsCanvas;
-      if (rr2 && typeof ctx !== "undefined" && ctx) {
-        var Ww = (typeof W === "number" && W > 0) ? W : (ctx.canvas ? ctx.canvas.clientWidth : 400);
-        var Hh = (typeof H === "number" && H > 0) ? H : (ctx.canvas ? ctx.canvas.clientHeight : 700);
-        rr2.t = (rr2.t || 0) + (typeof dt === "number" ? dt : 0.016);
-        var life2 = rr2.life || 4.0;
-        var a2 = 1;
-        if (rr2.t < 0.25) a2 = rr2.t / 0.25;
-        else if (rr2.t > life2 - 0.45) a2 = Math.max(0, 1 - (rr2.t - (life2 - 0.45)) / 0.45);
-        if (rr2.t >= life2) { window.__airborneRingResultsCanvas = null; a2 = 0; }
-        if (a2 > 0.02) {
-          ctx.save();
-          ctx.globalAlpha = a2;
-          ctx.fillStyle = "rgba(12,8,4,0.55)";
-          ctx.fillRect(0, Hh * 0.28, Ww, Hh * 0.22);
-          ctx.fillStyle = "#ffe8b0";
-          ctx.strokeStyle = "#e0b060";
-          ctx.lineWidth = 4;
-          var bw2 = Math.min(300, Ww * 0.72), bh2 = 78;
-          var bx2 = (Ww - bw2) / 2, by2 = Hh * 0.36;
-          ctx.fillStyle = "rgba(24,14,6,0.92)";
-          ctx.beginPath();
-          if (ctx.roundRect) ctx.roundRect(bx2, by2, bw2, bh2, 14); else ctx.rect(bx2, by2, bw2, bh2);
-          ctx.fill(); ctx.stroke();
-          ctx.fillStyle = "#ffe8b0";
-          ctx.font = "900 42px Rockwell,Georgia,serif";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(rr2.text || "0 / 20", Ww / 2, by2 + bh2 / 2);
-          ctx.restore();
+    
+      try {
+        var rr = window.__airborneRingResultsCanvas;
+        if (rr && typeof ctx !== "undefined" && ctx) {
+          var Ww = (typeof W === "number" && W > 0) ? W : (ctx.canvas ? ctx.canvas.clientWidth : 400);
+          var Hh = (typeof H === "number" && H > 0) ? H : (ctx.canvas ? ctx.canvas.clientHeight : 700);
+          rr.t = (rr.t || 0) + (typeof dt === "number" ? Math.min(dt, 0.05) : 0.016);
+          var life = rr.life || 4.2;
+          var a = 1;
+          if (rr.t < 0.35) a = rr.t / 0.35;
+          else if (rr.t > life - 0.5) a = Math.max(0, 1 - (rr.t - (life - 0.5)) / 0.5);
+          if (rr.t >= life) { window.__airborneRingResultsCanvas = null; a = 0; }
+          if (a > 0.02) {
+            ctx.save();
+            ctx.globalAlpha = a;
+            var cx = Ww * 0.5, cy = Hh * 0.38;
+            var R = Math.min(Ww, Hh) * 0.16;
+            // Soft vignette band
+            ctx.fillStyle = "rgba(0,0,0," + (0.35 * a) + ")";
+            ctx.fillRect(0, cy - R * 1.6, Ww, R * 3.2);
+            // Outer gold ring
+            ctx.beginPath();
+            ctx.arc(cx, cy, R, 0, Math.PI * 2);
+            ctx.strokeStyle = "#e8c060";
+            ctx.lineWidth = Math.max(6, R * 0.12);
+            ctx.stroke();
+            // Inner dark disc
+            ctx.beginPath();
+            ctx.arc(cx, cy, R * 0.82, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(28,16,6,0.92)";
+            ctx.fill();
+            ctx.strokeStyle = "#f0d878";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            // Label
+            ctx.fillStyle = "#c9a06a";
+            ctx.font = "bold " + Math.round(R * 0.22) + "px Rockwell,Georgia,serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("RINGS", cx, cy - R * 0.32);
+            // Big score
+            ctx.fillStyle = "#ffe8b0";
+            ctx.font = "900 " + Math.round(R * 0.48) + "px Rockwell,Georgia,serif";
+            ctx.fillText(rr.text || ((rr.n || 0) + " / " + (rr.total || 20)), cx, cy + R * 0.12);
+            // Decorative small rings
+            ctx.strokeStyle = "rgba(232,192,96,0.45)";
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(cx - R * 1.25, cy, R * 0.18, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(cx + R * 1.25, cy, R * 0.18, 0, Math.PI * 2); ctx.stroke();
+            ctx.restore();
+          }
         }
-      }
-    } catch (eR2) {}
+      } catch (eRR) {}
+
+
     // Platforms ON TOP so they cannot be covered
     // platforms drawn earlier (behind birds/blimp/ruff/coins)
 

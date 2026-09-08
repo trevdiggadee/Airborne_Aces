@@ -139,37 +139,33 @@
   
   function showRingResultsBanner() {
     try {
-      if (window.__airborneRingResultsShown && window.__airborneRingResultsCanvas) return;
+      if (window.__airborneRingResultsShown && window.__airborneRingResultsCanvas &&
+          window.__airborneRingResultsCanvas.t < 3.5) return;
       window.__airborneRingResultsShown = true;
       var n = (ruffStats && ruffStats.rings) ? ruffStats.rings : 0;
       var totN = window.__airborneRingTotalTarget || 20;
-      var text = String(n) + " / " + String(totN);
-      // Canvas is the reliable display (works on iOS over game)
-      window.__airborneRingResultsCanvas = { t: 0, life: 4.0, text: text };
-      console.log("[Rings] SCORE SUMMARY", text);
-      // DOM backup
-      try {
-        var old = document.getElementById("aaRingSummary");
-        if (old && old.parentNode) old.parentNode.removeChild(old);
-        var el = document.createElement("div");
-        el.id = "aaRingSummary";
-        el.textContent = text;
-        el.style.cssText = "position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);" +
-          "z-index:2147483647;pointer-events:none;font:900 52px Rockwell,Georgia,serif;" +
-          "color:#ffe8b0;text-shadow:0 3px 0 #4a3010,0 0 28px rgba(255,200,80,0.85);" +
-          "background:rgba(18,10,4,0.8);border:3px solid #e0b060;border-radius:16px;" +
-          "padding:18px 32px;letter-spacing:0.06em;";
-        document.body.appendChild(el);
-        setTimeout(function () {
-          try { if (el.parentNode) el.parentNode.removeChild(el); } catch (e) {}
-        }, 4000);
-      } catch (eDom) {}
+      // Unique design payload for canvas drawer
+      window.__airborneRingResultsCanvas = {
+        t: 0,
+        life: 4.2,
+        text: String(n) + " / " + String(totN),
+        n: n,
+        total: totN,
+        style: "ringMedal"
+      };
+      console.log("[Rings] UNIQUE SUMMARY", n, "/", totN);
+      // Remove any old DOM leftovers
+      ["aaRingSummary", "aaRingResults"].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+      });
     } catch (e) {
       console.warn("ring summary", e);
       window.__airborneRingResultsShown = true;
     }
   }
   window.showRingResultsBanner = showRingResultsBanner;
+
 
 
     function maybeFinishRingsLesson() {
@@ -4263,6 +4259,7 @@ function finishToMap() {
     } else if (ruffStage === "obstacles") {
       window.__airborneAirfieldInvuln = false;
       window.__airborneAirfieldObstacles = true;
+      try { if (typeof state !== "undefined" && state !== "playing" && state !== "paused") state = "playing"; } catch (e) {}
       // Keep platform-attached coins until platforms scroll off
       try {
         ruffCoins = (ruffCoins || []).filter(function (c) { return c && c.fixedToPlatform && !c.collected; });
