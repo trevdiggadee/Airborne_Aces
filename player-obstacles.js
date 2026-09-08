@@ -614,6 +614,40 @@ window.__airborneRingDebug = false;
     return true;
   }
 
+  
+  function boostBirdSheetOpacity(img) {
+    try {
+      if (!img || !img.naturalWidth || img.__alphaBoosted) return img;
+      var c = document.createElement("canvas");
+      c.width = img.naturalWidth;
+      c.height = img.naturalHeight;
+      var g = c.getContext("2d");
+      g.drawImage(img, 0, 0);
+      var data = g.getImageData(0, 0, c.width, c.height);
+      var d = data.data;
+      for (var i = 0; i < d.length; i += 4) {
+        var a = d[i + 3];
+        if (a > 8 && a < 230) {
+          // Strengthen semi-transparent bird pixels
+          d[i + 3] = Math.min(255, Math.floor(a * 1.65 + 40));
+        } else if (a > 0 && a <= 8) {
+          // Near-invisible fringe: keep or slight boost
+          d[i + 3] = Math.min(255, a * 3);
+        }
+      }
+      g.putImageData(data, 0, 0);
+      var out = new Image();
+      out.src = c.toDataURL("image/png");
+      out.__alphaBoosted = true;
+      out.width = c.width;
+      out.height = c.height;
+      // Use when loaded
+      img.__alphaBoosted = true;
+      img.__boostedCanvas = c;
+      return img;
+    } catch (e) { return img; }
+  }
+
   function drawBirdFromSheet(o, drawY) {
     var sp = o.birdSpecies;
     if (!sp) return false;
@@ -626,16 +660,28 @@ window.__airborneRingDebug = false;
     var row = Math.floor(fr / cols) % rows;
     var fw = img.naturalWidth / cols;
     var fh = img.naturalHeight / rows;
+    try { boostBirdSheetOpacity(img); } catch (eB) {}
+    var src = (img.__boostedCanvas) ? img.__boostedCanvas : img;
+    var sw = img.naturalWidth || src.width;
+    var sh = img.naturalHeight || src.height;
+    fw = sw / cols;
+    fh = sh / rows;
     ctx.save();
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = "source-over";
     if (o.powerAffected || o.onFire || o.rot) {
       ctx.translate(o.x + o.w / 2, drawY + o.h / 2);
       ctx.rotate(o.rot || 0);
-      ctx.drawImage(img, col * fw, row * fh, fw, fh, -o.w / 2, -o.h / 2, o.w, o.h);
+      ctx.drawImage(src, col * fw, row * fh, fw, fh, -o.w / 2, -o.h / 2, o.w, o.h);
+      // Second pass strengthens thin sprites
+      ctx.globalAlpha = 0.55;
+      ctx.drawImage(src, col * fw, row * fh, fw, fh, -o.w / 2, -o.h / 2, o.w, o.h);
     } else {
-      ctx.drawImage(img, col * fw, row * fh, fw, fh, o.x, drawY, o.w, o.h);
+      ctx.drawImage(src, col * fw, row * fh, fw, fh, o.x, drawY, o.w, o.h);
+      ctx.globalAlpha = 0.55;
+      ctx.drawImage(src, col * fw, row * fh, fw, fh, o.x, drawY, o.w, o.h);
     }
+    ctx.globalAlpha = 1;
     ctx.restore();
     return true;
   }
@@ -2032,45 +2078,50 @@ window.__airborneRingDebug = false;
     });
 
 
-    // --- Classic obstacle collision (simple, no bounce/knock) ---
-    // On hit: take damage once, obstacle keeps normal leftward path.
+    // --- Original-style obstacle collision ---
+    // AABB vs player center; damage once; obstacle keeps scrolling left.
     try {
-      if (typeof player !== "undefined" && player &&
-          !(typeof bossActive !== "undefined" && bossActive)) {
+      if (typeof player === "undefined" || !player) { /* skip */ }
+      else if (typeof bossActive !== "undefined" && bossActive) { /* skip */ }
+      else {
         var nowHit = performance.now();
-        for (var ci = 0; ci < obstacles.length; ci++) {
-          var co = obstacles[ci];
-          if (!co || co.scored) continue;
-          if (co.isRing || co.type === "gold_ring" || co.type === "ring") continue;
-          if (co.shockFall || co.onFire || co.powerAffected) continue;
-          var cx = co.x + (co.w || 40) * 0.5;
-          var cy = co.y + (co.h || 40) * 0.5 + Math.sin(co.bobPhase || 0) * (co.bobAmount || 0);
-          var dx = Math.abs(player.x - cx);
-          var dy = Math.abs(player.y - cy);
-          // Classic tighter hitbox (felt best historically)
-          var hw = (player.w || 48) * 0.40 + (co.w || 40) * 0.36;
-          var hh = (player.h || 36) * 0.40 + (co.h || 40) * 0.36;
-          if (dx < hw && dy < hh) {
-            // Combat lessons always collide; ignore sticky invuln flag
-            var stC = window.__airborneRuffStage || "";
-            var combat = (stC === "obstacles" || stC === "shield" || stC === "combined");
-            if (!combat && window.__airborneAirfieldInvuln) continue;
-            if (typeof shieldActive !== "undefined" && shieldActive) {
-              // Shield absorbs: mark scored so no re-trigger, path unchanged
+        var stC = window.__airborneRuffStage || "";
+        // Only block damage outside flight combat (takeoff/land/etc.)
+        var phase = window.__airborneAirfieldPhase || "";
+        var scripted = (phase === "taxi" || phase === "accel" || phase === "climb" ||
+                        phase === "land" || phase === "skid" || phase === "score" || phase === "done");
+        if (!scripted) {
+          for (var ci = 0; ci < obstacles.length; ci++) {
+            var co = obstacles[ci];
+            if (!co || co.scored) continue;
+            if (co.isRing || co.type === "gold_ring" || co.type === "ring") continue;
+            if (co.shockFall || co.onFire || co.powerAffected) continue;
+            var bob = Math.sin(co.bobPhase || 0) * (co.bobAmount || 0);
+            var cx = co.x + (co.w || 40) * 0.5;
+            var cy = co.y + (co.h || 40) * 0.5 + bob;
+            var dx = Math.abs(player.x - cx);
+            var dy = Math.abs(player.y - cy);
+            var hw = (player.w || 48) * 0.38 + (co.w || 40) * 0.34;
+            var hh = (player.h || 36) * 0.38 + (co.h || 40) * 0.34;
+            if (dx >= hw || dy >= hh) continue;
+
+            if ((typeof shieldActive !== "undefined" && shieldActive) || window.__airborneShieldActive) {
               co.scored = true;
-              co.hitFlash = 0.35;
+              co.hitFlash = 0.3;
               try { if (typeof shieldImpactTime !== "undefined") shieldImpactTime = nowHit; } catch (e) {}
+              try { if (typeof sfxDeflect === "function") sfxDeflect(); } catch (e) {}
               continue;
             }
             if (nowHit < (typeof invulnerableUntil === "number" ? invulnerableUntil : 0)) continue;
+
             co.scored = true;
-            co.hitFlash = 0.4;
+            co.hitFlash = 0.45;
             try { if (typeof takeHit === "function") takeHit(); } catch (eH) {}
-            break; // one hit per frame
+            break;
           }
         }
       }
-    } catch (eCol) {}
+    } catch (eCol) { console.warn("obst collision", eCol); }
 
     // In-place prune (never reassign obstacles — keeps shared references valid)
     for (var fi = obstacles.length - 1; fi >= 0; fi--) {

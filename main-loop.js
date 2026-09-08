@@ -649,6 +649,41 @@ function loop(ts) {
     try { if (window.__airborneDrawTrainingCoins) window.__airborneDrawTrainingCoins(); } catch (e) {}
 
     try { drawTrainingRuffEmergency(typeof dt === "number" ? dt : 0.016); } catch (eER) {}
+    // RING SUMMARY TOP LAYER (always last)
+    try {
+      var rr2 = window.__airborneRingResultsCanvas;
+      if (rr2 && typeof ctx !== "undefined" && ctx) {
+        var Ww = (typeof W === "number" && W > 0) ? W : (ctx.canvas ? ctx.canvas.clientWidth : 400);
+        var Hh = (typeof H === "number" && H > 0) ? H : (ctx.canvas ? ctx.canvas.clientHeight : 700);
+        rr2.t = (rr2.t || 0) + (typeof dt === "number" ? dt : 0.016);
+        var life2 = rr2.life || 4.0;
+        var a2 = 1;
+        if (rr2.t < 0.25) a2 = rr2.t / 0.25;
+        else if (rr2.t > life2 - 0.45) a2 = Math.max(0, 1 - (rr2.t - (life2 - 0.45)) / 0.45);
+        if (rr2.t >= life2) { window.__airborneRingResultsCanvas = null; a2 = 0; }
+        if (a2 > 0.02) {
+          ctx.save();
+          ctx.globalAlpha = a2;
+          ctx.fillStyle = "rgba(12,8,4,0.55)";
+          ctx.fillRect(0, Hh * 0.28, Ww, Hh * 0.22);
+          ctx.fillStyle = "#ffe8b0";
+          ctx.strokeStyle = "#e0b060";
+          ctx.lineWidth = 4;
+          var bw2 = Math.min(300, Ww * 0.72), bh2 = 78;
+          var bx2 = (Ww - bw2) / 2, by2 = Hh * 0.36;
+          ctx.fillStyle = "rgba(24,14,6,0.92)";
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(bx2, by2, bw2, bh2, 14); else ctx.rect(bx2, by2, bw2, bh2);
+          ctx.fill(); ctx.stroke();
+          ctx.fillStyle = "#ffe8b0";
+          ctx.font = "900 42px Rockwell,Georgia,serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(rr2.text || "0 / 20", Ww / 2, by2 + bh2 / 2);
+          ctx.restore();
+        }
+      }
+    } catch (eR2) {}
     // Platforms ON TOP so they cannot be covered
     // platforms drawn earlier (behind birds/blimp/ruff/coins)
 

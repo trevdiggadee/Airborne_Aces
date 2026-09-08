@@ -139,41 +139,31 @@
   
   function showRingResultsBanner() {
     try {
+      if (window.__airborneRingResultsShown && window.__airborneRingResultsCanvas) return;
       window.__airborneRingResultsShown = true;
       var n = (ruffStats && ruffStats.rings) ? ruffStats.rings : 0;
       var totN = window.__airborneRingTotalTarget || 20;
-      var text = n + " / " + totN;
-
-      // Remove any old
-      ["aaRingResults", "aaRingSummary"].forEach(function (id) {
-        var old = document.getElementById(id);
+      var text = String(n) + " / " + String(totN);
+      // Canvas is the reliable display (works on iOS over game)
+      window.__airborneRingResultsCanvas = { t: 0, life: 4.0, text: text };
+      console.log("[Rings] SCORE SUMMARY", text);
+      // DOM backup
+      try {
+        var old = document.getElementById("aaRingSummary");
         if (old && old.parentNode) old.parentNode.removeChild(old);
-      });
-
-      var el = document.createElement("div");
-      el.id = "aaRingSummary";
-      el.innerHTML = '<div style="font:900 48px/1.1 Rockwell,Georgia,serif;color:#ffe8b0;' +
-        'text-shadow:0 3px 0 #5a3a10,0 0 24px rgba(255,200,80,0.7),0 8px 28px rgba(0,0,0,0.6);' +
-        'letter-spacing:0.06em;padding:16px 28px;border-radius:16px;' +
-        'background:rgba(20,12,6,0.72);border:3px solid #e0b060;' +
-        'box-shadow:0 12px 40px rgba(0,0,0,0.55);">' + text + '</div>';
-      el.style.cssText = "position:fixed;left:0;top:0;right:0;bottom:0;display:flex;" +
-        "align-items:center;justify-content:center;z-index:2147483647;pointer-events:none;" +
-        "opacity:0;transition:opacity 0.35s ease;";
-      document.body.appendChild(el);
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () { el.style.opacity = "1"; });
-      });
-      window.__airborneRingResultsCanvas = { t: 0, life: 3.8, text: text };
-      console.log("[Rings] SUMMARY", text);
-      setTimeout(function () {
-        try {
-          el.style.opacity = "0";
-          setTimeout(function () {
-            try { if (el.parentNode) el.parentNode.removeChild(el); } catch (e) {}
-          }, 400);
-        } catch (e) {}
-      }, 3600);
+        var el = document.createElement("div");
+        el.id = "aaRingSummary";
+        el.textContent = text;
+        el.style.cssText = "position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);" +
+          "z-index:2147483647;pointer-events:none;font:900 52px Rockwell,Georgia,serif;" +
+          "color:#ffe8b0;text-shadow:0 3px 0 #4a3010,0 0 28px rgba(255,200,80,0.85);" +
+          "background:rgba(18,10,4,0.8);border:3px solid #e0b060;border-radius:16px;" +
+          "padding:18px 32px;letter-spacing:0.06em;";
+        document.body.appendChild(el);
+        setTimeout(function () {
+          try { if (el.parentNode) el.parentNode.removeChild(el); } catch (e) {}
+        }, 4000);
+      } catch (eDom) {}
     } catch (e) {
       console.warn("ring summary", e);
       window.__airborneRingResultsShown = true;
@@ -181,24 +171,31 @@
   }
   window.showRingResultsBanner = showRingResultsBanner;
 
-  function maybeFinishRingsLesson() {
+
+    function maybeFinishRingsLesson() {
     try {
       if (window.__airborneRingResultsShown) return;
-      if ((window.__airborneRuffStage || ruffStage) !== "rings") return;
+      var st = window.__airborneRuffStage || ruffStage || "";
+      if (st !== "rings") return;
       var target = window.__airborneRingTotalTarget || 20;
       var spawned = window.__airborneRingSpawned || 0;
+      if (spawned < target) return;
+      // Prefer resolved count, but don't hard-require misses (can lag one frame)
       var resolved = (ruffStats.rings || 0) + (ruffStats.ringMisses || 0);
-      if (spawned >= target && resolved >= target) {
-        try { if (window.__airborneComputeRingRank) window.__airborneComputeRingRank(); } catch (e) {}
-        showRingResultsBanner();
-        // Continue flying into next lesson under the banner
-        setTimeout(function () {
-          try {
-            if ((window.__airborneRuffStage || ruffStage) === "rings") setStage("platforms");
-          } catch (e) {}
-        }, 400);
-      }
-    } catch (e) {}
+      var ringsLeft = 0;
+      try {
+        if (typeof window.__airborneCountTrainingRings === "function")
+          ringsLeft = window.__airborneCountTrainingRings();
+      } catch (e) {}
+      if (resolved < target && ringsLeft > 0) return;
+      try { if (window.__airborneComputeRingRank) window.__airborneComputeRingRank(); } catch (e) {}
+      showRingResultsBanner();
+      setTimeout(function () {
+        try {
+          if ((window.__airborneRuffStage || ruffStage) === "rings") setStage("platforms");
+        } catch (e) {}
+      }, 300);
+    } catch (e) { console.warn("maybeFinishRings", e); }
   }
 
 
@@ -1252,6 +1249,7 @@
       ruffStats.ringPerfectFlight = false;
       window.__airborneRingHud = { streak: 0, mult: 1, score: 0, lastPts: 0, flash: 0, title: "" };
     } else if (name === "platforms") {
+      try { showRingResultsBanner(); } catch (e) {}
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
@@ -4236,18 +4234,11 @@ function finishToMap() {
         }
       } catch (eRL) {}
 
-      // After all 20 out and off-screen (or timeout): show N/20 and keep flying into platforms
-      if ((spawned >= 20 && ringsLeft === 0 && ruffStageT > 18) || ruffStageT > 110) {
-        if (!window.__airborneRingResultsShown) {
-          try { if (window.__airborneComputeRingRank) window.__airborneComputeRingRank(); } catch (e) {}
-          var rtxt = ((ruffStats.rings || 0) + " / " + (window.__airborneRingTotalTarget || 20));
-          window.__airborneRingResultsCanvas = { t: 0, life: 3.6, text: rtxt };
-          try { showRingResultsBanner(); } catch (e) {}
-          window.__airborneRingResultsShown = true;
-          // Advance immediately so blimp keeps flying into next lesson under the banner
-          setStage("platforms");
-          console.log("[R.U.F.F.] rings → platforms + results", rtxt);
-        }
+      if ((spawned >= 20 && ringsLeft === 0 && ruffStageT > 16) || ruffStageT > 100) {
+        try { if (window.__airborneComputeRingRank) window.__airborneComputeRingRank(); } catch (e) {}
+        try { showRingResultsBanner(); } catch (e) {}
+        setStage("platforms");
+        console.log("[R.U.F.F.] rings → platforms + summary");
       }
     } else if (ruffStage === "crystals" || ruffStage === "powerup") {
       setStage("obstacles");

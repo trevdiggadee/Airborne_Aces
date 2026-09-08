@@ -433,22 +433,18 @@
   function takeHit() {
     if (state !== "playing") return;
     if (bonusActive) return;
-    // Scripted airfield phases — no damage (except obstacle combat lessons)
+    // Only fully block damage during scripted takeoff/landing phases
+    var phase = window.__airborneAirfieldPhase || "";
+    if (phase === "taxi" || phase === "accel" || phase === "climb" ||
+        phase === "land" || phase === "rollout" || phase === "skid" ||
+        phase === "score" || phase === "done") {
+      return;
+    }
+    // Ignore sticky invuln flag during combat lessons
     var stHit = window.__airborneRuffStage || "";
-    var combatLesson = (stHit === "obstacles" || stHit === "shield" || stHit === "combined");
-    if (!combatLesson) {
-      if (window.__airborneAirfieldInvuln ||
-          (window.__airborneAirfield &&
-           (window.__airborneAirfieldPhase === "taxi" ||
-            window.__airborneAirfieldPhase === "accel" ||
-            window.__airborneAirfieldPhase === "climb" ||
-            window.__airborneAirfieldPhase === "land" ||
-            window.__airborneAirfieldPhase === "rollout" ||
-            window.__airborneAirfieldPhase === "skid" ||
-            window.__airborneAirfieldPhase === "score" ||
-            window.__airborneAirfieldPhase === "done"))) {
-        return;
-      }
+    if (window.__airborneAirfieldInvuln &&
+        stHit !== "obstacles" && stHit !== "shield" && stHit !== "combined" && stHit !== "platforms") {
+      return;
     }
     if (shieldActive || window.__airborneShieldActive) {
       spawnHitParticles(player.x, player.y);
