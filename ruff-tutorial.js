@@ -154,7 +154,7 @@
       var best = (ruffStats && ruffStats.ringBestStreak) ? ruffStats.ringBestStreak : 0;
       window.__airborneRingResultsCanvas = {
         t: 0,
-        life: 3.2,
+        life: 3.6,
         text: String(n) + " / " + String(totN),
         n: n,
         total: totN,
@@ -166,6 +166,11 @@
         embers: null
       };
       console.log("[Rings] UNIFIED", n, "/", totN, rank);
+      try {
+        if (typeof sfxRingSummary === "function") sfxRingSummary();
+        else if (window.sfxRingSummary) window.sfxRingSummary();
+        else if (typeof sfxRankUp === "function") sfxRankUp();
+      } catch (eS) {}
       ["aaRingSummary", "aaRingResults"].forEach(function (id) {
         var el = document.getElementById(id);
         if (el && el.parentNode) el.parentNode.removeChild(el);
@@ -200,7 +205,7 @@
         try {
           if ((window.__airborneRuffStage || ruffStage) === "rings") setStage("platforms");
         } catch (e) {}
-      }, 2800);
+      }, 3200);
     } catch (e) { console.warn("maybeFinishRings", e); }
   }
 
@@ -4745,26 +4750,26 @@ window.__airborneDrawRingSummary = function (ctx, W, H, dt) {
   if (!rr || !ctx) return;
   rr.t = (rr.t || 0) + (typeof dt === "number" ? Math.min(dt, 0.05) : 0.016);
   rr.frame = (rr.frame || 0) + 1;
-  var life = rr.life || 3.2;
+  var life = rr.life || 3.6;
 
   var a = 1, scale = 1;
-  if (rr.t < 0.28) {
-    var u = rr.t / 0.28;
+  if (rr.t < 0.32) {
+    var u = rr.t / 0.32;
     a = u;
-    scale = 0.72 + 0.32 * (1 - Math.pow(1 - u, 3));
-  } else if (rr.t > life - 0.4) {
-    var f = (rr.t - (life - 0.4)) / 0.4;
+    scale = 0.55 + 0.5 * (1 - Math.pow(1 - u, 3));
+  } else if (rr.t > life - 0.45) {
+    var f = (rr.t - (life - 0.45)) / 0.45;
     a = Math.max(0, 1 - f);
-    scale = 1 - 0.08 * f;
+    scale = 1 - 0.1 * f;
   } else {
-    scale = 1 + 0.012 * Math.sin(rr.t * 3);
+    scale = 1 + 0.018 * Math.sin(rr.t * 2.8);
   }
   if (rr.t >= life) { window.__airborneRingResultsCanvas = null; return; }
   if (a <= 0.02) return;
 
   var cx = W * 0.5;
-  var cy = H * 0.28;
-  var R = Math.min(W, H) * 0.13 * scale; // compact circle
+  var cy = H * 0.30;
+  var R = Math.min(W, H) * 0.26 * scale; // double previous ~0.13
 
   var rank = (rr.rank || "Rookie").toUpperCase();
   var accent = "#d4a04a";
@@ -4773,116 +4778,179 @@ window.__airborneDrawRingSummary = function (ctx, W, H, dt) {
   else if (rank === "ELITE") { accent = "#6ab8e0"; accentHi = "#d8f0ff"; }
   else if (rank === "SKILLED") { accent = "#6ecf88"; accentHi = "#d8f8e0"; }
 
-  // Propeller image
   var propImg = null;
   try {
     if (typeof images !== "undefined" && images && images.propeller_brass_ring && images.propeller_brass_ring.naturalWidth)
       propImg = images.propeller_brass_ring;
   } catch (e) {}
 
+  // Embers around medal
+  if (!rr.embers) {
+    rr.embers = [];
+    for (var i = 0; i < 28; i++) {
+      var ang0 = Math.random() * Math.PI * 2;
+      rr.embers.push({
+        ang: ang0,
+        dist: R * (0.85 + Math.random() * 0.55),
+        size: 1 + Math.random() * 2.2,
+        spd: 0.4 + Math.random() * 1.2,
+        life: Math.random() * 40,
+        maxLife: 35 + Math.random() * 40
+      });
+    }
+  }
+
   ctx.save();
   ctx.globalAlpha = a;
   ctx.translate(cx, cy);
 
-  // Soft outer glow only (no solid box)
-  var glow = ctx.createRadialGradient(0, 0, R * 0.3, 0, 0, R * 1.35);
-  glow.addColorStop(0, "rgba(212, 160, 74, 0.18)");
-  glow.addColorStop(0.6, "rgba(80, 50, 20, 0.12)");
+  // Expanding shock rings on pop-in
+  if (rr.t < 0.7) {
+    var er = R * (0.6 + rr.t * 2.2);
+    var ea = (1 - rr.t / 0.7) * 0.45 * a;
+    ctx.strokeStyle = "rgba(255, 210, 120," + ea + ")";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, er, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(232, 160, 60," + (ea * 0.6) + ")";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, er * 0.72, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Soft gold atmosphere
+  var glow = ctx.createRadialGradient(0, 0, R * 0.2, 0, 0, R * 1.5);
+  glow.addColorStop(0, "rgba(230, 170, 60, 0.28)");
+  glow.addColorStop(0.55, "rgba(120, 70, 20, 0.12)");
   glow.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(0, 0, R * 1.35, 0, Math.PI * 2);
+  ctx.arc(0, 0, R * 1.5, 0, Math.PI * 2);
   ctx.fill();
 
-  // Spinning brass propeller BEHIND the transparent circle
-  var spin = rr.frame * 0.12; // smooth continuous spin
+  // Embers
+  for (var ei = 0; ei < rr.embers.length; ei++) {
+    var p = rr.embers[ei];
+    p.ang += 0.012 * p.spd;
+    p.dist += Math.sin(rr.frame * 0.05 + ei) * 0.15;
+    p.life++;
+    var pa = 1 - p.life / p.maxLife;
+    if (p.life >= p.maxLife) {
+      p.ang = Math.random() * Math.PI * 2;
+      p.dist = R * (0.9 + Math.random() * 0.5);
+      p.life = 0;
+      pa = 1;
+    }
+    ctx.globalAlpha = a * Math.max(0, pa) * 0.85;
+    ctx.fillStyle = accentHi;
+    ctx.shadowColor = "#ffd060";
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(Math.cos(p.ang) * p.dist, Math.sin(p.ang) * p.dist, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = a;
+
+  // Spinning propeller (faster on pop-in)
+  var spinSpd = rr.t < 0.5 ? 0.22 : 0.11;
+  var spin = rr.frame * spinSpd;
   ctx.save();
   ctx.rotate(spin);
   if (propImg) {
-    var propSize = R * 1.85;
-    ctx.globalAlpha = a * 0.92;
+    var propSize = R * 1.9;
+    ctx.globalAlpha = a * 0.95;
     ctx.drawImage(propImg, -propSize * 0.5, -propSize * 0.5, propSize, propSize);
   } else {
-    // Fallback drawn prop if asset not loaded
-    ctx.globalAlpha = a * 0.85;
+    ctx.globalAlpha = a * 0.9;
+    ctx.fillStyle = "rgba(180,120,40,0.75)";
     ctx.strokeStyle = accent;
-    ctx.fillStyle = "rgba(180, 120, 40, 0.7)";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2.5;
     for (var bi = 0; bi < 4; bi++) {
       ctx.save();
       ctx.rotate((bi / 4) * Math.PI * 2);
       ctx.beginPath();
-      ctx.ellipse(0, -R * 0.55, R * 0.16, R * 0.48, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, -R * 0.55, R * 0.18, R * 0.5, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
       ctx.restore();
     }
     ctx.beginPath();
-    ctx.arc(0, 0, R * 0.12, 0, Math.PI * 2);
+    ctx.arc(0, 0, R * 0.14, 0, Math.PI * 2);
     ctx.fillStyle = "#c9a050";
     ctx.fill();
   }
   ctx.restore();
 
-  // Transparent glass circle over prop
+  // Transparent glass circle
   ctx.globalAlpha = a;
-  var glass = ctx.createRadialGradient(0, 0, R * 0.15, 0, 0, R);
-  glass.addColorStop(0, "rgba(40, 28, 12, 0.15)");
-  glass.addColorStop(0.55, "rgba(30, 20, 10, 0.28)");
-  glass.addColorStop(1, "rgba(20, 12, 6, 0.42)");
+  var glass = ctx.createRadialGradient(0, 0, R * 0.12, 0, 0, R);
+  glass.addColorStop(0, "rgba(45, 30, 12, 0.12)");
+  glass.addColorStop(0.5, "rgba(30, 20, 10, 0.28)");
+  glass.addColorStop(1, "rgba(18, 12, 6, 0.45)");
   ctx.beginPath();
   ctx.arc(0, 0, R, 0, Math.PI * 2);
   ctx.fillStyle = glass;
   ctx.fill();
 
-  // Thin brass rim
+  // Brass double rim
   ctx.strokeStyle = accent;
-  ctx.lineWidth = 2.5;
+  ctx.lineWidth = 3;
   ctx.stroke();
-  ctx.strokeStyle = "rgba(255, 230, 180, 0.35)";
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = "rgba(255, 230, 180, 0.4)";
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.arc(0, 0, R * 0.92, 0, Math.PI * 2);
   ctx.stroke();
+  ctx.strokeStyle = "rgba(212, 160, 74, 0.35)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(0, 0, R * 1.08, 0, Math.PI * 2);
+  ctx.stroke();
 
-  // Rim sparkles
-  for (var si = 0; si < 6; si++) {
-    var ang = rr.frame * 0.05 + (si / 6) * Math.PI * 2;
-    var tw = 0.35 + 0.65 * Math.sin(rr.frame * 0.1 + si);
-    ctx.globalAlpha = a * tw * 0.75;
+  // Rim nodes
+  for (var si = 0; si < 8; si++) {
+    var ang = rr.frame * 0.04 + (si / 8) * Math.PI * 2;
+    var tw = 0.4 + 0.6 * Math.sin(rr.frame * 0.1 + si);
+    ctx.globalAlpha = a * tw * 0.85;
     ctx.fillStyle = accentHi;
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = 6;
     ctx.beginPath();
-    ctx.arc(Math.cos(ang) * R * 0.98, Math.sin(ang) * R * 0.98, 1.6 + tw, 0, Math.PI * 2);
+    ctx.arc(Math.cos(ang) * R * 1.0, Math.sin(ang) * R * 1.0, 2 + tw, 0, Math.PI * 2);
     ctx.fill();
   }
+  ctx.shadowBlur = 0;
   ctx.globalAlpha = a;
 
   // Text
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = "700 " + Math.round(R * 0.22) + "px Rockwell,Georgia,serif";
+  ctx.font = "700 " + Math.round(R * 0.2) + "px Rockwell,Georgia,serif";
   ctx.fillStyle = "rgba(201,160,106,0.95)";
-  ctx.fillText("RINGS", 0, -R * 0.32);
+  ctx.fillText("RINGS", 0, -R * 0.3);
 
   var targetN = rr.n != null ? rr.n : 0;
   var tot = rr.total || 20;
   var shown = targetN;
-  if (rr.t < 0.7) {
-    shown = Math.round(targetN * Math.min(1, Math.max(0, (rr.t - 0.12) / 0.5)));
+  if (rr.t < 0.85) {
+    shown = Math.round(targetN * Math.min(1, Math.max(0, (rr.t - 0.15) / 0.6)));
   }
-  ctx.font = "900 " + Math.round(R * 0.42) + "px Rockwell,Georgia,serif";
+  ctx.font = "900 " + Math.round(R * 0.4) + "px Rockwell,Georgia,serif";
   ctx.fillStyle = "#ffe8b0";
-  ctx.shadowColor = "rgba(232,170,60,0.5)";
-  ctx.shadowBlur = 12;
+  ctx.shadowColor = "rgba(232,170,60,0.55)";
+  ctx.shadowBlur = 14;
   ctx.fillText(shown + " / " + tot, 0, R * 0.06);
   ctx.shadowBlur = 0;
 
   var rankA = a;
-  if (rr.t < 0.5) rankA = a * Math.max(0, (rr.t - 0.25) / 0.25);
+  if (rr.t < 0.55) rankA = a * Math.max(0, (rr.t - 0.3) / 0.25);
   ctx.globalAlpha = rankA;
-  ctx.font = "700 " + Math.round(R * 0.18) + "px Rockwell,Georgia,serif";
+  ctx.font = "700 " + Math.round(R * 0.17) + "px Rockwell,Georgia,serif";
   ctx.fillStyle = accent;
-  ctx.fillText(rank, 0, R * 0.42);
+  ctx.fillText(rank, 0, R * 0.4);
 
   ctx.restore();
 };

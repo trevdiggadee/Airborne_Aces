@@ -315,6 +315,62 @@
     } catch (e) {}
   }
 
+
+  function sfxRingSummary() {
+    // Mechanical prop spin-up + brass chime for rings results medal
+    ensureAudio();
+    try {
+      const t0 = audioCtx.currentTime;
+      const vol = (typeof sfxVolume === "number" ? sfxVolume : 0.7) * 0.85;
+      // low mechanical whoosh (prop)
+      const len = Math.floor(audioCtx.sampleRate * 0.45);
+      const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) {
+        const env = Math.pow(1 - i / len, 0.7);
+        data[i] = (Math.random() * 2 - 1) * env * 0.9;
+      }
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      const bp = audioCtx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.setValueAtTime(280, t0);
+      bp.frequency.exponentialRampToValueAtTime(900, t0 + 0.35);
+      bp.Q.value = 1.2;
+      const ng = audioCtx.createGain();
+      ng.gain.setValueAtTime(0.14 * vol, t0);
+      ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.45);
+      src.connect(bp); bp.connect(ng); ng.connect(audioCtx.destination);
+      src.start(t0); src.stop(t0 + 0.46);
+      // brass chord sparkle
+      const notes = [392.0, 493.88, 587.33, 784.0]; // G B D G
+      notes.forEach(function (freq, i) {
+        const o = audioCtx.createOscillator();
+        o.type = i < 2 ? "triangle" : "sine";
+        o.frequency.setValueAtTime(freq, t0 + 0.06 + i * 0.07);
+        const og = audioCtx.createGain();
+        og.gain.setValueAtTime(0.0001, t0 + 0.06 + i * 0.07);
+        og.gain.exponentialRampToValueAtTime(0.16 * vol, t0 + 0.08 + i * 0.07);
+        og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08 + i * 0.07 + 0.55);
+        o.connect(og); og.connect(audioCtx.destination);
+        o.start(t0 + 0.06 + i * 0.07);
+        o.stop(t0 + 0.08 + i * 0.07 + 0.6);
+      });
+      // soft high shimmer
+      const o2 = audioCtx.createOscillator();
+      o2.type = "sine";
+      o2.frequency.setValueAtTime(1568, t0 + 0.35);
+      o2.frequency.exponentialRampToValueAtTime(2093, t0 + 0.55);
+      const g2 = audioCtx.createGain();
+      g2.gain.setValueAtTime(0.0001, t0 + 0.35);
+      g2.gain.exponentialRampToValueAtTime(0.08 * vol, t0 + 0.38);
+      g2.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.7);
+      o2.connect(g2); g2.connect(audioCtx.destination);
+      o2.start(t0 + 0.35); o2.stop(t0 + 0.72);
+    } catch (e) {}
+  }
+  window.sfxRingSummary = sfxRingSummary;
+
   function sfxRankUp() {
     // Fanfare-ish rising brass sparkle for RANK UP
     ensureAudio();
