@@ -154,14 +154,14 @@
       var best = (ruffStats && ruffStats.ringBestStreak) ? ruffStats.ringBestStreak : 0;
       window.__airborneRingResultsCanvas = {
         t: 0,
-        life: 5.5,
+        life: 3.2,
         text: String(n) + " / " + String(totN),
         n: n,
         total: totN,
         rank: rank,
         bestStreak: best,
         perfectFlight: !!(ruffStats && ruffStats.ringPerfectFlight),
-        style: "ringHudTech",
+        style: "ringCompact",
         frame: 0,
         embers: null
       };
@@ -200,7 +200,7 @@
         try {
           if ((window.__airborneRuffStage || ruffStage) === "rings") setStage("platforms");
         } catch (e) {}
-      }, 300);
+      }, 2800);
     } catch (e) { console.warn("maybeFinishRings", e); }
   }
 
@@ -4743,260 +4743,112 @@ function finishToMap() {
 window.__airborneDrawRingSummary = function (ctx, W, H, dt) {
   var rr = window.__airborneRingResultsCanvas;
   if (!rr || !ctx) return;
-  // Single owner of time
   rr.t = (rr.t || 0) + (typeof dt === "number" ? Math.min(dt, 0.05) : 0.016);
   rr.frame = (rr.frame || 0) + 1;
-  var life = rr.life || 5.5;
+  var life = rr.life || 3.2;
 
   var a = 1, scale = 1;
-  if (rr.t < 0.45) {
-    var u = rr.t / 0.45;
+  if (rr.t < 0.28) {
+    var u = rr.t / 0.28;
     a = u;
-    scale = 0.5 + 0.55 * (1 - Math.pow(1 - u, 3));
-  } else if (rr.t > life - 0.7) {
-    var f = (rr.t - (life - 0.7)) / 0.7;
+    scale = 0.7 + 0.35 * (1 - Math.pow(1 - u, 3));
+  } else if (rr.t > life - 0.4) {
+    var f = (rr.t - (life - 0.4)) / 0.4;
     a = Math.max(0, 1 - f);
-    scale = 1 - 0.1 * f;
+    scale = 1 - 0.08 * f;
   } else {
-    scale = 1 + 0.03 * Math.sin(rr.t * 2.4);
+    scale = 1 + 0.015 * Math.sin(rr.t * 3);
   }
   if (rr.t >= life) { window.__airborneRingResultsCanvas = null; return; }
   if (a <= 0.02) return;
 
+  // Compact — not full screen
   var cx = W * 0.5;
-  var cy = H * 0.38;
-  // Match reference proportions — larger HUD
-  var unit = Math.min(W, H) * 0.42; // outer radius baseline
-  var pulse = 1 + Math.sin(rr.frame * 0.05) * 0.04;
+  var cy = H * 0.28; // upper area, clear of next lesson action
+  var pw = Math.min(W * 0.52, 210) * scale;
+  var ph = Math.min(H * 0.14, 96) * scale;
 
   var rank = (rr.rank || "Rookie").toUpperCase();
-  var accent = "#e09826";
-  var accentHi = "#ffeba8";
-  var accentDeep = "#613903";
-  if (rank === "LEGENDARY") { accent = "#ffd24a"; accentHi = "#fff6c8"; accentDeep = "#b8860b"; }
-  else if (rank === "ELITE") { accent = "#5eb8e8"; accentHi = "#d8f0ff"; accentDeep = "#1a6088"; }
-  else if (rank === "SKILLED") { accent = "#6fd68a"; accentHi = "#e0ffe8"; accentDeep = "#2a7040"; }
-
-  if (!rr.embers) {
-    rr.embers = [];
-    for (var i = 0; i < 70; i++) {
-      var ang = Math.random() * Math.PI * 2;
-      var dist = unit * (0.55 + Math.random() * 0.7);
-      rr.embers.push({
-        ang: ang, dist: dist,
-        size: Math.random() * 2.5 + 0.5,
-        vx: (Math.random() - 0.5) * 0.9,
-        vy: (Math.random() - 0.8) * 1.3,
-        x: Math.cos(ang) * dist,
-        y: Math.sin(ang) * dist,
-        life: Math.random() * 80,
-        maxLife: 70 + Math.random() * 50
-      });
-    }
-  }
+  var accent = "#d4a04a";
+  var accentHi = "#f5e0b0";
+  if (rank === "LEGENDARY") { accent = "#ffd24a"; accentHi = "#fff6c8"; }
+  else if (rank === "ELITE") { accent = "#6ab8e0"; accentHi = "#d8f0ff"; }
+  else if (rank === "SKILLED") { accent = "#6ecf88"; accentHi = "#d8f8e0"; }
 
   ctx.save();
-  ctx.translate(cx, cy);
-  ctx.scale(scale, scale);
   ctx.globalAlpha = a;
 
-  // Dim band
-  ctx.fillStyle = "rgba(0,0,0,0.42)";
-  ctx.fillRect(-W * 0.55, -unit * 1.35, W * 1.1, unit * 2.7);
-
-  // Background glow
-  var g = ctx.createRadialGradient(0, 0, unit * 0.25 * pulse, 0, 0, unit * 1.05 * pulse);
-  g.addColorStop(0, "rgba(230,150,40,0.38)");
-  g.addColorStop(0.5, "rgba(140,70,10,0.14)");
-  g.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = g;
+  // Soft shadow under panel only (no full-screen dim)
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
   ctx.beginPath();
-  ctx.arc(0, 0, unit * 1.1, 0, Math.PI * 2);
+  if (ctx.roundRect) ctx.roundRect(cx - pw * 0.52, cy - ph * 0.55, pw * 1.04, ph * 1.2, 14);
+  else ctx.rect(cx - pw * 0.52, cy - ph * 0.55, pw * 1.04, ph * 1.2);
   ctx.fill();
 
-  // Embers
-  for (var ei = 0; ei < rr.embers.length; ei++) {
-    var p = rr.embers[ei];
-    p.x += p.vx; p.y += p.vy; p.life++;
-    var pa = 1 - p.life / p.maxLife;
-    if (p.life >= p.maxLife) {
-      var a2 = Math.random() * Math.PI * 2;
-      var d2 = unit * (0.55 + Math.random() * 0.7);
-      p.x = Math.cos(a2) * d2; p.y = Math.sin(a2) * d2;
-      p.life = 0; p.maxLife = 70 + Math.random() * 50; pa = 1;
-    }
-    ctx.save();
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = "#ffd060";
-    ctx.fillStyle = "rgba(255,215,130," + Math.max(0, pa) + ")";
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
+  // Brass plate body
+  var body = ctx.createLinearGradient(cx, cy - ph * 0.5, cx, cy + ph * 0.5);
+  body.addColorStop(0, "rgba(72, 48, 24, 0.92)");
+  body.addColorStop(0.4, "rgba(42, 28, 14, 0.94)");
+  body.addColorStop(1, "rgba(28, 18, 8, 0.95)");
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(cx - pw * 0.5, cy - ph * 0.5, pw, ph, 12);
+  else ctx.rect(cx - pw * 0.5, cy - ph * 0.5, pw, ph);
+  ctx.fillStyle = body;
+  ctx.fill();
 
-  // Lightning
-  if (Math.random() > 0.4) {
-    ctx.save();
-    ctx.strokeStyle = "rgba(255,245,210,0.9)";
-    ctx.shadowColor = "#ffaa20";
-    ctx.shadowBlur = 14;
-    ctx.lineWidth = 1.8;
-    var baseA = Math.random() * Math.PI * 2;
-    var curR = unit * 0.72, curA = baseA;
-    ctx.beginPath();
-    ctx.moveTo(Math.cos(curA) * curR, Math.sin(curA) * curR);
-    for (var li = 0; li < 7; li++) {
-      curA += (Math.random() - 0.5) * 0.2;
-      curR += (Math.random() - 0.5) * unit * 0.06;
-      ctx.lineTo(Math.cos(curA) * curR, Math.sin(curA) * curR);
-    }
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  var slowRot = rr.frame * 0.005;
-  var revRot = -rr.frame * 0.008;
-  var fastRot = rr.frame * 0.015;
-
-  function ringArc(radius, start, end, lw, color, glow) {
-    ctx.save();
-    ctx.shadowBlur = glow || 10;
-    ctx.shadowColor = "#ea9a20";
-    ctx.strokeStyle = color;
-    ctx.lineWidth = lw;
-    ctx.beginPath();
-    ctx.arc(0, 0, radius, start, end);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  // Outer segmented bevel (slow)
-  ctx.save();
-  ctx.rotate(slowRot);
-  ctx.scale(pulse, pulse);
-  ctx.shadowBlur = 18;
-  ctx.shadowColor = "#d68318";
-  ctx.fillStyle = "rgba(215,140,45,0.35)";
-  ctx.strokeStyle = "#fce2a6";
+  // Gold rim
+  ctx.strokeStyle = accent;
   ctx.lineWidth = 2;
-  var segs = [
-    { s: -2.7, e: -1.7 }, { s: -1.4, e: -0.4 },
-    { s: 0.3, e: 1.3 }, { s: 1.8, e: 2.7 }
-  ];
-  var rOut = unit * 0.92, rIn = unit * 0.80;
-  for (var si = 0; si < segs.length; si++) {
-    var seg = segs[si];
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(255, 230, 170, 0.25)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(cx - pw * 0.5 + 4, cy - ph * 0.5 + 4, pw - 8, ph - 8, 9);
+  else ctx.rect(cx - pw * 0.5 + 4, cy - ph * 0.5 + 4, pw - 8, ph - 8);
+  ctx.stroke();
+
+  // Tiny orbiting sparkles on rim (subtle)
+  for (var si = 0; si < 5; si++) {
+    var ang = rr.frame * 0.04 + (si / 5) * Math.PI * 2;
+    var sx = cx + Math.cos(ang) * pw * 0.48;
+    var sy = cy + Math.sin(ang) * ph * 0.48;
+    var tw = 0.4 + 0.6 * Math.sin(rr.frame * 0.12 + si);
+    ctx.globalAlpha = a * tw * 0.7;
+    ctx.fillStyle = accentHi;
     ctx.beginPath();
-    ctx.arc(0, 0, rOut, seg.s, seg.e);
-    ctx.arc(0, 0, rIn, seg.e, seg.s, true);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-  }
-  ctx.restore();
-
-  // Counter-rotating rings
-  ctx.save();
-  ctx.rotate(revRot);
-  var rg = ctx.createLinearGradient(-unit * 0.55, -unit * 0.55, unit * 0.55, unit * 0.55);
-  rg.addColorStop(0, "#fff4d1");
-  rg.addColorStop(0.5, "#e09826");
-  rg.addColorStop(1, "#613903");
-  ringArc(unit * 0.70, 0, Math.PI * 2, unit * 0.048, rg, 22);
-  ringArc(unit * 0.66, 0, Math.PI * 2, 2, "rgba(255,225,160,0.8)", 8);
-  ringArc(unit * 0.60, -0.5, Math.PI * 1.2, 3, "rgba(240,170,60,0.8)", 8);
-  ctx.restore();
-
-  // Fast segments
-  ctx.save();
-  ctx.rotate(fastRot);
-  ringArc(unit * 0.57, 0, Math.PI * 0.8, 2, "rgba(255,220,130,0.9)", 10);
-  ringArc(unit * 0.52, Math.PI, Math.PI * 1.8, 4, "rgba(190,110,20,0.8)", 6);
-  ringArc(unit * 0.44, 0, Math.PI * 2, 2, "rgba(255,210,120,0.6)", 5);
-  ctx.restore();
-
-  // Core
-  ringArc(unit * 0.38, 0, Math.PI * 2, 1, "rgba(200,130,40,0.4)", 3);
-  ringArc(unit * 0.32, 0, Math.PI * 2, 3, "rgba(255,220,150,0.8)", 8);
-
-  // Circuits
-  ctx.save();
-  ctx.rotate(slowRot * 0.5);
-  ctx.strokeStyle = "rgba(240,180,80,0.6)";
-  ctx.lineWidth = 1.2;
-  ctx.shadowColor = "#f5b042";
-  ctx.shadowBlur = 8;
-  var nodes = [
-    { a: -2.2, r: unit * 0.70 },
-    { a: 0.8, r: unit * 0.72 },
-    { a: 2.5, r: unit * 0.68 },
-    { a: 4.2, r: unit * 0.70 }
-  ];
-  for (var ni = 0; ni < nodes.length; ni++) {
-    var nd = nodes[ni];
-    var nx = Math.cos(nd.a) * nd.r, ny = Math.sin(nd.a) * nd.r;
-    ctx.beginPath();
-    ctx.moveTo(nx, ny);
-    ctx.lineTo(nx + Math.cos(nd.a) * unit * 0.08, ny + Math.sin(nd.a) * unit * 0.08);
-    ctx.stroke();
-    ctx.fillStyle = "#fff0d0";
-    ctx.shadowBlur = 10;
-    ctx.beginPath();
-    ctx.arc(nx + Math.cos(nd.a) * unit * 0.1, ny + Math.sin(nd.a) * unit * 0.1, 3, 0, Math.PI * 2);
+    ctx.arc(sx, sy, 1.5 + tw, 0, Math.PI * 2);
     ctx.fill();
   }
-  // Orbit dots
-  [0, 1.2, 2.5, 3.8, 5.0].forEach(function (ang) {
-    ctx.fillStyle = "#fff0d0";
-    ctx.beginPath();
-    ctx.arc(Math.cos(ang) * unit * 0.84, Math.sin(ang) * unit * 0.84, 3, 0, Math.PI * 2);
-    ctx.fill();
-  });
-  ctx.restore();
+  ctx.globalAlpha = a;
 
-  // Title RINGS (above)
+  // Label
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = '900 ' + Math.round(unit * 0.14) + 'px Rockwell,Georgia,"Courier New",monospace';
-  ctx.fillStyle = "#ffeba8";
-  ctx.shadowColor = "#e89017";
-  ctx.shadowBlur = 15 + Math.sin(rr.frame * 0.08) * 5;
-  ctx.fillText("RINGS", 0, -unit * 1.08);
+  ctx.font = "700 " + Math.round(ph * 0.18) + "px Rockwell,Georgia,serif";
+  ctx.fillStyle = "rgba(201,160,106,0.95)";
+  ctx.fillText("RINGS", cx, cy - ph * 0.28);
 
-  // Score
+  // Score count-up
   var targetN = rr.n != null ? rr.n : 0;
   var tot = rr.total || 20;
   var shown = targetN;
-  if (rr.t < 1.15) {
-    shown = Math.round(targetN * Math.min(1, Math.max(0, (rr.t - 0.3) / 0.85)));
+  if (rr.t < 0.75) {
+    shown = Math.round(targetN * Math.min(1, Math.max(0, (rr.t - 0.15) / 0.55)));
   }
-  ctx.font = '900 ' + Math.round(unit * 0.28) + 'px Rockwell,Georgia,"Courier New",monospace';
-  ctx.fillStyle = "#fff3cb";
-  ctx.shadowColor = "#fcae1e";
-  ctx.shadowBlur = 20 + Math.sin(rr.frame * 0.1) * 8;
-  ctx.fillText(shown + " / " + tot, 0, unit * 0.02);
+  ctx.font = "900 " + Math.round(ph * 0.36) + "px Rockwell,Georgia,serif";
+  ctx.fillStyle = "#ffe8b0";
+  ctx.shadowColor = "rgba(232, 170, 60, 0.45)";
+  ctx.shadowBlur = 10;
+  ctx.fillText(shown + " / " + tot, cx, cy + ph * 0.02);
   ctx.shadowBlur = 0;
 
-  // Rank bottom
+  // Rank thin line under score
   var rankA = a;
-  if (rr.t < 1.0) rankA = a * Math.max(0, (rr.t - 0.55) / 0.45);
+  if (rr.t < 0.55) rankA = a * Math.max(0, (rr.t - 0.3) / 0.25);
   ctx.globalAlpha = rankA;
-  ctx.font = "800 " + Math.round(unit * 0.11) + "px Rockwell,Georgia,serif";
+  ctx.font = "700 " + Math.round(ph * 0.16) + "px Rockwell,Georgia,serif";
   ctx.fillStyle = accent;
-  ctx.shadowColor = accentDeep;
-  ctx.shadowBlur = 10;
-  ctx.fillText(rank, 0, unit * 0.32);
-  ctx.shadowBlur = 0;
-  if (rr.perfectFlight) {
-    ctx.font = "700 " + Math.round(unit * 0.08) + "px Rockwell,Georgia,serif";
-    ctx.fillStyle = "#ffd24a";
-    ctx.fillText("PERFECT FLIGHT", 0, unit * 0.44);
-  } else if (rr.bestStreak > 0) {
-    ctx.font = "600 " + Math.round(unit * 0.075) + "px Rockwell,Georgia,serif";
-    ctx.fillStyle = "rgba(201,160,106,0.9)";
-    ctx.fillText("BEST STREAK  " + rr.bestStreak, 0, unit * 0.44);
-  }
+  ctx.fillText(rank, cx, cy + ph * 0.32);
 
   ctx.restore();
 };
