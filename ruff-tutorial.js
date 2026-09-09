@@ -4768,15 +4768,16 @@ window.__airborneDrawRingSummary = function (ctx, W, H, dt) {
   if (a <= 0.02) return;
 
   var cx = W * 0.5;
-  var cy = H * 0.30;
-  var R = Math.min(W, H) * 0.26 * scale; // double previous ~0.13
+  var cy = H * 0.32;
+  var R = Math.min(W, H) * 0.52 * scale; // 2x again — large gold medal
 
   var rank = (rr.rank || "Rookie").toUpperCase();
-  var accent = "#d4a04a";
-  var accentHi = "#f5e0b0";
+  // Gold-only palette (no blue / green)
+  var accent = "#e0b050";
+  var accentHi = "#ffe8b0";
   if (rank === "LEGENDARY") { accent = "#ffd24a"; accentHi = "#fff6c8"; }
-  else if (rank === "ELITE") { accent = "#6ab8e0"; accentHi = "#d8f0ff"; }
-  else if (rank === "SKILLED") { accent = "#6ecf88"; accentHi = "#d8f8e0"; }
+  else if (rank === "ELITE") { accent = "#f0c060"; accentHi = "#fff0c8"; }
+  else if (rank === "SKILLED") { accent = "#d4a04a"; accentHi = "#f5e0b0"; }
 
   var propImg = null;
   try {
