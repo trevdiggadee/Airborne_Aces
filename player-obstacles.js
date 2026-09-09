@@ -1885,8 +1885,8 @@ window.__airborneRingDebug = false;
           o.hitKnockT -= dt;
           o.x += (o.knockVx || 0) * dt;
           o.y += (o.knockVy || 0) * dt;
-          o.knockVx = (o.knockVx || 0) * (1 - 3.5 * dt);
-          o.knockVy = (o.knockVy || 0) * (1 - 4.0 * dt);
+          o.knockVx = (o.knockVx || 0) * (1 - 2.2 * dt);
+          o.knockVy = (o.knockVy || 0) * (1 - 2.6 * dt);
           o.rot = 0;
           o.knockSpin = 0;
           if (o.hitKnockT <= 0) { o.knockVx = 0; o.knockVy = 0; }
@@ -2087,7 +2087,7 @@ window.__airborneRingDebug = false;
     });
 
 
-    // === Smooth mutual bounce + expanded shield radius ===
+    // === Cartoon impact collision (readable bounce + funny effects) ===
     try {
       var obsList = obstacles;
       try {
@@ -2106,24 +2106,22 @@ window.__airborneRingDebug = false;
           var px = player.x;
           var py = player.y;
           var shieldOn = !!(typeof shieldActive !== "undefined" && shieldActive) || !!window.__airborneShieldActive;
-          // Match visible shield bubble (draw uses ~player.w * 0.72) + margin so hit fires at rim
           var shieldR = (player.w || 84) * 0.72 * 1.28;
-          var pHalfW = (player.w || 84) * 0.40;
-          var pHalfH = (player.h || 50) * 0.40;
+          var pHalfW = (player.w || 84) * 0.38;
+          var pHalfH = (player.h || 50) * 0.38;
 
           for (var ci = 0; ci < obsList.length; ci++) {
             var co = obsList[ci];
             if (!co || co.scored) continue;
             if (co.isRing || co.type === "gold_ring" || co.type === "ring") continue;
             if (co.shockFall || co.onFire || co.powerAffected) continue;
-            // Don't re-bounce same bird every frame
             if (co.bounceCool && co.bounceCool > 0) continue;
 
             var bob = Math.sin(co.bobPhase || 0) * (co.bobAmount || 0);
             var ox = (co.x || 0) + (co.w || 40) * 0.5;
             var oy = (co.y || 0) + (co.h || 40) * 0.5 + bob;
-            var oHalfW = (co.w || 40) * 0.36;
-            var oHalfH = (co.h || 40) * 0.36;
+            var oHalfW = (co.w || 40) * 0.34;
+            var oHalfH = (co.h || 40) * 0.34;
 
             var dx = px - ox;
             var dy = py - oy;
@@ -2132,8 +2130,7 @@ window.__airborneRingDebug = false;
             var hit = false;
             var useShield = false;
             if (shieldOn) {
-              // Circle vs obstacle — triggers as soon as bird touches shield rim
-              var need = shieldR + Math.max(oHalfW, oHalfH) * 0.85;
+              var need = shieldR + Math.max(oHalfW, oHalfH) * 0.9;
               if (dist < need) { hit = true; useShield = true; }
             } else {
               if (Math.abs(dx) < (pHalfW + oHalfW) && Math.abs(dy) < (pHalfH + oHalfH)) hit = true;
@@ -2142,63 +2139,100 @@ window.__airborneRingDebug = false;
 
             var nx = dx / dist;
             var ny = dy / dist;
-            // Prefer outward normal from bird to blimp (reflection axis)
-            // Smooth separation (small, avoids choppy teleports)
-            var sep = useShield ? 6 : 4;
-            player.x += nx * sep * 0.55;
-            player.y += ny * sep * 0.65;
-            co.x -= nx * sep * 1.1;
-            co.y -= ny * sep * 1.0;
+            // Prefer a clear up/down bounce if nearly horizontal
+            if (Math.abs(ny) < 0.25) ny = (py < oy) ? -0.75 : 0.75;
+            var nlen = Math.sqrt(nx * nx + ny * ny) || 1;
+            nx /= nlen; ny /= nlen;
 
-            // Reflect velocities along normal — springy, not instant snap
+            // === Strong visual separation (stops glitchy overlap) ===
+            var sep = useShield ? 18 : 14;
+            player.x += nx * sep * 0.7;
+            player.y += ny * sep;
+            co.x -= nx * sep * 1.2;
+            co.y -= ny * sep * 1.1;
+
+            // === Blimp: cartoon bounce (believable spring) ===
             var pvy = player.vy || 0;
-            var closing = - (pvy * ny); // how fast blimp moves into bird along normal
-            var bounceBoost = useShield ? 280 : 200;
-            var reflected = Math.max(90, Math.abs(closing) * 0.55 + bounceBoost * 0.35);
-            // Smooth blend into new vy
-            var targetVy = ny * -reflected + pvy * 0.15;
-            player.vy = pvy * 0.35 + targetVy * 0.65;
-            if (player.vy > 300) player.vy = 300;
-            if (player.vy < -380) player.vy = -380;
+            var bounceVy = ny * -(useShield ? 340 : 280) - Math.abs(pvy) * 0.15;
+            player.vy = bounceVy;
+            if (player.vy > 360) player.vy = 360;
+            if (player.vy < -420) player.vy = -420;
+            // Tiny horizontal wobble
+            player.x += (Math.random() - 0.5) * 4;
 
-            // Stay on path — small deflection only (no flip/spin)
-            co.hitKnockT = useShield ? 0.4 : 0.28;
-            co.knockVx = -20 - Math.abs(nx) * 15; // slight extra left, keep scrolling
-            co.knockVy = -ny * (useShield ? 70 : 45); // soft vertical nudge
+            // Squash/stretch personality on hit
+            try {
+              if (typeof blimpPersonality !== "undefined" && blimpPersonality) {
+                blimpPersonality.squashX = 1.28;
+                blimpPersonality.squashY = 0.72;
+                blimpPersonality.squashTargetX = 1;
+                blimpPersonality.squashTargetY = 1;
+                blimpPersonality.finLag = (nx > 0 ? 1 : -1) * 0.35;
+              }
+            } catch (ePers) {}
+
+            // === Bird: clear path deflection (no flip) ===
+            co.hitKnockT = useShield ? 0.55 : 0.42;
+            co.knockVx = -55 - Math.abs(nx) * 40; // visible shove left
+            co.knockVy = -ny * (useShield ? 200 : 160) + (Math.random() - 0.5) * 30;
             co.knockSpin = 0;
             co.rot = 0;
             co.hitFlash = 0;
             co.squashT = 0;
-            co.bounceCool = 0.22;
+            co.bounceCool = 0.35; // prevent multi-hit glitch
 
+            // === Funny impact FX: stars + feathers + puff ===
             try {
+              var ix = (px + ox) * 0.5, iy = (py + oy) * 0.5;
               if (typeof particles !== "undefined" && particles) {
-                var ix = (px + ox) * 0.5, iy = (py + oy) * 0.5;
                 var cols = useShield
-                  ? ["#c8f0ff", "#ffffff", "#7ecbff", "#a0e0ff"]
-                  : ["#fff", "#ffd24a", "#c9a06a", "#e8c060"];
-                for (var pi = 0; pi < (useShield ? 12 : 8); pi++) {
-                  var ang = Math.random() * Math.PI * 2;
-                  var spd = 30 + Math.random() * (useShield ? 160 : 120);
+                  ? ["#c8f0ff", "#ffffff", "#a0e0ff", "#ffe8b0"]
+                  : ["#fff6d0", "#ffd24a", "#ffffff", "#c9a06a", "#ff9040"];
+                // Burst ring
+                for (var pi = 0; pi < 14; pi++) {
+                  var ang = (pi / 14) * Math.PI * 2 + Math.random() * 0.2;
+                  var spd = 90 + Math.random() * 160;
                   particles.push({
                     x: ix, y: iy,
-                    vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd - 20,
-                    life: 0.35 + Math.random() * 0.4,
+                    vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd - 40,
+                    life: 0.4 + Math.random() * 0.35,
                     color: cols[pi % cols.length],
-                    size: 1.5 + Math.random() * 2.5
+                    size: 2 + Math.random() * 3.5
+                  });
+                }
+                // Cartoon stars
+                for (var si = 0; si < 5; si++) {
+                  var sa = Math.random() * Math.PI * 2;
+                  particles.push({
+                    x: ix, y: iy,
+                    vx: Math.cos(sa) * (60 + Math.random() * 100),
+                    vy: Math.sin(sa) * (60 + Math.random() * 100) - 50,
+                    life: 0.5 + Math.random() * 0.3,
+                    color: "#ffe566",
+                    size: 3 + Math.random() * 3,
+                    star: true
                   });
                 }
               }
+              // Impact stamp for one-frame punch
+              window.__airborneImpactPop = {
+                x: ix, y: iy, t: 0, life: 0.35, shield: useShield
+              };
             } catch (eP) {}
-            try { if (typeof triggerScreenShake === "function") triggerScreenShake(useShield ? 3 : 4, 120); } catch (eS) {}
+            try { if (typeof triggerScreenShake === "function") triggerScreenShake(useShield ? 5 : 7, 160); } catch (eS) {}
+            try { if (typeof sfxHit === "function" && !useShield) sfxHit(); } catch (eH0) {}
+            try { if (typeof sfxDeflect === "function" && useShield) sfxDeflect(); } catch (eD0) {}
 
             if (useShield) {
               co.scored = true;
               try { if (typeof shieldImpactTime !== "undefined") shieldImpactTime = nowHit; } catch (e) {}
-              try { if (typeof sfxDeflect === "function") sfxDeflect(); } catch (e) {}
               continue;
             }
-            if (nowHit < (typeof invulnerableUntil === "number" ? invulnerableUntil : 0)) continue;
+            if (nowHit < (typeof invulnerableUntil === "number" ? invulnerableUntil : 0)) {
+              // still bounced visually; skip damage if invuln
+              co.scored = true;
+              break;
+            }
 
             try { if (typeof takeHit === "function") takeHit(); } catch (eH) { console.warn(eH); }
             co.scored = true;
@@ -2206,7 +2240,15 @@ window.__airborneRingDebug = false;
           }
         }
       }
-    } catch (eCol) { console.warn("collision smooth", eCol); }
+    } catch (eCol) { console.warn("collision impact", eCol); }
+
+    // Cartoon impact pop (rings + "BONK" feel)
+    try {
+      if (window.__airborneImpactPop && typeof ctx !== "undefined" && ctx) {
+        var ip = window.__airborneImpactPop;
+        // advanced in draw path; mark for drawObstacles/main
+      }
+    } catch (eIP) {}
 
     // In-place prune (never reassign obstacles — keeps shared references valid)
     for (var fi = obstacles.length - 1; fi >= 0; fi--) {
@@ -3154,4 +3196,39 @@ window.__airborneDrawActivePowerVisual = function () {
       window.PowerFX.drawAura(ctx, kind, player.x, player.y, t, fade);
     }
   } catch (e) {}
+};
+
+
+window.__airborneDrawImpactPop = function (ctx, dt) {
+  var ip = window.__airborneImpactPop;
+  if (!ip || !ctx) return;
+  ip.t = (ip.t || 0) + (typeof dt === "number" ? dt : 0.016);
+  if (ip.t >= (ip.life || 0.35)) { window.__airborneImpactPop = null; return; }
+  var u = ip.t / (ip.life || 0.35);
+  var a = 1 - u;
+  var r = 12 + u * 42;
+  ctx.save();
+  ctx.globalAlpha = a * 0.9;
+  ctx.strokeStyle = ip.shield ? "rgba(180,230,255,0.9)" : "rgba(255,210,100,0.95)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(ip.x, ip.y, r, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.strokeStyle = ip.shield ? "rgba(255,255,255,0.5)" : "rgba(255,240,180,0.6)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(ip.x, ip.y, r * 0.55, 0, Math.PI * 2);
+  ctx.stroke();
+  // little star bursts
+  ctx.fillStyle = "#ffe566";
+  for (var i = 0; i < 4; i++) {
+    var ang = u * 6 + i * Math.PI * 0.5;
+    var sx = ip.x + Math.cos(ang) * r * 0.85;
+    var sy = ip.y + Math.sin(ang) * r * 0.85;
+    ctx.globalAlpha = a;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 2.5 * (1 - u * 0.5), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
 };

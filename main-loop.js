@@ -621,6 +621,7 @@ try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePow
     try { drawTrainingRuffEmergency(typeof dt === "number" ? dt : 0.016); } catch (eER) {}
     try { if (window.__airborneDrawRingSummary) window.__airborneDrawRingSummary(ctx, W, H, typeof dt==="number"?dt:0.016); } catch(eRS) {}
     try { if (window.__airborneDrawLessonBanner) window.__airborneDrawLessonBanner(ctx, W, H, typeof dt==="number"?dt:0.016); } catch(eLB) {}
+    try { if (window.__airborneDrawImpactPop) window.__airborneDrawImpactPop(ctx, typeof dt==="number"?dt:0.016); } catch(eIP) {}
     
       
 

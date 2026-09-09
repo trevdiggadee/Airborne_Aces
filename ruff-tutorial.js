@@ -4937,7 +4937,7 @@ window.__airborneDrawRingSummary = function (ctx, W, H, dt) {
   // Text
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = "700 " + Math.round(R * 0.2) + "px Rockwell,Georgia,serif";
+  ctx.font = "700 " + Math.round(R * 0.25) + "px Rockwell,Georgia,serif";
   ctx.fillStyle = "rgba(201,160,106,0.95)";
   ctx.fillText("RINGS", 0, -R * 0.3);
 
@@ -4947,7 +4947,7 @@ window.__airborneDrawRingSummary = function (ctx, W, H, dt) {
   if (rr.t < 0.85) {
     shown = Math.round(targetN * Math.min(1, Math.max(0, (rr.t - 0.15) / 0.6)));
   }
-  ctx.font = "900 " + Math.round(R * 0.4) + "px Rockwell,Georgia,serif";
+  ctx.font = "900 " + Math.round(R * 0.5) + "px Rockwell,Georgia,serif";
   ctx.fillStyle = "#ffe8b0";
   ctx.shadowColor = "rgba(232,170,60,0.55)";
   ctx.shadowBlur = 14;
@@ -4957,7 +4957,7 @@ window.__airborneDrawRingSummary = function (ctx, W, H, dt) {
   var rankA = a;
   if (rr.t < 0.55) rankA = a * Math.max(0, (rr.t - 0.3) / 0.25);
   ctx.globalAlpha = rankA;
-  ctx.font = "700 " + Math.round(R * 0.17) + "px Rockwell,Georgia,serif";
+  ctx.font = "700 " + Math.round(R * 0.21) + "px Rockwell,Georgia,serif";
   ctx.fillStyle = accent;
   ctx.fillText(rank, 0, R * 0.4);
 
@@ -5155,7 +5155,7 @@ window.__airborneDrawLessonBanner = function (ctx, W, H, dt) {
   ctx.fillStyle = accentHi;
   ctx.shadowColor = "rgba(180,120,40,0.5)";
   ctx.shadowBlur = 10;
-  var fontSize = Math.round(R * (title.length > 12 ? 0.22 : 0.28));
+  var fontSize = Math.round(R * (title.length > 12 ? 0.275 : 0.35)); // +25%
   ctx.font = "800 " + fontSize + "px Rockwell,Georgia,serif";
   // Multi-line if needed
   var words = title.split(" ");
