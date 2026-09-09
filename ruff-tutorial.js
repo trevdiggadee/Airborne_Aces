@@ -755,29 +755,37 @@
 
   function showLessonBanner(title) {
     if (!title) return;
-    // DOM-only banner (avoid canvas + DOM double titles)
     window.__airborneFtBanner = null;
+    // Remove old DOM banners
     try {
       var n = document.getElementById("aaFlightBanner");
-      if (!n) {
-        n = document.createElement("div");
-        n.id = "aaFlightBanner";
-        document.body.appendChild(n);
-      }
-      n.textContent = String(title).toUpperCase();
-      n.style.cssText = "position:fixed;left:50%;top:46%;transform:translate(-50%,-50%);z-index:999999;"
-        + "padding:8px 18px;border-radius:12px;pointer-events:none;"
-        + "background:rgba(18,10,4,0.94);border:3px solid #ffc84a;"
-        + "color:#ffe566;font:800 clamp(15px,4.8vw,26px) Rockwell,Georgia,serif;"
-        + "letter-spacing:0.1em;text-shadow:0 2px 8px #000;opacity:0;"
-        + "transition:opacity 0.35s ease;white-space:nowrap;";
-      requestAnimationFrame(function () { n.style.opacity = "1"; });
-      clearTimeout(showLessonBanner._hide);
-      showLessonBanner._hide = setTimeout(function () {
-        n.style.opacity = "0";
-        setTimeout(function () { if (n.parentNode) n.parentNode.removeChild(n); }, 400);
-      }, 2400);
+      if (n && n.parentNode) n.parentNode.removeChild(n);
     } catch (e) {}
+    var key = String(title).toLowerCase();
+    var style = "default";
+    if (key.indexOf("flight") >= 0) style = "flight";
+    else if (key.indexOf("takeoff") >= 0 || key.indexOf("take off") >= 0) style = "takeoff";
+    else if (key.indexOf("altitude") >= 0) style = "altitude";
+    else if (key.indexOf("ring") >= 0) style = "rings";
+    else if (key.indexOf("platform") >= 0 || key.indexOf("sky") >= 0) style = "platforms";
+    else if (key.indexOf("obstacle") >= 0 || key.indexOf("bird") >= 0) style = "obstacles";
+    else if (key.indexOf("shield") >= 0) style = "shield";
+    else if (key.indexOf("combined") >= 0 || key.indexOf("combo") >= 0) style = "combined";
+    else if (key.indexOf("land") >= 0) style = "landing";
+    else if (key.indexOf("boss") >= 0) style = "boss";
+    else if (key.indexOf("crystal") >= 0) style = "crystals";
+    else if (key.indexOf("power") >= 0) style = "powerup";
+    window.__airborneLessonBanner = {
+      title: String(title).toUpperCase(),
+      style: style,
+      t: 0,
+      life: 2.6,
+      frame: 0
+    };
+    try {
+      if (typeof sfxTrainingStageClear === "function") sfxTrainingStageClear();
+      else if (typeof sfxRingCollect === "function") sfxRingCollect();
+    } catch (eS) {}
   }
   window.__airborneShowLessonBanner = showLessonBanner;
 
@@ -4769,7 +4777,7 @@ window.__airborneDrawRingSummary = function (ctx, W, H, dt) {
 
   var cx = W * 0.5;
   var cy = H * 0.32;
-  var R = Math.min(W, H) * 0.52 * scale; // 2x again — large gold medal
+  var R = Math.min(W, H) * 0.26 * scale; // 50% smaller
 
   var rank = (rr.rank || "Rookie").toUpperCase();
   // Gold-only palette (no blue / green)
@@ -4955,3 +4963,211 @@ window.__airborneDrawRingSummary = function (ctx, W, H, dt) {
 
   ctx.restore();
 };
+
+window.__airborneDrawLessonBanner = function (ctx, W, H, dt) {
+  var lb = window.__airborneLessonBanner;
+  if (!lb || !ctx) return;
+  // Don't stack over rings score
+  if (window.__airborneRingResultsCanvas && window.__airborneRingResultsCanvas.t < 2.5) return;
+
+  lb.t = (lb.t || 0) + (typeof dt === "number" ? Math.min(dt, 0.05) : 0.016);
+  lb.frame = (lb.frame || 0) + 1;
+  var life = lb.life || 2.6;
+  var a = 1, scale = 1;
+  if (lb.t < 0.28) {
+    var u = lb.t / 0.28;
+    a = u;
+    scale = 0.7 + 0.35 * (1 - Math.pow(1 - u, 3));
+  } else if (lb.t > life - 0.4) {
+    var f = (lb.t - (life - 0.4)) / 0.4;
+    a = Math.max(0, 1 - f);
+    scale = 1 - 0.08 * f;
+  } else {
+    scale = 1 + 0.012 * Math.sin(lb.t * 3);
+  }
+  if (lb.t >= life) { window.__airborneLessonBanner = null; return; }
+  if (a <= 0.02) return;
+
+  var style = lb.style || "default";
+  var cx = W * 0.5;
+  var cy = H * 0.26;
+  var R = Math.min(W, H) * 0.14 * scale;
+
+  // Unique gold-family accents + spin rates (no blue)
+  var accent = "#e0b050";
+  var accentHi = "#ffe8b0";
+  var spinRate = 0.10;
+  var segs = 4;
+  var glowStr = 0.22;
+  if (style === "flight") { accent = "#f0c060"; spinRate = 0.08; segs = 6; glowStr = 0.28; }
+  else if (style === "takeoff") { accent = "#e8a838"; spinRate = 0.16; segs = 3; glowStr = 0.26; }
+  else if (style === "altitude") { accent = "#d4a04a"; spinRate = 0.06; segs = 5; glowStr = 0.2; }
+  else if (style === "rings") { accent = "#ffd24a"; spinRate = 0.14; segs = 8; glowStr = 0.3; }
+  else if (style === "platforms") { accent = "#c9963a"; spinRate = 0.05; segs = 4; glowStr = 0.18; }
+  else if (style === "obstacles") { accent = "#e09030"; spinRate = 0.18; segs = 3; glowStr = 0.24; }
+  else if (style === "shield") { accent = "#e8c878"; spinRate = 0.09; segs = 6; glowStr = 0.26; }
+  else if (style === "combined") { accent = "#f0b848"; spinRate = 0.12; segs = 5; glowStr = 0.28; }
+  else if (style === "landing") { accent = "#c9a060"; spinRate = 0.04; segs = 4; glowStr = 0.16; }
+  else if (style === "boss") { accent = "#ffc040"; spinRate = 0.2; segs = 8; glowStr = 0.35; }
+  else if (style === "crystals") { accent = "#e8c060"; spinRate = 0.11; segs = 5; glowStr = 0.25; }
+  else if (style === "powerup") { accent = "#f0d070"; spinRate = 0.13; segs = 6; glowStr = 0.3; }
+
+  var propImg = null;
+  try {
+    if (typeof images !== "undefined" && images && images.propeller_brass_ring && images.propeller_brass_ring.naturalWidth)
+      propImg = images.propeller_brass_ring;
+  } catch (e) {}
+
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.translate(cx, cy);
+
+  // Glow
+  var glow = ctx.createRadialGradient(0, 0, R * 0.2, 0, 0, R * 1.4);
+  glow.addColorStop(0, "rgba(230,170,60," + glowStr + ")");
+  glow.addColorStop(0.55, "rgba(120,70,20,0.1)");
+  glow.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(0, 0, R * 1.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Unique: segmented outer ring
+  ctx.save();
+  ctx.rotate(lb.frame * spinRate * 0.4);
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 2.5;
+  ctx.shadowColor = accent;
+  ctx.shadowBlur = 8;
+  var gap = 0.18;
+  var step = (Math.PI * 2) / segs;
+  for (var si = 0; si < segs; si++) {
+    var a0 = si * step + gap * 0.5;
+    var a1 = (si + 1) * step - gap * 0.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, R * 1.12, a0, a1);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Combined: second counter-rotating ring
+  if (style === "combined" || style === "boss" || style === "flight") {
+    ctx.save();
+    ctx.rotate(-lb.frame * spinRate * 0.55);
+    ctx.strokeStyle = "rgba(255, 220, 140, 0.45)";
+    ctx.lineWidth = 1.5;
+    for (var sj = 0; sj < segs; sj++) {
+      var b0 = sj * step + gap;
+      var b1 = (sj + 1) * step - gap;
+      ctx.beginPath();
+      ctx.arc(0, 0, R * 1.22, b0, b1);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Takeoff: upward gold streaks
+  if (style === "takeoff") {
+    ctx.globalAlpha = a * 0.55;
+    ctx.strokeStyle = accentHi;
+    ctx.lineWidth = 1.5;
+    for (var ui = 0; ui < 5; ui++) {
+      var ux = (ui - 2) * R * 0.22;
+      var uy = R * 0.9 - (lb.frame * 1.5 + ui * 12) % (R * 1.6);
+      ctx.beginPath();
+      ctx.moveTo(ux, uy + R * 0.2);
+      ctx.lineTo(ux, uy);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = a;
+  }
+
+  // Altitude: vertical tick marks
+  if (style === "altitude") {
+    ctx.strokeStyle = "rgba(232, 180, 80, 0.5)";
+    ctx.lineWidth = 1.5;
+    for (var ti = 0; ti < 5; ti++) {
+      var ty = -R * 0.7 + ti * (R * 0.35);
+      ctx.beginPath();
+      ctx.moveTo(-R * 1.25, ty);
+      ctx.lineTo(-R * 1.1, ty);
+      ctx.moveTo(R * 1.1, ty);
+      ctx.lineTo(R * 1.25, ty);
+      ctx.stroke();
+    }
+  }
+
+  // Spinning prop
+  ctx.save();
+  ctx.rotate(lb.frame * spinRate);
+  if (propImg) {
+    var propSize = R * (style === "boss" ? 2.05 : 1.85);
+    ctx.globalAlpha = a * 0.92;
+    ctx.drawImage(propImg, -propSize * 0.5, -propSize * 0.5, propSize, propSize);
+  } else {
+    ctx.fillStyle = "rgba(180,120,40,0.75)";
+    for (var bi = 0; bi < 4; bi++) {
+      ctx.save();
+      ctx.rotate((bi / 4) * Math.PI * 2);
+      ctx.beginPath();
+      ctx.ellipse(0, -R * 0.5, R * 0.15, R * 0.45, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+
+  // Transparent glass disc
+  ctx.globalAlpha = a;
+  var glass = ctx.createRadialGradient(0, 0, R * 0.1, 0, 0, R);
+  glass.addColorStop(0, "rgba(40,28,12,0.12)");
+  glass.addColorStop(0.55, "rgba(28,18,10,0.3)");
+  glass.addColorStop(1, "rgba(16,10,5,0.48)");
+  ctx.beginPath();
+  ctx.arc(0, 0, R, 0, Math.PI * 2);
+  ctx.fillStyle = glass;
+  ctx.fill();
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(255,230,180,0.35)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(0, 0, R * 0.9, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Rim sparkles
+  for (var sk = 0; sk < 6; sk++) {
+    var ang = lb.frame * 0.05 + (sk / 6) * Math.PI * 2;
+    var tw = 0.4 + 0.6 * Math.sin(lb.frame * 0.12 + sk);
+    ctx.globalAlpha = a * tw * 0.8;
+    ctx.fillStyle = accentHi;
+    ctx.beginPath();
+    ctx.arc(Math.cos(ang) * R * 0.98, Math.sin(ang) * R * 0.98, 1.5 + tw, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = a;
+
+  // Title text (wrap long titles)
+  var title = lb.title || "";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = accentHi;
+  ctx.shadowColor = "rgba(180,120,40,0.5)";
+  ctx.shadowBlur = 10;
+  var fontSize = Math.round(R * (title.length > 12 ? 0.22 : 0.28));
+  ctx.font = "800 " + fontSize + "px Rockwell,Georgia,serif";
+  // Multi-line if needed
+  var words = title.split(" ");
+  if (title.length > 14 && words.length > 1) {
+    var mid = Math.ceil(words.length / 2);
+    ctx.fillText(words.slice(0, mid).join(" "), 0, -R * 0.12);
+    ctx.fillText(words.slice(mid).join(" "), 0, R * 0.18);
+  } else {
+    ctx.fillText(title, 0, 0);
+  }
+  ctx.shadowBlur = 0;
+
+  ctx.restore();
+};
+
