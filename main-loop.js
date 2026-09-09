@@ -605,54 +605,8 @@ function loop(ts) {
     try { if (window.__airborneDrawRoyalBehind) window.__airborneDrawRoyalBehind(); } catch (e) {}
     drawPlayer();
       try { if (window.drawBlimpSurfaceShadow) window.drawBlimpSurfaceShadow(); } catch (eSh) {}
-      try {
-        var rr = window.__airborneRingResultsCanvas;
-        if (rr && typeof ctx !== "undefined" && ctx) {
-          var Ww = (typeof W === "number" && W > 0) ? W : (ctx.canvas ? ctx.canvas.clientWidth : 400);
-          var Hh = (typeof H === "number" && H > 0) ? H : (ctx.canvas ? ctx.canvas.clientHeight : 700);
-          rr.t = (rr.t || 0) + (typeof dt === "number" ? Math.min(dt, 0.05) : 0.016);
-          var life = rr.life || 4.2;
-          var a = 1;
-          if (rr.t < 0.35) a = rr.t / 0.35;
-          else if (rr.t > life - 0.5) a = Math.max(0, 1 - (rr.t - (life - 0.5)) / 0.5);
-          if (rr.t >= life) { window.__airborneRingResultsCanvas = null; a = 0; }
-          if (a > 0.02) {
-            ctx.save();
-            ctx.globalAlpha = a;
-            var cx = Ww * 0.5, cy = Hh * 0.38;
-            var R = Math.min(Ww, Hh) * 0.16;
-            // Soft vignette band
-            ctx.fillStyle = "rgba(0,0,0," + (0.35 * a) + ")";
-            ctx.fillRect(0, cy - R * 1.6, Ww, R * 3.2);
-            // Outer gold ring
-            ctx.beginPath();
-            ctx.arc(cx, cy, R, 0, Math.PI * 2);
-            ctx.strokeStyle = "#e8c060";
-            ctx.lineWidth = Math.max(6, R * 0.12);
-            ctx.stroke();
-            // Inner dark disc
-            ctx.beginPath();
-            ctx.arc(cx, cy, R * 0.82, 0, Math.PI * 2);
-            ctx.fillStyle = "rgba(28,16,6,0.92)";
-            ctx.fill();
-            ctx.strokeStyle = "#f0d878";
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            // Label
-            ctx.fillStyle = "#c9a06a";
-            ctx.font = "bold " + Math.round(R * 0.22) + "px Rockwell,Georgia,serif";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText("RINGS", cx, cy - R * 0.32);
-            // Big score
-            ctx.fillStyle = "#ffe8b0";
-            ctx.font = "900 " + Math.round(R * 0.48) + "px Rockwell,Georgia,serif";
-            ctx.fillText(rr.text || ((rr.n || 0) + " / " + (rr.total || 20)), cx, cy + R * 0.12);
-            // (no side decorative rings)
-            ctx.restore();
-          }
-        }
-      } catch (eRR) {} try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePowerVisual(); } catch(e) {};
+      /* OLD medal drawer removed — uses __airborneDrawRingSummary only */
+try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePowerVisual(); } catch(e) {};
     try { if (window.drawHitCoins) window.drawHitCoins(); } catch (e) {}
     try { if (typeof drawRingFronts === "function") drawRingFronts(); else if (window.__airborneDrawRingFronts) window.__airborneDrawRingFronts(); } catch (e) {}
     // Soft clouds FRONT layer OFF for now
@@ -665,55 +619,9 @@ function loop(ts) {
     try { if (window.__airborneDrawTrainingCoins) window.__airborneDrawTrainingCoins(); } catch (e) {}
 
     try { drawTrainingRuffEmergency(typeof dt === "number" ? dt : 0.016); } catch (eER) {}
+    try { if (window.__airborneDrawRingSummary) window.__airborneDrawRingSummary(ctx, W, H, typeof dt==="number"?dt:0.016); } catch(eRS) {}
     
-      try {
-        var rr = window.__airborneRingResultsCanvas;
-        if (rr && typeof ctx !== "undefined" && ctx) {
-          var Ww = (typeof W === "number" && W > 0) ? W : (ctx.canvas ? ctx.canvas.clientWidth : 400);
-          var Hh = (typeof H === "number" && H > 0) ? H : (ctx.canvas ? ctx.canvas.clientHeight : 700);
-          rr.t = (rr.t || 0) + (typeof dt === "number" ? Math.min(dt, 0.05) : 0.016);
-          var life = rr.life || 4.2;
-          var a = 1;
-          if (rr.t < 0.35) a = rr.t / 0.35;
-          else if (rr.t > life - 0.5) a = Math.max(0, 1 - (rr.t - (life - 0.5)) / 0.5);
-          if (rr.t >= life) { window.__airborneRingResultsCanvas = null; a = 0; }
-          if (a > 0.02) {
-            ctx.save();
-            ctx.globalAlpha = a;
-            var cx = Ww * 0.5, cy = Hh * 0.38;
-            var R = Math.min(Ww, Hh) * 0.16;
-            // Soft vignette band
-            ctx.fillStyle = "rgba(0,0,0," + (0.35 * a) + ")";
-            ctx.fillRect(0, cy - R * 1.6, Ww, R * 3.2);
-            // Outer gold ring
-            ctx.beginPath();
-            ctx.arc(cx, cy, R, 0, Math.PI * 2);
-            ctx.strokeStyle = "#e8c060";
-            ctx.lineWidth = Math.max(6, R * 0.12);
-            ctx.stroke();
-            // Inner dark disc
-            ctx.beginPath();
-            ctx.arc(cx, cy, R * 0.82, 0, Math.PI * 2);
-            ctx.fillStyle = "rgba(28,16,6,0.92)";
-            ctx.fill();
-            ctx.strokeStyle = "#f0d878";
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            // Label
-            ctx.fillStyle = "#c9a06a";
-            ctx.font = "bold " + Math.round(R * 0.22) + "px Rockwell,Georgia,serif";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText("RINGS", cx, cy - R * 0.32);
-            // Big score
-            ctx.fillStyle = "#ffe8b0";
-            ctx.font = "900 " + Math.round(R * 0.48) + "px Rockwell,Georgia,serif";
-            ctx.fillText(rr.text || ((rr.n || 0) + " / " + (rr.total || 20)), cx, cy + R * 0.12);
-            // (no side decorative rings)
-            ctx.restore();
-          }
-        }
-      } catch (eRR) {}
+      
 
 
     // Platforms ON TOP so they cannot be covered

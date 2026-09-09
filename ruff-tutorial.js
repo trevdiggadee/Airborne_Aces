@@ -4156,12 +4156,7 @@ function finishToMap() {
 
     
   // Keep ring results overlay alive across stage change
-  if (window.__airborneRingResultsCanvas) {
-    window.__airborneRingResultsCanvas.t = (window.__airborneRingResultsCanvas.t || 0) + dt;
-    if (window.__airborneRingResultsCanvas.t > (window.__airborneRingResultsCanvas.life || 3.6) + 0.2) {
-      window.__airborneRingResultsCanvas = null;
-    }
-  }
+  // Ring HUD lifetime handled only inside __airborneDrawRingSummary
 
 // Stage logic — every stage has a hard timeout so training never freezes
     if (ruffStage === "takeoff") {
@@ -4748,55 +4743,54 @@ function finishToMap() {
 window.__airborneDrawRingSummary = function (ctx, W, H, dt) {
   var rr = window.__airborneRingResultsCanvas;
   if (!rr || !ctx) return;
+  // Single owner of time
   rr.t = (rr.t || 0) + (typeof dt === "number" ? Math.min(dt, 0.05) : 0.016);
   rr.frame = (rr.frame || 0) + 1;
   var life = rr.life || 5.5;
 
-  // Fade / scale phases
   var a = 1, scale = 1;
-  if (rr.t < 0.5) {
-    var u = rr.t / 0.5;
+  if (rr.t < 0.45) {
+    var u = rr.t / 0.45;
     a = u;
-    scale = 0.55 + 0.55 * (1 - Math.pow(1 - u, 3));
-  } else if (rr.t > life - 0.65) {
-    var f = (rr.t - (life - 0.65)) / 0.65;
+    scale = 0.5 + 0.55 * (1 - Math.pow(1 - u, 3));
+  } else if (rr.t > life - 0.7) {
+    var f = (rr.t - (life - 0.7)) / 0.7;
     a = Math.max(0, 1 - f);
-    scale = 1 - 0.12 * f;
+    scale = 1 - 0.1 * f;
   } else {
-    scale = 1 + 0.025 * Math.sin(rr.t * 2.6);
+    scale = 1 + 0.03 * Math.sin(rr.t * 2.4);
   }
   if (rr.t >= life) { window.__airborneRingResultsCanvas = null; return; }
   if (a <= 0.02) return;
 
   var cx = W * 0.5;
-  var cy = H * 0.36;
-  // Scale design from reference (~400px) to screen
-  var S = Math.min(W, H) * 0.00115 * scale; // unit scale
+  var cy = H * 0.38;
+  // Match reference proportions — larger HUD
+  var unit = Math.min(W, H) * 0.42; // outer radius baseline
   var pulse = 1 + Math.sin(rr.frame * 0.05) * 0.04;
 
-  // Rank accent (game palette)
   var rank = (rr.rank || "Rookie").toUpperCase();
   var accent = "#e09826";
   var accentHi = "#ffeba8";
-  var accentDeep = "#8b5a14";
+  var accentDeep = "#613903";
   if (rank === "LEGENDARY") { accent = "#ffd24a"; accentHi = "#fff6c8"; accentDeep = "#b8860b"; }
   else if (rank === "ELITE") { accent = "#5eb8e8"; accentHi = "#d8f0ff"; accentDeep = "#1a6088"; }
   else if (rank === "SKILLED") { accent = "#6fd68a"; accentHi = "#e0ffe8"; accentDeep = "#2a7040"; }
 
-  // Init embers once
   if (!rr.embers) {
     rr.embers = [];
-    for (var i = 0; i < 48; i++) {
+    for (var i = 0; i < 70; i++) {
       var ang = Math.random() * Math.PI * 2;
-      var dist = 70 + Math.random() * 100;
+      var dist = unit * (0.55 + Math.random() * 0.7);
       rr.embers.push({
+        ang: ang, dist: dist,
+        size: Math.random() * 2.5 + 0.5,
+        vx: (Math.random() - 0.5) * 0.9,
+        vy: (Math.random() - 0.8) * 1.3,
         x: Math.cos(ang) * dist,
         y: Math.sin(ang) * dist,
-        size: Math.random() * 2.2 + 0.5,
-        vx: (Math.random() - 0.5) * 0.7,
-        vy: (Math.random() - 0.75) * 1.0,
-        life: Math.random() * 60,
-        maxLife: 50 + Math.random() * 50
+        life: Math.random() * 80,
+        maxLife: 70 + Math.random() * 50
       });
     }
   }
@@ -4806,64 +4800,55 @@ window.__airborneDrawRingSummary = function (ctx, W, H, dt) {
   ctx.scale(scale, scale);
   ctx.globalAlpha = a;
 
-  // Soft dim vignette behind HUD
-  ctx.fillStyle = "rgba(0,0,0,0.38)";
-  ctx.beginPath();
-  ctx.arc(0, 0, 200, 0, Math.PI * 2);
-  ctx.fill();
+  // Dim band
+  ctx.fillStyle = "rgba(0,0,0,0.42)";
+  ctx.fillRect(-W * 0.55, -unit * 1.35, W * 1.1, unit * 2.7);
 
-  // Atmospheric gold glow (game warm amber)
-  var glowR = 160 * pulse;
-  var grad = ctx.createRadialGradient(0, 0, 40 * pulse, 0, 0, glowR);
-  grad.addColorStop(0, "rgba(230, 150, 40, 0.32)");
-  grad.addColorStop(0.5, "rgba(140, 70, 10, 0.10)");
-  grad.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = grad;
+  // Background glow
+  var g = ctx.createRadialGradient(0, 0, unit * 0.25 * pulse, 0, 0, unit * 1.05 * pulse);
+  g.addColorStop(0, "rgba(230,150,40,0.38)");
+  g.addColorStop(0.5, "rgba(140,70,10,0.14)");
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g;
   ctx.beginPath();
-  ctx.arc(0, 0, glowR, 0, Math.PI * 2);
+  ctx.arc(0, 0, unit * 1.1, 0, Math.PI * 2);
   ctx.fill();
 
   // Embers
   for (var ei = 0; ei < rr.embers.length; ei++) {
     var p = rr.embers[ei];
-    p.x += p.vx;
-    p.y += p.vy;
-    p.life++;
+    p.x += p.vx; p.y += p.vy; p.life++;
     var pa = 1 - p.life / p.maxLife;
     if (p.life >= p.maxLife) {
-      var ang2 = Math.random() * Math.PI * 2;
-      var dist2 = 70 + Math.random() * 100;
-      p.x = Math.cos(ang2) * dist2;
-      p.y = Math.sin(ang2) * dist2;
-      p.life = 0;
-      p.maxLife = 50 + Math.random() * 50;
-      pa = 1;
+      var a2 = Math.random() * Math.PI * 2;
+      var d2 = unit * (0.55 + Math.random() * 0.7);
+      p.x = Math.cos(a2) * d2; p.y = Math.sin(a2) * d2;
+      p.life = 0; p.maxLife = 70 + Math.random() * 50; pa = 1;
     }
     ctx.save();
-    ctx.shadowBlur = 8;
+    ctx.shadowBlur = 10;
     ctx.shadowColor = "#ffd060";
-    ctx.fillStyle = "rgba(255, 215, 130," + Math.max(0, pa * a) + ")";
+    ctx.fillStyle = "rgba(255,215,130," + Math.max(0, pa) + ")";
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
 
-  // Occasional crackling arcs
-  if (Math.random() > 0.55) {
+  // Lightning
+  if (Math.random() > 0.4) {
     ctx.save();
-    ctx.strokeStyle = "rgba(255, 245, 210, 0.85)";
-    ctx.shadowColor = accent;
-    ctx.shadowBlur = 12;
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "rgba(255,245,210,0.9)";
+    ctx.shadowColor = "#ffaa20";
+    ctx.shadowBlur = 14;
+    ctx.lineWidth = 1.8;
     var baseA = Math.random() * Math.PI * 2;
-    var curR = 95;
-    var curA = baseA;
+    var curR = unit * 0.72, curA = baseA;
     ctx.beginPath();
     ctx.moveTo(Math.cos(curA) * curR, Math.sin(curA) * curR);
-    for (var li = 0; li < 6; li++) {
-      curA += (Math.random() - 0.5) * 0.22;
-      curR += (Math.random() - 0.5) * 12;
+    for (var li = 0; li < 7; li++) {
+      curA += (Math.random() - 0.5) * 0.2;
+      curR += (Math.random() - 0.5) * unit * 0.06;
       ctx.lineTo(Math.cos(curA) * curR, Math.sin(curA) * curR);
     }
     ctx.stroke();
@@ -4876,8 +4861,8 @@ window.__airborneDrawRingSummary = function (ctx, W, H, dt) {
 
   function ringArc(radius, start, end, lw, color, glow) {
     ctx.save();
-    ctx.shadowBlur = glow || 8;
-    ctx.shadowColor = accent;
+    ctx.shadowBlur = glow || 10;
+    ctx.shadowColor = "#ea9a20";
     ctx.strokeStyle = color;
     ctx.lineWidth = lw;
     ctx.beginPath();
@@ -4886,118 +4871,131 @@ window.__airborneDrawRingSummary = function (ctx, W, H, dt) {
     ctx.restore();
   }
 
-  // Outer segmented bevel rings (slow rotate)
+  // Outer segmented bevel (slow)
   ctx.save();
   ctx.rotate(slowRot);
   ctx.scale(pulse, pulse);
-  ctx.shadowBlur = 14;
+  ctx.shadowBlur = 18;
   ctx.shadowColor = "#d68318";
-  ctx.fillStyle = "rgba(215, 140, 45, 0.32)";
+  ctx.fillStyle = "rgba(215,140,45,0.35)";
   ctx.strokeStyle = "#fce2a6";
-  ctx.lineWidth = 1.8;
+  ctx.lineWidth = 2;
   var segs = [
     { s: -2.7, e: -1.7 }, { s: -1.4, e: -0.4 },
     { s: 0.3, e: 1.3 }, { s: 1.8, e: 2.7 }
   ];
+  var rOut = unit * 0.92, rIn = unit * 0.80;
   for (var si = 0; si < segs.length; si++) {
     var seg = segs[si];
     ctx.beginPath();
-    ctx.arc(0, 0, 108, seg.s, seg.e);
-    ctx.arc(0, 0, 94, seg.e, seg.s, true);
+    ctx.arc(0, 0, rOut, seg.s, seg.e);
+    ctx.arc(0, 0, rIn, seg.e, seg.s, true);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
   }
   ctx.restore();
 
-  // Counter-rotating inner rings
+  // Counter-rotating rings
   ctx.save();
   ctx.rotate(revRot);
-  var rg = ctx.createLinearGradient(-80, -80, 80, 80);
+  var rg = ctx.createLinearGradient(-unit * 0.55, -unit * 0.55, unit * 0.55, unit * 0.55);
   rg.addColorStop(0, "#fff4d1");
-  rg.addColorStop(0.5, accent);
-  rg.addColorStop(1, accentDeep);
-  ringArc(82, 0, Math.PI * 2, 10, rg, 16);
-  ringArc(76, 0, Math.PI * 2, 1.8, "rgba(255, 225, 160, 0.75)", 6);
-  ringArc(70, -0.5, Math.PI * 1.2, 2.5, "rgba(240, 170, 60, 0.75)", 6);
+  rg.addColorStop(0.5, "#e09826");
+  rg.addColorStop(1, "#613903");
+  ringArc(unit * 0.70, 0, Math.PI * 2, unit * 0.048, rg, 22);
+  ringArc(unit * 0.66, 0, Math.PI * 2, 2, "rgba(255,225,160,0.8)", 8);
+  ringArc(unit * 0.60, -0.5, Math.PI * 1.2, 3, "rgba(240,170,60,0.8)", 8);
   ctx.restore();
 
-  // Fast orbit segments
+  // Fast segments
   ctx.save();
   ctx.rotate(fastRot);
-  ringArc(64, 0, Math.PI * 0.8, 2, "rgba(255, 220, 130, 0.85)", 8);
-  ringArc(58, Math.PI, Math.PI * 1.8, 3.5, "rgba(190, 110, 20, 0.75)", 5);
-  ringArc(50, 0, Math.PI * 2, 1.8, "rgba(255, 210, 120, 0.55)", 4);
+  ringArc(unit * 0.57, 0, Math.PI * 0.8, 2, "rgba(255,220,130,0.9)", 10);
+  ringArc(unit * 0.52, Math.PI, Math.PI * 1.8, 4, "rgba(190,110,20,0.8)", 6);
+  ringArc(unit * 0.44, 0, Math.PI * 2, 2, "rgba(255,210,120,0.6)", 5);
   ctx.restore();
 
-  // Core circles
-  ringArc(42, 0, Math.PI * 2, 1, "rgba(200, 130, 40, 0.35)", 2);
-  ringArc(36, 0, Math.PI * 2, 2.5, "rgba(255, 220, 150, 0.75)", 6);
+  // Core
+  ringArc(unit * 0.38, 0, Math.PI * 2, 1, "rgba(200,130,40,0.4)", 3);
+  ringArc(unit * 0.32, 0, Math.PI * 2, 3, "rgba(255,220,150,0.8)", 8);
 
-  // Circuit ticks
+  // Circuits
   ctx.save();
   ctx.rotate(slowRot * 0.5);
-  ctx.strokeStyle = "rgba(240, 180, 80, 0.55)";
-  ctx.lineWidth = 1.1;
+  ctx.strokeStyle = "rgba(240,180,80,0.6)";
+  ctx.lineWidth = 1.2;
   ctx.shadowColor = "#f5b042";
-  ctx.shadowBlur = 6;
-  var ticks = [-2.2, 0.8, 2.4, 4.0];
-  for (var ti = 0; ti < ticks.length; ti++) {
-    var ta = ticks[ti];
-    var tx = Math.cos(ta) * 78;
-    var ty = Math.sin(ta) * 78;
+  ctx.shadowBlur = 8;
+  var nodes = [
+    { a: -2.2, r: unit * 0.70 },
+    { a: 0.8, r: unit * 0.72 },
+    { a: 2.5, r: unit * 0.68 },
+    { a: 4.2, r: unit * 0.70 }
+  ];
+  for (var ni = 0; ni < nodes.length; ni++) {
+    var nd = nodes[ni];
+    var nx = Math.cos(nd.a) * nd.r, ny = Math.sin(nd.a) * nd.r;
     ctx.beginPath();
-    ctx.moveTo(tx, ty);
-    ctx.lineTo(tx + Math.cos(ta) * 12, ty + Math.sin(ta) * 12);
+    ctx.moveTo(nx, ny);
+    ctx.lineTo(nx + Math.cos(nd.a) * unit * 0.08, ny + Math.sin(nd.a) * unit * 0.08);
     ctx.stroke();
     ctx.fillStyle = "#fff0d0";
+    ctx.shadowBlur = 10;
     ctx.beginPath();
-    ctx.arc(tx + Math.cos(ta) * 14, ty + Math.sin(ta) * 14, 2.2, 0, Math.PI * 2);
+    ctx.arc(nx + Math.cos(nd.a) * unit * 0.1, ny + Math.sin(nd.a) * unit * 0.1, 3, 0, Math.PI * 2);
     ctx.fill();
   }
+  // Orbit dots
+  [0, 1.2, 2.5, 3.8, 5.0].forEach(function (ang) {
+    ctx.fillStyle = "#fff0d0";
+    ctx.beginPath();
+    ctx.arc(Math.cos(ang) * unit * 0.84, Math.sin(ang) * unit * 0.84, 3, 0, Math.PI * 2);
+    ctx.fill();
+  });
   ctx.restore();
 
-  // Typography — RINGS label above core
+  // Title RINGS (above)
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = '900 15px Rockwell,Georgia,"Courier New",monospace';
-  ctx.fillStyle = accentHi;
-  ctx.shadowColor = accent;
-  ctx.shadowBlur = 12 + Math.sin(rr.frame * 0.08) * 4;
-  ctx.fillText("RINGS", 0, -52);
+  ctx.font = '900 ' + Math.round(unit * 0.14) + 'px Rockwell,Georgia,"Courier New",monospace';
+  ctx.fillStyle = "#ffeba8";
+  ctx.shadowColor = "#e89017";
+  ctx.shadowBlur = 15 + Math.sin(rr.frame * 0.08) * 5;
+  ctx.fillText("RINGS", 0, -unit * 1.08);
 
-  // Score count-up in center
+  // Score
   var targetN = rr.n != null ? rr.n : 0;
   var tot = rr.total || 20;
   var shown = targetN;
-  if (rr.t < 1.1) {
-    shown = Math.round(targetN * Math.min(1, Math.max(0, (rr.t - 0.25) / 0.85)));
+  if (rr.t < 1.15) {
+    shown = Math.round(targetN * Math.min(1, Math.max(0, (rr.t - 0.3) / 0.85)));
   }
-  ctx.font = '900 34px Rockwell,Georgia,"Courier New",monospace';
+  ctx.font = '900 ' + Math.round(unit * 0.28) + 'px Rockwell,Georgia,"Courier New",monospace';
   ctx.fillStyle = "#fff3cb";
   ctx.shadowColor = "#fcae1e";
-  ctx.shadowBlur = 16 + Math.sin(rr.frame * 0.1) * 6;
-  ctx.fillText(shown + " / " + tot, 0, 4);
+  ctx.shadowBlur = 20 + Math.sin(rr.frame * 0.1) * 8;
+  ctx.fillText(shown + " / " + tot, 0, unit * 0.02);
   ctx.shadowBlur = 0;
 
-  // Rank at bottom of core
+  // Rank bottom
   var rankA = a;
-  if (rr.t < 1.0) rankA = a * Math.max(0, (rr.t - 0.5) / 0.5);
+  if (rr.t < 1.0) rankA = a * Math.max(0, (rr.t - 0.55) / 0.45);
   ctx.globalAlpha = rankA;
-  ctx.font = "800 13px Rockwell,Georgia,serif";
+  ctx.font = "800 " + Math.round(unit * 0.11) + "px Rockwell,Georgia,serif";
   ctx.fillStyle = accent;
   ctx.shadowColor = accentDeep;
-  ctx.shadowBlur = 8;
-  ctx.fillText(rank, 0, 38);
+  ctx.shadowBlur = 10;
+  ctx.fillText(rank, 0, unit * 0.32);
   ctx.shadowBlur = 0;
   if (rr.perfectFlight) {
-    ctx.font = "700 10px Rockwell,Georgia,serif";
+    ctx.font = "700 " + Math.round(unit * 0.08) + "px Rockwell,Georgia,serif";
     ctx.fillStyle = "#ffd24a";
-    ctx.fillText("PERFECT FLIGHT", 0, 54);
+    ctx.fillText("PERFECT FLIGHT", 0, unit * 0.44);
   } else if (rr.bestStreak > 0) {
-    ctx.font = "600 10px Rockwell,Georgia,serif";
+    ctx.font = "600 " + Math.round(unit * 0.075) + "px Rockwell,Georgia,serif";
     ctx.fillStyle = "rgba(201,160,106,0.9)";
-    ctx.fillText("BEST STREAK  " + rr.bestStreak, 0, 54);
+    ctx.fillText("BEST STREAK  " + rr.bestStreak, 0, unit * 0.44);
   }
 
   ctx.restore();
