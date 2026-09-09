@@ -78,6 +78,7 @@
     island_propeller_platform: "island_propeller_platform.webp",
     island_ring_portal_blue: "island_ring_portal_blue.webp",
     island_signpost: "island_signpost.webp",
+    propeller_brass_ring: "propeller_brass_ring.png?v=ruff475",
     island_crane: "island_crane.webp",
     island_gazebo: "island_gazebo.webp",
     island_greenhouse_factory: "island_greenhouse_factory.webp",

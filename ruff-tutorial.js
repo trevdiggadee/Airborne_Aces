@@ -4751,22 +4751,20 @@ window.__airborneDrawRingSummary = function (ctx, W, H, dt) {
   if (rr.t < 0.28) {
     var u = rr.t / 0.28;
     a = u;
-    scale = 0.7 + 0.35 * (1 - Math.pow(1 - u, 3));
+    scale = 0.72 + 0.32 * (1 - Math.pow(1 - u, 3));
   } else if (rr.t > life - 0.4) {
     var f = (rr.t - (life - 0.4)) / 0.4;
     a = Math.max(0, 1 - f);
     scale = 1 - 0.08 * f;
   } else {
-    scale = 1 + 0.015 * Math.sin(rr.t * 3);
+    scale = 1 + 0.012 * Math.sin(rr.t * 3);
   }
   if (rr.t >= life) { window.__airborneRingResultsCanvas = null; return; }
   if (a <= 0.02) return;
 
-  // Compact — not full screen
   var cx = W * 0.5;
-  var cy = H * 0.28; // upper area, clear of next lesson action
-  var pw = Math.min(W * 0.52, 210) * scale;
-  var ph = Math.min(H * 0.14, 96) * scale;
+  var cy = H * 0.28;
+  var R = Math.min(W, H) * 0.13 * scale; // compact circle
 
   var rank = (rr.rank || "Rookie").toUpperCase();
   var accent = "#d4a04a";
@@ -4775,80 +4773,116 @@ window.__airborneDrawRingSummary = function (ctx, W, H, dt) {
   else if (rank === "ELITE") { accent = "#6ab8e0"; accentHi = "#d8f0ff"; }
   else if (rank === "SKILLED") { accent = "#6ecf88"; accentHi = "#d8f8e0"; }
 
+  // Propeller image
+  var propImg = null;
+  try {
+    if (typeof images !== "undefined" && images && images.propeller_brass_ring && images.propeller_brass_ring.naturalWidth)
+      propImg = images.propeller_brass_ring;
+  } catch (e) {}
+
   ctx.save();
   ctx.globalAlpha = a;
+  ctx.translate(cx, cy);
 
-  // Soft shadow under panel only (no full-screen dim)
-  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  // Soft outer glow only (no solid box)
+  var glow = ctx.createRadialGradient(0, 0, R * 0.3, 0, 0, R * 1.35);
+  glow.addColorStop(0, "rgba(212, 160, 74, 0.18)");
+  glow.addColorStop(0.6, "rgba(80, 50, 20, 0.12)");
+  glow.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = glow;
   ctx.beginPath();
-  if (ctx.roundRect) ctx.roundRect(cx - pw * 0.52, cy - ph * 0.55, pw * 1.04, ph * 1.2, 14);
-  else ctx.rect(cx - pw * 0.52, cy - ph * 0.55, pw * 1.04, ph * 1.2);
+  ctx.arc(0, 0, R * 1.35, 0, Math.PI * 2);
   ctx.fill();
 
-  // Brass plate body
-  var body = ctx.createLinearGradient(cx, cy - ph * 0.5, cx, cy + ph * 0.5);
-  body.addColorStop(0, "rgba(72, 48, 24, 0.92)");
-  body.addColorStop(0.4, "rgba(42, 28, 14, 0.94)");
-  body.addColorStop(1, "rgba(28, 18, 8, 0.95)");
+  // Spinning brass propeller BEHIND the transparent circle
+  var spin = rr.frame * 0.12; // smooth continuous spin
+  ctx.save();
+  ctx.rotate(spin);
+  if (propImg) {
+    var propSize = R * 1.85;
+    ctx.globalAlpha = a * 0.92;
+    ctx.drawImage(propImg, -propSize * 0.5, -propSize * 0.5, propSize, propSize);
+  } else {
+    // Fallback drawn prop if asset not loaded
+    ctx.globalAlpha = a * 0.85;
+    ctx.strokeStyle = accent;
+    ctx.fillStyle = "rgba(180, 120, 40, 0.7)";
+    ctx.lineWidth = 3;
+    for (var bi = 0; bi < 4; bi++) {
+      ctx.save();
+      ctx.rotate((bi / 4) * Math.PI * 2);
+      ctx.beginPath();
+      ctx.ellipse(0, -R * 0.55, R * 0.16, R * 0.48, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.beginPath();
+    ctx.arc(0, 0, R * 0.12, 0, Math.PI * 2);
+    ctx.fillStyle = "#c9a050";
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // Transparent glass circle over prop
+  ctx.globalAlpha = a;
+  var glass = ctx.createRadialGradient(0, 0, R * 0.15, 0, 0, R);
+  glass.addColorStop(0, "rgba(40, 28, 12, 0.15)");
+  glass.addColorStop(0.55, "rgba(30, 20, 10, 0.28)");
+  glass.addColorStop(1, "rgba(20, 12, 6, 0.42)");
   ctx.beginPath();
-  if (ctx.roundRect) ctx.roundRect(cx - pw * 0.5, cy - ph * 0.5, pw, ph, 12);
-  else ctx.rect(cx - pw * 0.5, cy - ph * 0.5, pw, ph);
-  ctx.fillStyle = body;
+  ctx.arc(0, 0, R, 0, Math.PI * 2);
+  ctx.fillStyle = glass;
   ctx.fill();
 
-  // Gold rim
+  // Thin brass rim
   ctx.strokeStyle = accent;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.5;
   ctx.stroke();
-  ctx.strokeStyle = "rgba(255, 230, 170, 0.25)";
+  ctx.strokeStyle = "rgba(255, 230, 180, 0.35)";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  if (ctx.roundRect) ctx.roundRect(cx - pw * 0.5 + 4, cy - ph * 0.5 + 4, pw - 8, ph - 8, 9);
-  else ctx.rect(cx - pw * 0.5 + 4, cy - ph * 0.5 + 4, pw - 8, ph - 8);
+  ctx.arc(0, 0, R * 0.92, 0, Math.PI * 2);
   ctx.stroke();
 
-  // Tiny orbiting sparkles on rim (subtle)
-  for (var si = 0; si < 5; si++) {
-    var ang = rr.frame * 0.04 + (si / 5) * Math.PI * 2;
-    var sx = cx + Math.cos(ang) * pw * 0.48;
-    var sy = cy + Math.sin(ang) * ph * 0.48;
-    var tw = 0.4 + 0.6 * Math.sin(rr.frame * 0.12 + si);
-    ctx.globalAlpha = a * tw * 0.7;
+  // Rim sparkles
+  for (var si = 0; si < 6; si++) {
+    var ang = rr.frame * 0.05 + (si / 6) * Math.PI * 2;
+    var tw = 0.35 + 0.65 * Math.sin(rr.frame * 0.1 + si);
+    ctx.globalAlpha = a * tw * 0.75;
     ctx.fillStyle = accentHi;
     ctx.beginPath();
-    ctx.arc(sx, sy, 1.5 + tw, 0, Math.PI * 2);
+    ctx.arc(Math.cos(ang) * R * 0.98, Math.sin(ang) * R * 0.98, 1.6 + tw, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.globalAlpha = a;
 
-  // Label
+  // Text
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = "700 " + Math.round(ph * 0.18) + "px Rockwell,Georgia,serif";
+  ctx.font = "700 " + Math.round(R * 0.22) + "px Rockwell,Georgia,serif";
   ctx.fillStyle = "rgba(201,160,106,0.95)";
-  ctx.fillText("RINGS", cx, cy - ph * 0.28);
+  ctx.fillText("RINGS", 0, -R * 0.32);
 
-  // Score count-up
   var targetN = rr.n != null ? rr.n : 0;
   var tot = rr.total || 20;
   var shown = targetN;
-  if (rr.t < 0.75) {
-    shown = Math.round(targetN * Math.min(1, Math.max(0, (rr.t - 0.15) / 0.55)));
+  if (rr.t < 0.7) {
+    shown = Math.round(targetN * Math.min(1, Math.max(0, (rr.t - 0.12) / 0.5)));
   }
-  ctx.font = "900 " + Math.round(ph * 0.36) + "px Rockwell,Georgia,serif";
+  ctx.font = "900 " + Math.round(R * 0.42) + "px Rockwell,Georgia,serif";
   ctx.fillStyle = "#ffe8b0";
-  ctx.shadowColor = "rgba(232, 170, 60, 0.45)";
-  ctx.shadowBlur = 10;
-  ctx.fillText(shown + " / " + tot, cx, cy + ph * 0.02);
+  ctx.shadowColor = "rgba(232,170,60,0.5)";
+  ctx.shadowBlur = 12;
+  ctx.fillText(shown + " / " + tot, 0, R * 0.06);
   ctx.shadowBlur = 0;
 
-  // Rank thin line under score
   var rankA = a;
-  if (rr.t < 0.55) rankA = a * Math.max(0, (rr.t - 0.3) / 0.25);
+  if (rr.t < 0.5) rankA = a * Math.max(0, (rr.t - 0.25) / 0.25);
   ctx.globalAlpha = rankA;
-  ctx.font = "700 " + Math.round(ph * 0.16) + "px Rockwell,Georgia,serif";
+  ctx.font = "700 " + Math.round(R * 0.18) + "px Rockwell,Georgia,serif";
   ctx.fillStyle = accent;
-  ctx.fillText(rank, cx, cy + ph * 0.32);
+  ctx.fillText(rank, 0, R * 0.42);
 
   ctx.restore();
 };
