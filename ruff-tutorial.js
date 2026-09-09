@@ -205,7 +205,7 @@
         try {
           if ((window.__airborneRuffStage || ruffStage) === "rings") setStage("platforms");
         } catch (e) {}
-      }, 3200);
+      }, 4200); // wait for score medal to finish (~3.6s) + buffer
     } catch (e) { console.warn("maybeFinishRings", e); }
   }
 
@@ -4869,7 +4869,7 @@ window.__airborneDrawRingSummary = function (ctx, W, H, dt) {
   ctx.save();
   ctx.rotate(spin);
   if (propImg) {
-    var propSize = R * 1.9;
+    var propSize = R * 2.75; // larger than glass circle
     ctx.globalAlpha = a * 0.95;
     ctx.drawImage(propImg, -propSize * 0.5, -propSize * 0.5, propSize, propSize);
   } else {
@@ -5101,7 +5101,7 @@ window.__airborneDrawLessonBanner = function (ctx, W, H, dt) {
   ctx.save();
   ctx.rotate(lb.frame * spinRate);
   if (propImg) {
-    var propSize = R * (style === "boss" ? 2.05 : 1.85);
+    var propSize = R * (style === "boss" ? 2.85 : 2.7); // larger than glass circle
     ctx.globalAlpha = a * 0.92;
     ctx.drawImage(propImg, -propSize * 0.5, -propSize * 0.5, propSize, propSize);
   } else {

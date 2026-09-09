@@ -499,7 +499,7 @@ function setSfxVolumePref(v) {
 })();
 
 
-// ---------- Splash page music (Splash_page.mp3) — stops/fades on Enter Hangar ----------
+// ---------- Splash page music (banking_into_the_blue.mp3) — stops/fades on Enter Hangar ----------
 const splashMusic = document.getElementById("splashMusic");
 let splashMusicUnlocked = false;
 const SPLASH_MUSIC_VOL = 0.20; // 20%
