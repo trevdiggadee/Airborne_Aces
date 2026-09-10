@@ -1865,10 +1865,45 @@ function powerPreviewKindFor(key) {
 
   
   
-  // Videos per ship (Zeppelin Ace first)
-  var POWER_PREVIEW_VIDEOS = {
-    blimp1: { src: "power_preview_zeppelin_ace.mp4?v=ruff482", title: "ZEPPELIN ACE" }
+  // Shared placeholder video for all ships until individual clips are uploaded
+  var POWER_PREVIEW_VIDEO_SRC = "power_preview_zeppelin_ace.mp4?v=ruff483";
+
+  // Fallback power names if SHIP_DATA is missing an ability
+  var POWER_NAME_BY_SHIP = {
+    blimp1: "Meteor Strike",
+    blimp2: "Storm Cloud",
+    blimp3: "Missile Slice",
+    blimp4: "Steam Overload",
+    blimp5: "Jade Ward",
+    blimp6: "Ghost Veil",
+    blimp7: "Thunder Lance",
+    blimp8: "Iron Hail",
+    blimp9: "Black Flag Bomb",
+    blimp10: "Anchor Barrier",
+    blimp11: "Depth Charge",
+    blimp12: "Afterburner",
+    blimp13: "Lattice Barrage",
+    blimp14: "Pirate Broadside",
+    blimp15: "Royal Meteor"
   };
+
+  function getPowerPreviewName(key) {
+    try {
+      var data = (typeof SHIP_DATA !== "undefined" && SHIP_DATA[key]) ? SHIP_DATA[key]
+        : ((typeof BLIMP_DATA !== "undefined" && BLIMP_DATA[key]) ? BLIMP_DATA[key] : null);
+      if (data && data.ability && data.ability.name) return data.ability.name;
+    } catch (e) {}
+    return POWER_NAME_BY_SHIP[key] || "Power Up";
+  }
+
+  function getShipDisplayName(key) {
+    try {
+      var data = (typeof SHIP_DATA !== "undefined" && SHIP_DATA[key]) ? SHIP_DATA[key]
+        : ((typeof BLIMP_DATA !== "undefined" && BLIMP_DATA[key]) ? BLIMP_DATA[key] : null);
+      if (data && data.name) return data.name;
+    } catch (e) {}
+    return key;
+  }
 
   function closePowerPreviewModal() {
     var modal = document.getElementById("powerPreviewModal");
@@ -1880,30 +1915,29 @@ function powerPreviewKindFor(key) {
     if (vid) {
       try { vid.pause(); vid.removeAttribute("src"); vid.load(); } catch (e) {}
     }
-    // Stop any leftover hero canvas FX
     try { stopHeroFireAura(); } catch (e) {}
   }
 
   function openPowerPreviewModal(optKey) {
     var key = optKey || ((typeof selectedBlimp !== "undefined") ? selectedBlimp : "blimp1");
-    var info = POWER_PREVIEW_VIDEOS[key];
-    // Only ships with a video — others close quietly for now
-    if (!info || !info.src) {
-      try { if (typeof sfxClick === "function") sfxClick(); } catch (e) {}
-      return;
-    }
     var modal = document.getElementById("powerPreviewModal");
     var vid = document.getElementById("powerPreviewVideo");
     var titleEl = document.getElementById("powerPreviewTitle");
+    var capEl = document.getElementById("powerPreviewCaption");
     if (!modal || !vid) return;
-    if (titleEl) titleEl.textContent = info.title || "POWER PREVIEW";
+
+    var shipName = getShipDisplayName(key);
+    var powerName = getPowerPreviewName(key);
+    if (titleEl) titleEl.textContent = String(shipName).toUpperCase();
+    if (capEl) capEl.textContent = String(powerName).toUpperCase();
+
     try { stopHeroFireAura(); } catch (e) {}
     vid.loop = true;
     vid.muted = true;
     vid.playsInline = true;
     vid.setAttribute("playsinline", "");
     vid.setAttribute("webkit-playsinline", "");
-    vid.src = info.src;
+    vid.src = POWER_PREVIEW_VIDEO_SRC;
     vid.load();
     modal.classList.add("open");
     modal.setAttribute("aria-hidden", "false");

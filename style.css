@@ -3763,9 +3763,13 @@ canvas {
 .powerPreviewCaption {
   text-align: center;
   margin-top: 8px;
-  font: 700 10px Rockwell, Georgia, serif;
-  letter-spacing: 0.16em;
-  color: rgba(201, 160, 106, 0.9);
+  font: 800 11px Rockwell, Georgia, serif;
+  letter-spacing: 0.1em;
+  color: #ffe8b0;
+  text-shadow: 0 1px 4px #000;
+  max-width: 100%;
+  padding: 0 4px;
+  line-height: 1.25;
 }
 .powerPreviewClose {
   position: absolute;
