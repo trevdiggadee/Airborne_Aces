@@ -1465,6 +1465,8 @@ window.__airborneRingDebug = false;
               orb.hitIds[oid] = true;
               o.onFire = true;
               o.powerAffected = true;
+              o.spinDir = (Math.random() < 0.5 ? -1 : 1) * (4.5 + Math.random() * 3.5);
+              o.rot = o.rot || 0;
               o.hitFlash = 0.7;
               o.vy = 70 + Math.random() * 40;
               o.vx = (Math.random() - 0.5) * 60;
@@ -1868,7 +1870,9 @@ window.__airborneRingDebug = false;
         if (o.vy > 560) o.vy = 560;
         o.y += o.vy * dt;
         o.x -= Math.max(40, obstacleSpeed * 0.3) * dt;
-        o.rot = (o.rot || 0) + dt * 3.5;
+        // Cartoon tumble while falling from power-up hit
+        o.rot = (o.rot || 0) + dt * (o.spinDir || 5.5);
+        if (o.spinDir == null) o.spinDir = (Math.random() < 0.5 ? -1 : 1) * (4.5 + Math.random() * 3);
         try {
           if (o.onFire && typeof window.__airborneEmitFireTrail === "function") {
             window.__airborneEmitFireTrail(o.x + o.w * 0.5, o.y + o.h * 0.3, o.blueFire ? "blue" : (o.greenFire ? "green" : "orange"));
@@ -2681,7 +2685,14 @@ window.__airborneRingDebug = false;
         ctx.globalAlpha = 1;
         ctx.globalCompositeOperation = "source-over";
         try {
-          ctx.drawImage(imgB, o.x, drawY, o.w, o.h);
+          if (o.onFire || o.powerAffected || o.rot) {
+            var cxb = o.x + o.w * 0.5, cyb = drawY + o.h * 0.5;
+            ctx.translate(cxb, cyb);
+            ctx.rotate(o.rot || 0);
+            ctx.drawImage(imgB, -o.w * 0.5, -o.h * 0.5, o.w, o.h);
+          } else {
+            ctx.drawImage(imgB, o.x, drawY, o.w, o.h);
+          }
         } catch (eD) {}
         ctx.restore();
         return;

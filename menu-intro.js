@@ -1865,40 +1865,56 @@ function powerPreviewKindFor(key) {
 
   
   
-  function playMenuPowerPreview(optKey) {
+  // Videos per ship (Zeppelin Ace first)
+  var POWER_PREVIEW_VIDEOS = {
+    blimp1: { src: "power_preview_zeppelin_ace.mp4?v=ruff482", title: "ZEPPELIN ACE" }
+  };
+
+  function closePowerPreviewModal() {
+    var modal = document.getElementById("powerPreviewModal");
+    var vid = document.getElementById("powerPreviewVideo");
+    if (modal) {
+      modal.classList.remove("open");
+      modal.setAttribute("aria-hidden", "true");
+    }
+    if (vid) {
+      try { vid.pause(); vid.removeAttribute("src"); vid.load(); } catch (e) {}
+    }
+    // Stop any leftover hero canvas FX
+    try { stopHeroFireAura(); } catch (e) {}
+  }
+
+  function openPowerPreviewModal(optKey) {
     var key = optKey || ((typeof selectedBlimp !== "undefined") ? selectedBlimp : "blimp1");
-    // Exact same modes as gameplay (bosses.js SHIP_POWER_MODE)
-    var map = {
-      blimp1: "fire",
-      blimp2: "shockwave",
-      blimp3: "bluefireball",
-      blimp4: "steam",
-      blimp5: "greenfireball",
-      blimp6: "vortex",
-      blimp7: "chain",
-      blimp8: "fireball",
-      blimp9: "jollybomb",
-      blimp10: "royal",
-      blimp11: "warshark",
-      blimp12: "heatseek",
-      blimp13: "swarm",
-      blimp14: "barrelbomb",
-      blimp15: "meteors"
-    };
-    var kind = map[key] || "fire";
-    startHeroPowerFx(kind);
-    try {
-      if (window.PowerFX) {
-        var wrap = document.querySelector(".heroBlimpWrap");
-        var rect = wrap ? wrap.getBoundingClientRect() : { width: 200, height: 120 };
-        var hx = rect.width * 0.5, hy = rect.height * 0.5;
-        window.PowerFX.activate(kind, hx, hy);
-        // Keep aura/projectiles refreshing like in-game
-        window.__menuPowerFxKind = kind;
-        window.__menuPowerFxUntil = performance.now() + 5500;
-      }
-    } catch (e) {}
-    try { if (typeof sfxPowerup === "function") sfxPowerup(); } catch (e) {}
+    var info = POWER_PREVIEW_VIDEOS[key];
+    // Only ships with a video — others close quietly for now
+    if (!info || !info.src) {
+      try { if (typeof sfxClick === "function") sfxClick(); } catch (e) {}
+      return;
+    }
+    var modal = document.getElementById("powerPreviewModal");
+    var vid = document.getElementById("powerPreviewVideo");
+    var titleEl = document.getElementById("powerPreviewTitle");
+    if (!modal || !vid) return;
+    if (titleEl) titleEl.textContent = info.title || "POWER PREVIEW";
+    try { stopHeroFireAura(); } catch (e) {}
+    vid.loop = true;
+    vid.muted = true;
+    vid.playsInline = true;
+    vid.setAttribute("playsinline", "");
+    vid.setAttribute("webkit-playsinline", "");
+    vid.src = info.src;
+    vid.load();
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden", "false");
+    var playP = vid.play();
+    if (playP && playP.catch) playP.catch(function () {});
+    try { if (typeof sfxClick === "function") sfxClick(); } catch (e) {}
+  }
+
+  function playMenuPowerPreview(optKey) {
+    // Video popup instead of live canvas FX on the menu blimp
+    openPowerPreviewModal(optKey);
   }
 
   function bindMenuPowerPreview() {
@@ -1913,6 +1929,22 @@ function powerPreviewKindFor(key) {
         e.preventDefault();
         e.stopPropagation();
         playMenuPowerPreview();
+      });
+    }
+    var closeBtn = document.getElementById("powerPreviewClose");
+    var modal = document.getElementById("powerPreviewModal");
+    if (closeBtn && !closeBtn.dataset.bound) {
+      closeBtn.dataset.bound = "1";
+      closeBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closePowerPreviewModal();
+      });
+    }
+    if (modal && !modal.dataset.bound) {
+      modal.dataset.bound = "1";
+      modal.addEventListener("click", function (e) {
+        if (e.target === modal) closePowerPreviewModal();
       });
     }
   }
