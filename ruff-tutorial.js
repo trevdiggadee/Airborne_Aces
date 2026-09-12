@@ -1275,7 +1275,7 @@
       window.__airborneAirfieldObstacles = true;
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldInvuln = false; // allow collision damage
-      if (typeof spawnInterval !== "undefined") spawnInterval = 0.60;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 0.40;
       try { if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 198; } catch (e) {}
       // No platforms during bird obstacle lesson
       try { ruffPlatforms = []; window.__airborneRuffPlatforms = []; } catch (e) {}
