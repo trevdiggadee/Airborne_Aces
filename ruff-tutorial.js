@@ -55,6 +55,7 @@
   let ruffJetParticles = [];
   let ruffSpeakLines = [];
   let ruffMotionGhosts = [];
+  let ruffGhostCd = 0;
   let ruffY = 0;
   let ruffSpeakClose = 0;
   let ruffTilt = 0;
@@ -203,7 +204,7 @@
       showRingResultsBanner();
       setTimeout(function () {
         try {
-          if ((window.__airborneRuffStage || ruffStage) === "rings") setStage("platforms");
+          if ((window.__airborneRuffStage || ruffStage) === "rings") setStage("combined");
         } catch (e) {}
       }, 4200); // wait for score medal to finish (~3.6s) + buffer
     } catch (e) { console.warn("maybeFinishRings", e); }
@@ -640,11 +641,11 @@
     "cruise",
     "altitude",
     "rings",
+    "combined",
     "platforms",
     "obstacles",
     "shield",
     "airship",
-    "combined",
     "boss1",
     "landing",
     "report"
@@ -732,8 +733,8 @@
   // ---------- DOM ----------
 
   const TRACE_STAGES = [
-    "intro", "takeoff", "altitude", "rings", "obstacles",
-    "shield", "powerup", "rings", "combined", "landing"
+    "intro", "takeoff", "altitude", "rings", "combined",
+    "platforms", "obstacles", "shield", "landing"
   ];
   const TRACE_LABELS = {
     intro: "Radio check",
@@ -1151,7 +1152,7 @@
 
     // Progress UI — show dock + update percent
     try {
-      var stages = ["intro","takeoff","cruise","altitude","rings","platforms","obstacles","shield","airship","combined","boss1","landing","report"];
+      var stages = ["intro","takeoff","cruise","altitude","rings","combined","platforms","obstacles","shield","airship","boss1","landing","report"];
       var si = stages.indexOf(name);
       if (si < 0) si = 0;
       var pct = (name === "report" || name === "landing") ? 100 : ((si / (stages.length - 1)) * 100);
@@ -1275,7 +1276,7 @@
       window.__airborneAirfieldObstacles = true;
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldInvuln = false; // allow collision damage
-      if (typeof spawnInterval !== "undefined") spawnInterval = 0.13;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 0.087; // +50% birds
       try { if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 198; } catch (e) {}
       // No platforms during bird obstacle lesson
       try { ruffPlatforms = []; window.__airborneRuffPlatforms = []; } catch (e) {}
@@ -1302,7 +1303,7 @@
       window.__airborneTrainingBoss = false;
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = true;
-      if (typeof spawnInterval !== "undefined") spawnInterval = 0.95;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 0.63; // +50% birds
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 200;
       ruffAirship = null;
       // No rings in combined — platforms + birds only
@@ -1451,7 +1452,7 @@
 
   // ---------- Floating training platforms (steampunk sky docks) ----------
   var ruffPlatforms = [];
-  var PLATFORM_SCROLL_SPEED = 35.75; // +10% from 32.5
+  var PLATFORM_SCROLL_SPEED = 41.1; // ~15% faster so full set clears ~10s sooner
   var PLATFORM_KEYS = [
     "island_barrel_platform", "island_gear_wheel_platform", "island_ring_portal_blue",
     "island_market_stall", "island_tiny_rock_grass", "island_tiny_rock_mossy", "island_propeller_platform",
@@ -1586,6 +1587,8 @@
 
       p.speed = PLATFORM_SCROLL_SPEED;
       p.x -= PLATFORM_SCROLL_SPEED * dt;
+      // mark off-screen for prune
+      if (p.x + (p.w || 0) < -40) p._off = true;
       if (p.squash) p.squash = Math.max(0, p.squash - dt * 0.75);
       // Dynamic motion: gentle bob + slow sway
       p.bobT = (p.bobT || Math.random() * 10) + dt;
@@ -1769,6 +1772,13 @@
         }
       });
     }
+    // Prune platforms that fully left the screen
+    try {
+      if (ruffPlatforms && ruffPlatforms.length) {
+        ruffPlatforms = ruffPlatforms.filter(function (p) { return p && !p._off; });
+        window.__airborneRuffPlatforms = ruffPlatforms;
+      }
+    } catch (eOff) {}
     // Keep fixed coins/crystal locked to platform tops
     (ruffCoins || []).forEach(function (c) {
       if (!c.fixedToPlatform || !c.platRef) return;
@@ -2957,7 +2967,7 @@
   function updateRuffCompanion(dt) {
     if (!ruffActive) return;
     try {
-    ruffBob += dt * 2.2;
+    ruffBob += dt * 2.6;
     ruffFrameT += dt;
     const ruffFps = 12; // smooth companion loop
     const ruffFd = 1 / ruffFps;
@@ -3024,8 +3034,10 @@
     ruffX = Math.max(W0 * 0.04, Math.min(W0 * 0.7, ruffX));
     ruffY = Math.max(minY, Math.min(maxY, ruffY));
     // Motion lean / bank
-    ruffTilt = Math.sin(ruffBob * 1.3) * 0.12 + Math.sin(ruffBob * 0.5) * 0.04;
-    ruffScalePulse = 1 + Math.sin(ruffBob * 2.1) * 0.03;
+    // Subtle hover + lean toward movement
+    var lean = Math.max(-1, Math.min(1, (targetY - ruffY) * 0.012));
+    ruffTilt = Math.sin(ruffBob * 1.45) * 0.14 + Math.sin(ruffBob * 0.55) * 0.05 + lean * 0.18;
+    ruffScalePulse = 1 + Math.sin(ruffBob * 2.4) * 0.04 + Math.sin(ruffBob * 0.9) * 0.015;
     if (ruffSpeakClose > 0) ruffSpeakClose = Math.max(0, ruffSpeakClose - dt * 0.5);
 
     // Jetpack exhaust (behind / slightly below)
@@ -3055,11 +3067,18 @@
 
     // Motion ghosts (afterimage)
     if (Math.random() < 0.35) {
-      ruffMotionGhosts.push({ x: ruffX, y: ruffY, age: 0, life: 0.22, tilt: ruffTilt });
+      ruffGhostCd = (ruffGhostCd || 0) - dt;
+      if (ruffGhostCd <= 0) {
+        ruffGhostCd = 0.045;
+        ruffMotionGhosts.push({
+          x: ruffX, y: ruffY, age: 0, life: 0.42,
+          tilt: ruffTilt, frame: ruffFrame, scale: ruffScalePulse || 1
+        });
+      }
     }
     ruffMotionGhosts.forEach(function (g) { g.age += dt; });
     ruffMotionGhosts = ruffMotionGhosts.filter(function (g) { return g.age < g.life; });
-    if (ruffMotionGhosts.length > 8) ruffMotionGhosts.splice(0, ruffMotionGhosts.length - 8);
+    if (ruffMotionGhosts.length > 12) ruffMotionGhosts.splice(0, ruffMotionGhosts.length - 12);
 
     // Speaking: small black lines from mouth area
     const radio = document.getElementById("ruffRadio");
@@ -3196,6 +3215,30 @@
         c.restore();
       });
     } catch (eJ) {}
+
+    // Ghost motion trails (behind Ruff)
+    try {
+      for (var gi = 0; gi < (ruffMotionGhosts || []).length; gi++) {
+        var g = ruffMotionGhosts[gi];
+        if (!g) continue;
+        var gu = 1 - (g.age / (g.life || 0.42));
+        if (gu <= 0.05) continue;
+        c.save();
+        c.globalAlpha = gu * 0.28;
+        c.translate(g.x, g.y);
+        c.rotate(g.tilt || 0);
+        var gsc = sc * (g.scale || 1) * (0.92 + gu * 0.05);
+        if (img && img.naturalWidth) {
+          c.drawImage(img, -gsc / 2, -gsc / 2, gsc, gsc);
+        } else {
+          c.fillStyle = "rgba(201,162,74," + (gu * 0.45) + ")";
+          c.beginPath();
+          c.ellipse(0, 4, gsc * 0.28, gsc * 0.32, 0, 0, Math.PI * 2);
+          c.fill();
+        }
+        c.restore();
+      }
+    } catch (eGh) {}
 
     c.save();
     try {
@@ -4248,8 +4291,8 @@ function finishToMap() {
 
       if ((spawned >= 20 && ringsLeft === 0 && ruffStageT > 16) || ruffStageT > 100) {
         try { showRingResultsBanner(); } catch (e) {}
-        setStage("platforms");
-        console.log("[R.U.F.F.] rings → platforms + summary");
+        setStage("combined");
+        console.log("[R.U.F.F.] rings → combined + summary");
       }
     } else if (ruffStage === "crystals" || ruffStage === "powerup") {
       setStage("obstacles");
@@ -4262,12 +4305,21 @@ function finishToMap() {
       }
       try { updateTrainingPlatforms(dt); } catch (e) {}
       // Wait until every platform has scrolled fully off
-      var anyPlat = ruffPlatforms && ruffPlatforms.some(function (p) { return p && (p.x + (p.w || 0) > 0); });
-      if (!anyPlat && ruffStageT > 10) {
+      // Drop platforms fully past the left edge (must fully leave screen)
+      try {
+        ruffPlatforms = (ruffPlatforms || []).filter(function (p) {
+          return p && (p.x + (p.w || 0) > -40);
+        });
+        window.__airborneRuffPlatforms = ruffPlatforms;
+      } catch (ePr) {}
+      var anyPlat = ruffPlatforms && ruffPlatforms.some(function (p) {
+        return p && (p.x + (p.w || 0) > -20);
+      });
+      if (!anyPlat && ruffStageT > 8) {
         setStage("obstacles");
         console.log("[R.U.F.F.] platforms → obstacles (cleared)");
-      } else if (ruffStageT > 70) {
-        // Safety only after plenty of time at slow speed
+      } else if (ruffStageT > 60) {
+        // ~10s shorter safety timeout
         setStage("obstacles");
         console.log("[R.U.F.F.] platforms → obstacles (timeout)");
       }
@@ -4280,7 +4332,7 @@ function finishToMap() {
         ruffCoins = (ruffCoins || []).filter(function (c) { return c && c.fixedToPlatform && !c.collected; });
         ruffCrystals = (ruffCrystals || []).filter(function (c) { return c && c.fixedToPlatform && !c.collected; });
       } catch (e) {}
-      if (typeof spawnInterval !== "undefined") spawnInterval = 0.60;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 0.087;
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 198;
 
       if (ruffLessonPendingNext) {
