@@ -1300,6 +1300,7 @@
       ruffStage = "combined";
       window.__airborneRuffStage = "combined";
     } else if (name === "combined") {
+      try { showLessonBanner("Combined"); } catch (eBan) {}
       window.__airborneTrainingBoss = false;
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = true;
@@ -3684,6 +3685,7 @@
 
     window.__airborneRuffActive = false;
     window.__airborneRuffStage = "idle";
+  window.__airborneStageOrder = STAGE_ORDER;
     window.__airborneRuffLandArmed = false;
     window.__airborneRuffRequestLand = false;
     window.__airborneTrainingPowerUsed = false;
@@ -3806,6 +3808,7 @@
     ruffActive = false;
     window.__airborneRuffActive = false;
     window.__airborneRuffStage = "idle";
+  window.__airborneStageOrder = STAGE_ORDER;
     window.__airborneRuffRequestLand = false;
     window.__airborneRuffLandArmed = false;
     window.__airborneTrainingBoss = false;
@@ -3883,6 +3886,7 @@ function finishToMap() {
     ruffActive = false;
     window.__airborneRuffActive = false;
     window.__airborneRuffStage = "idle";
+  window.__airborneStageOrder = STAGE_ORDER;
     window.__airborneRuffRequestLand = false;
     window.__airborneRuffLandArmed = false;
     try { syncRuffDomBuddy(false); } catch (e) {}
@@ -4801,6 +4805,7 @@ function finishToMap() {
   window.__airborneDrawRuff = drawRuff;
   window.__airborneRuffActive = false;
   window.__airborneRuffStage = "idle";
+  window.__airborneStageOrder = STAGE_ORDER;
   window.__airborneRuffRequestLand = false;
   window.__airborneRingCollects = 0;
 })();

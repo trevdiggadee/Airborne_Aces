@@ -304,14 +304,13 @@ function drawTrainingRuffEmergency(dt) {
     try {
       if (!(window.__airborneAirfield || window.__airborneTrainingFlight || window.__airborneRuffActive)) return;
       if (window.__airborneRuffStage === "report") return;
-      // Keep drawing through landing/score
       if (typeof ctx === "undefined" || !ctx) return;
       var W0 = (typeof W !== "undefined" && W > 0) ? W : 400;
       var H0 = (typeof H !== "undefined" && H > 0) ? H : 600;
       var stage = window.__airborneRuffStage || "intro";
       var dti = (typeof dt === "number" && dt > 0) ? Math.min(dt, 0.05) : 0.016;
 
-      // Intro phases: 0–1.4s fly-in, 1.4–end of intro hover near dest
+      // Intro phases: fly-in then hover
       if (stage === "intro") {
         window.__airborneRuffIntroT = (window.__airborneRuffIntroT || 0) + dti;
         var tFly = Math.min(1, window.__airborneRuffIntroT / 1.6);
@@ -322,33 +321,35 @@ function drawTrainingRuffEmergency(dt) {
         window.__airborneRuffY = startY + (destY - startY) * ease + Math.sin(window.__airborneRuffIntroT * 2.0) * 5;
         window.__airborneRuffFollowBlend = 0;
       } else {
-        // Smooth blend toward follow (closer to blimp, not high above)
         window.__airborneRuffFollowBlend = Math.min(1, (window.__airborneRuffFollowBlend || 0) + dti / 1.2);
         var b = window.__airborneRuffFollowBlend;
         var fx = W0 * 0.20, fy = H0 * 0.35;
         if (typeof player !== "undefined" && player && player.x > 0) {
           fx = player.x - ((player.w || 60) * 0.50 + 28);
-          // Sit ~30% of blimp height above the blimp
-          fy = player.y - ((player.h || 40) * 0.30 + 18) + Math.sin((performance.now() / 1000) * 2.0) * 5;
+          fy = player.y - ((player.h || 40) * 0.30 + 18);
         }
+        // Subtle hover + drift (readable motion)
+        var bobT = performance.now() / 1000;
+        fy += Math.sin(bobT * 2.15) * 7 + Math.sin(bobT * 3.4) * 2.5;
+        fx += Math.sin(bobT * 1.1) * 3;
         var ox = (window.__airborneRuffX > 0) ? window.__airborneRuffX : fx;
         var oy = (window.__airborneRuffY > 0) ? window.__airborneRuffY : fy;
-        window.__airborneRuffX = ox + (fx - ox) * Math.max(0.08, b * 0.2);
-        window.__airborneRuffY = oy + (fy - oy) * Math.max(0.08, b * 0.2);
+        window.__airborneRuffX = ox + (fx - ox) * Math.max(0.08, b * 0.22);
+        window.__airborneRuffY = oy + (fy - oy) * Math.max(0.08, b * 0.22);
       }
       var x = Math.max(36, Math.min(W0 * 0.62, window.__airborneRuffX));
       var y = Math.max(H0 * 0.08, Math.min(H0 * 0.75, window.__airborneRuffY));
       window.__airborneRuffX = x;
       window.__airborneRuffY = y;
 
-      // Animation 10 fps — less choppy
+      // Animation
       window.__airborneRuffFrameT = (window.__airborneRuffFrameT || 0) + dti;
       if (window.__airborneRuffFrameT >= 0.1) {
-        window.__airborneRuffFrameT -= 0.1;
+        window.__airborneRuffFrameT = 0;
         window.__airborneRuffFrame = ((window.__airborneRuffFrame || 0) + 1) % 36;
       }
-      var fi = ((window.__airborneRuffFrame || 0) | 0) + 1;
-      var key = "ruff_" + (fi < 10 ? "0" + fi : String(fi));
+      var fr = ((window.__airborneRuffFrame || 0) % 36) + 1;
+      var key = "ruff_" + (fr < 10 ? "0" + fr : String(fr));
       var img = (typeof images !== "undefined") ? images[key] : null;
       if (!img || !img.naturalWidth) {
         for (var i = 1; i <= 36; i++) {
@@ -356,21 +357,67 @@ function drawTrainingRuffEmergency(dt) {
           if (images && images[k] && images[k].naturalWidth) { img = images[k]; break; }
         }
       }
-      var size = 78; // -15%
+      var size = 78;
+
+      // ---- Ghost trails (afterimages) ----
+      window.__airborneRuffGhosts = window.__airborneRuffGhosts || [];
+      window.__airborneRuffGhostCd = (window.__airborneRuffGhostCd || 0) - dti;
+      if (window.__airborneRuffGhostCd <= 0) {
+        window.__airborneRuffGhostCd = 0.04;
+        window.__airborneRuffGhosts.push({ x: x, y: y, age: 0, life: 0.38, frame: fr });
+      }
+      for (var gi = window.__airborneRuffGhosts.length - 1; gi >= 0; gi--) {
+        var g = window.__airborneRuffGhosts[gi];
+        g.age += dti;
+        if (g.age >= g.life) window.__airborneRuffGhosts.splice(gi, 1);
+      }
+      if (window.__airborneRuffGhosts.length > 14) {
+        window.__airborneRuffGhosts.splice(0, window.__airborneRuffGhosts.length - 14);
+      }
+      // Draw oldest first (farthest / most transparent)
+      for (var gj = 0; gj < window.__airborneRuffGhosts.length; gj++) {
+        var gh = window.__airborneRuffGhosts[gj];
+        var gu = 1 - (gh.age / gh.life);
+        if (gu < 0.08) continue;
+        var gImg = img;
+        if (gh.frame) {
+          var gk = "ruff_" + (gh.frame < 10 ? "0" + gh.frame : String(gh.frame));
+          if (images && images[gk] && images[gk].naturalWidth) gImg = images[gk];
+        }
+        var gsz = size * (0.9 + gu * 0.08);
+        ctx.save();
+        ctx.globalAlpha = gu * 0.42;
+        ctx.globalCompositeOperation = "source-over";
+        if (gImg && gImg.naturalWidth) {
+          ctx.drawImage(gImg, gh.x - gsz / 2, gh.y - gsz / 2, gsz, gsz);
+        } else {
+          ctx.fillStyle = "rgba(255, 200, 60," + (gu * 0.5) + ")";
+          ctx.beginPath();
+          ctx.arc(gh.x, gh.y, 28, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // Main Ruff sprite
       ctx.save();
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "source-over";
+      // slight tilt for life
+      var tilt = Math.sin(performance.now() / 1000 * 2.2) * 0.08;
+      ctx.translate(x, y);
+      ctx.rotate(tilt);
       if (img && img.naturalWidth) {
-        ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
+        ctx.drawImage(img, -size / 2, -size / 2, size, size);
       } else {
         ctx.fillStyle = "rgba(255, 200, 60, 0.95)";
         ctx.beginPath();
-        ctx.arc(x, y, 34, 0, Math.PI * 2);
+        ctx.arc(0, 0, 34, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = "#1a1208";
         ctx.font = "bold 12px system-ui,sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("R.U.F.F.", x, y + 4);
+        ctx.fillText("R.U.F.F.", 0, 4);
       }
       ctx.restore();
     } catch (e) {
