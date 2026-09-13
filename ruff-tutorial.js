@@ -204,7 +204,7 @@
       showRingResultsBanner();
       setTimeout(function () {
         try {
-          if ((window.__airborneRuffStage || ruffStage) === "rings") setStage("combined");
+          if ((window.__airborneRuffStage || ruffStage) === "rings") setStage("obstacles");
         } catch (e) {}
       }, 4200); // wait for score medal to finish (~3.6s) + buffer
     } catch (e) { console.warn("maybeFinishRings", e); }
@@ -641,9 +641,9 @@
     "cruise",
     "altitude",
     "rings",
-    "combined",
-    "platforms",
     "obstacles",
+    "platforms",
+    "combined",
     "shield",
     "airship",
     "boss1",
@@ -733,8 +733,8 @@
   // ---------- DOM ----------
 
   const TRACE_STAGES = [
-    "intro", "takeoff", "altitude", "rings", "combined",
-    "platforms", "obstacles", "shield", "landing"
+    "intro", "takeoff", "altitude", "rings", "obstacles",
+    "platforms", "combined", "shield", "landing"
   ];
   const TRACE_LABELS = {
     intro: "Radio check",
@@ -1087,6 +1087,11 @@
 
   // ---------- Stage control ----------
   function setStage(name) {
+    // Hard rule: never jump rings → platforms (must be obstacles first)
+    if ((ruffStage === "rings" || window.__airborneRuffStage === "rings") && name === "platforms") {
+      name = "obstacles";
+      console.log("[R.U.F.F.] rings→platforms blocked; forcing obstacles");
+    }
     try {
       if (ruffStage === "rings" && name !== "rings" && window.__airborneComputeRingRank) {
         window.__airborneComputeRingRank();
@@ -1152,7 +1157,7 @@
 
     // Progress UI — show dock + update percent
     try {
-      var stages = ["intro","takeoff","cruise","altitude","rings","combined","platforms","obstacles","shield","airship","boss1","landing","report"];
+      var stages = ["intro","takeoff","cruise","altitude","rings","obstacles","platforms","combined","shield","airship","boss1","landing","report"];
       var si = stages.indexOf(name);
       if (si < 0) si = 0;
       var pct = (name === "report" || name === "landing") ? 100 : ((si / (stages.length - 1)) * 100);
@@ -1267,19 +1272,24 @@
       ruffStats.ringPerfectFlight = false;
       window.__airborneRingHud = { streak: 0, mult: 1, score: 0, lastPts: 0, flash: 0, title: "" };
     } else if (name === "platforms") {
-      try { showRingResultsBanner(); } catch (e) {}
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       try { spawnTrainingPlatformsLesson(); } catch (e) { console.warn("platforms", e); }
     } else if (name === "obstacles") {
+      try { showLessonBanner("Obstacles"); } catch (eBan) {}
       window.__airborneAirfieldObstacles = true;
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldInvuln = false; // allow collision damage
-      if (typeof spawnInterval !== "undefined") spawnInterval = 0.087; // +50% birds
+      if (typeof spawnInterval !== "undefined") spawnInterval = 0.087;
       try { if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 198; } catch (e) {}
-      // No platforms during bird obstacle lesson
-      try { ruffPlatforms = []; window.__airborneRuffPlatforms = []; } catch (e) {}
+      // Hard clear platforms so they cannot appear after rings
+      try {
+        ruffPlatforms = [];
+        window.__airborneRuffPlatforms = [];
+        ruffCoins = (ruffCoins || []).filter(function (c) { return c && !c.fixedToPlatform; });
+        ruffCrystals = (ruffCrystals || []).filter(function (c) { return c && !c.fixedToPlatform; });
+      } catch (e) {}
     } else if (name === "shield") {
       try {
         ruffCoins = (ruffCoins || []).filter(function (c) { return c && c.fixedToPlatform && !c.collected; });
@@ -4255,6 +4265,8 @@ function finishToMap() {
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 199;
       window.__airborneRingTotalTarget = 20;
+      // Never show platforms during / right after rings
+      try { ruffPlatforms = []; window.__airborneRuffPlatforms = []; } catch (eClr) {}
 
       // Sequential spawn: 1 ring every 1.15s until exactly 20
       window.__airborneRingSpawnT = (window.__airborneRingSpawnT || 0) + dt;
@@ -4295,8 +4307,8 @@ function finishToMap() {
 
       if ((spawned >= 20 && ringsLeft === 0 && ruffStageT > 16) || ruffStageT > 100) {
         try { showRingResultsBanner(); } catch (e) {}
-        setStage("combined");
-        console.log("[R.U.F.F.] rings → combined + summary");
+        setStage("obstacles");
+        console.log("[R.U.F.F.] rings → obstacles + summary");
       }
     } else if (ruffStage === "crystals" || ruffStage === "powerup") {
       setStage("obstacles");
@@ -4320,21 +4332,22 @@ function finishToMap() {
         return p && (p.x + (p.w || 0) > -20);
       });
       if (!anyPlat && ruffStageT > 8) {
-        setStage("obstacles");
-        console.log("[R.U.F.F.] platforms → obstacles (cleared)");
+        setStage("combined");
+        console.log("[R.U.F.F.] platforms → combined (cleared)");
       } else if (ruffStageT > 60) {
-        // ~10s shorter safety timeout
-        setStage("obstacles");
-        console.log("[R.U.F.F.] platforms → obstacles (timeout)");
+        setStage("combined");
+        console.log("[R.U.F.F.] platforms → combined (timeout)");
       }
     } else if (ruffStage === "obstacles") {
       window.__airborneAirfieldInvuln = false;
       window.__airborneAirfieldObstacles = true;
       try { if (typeof state !== "undefined" && state !== "playing" && state !== "paused") state = "playing"; } catch (e) {}
-      // Keep platform-attached coins until platforms scroll off
+      // No platforms in this lesson
       try {
-        ruffCoins = (ruffCoins || []).filter(function (c) { return c && c.fixedToPlatform && !c.collected; });
-        ruffCrystals = (ruffCrystals || []).filter(function (c) { return c && c.fixedToPlatform && !c.collected; });
+        ruffPlatforms = [];
+        window.__airborneRuffPlatforms = [];
+        ruffCoins = (ruffCoins || []).filter(function (c) { return c && !c.fixedToPlatform && !c.collected; });
+        ruffCrystals = (ruffCrystals || []).filter(function (c) { return c && !c.fixedToPlatform && !c.collected; });
       } catch (e) {}
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.087;
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 198;
@@ -4343,7 +4356,7 @@ function finishToMap() {
         stopLessonSpawns();
       } else {
         window.__airborneAirfieldObstacles = true;
-        if (typeof spawnInterval !== "undefined") spawnInterval = 1.35;
+        if (typeof spawnInterval !== "undefined") spawnInterval = 0.087;
         if (ruffStageT > 16) {
           window.__airborneAirfieldObstacles = false;
           if (typeof spawnInterval !== "undefined") spawnInterval = 999;
@@ -4351,8 +4364,8 @@ function finishToMap() {
         const obsCount = (typeof obstacles !== "undefined" && obstacles) ? obstacles.length : 0;
         if ((ruffStageT > 14 && obsCount === 0) || ruffStageT > 20) {
           ruffStats.obstaclesAvoided += 2;
-          setStage("shield");
-          console.log("[R.U.F.F.] obstacles → shield");
+          setStage("platforms");
+          console.log("[R.U.F.F.] obstacles → platforms");
         }
       }
     } else if (ruffStage === "airship") {
