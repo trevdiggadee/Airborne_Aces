@@ -1087,11 +1087,6 @@
 
   // ---------- Stage control ----------
   function setStage(name) {
-    // Hard rule: never jump rings → platforms (must be obstacles first)
-    if ((ruffStage === "rings" || window.__airborneRuffStage === "rings") && name === "platforms") {
-      name = "obstacles";
-      console.log("[R.U.F.F.] rings→platforms blocked; forcing obstacles");
-    }
     try {
       if (ruffStage === "rings" && name !== "rings" && window.__airborneComputeRingRank) {
         window.__airborneComputeRingRank();
@@ -1272,24 +1267,19 @@
       ruffStats.ringPerfectFlight = false;
       window.__airborneRingHud = { streak: 0, mult: 1, score: 0, lastPts: 0, flash: 0, title: "" };
     } else if (name === "platforms") {
+      try { showRingResultsBanner(); } catch (e) {}
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       try { spawnTrainingPlatformsLesson(); } catch (e) { console.warn("platforms", e); }
     } else if (name === "obstacles") {
-      try { showLessonBanner("Obstacles"); } catch (eBan) {}
       window.__airborneAirfieldObstacles = true;
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldInvuln = false; // allow collision damage
-      if (typeof spawnInterval !== "undefined") spawnInterval = 0.087;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 0.087; // +50% birds
       try { if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 198; } catch (e) {}
-      // Hard clear platforms so they cannot appear after rings
-      try {
-        ruffPlatforms = [];
-        window.__airborneRuffPlatforms = [];
-        ruffCoins = (ruffCoins || []).filter(function (c) { return c && !c.fixedToPlatform; });
-        ruffCrystals = (ruffCrystals || []).filter(function (c) { return c && !c.fixedToPlatform; });
-      } catch (e) {}
+      // No platforms during bird obstacle lesson
+      try { ruffPlatforms = []; window.__airborneRuffPlatforms = []; } catch (e) {}
     } else if (name === "shield") {
       try {
         ruffCoins = (ruffCoins || []).filter(function (c) { return c && c.fixedToPlatform && !c.collected; });
@@ -4265,8 +4255,6 @@ function finishToMap() {
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 199;
       window.__airborneRingTotalTarget = 20;
-      // Never show platforms during / right after rings
-      try { ruffPlatforms = []; window.__airborneRuffPlatforms = []; } catch (eClr) {}
 
       // Sequential spawn: 1 ring every 1.15s until exactly 20
       window.__airborneRingSpawnT = (window.__airborneRingSpawnT || 0) + dt;
@@ -4342,12 +4330,10 @@ function finishToMap() {
       window.__airborneAirfieldInvuln = false;
       window.__airborneAirfieldObstacles = true;
       try { if (typeof state !== "undefined" && state !== "playing" && state !== "paused") state = "playing"; } catch (e) {}
-      // No platforms in this lesson
+      // Keep platform-attached coins until platforms scroll off
       try {
-        ruffPlatforms = [];
-        window.__airborneRuffPlatforms = [];
-        ruffCoins = (ruffCoins || []).filter(function (c) { return c && !c.fixedToPlatform && !c.collected; });
-        ruffCrystals = (ruffCrystals || []).filter(function (c) { return c && !c.fixedToPlatform && !c.collected; });
+        ruffCoins = (ruffCoins || []).filter(function (c) { return c && c.fixedToPlatform && !c.collected; });
+        ruffCrystals = (ruffCrystals || []).filter(function (c) { return c && c.fixedToPlatform && !c.collected; });
       } catch (e) {}
       if (typeof spawnInterval !== "undefined") spawnInterval = 0.087;
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 198;
@@ -4356,7 +4342,7 @@ function finishToMap() {
         stopLessonSpawns();
       } else {
         window.__airborneAirfieldObstacles = true;
-        if (typeof spawnInterval !== "undefined") spawnInterval = 0.087;
+        if (typeof spawnInterval !== "undefined") spawnInterval = 1.35;
         if (ruffStageT > 16) {
           window.__airborneAirfieldObstacles = false;
           if (typeof spawnInterval !== "undefined") spawnInterval = 999;
@@ -4364,8 +4350,8 @@ function finishToMap() {
         const obsCount = (typeof obstacles !== "undefined" && obstacles) ? obstacles.length : 0;
         if ((ruffStageT > 14 && obsCount === 0) || ruffStageT > 20) {
           ruffStats.obstaclesAvoided += 2;
-          setStage("platforms");
-          console.log("[R.U.F.F.] obstacles → platforms");
+          setStage("shield");
+          console.log("[R.U.F.F.] obstacles → shield");
         }
       }
     } else if (ruffStage === "airship") {
