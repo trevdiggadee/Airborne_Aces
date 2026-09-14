@@ -3698,8 +3698,7 @@ canvas {
   font-size: 0 !important;
 }
 
-
-/* ---- Power preview video modal ---- */
+/* ---- Power preview (video frame is in the footage) ---- */
 .powerPreviewModal {
   position: fixed;
   inset: 0;
@@ -3707,7 +3706,7 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(8, 5, 2, 0.62);
+  background: rgba(0, 0, 0, 0.72);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.28s ease;
@@ -3716,76 +3715,73 @@ canvas {
   opacity: 1;
   pointer-events: auto;
 }
-.powerPreviewFrame {
+.powerPreviewStage {
   position: relative;
-  width: min(78vw, 340px);
-  padding: 14px 14px 12px;
-  border-radius: 16px;
-  background: linear-gradient(160deg, #3a2a14 0%, #1a1208 55%, #0e0a05 100%);
-  border: 2.5px solid #d4a04a;
-  box-shadow:
-    0 0 0 1px rgba(255, 220, 150, 0.25) inset,
-    0 12px 40px rgba(0, 0, 0, 0.55),
-    0 0 28px rgba(212, 160, 74, 0.25);
-}
-.powerPreviewFrame::before {
-  content: "";
-  position: absolute;
-  inset: 6px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 220, 160, 0.18);
-  pointer-events: none;
-}
-.powerPreviewTitle {
-  text-align: center;
-  font: 800 13px Rockwell, Georgia, serif;
-  letter-spacing: 0.12em;
-  color: #ffe8b0;
-  text-shadow: 0 1px 4px #000;
-  margin-bottom: 8px;
-}
-.powerPreviewScreen {
-  position: relative;
-  border-radius: 10px;
+  width: min(86vw, 420px);
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
   overflow: hidden;
-  background: #0a0806;
-  border: 1.5px solid rgba(212, 160, 74, 0.55);
-  box-shadow: 0 0 12px rgba(0, 0, 0, 0.4) inset;
-  aspect-ratio: 16 / 10;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+  background: transparent;
 }
-.powerPreviewScreen video {
+.powerPreviewVideo {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
-  background: #000;
+  background: transparent;
 }
-.powerPreviewCaption {
+/* Top brass nameplate on the video frame */
+.powerPreviewTitle {
+  position: absolute;
+  left: 50%;
+  top: 4.2%;
+  transform: translateX(-50%);
+  width: 48%;
   text-align: center;
-  margin-top: 8px;
-  font: 800 11px Rockwell, Georgia, serif;
-  letter-spacing: 0.1em;
-  color: #ffe8b0;
-  text-shadow: 0 1px 4px #000;
-  max-width: 100%;
-  padding: 0 4px;
-  line-height: 1.25;
+  font: 800 clamp(11px, 3.2vw, 15px) Rockwell, Georgia, serif;
+  letter-spacing: 0.08em;
+  color: #2a1a08;
+  text-shadow: 0 1px 0 rgba(255, 230, 180, 0.35);
+  pointer-events: none;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Bottom brass nameplate — power-up name */
+.powerPreviewCaption {
+  position: absolute;
+  left: 50%;
+  bottom: 5.5%;
+  transform: translateX(-50%);
+  width: 52%;
+  text-align: center;
+  font: 800 clamp(10px, 2.9vw, 14px) Rockwell, Georgia, serif;
+  letter-spacing: 0.06em;
+  color: #2a1a08;
+  text-shadow: 0 1px 0 rgba(255, 230, 180, 0.35);
+  pointer-events: none;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .powerPreviewClose {
   position: absolute;
-  top: 6px;
-  right: 8px;
+  top: 2.5%;
+  right: 3.5%;
+  z-index: 3;
   width: 28px;
   height: 28px;
   border: none;
   border-radius: 50%;
-  background: rgba(40, 28, 12, 0.9);
+  background: rgba(20, 12, 6, 0.55);
   color: #ffe8b0;
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
-  z-index: 2;
-  border: 1px solid rgba(212, 160, 74, 0.5);
+  border: 1px solid rgba(212, 160, 74, 0.45);
 }
 .powerPreviewClose:active {
   transform: scale(0.94);

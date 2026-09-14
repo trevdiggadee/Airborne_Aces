@@ -1866,7 +1866,7 @@ function powerPreviewKindFor(key) {
   
   
   // Shared placeholder video for all ships until individual clips are uploaded
-  var POWER_PREVIEW_VIDEO_SRC = "power_preview_zeppelin_ace.mp4?v=ruff483";
+  var POWER_PREVIEW_VIDEO_SRC = "power_preview_zeppelin_ace.mp4?v=ruff494";
 
   // Fallback power names if SHIP_DATA is missing an ability
   var POWER_NAME_BY_SHIP = {
