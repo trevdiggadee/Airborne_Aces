@@ -3739,7 +3739,7 @@ canvas {
 .powerPreviewTitle {
   position: absolute;
   left: 50%;
-  top: 5.25%;
+  top: 6.85%;
   transform: translateX(-50%);
   width: 48%;
   text-align: center;
@@ -3757,7 +3757,7 @@ canvas {
 .powerPreviewCaption {
   position: absolute;
   left: 50%;
-  bottom: 4.1%;
+  bottom: 2.85%;
   transform: translateX(-50%);
   width: 52%;
   text-align: center;

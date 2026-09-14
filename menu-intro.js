@@ -442,7 +442,7 @@ function startHeroAnimation(key) {
 }
 
 // Set the default hero image right away (placeholder mode skips the network round trip)
-startHeroAnimation("blimp1");
+startHeroAnimation(selectedBlimp || "blimp1");
 
 // Preload every blimp asset (static hero images + full animation sets) once
 // up front so switching, and the animation itself, never stutters. This also
@@ -1963,6 +1963,14 @@ function powerPreviewKindFor(key) {
       try { vid.pause(); vid.removeAttribute("src"); vid.load(); } catch (e) {}
     }
     try { stopHeroFireAura(); } catch (e) {}
+    // Restore menu music volume
+    try {
+      window.__airborneMenuMusicDuck = false;
+      if (typeof menuMusicFadeStep === "function") menuMusicFadeStep();
+      else if (menuMusic && !menuMusic.paused) {
+        menuMusic.volume = Math.max(0, Math.min(1, musicVolumePref || 0.2));
+      }
+    } catch (eUnduck) {}
   }
 
   function openPowerPreviewModal(optKey) {
@@ -1972,6 +1980,15 @@ function powerPreviewKindFor(key) {
     var titleEl = document.getElementById("powerPreviewTitle");
     var capEl = document.getElementById("powerPreviewCaption");
     if (!modal || !vid) return;
+
+    // Keep menu music playing; duck 50%
+    try {
+      window.__airborneMenuMusicDuck = true;
+      if (typeof menuMusicFadeStep === "function") menuMusicFadeStep();
+      else if (menuMusic && !menuMusic.paused) {
+        menuMusic.volume = Math.max(0, Math.min(1, (musicVolumePref || 0.2) * 0.5));
+      }
+    } catch (eDuck) {}
 
     var shipName = getShipDisplayName(key);
     var powerName = getPowerPreviewName(key);
