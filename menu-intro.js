@@ -237,6 +237,52 @@ function blimpSrc(data) {
 
 let selectedBlimp = "blimp1";
 
+function selectBlimp(key, btn) {
+  try {
+    if (!key || typeof key !== "string") return;
+    if (typeof BLIMP_DATA !== "undefined" && BLIMP_DATA && !BLIMP_DATA[key]) {
+      console.warn("[selectBlimp] unknown key", key);
+      return;
+    }
+    selectedBlimp = key;
+    window.selectedBlimp = key;
+    try { localStorage.setItem("aa_selected_blimp", key); } catch (e) {}
+
+    // Active button state
+    try {
+      var buttons = document.querySelectorAll(".numBtn");
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].classList.remove("active");
+      }
+      if (btn && btn.classList) btn.classList.add("active");
+      else {
+        var match = document.querySelector('.numBtn[onclick*="' + key + '"]');
+        if (match) match.classList.add("active");
+      }
+    } catch (eBtn) {}
+
+    try { startHeroAnimation(key); } catch (eAnim) { console.warn("hero anim", eAnim); }
+    try { updateProfile(key); } catch (eProf) {}
+    try { stopHeroFireAura(); } catch (eFx) {}
+    try {
+      if (typeof window.__airborneApplyShipPowerIcon === "function") {
+        window.__airborneApplyShipPowerIcon();
+      }
+    } catch (eIcon) {}
+    try { if (typeof sfxClick === "function") sfxClick(); } catch (eSfx) {}
+  } catch (e) {
+    console.warn("selectBlimp", e);
+  }
+}
+window.selectBlimp = selectBlimp;
+
+// Restore last selection
+try {
+  var saved = localStorage.getItem("aa_selected_blimp");
+  if (saved && BLIMP_DATA && BLIMP_DATA[saved]) selectedBlimp = saved;
+} catch (e) {}
+
+
 const heroBlimpLayers = [
   document.getElementById("heroBlimpImgA"),
   document.getElementById("heroBlimpImgB")
@@ -1866,8 +1912,8 @@ function powerPreviewKindFor(key) {
   
   
   // Shared placeholder video for all ships until individual clips are uploaded
-  var POWER_PREVIEW_VIDEO_SRC = "power_preview_zeppelin_ace.webm?v=ruff495";
-  var POWER_PREVIEW_VIDEO_FALLBACK = "power_preview_zeppelin_ace.mp4?v=ruff495";
+  var POWER_PREVIEW_VIDEO_SRC = "power_preview_zeppelin_ace.mp4?v=ruff496";
+  var POWER_PREVIEW_VIDEO_FALLBACK = "power_preview_zeppelin_ace.webm?v=ruff496";
 
   // Fallback power names if SHIP_DATA is missing an ability
   var POWER_NAME_BY_SHIP = {
@@ -1934,15 +1980,16 @@ function powerPreviewKindFor(key) {
 
     try { stopHeroFireAura(); } catch (e) {}
     vid.loop = true;
-    vid.muted = true;
+    // User tapped power icon — allow audio
+    vid.muted = false;
+    try { vid.volume = 0.85; } catch (eV) {}
     vid.playsInline = true;
     vid.setAttribute("playsinline", "");
     vid.setAttribute("webkit-playsinline", "");
-    // Prefer alpha WebM (black keyed out); MP4 fallback
     vid.src = POWER_PREVIEW_VIDEO_SRC;
     vid.onerror = function () {
       try {
-        if (vid.src.indexOf(".webm") >= 0 && typeof POWER_PREVIEW_VIDEO_FALLBACK === "string") {
+        if (vid.src.indexOf(".mp4") >= 0 && typeof POWER_PREVIEW_VIDEO_FALLBACK === "string") {
           vid.onerror = null;
           vid.src = POWER_PREVIEW_VIDEO_FALLBACK;
           vid.load();
@@ -1955,7 +2002,17 @@ function powerPreviewKindFor(key) {
     modal.classList.add("open");
     modal.setAttribute("aria-hidden", "false");
     var playP = vid.play();
-    if (playP && playP.catch) playP.catch(function () {});
+    if (playP && playP.catch) {
+      playP.catch(function () {
+        // Autoplay with sound blocked — retry muted then unmute attempt
+        try {
+          vid.muted = true;
+          vid.play().then(function () {
+            vid.muted = false;
+          }).catch(function () {});
+        } catch (e2) {}
+      });
+    }
     try { if (typeof sfxClick === "function") sfxClick(); } catch (e) {}
   }
 

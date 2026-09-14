@@ -879,6 +879,8 @@ html, body {
 
 
 .numBtn {
+  pointer-events: auto !important;
+  z-index: 20;
   position: absolute;
   /* Tighter to hangar_bg_v2 frames */
   top: 66.8%;
@@ -3705,7 +3707,7 @@ canvas {
   position: fixed;
   inset: 0;
   z-index: 100050;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.55);
@@ -3714,6 +3716,7 @@ canvas {
   transition: opacity 0.28s ease;
 }
 .powerPreviewModal.open {
+  display: flex;
   opacity: 1;
   pointer-events: auto;
 }
