@@ -276,6 +276,56 @@ function selectBlimp(key, btn) {
 }
 window.selectBlimp = selectBlimp;
 
+// ---------- Take Flight button → world map ----------
+function onTakeFlightClick(e) {
+  try {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+  } catch (err) {}
+  try { if (typeof sfxClick === "function") sfxClick(); } catch (e) {}
+  try { if (typeof ensureAudio === "function") ensureAudio(); } catch (e) {}
+  try {
+    // Close power preview if open
+    if (typeof closePowerPreviewModal === "function") closePowerPreviewModal();
+    else if (typeof window.closePowerPreviewModal === "function") window.closePowerPreviewModal();
+  } catch (e) {}
+  try {
+    if (typeof window.__airborneShowWorldMap === "function") {
+      window.__airborneShowWorldMap({ mode: "start" });
+    } else if (typeof showWorldMap === "function") {
+      showWorldMap({ mode: "start" });
+    } else {
+      console.warn("[Take Flight] world map not ready");
+    }
+  } catch (err) {
+    console.warn("Take Flight", err);
+  }
+}
+window.onTakeFlightClick = onTakeFlightClick;
+
+function bindTakeFlightButton() {
+  var btn = document.getElementById("flyBtn");
+  if (!btn || btn.__takeFlightBound) return;
+  btn.__takeFlightBound = true;
+  btn.style.pointerEvents = "auto";
+  btn.style.cursor = "pointer";
+  btn.style.zIndex = "30";
+  ["click", "pointerup", "touchend"].forEach(function (ev) {
+    btn.addEventListener(ev, function (e) {
+      if (ev === "touchend") {
+        try { e.preventDefault(); } catch (err) {}
+      }
+      onTakeFlightClick(e);
+    }, { passive: false });
+  });
+}
+try {
+  document.addEventListener("DOMContentLoaded", bindTakeFlightButton);
+  setTimeout(bindTakeFlightButton, 100);
+  setTimeout(bindTakeFlightButton, 800);
+} catch (e) {}
+
+
+
 // Restore last selection
 try {
   var saved = localStorage.getItem("aa_selected_blimp");
