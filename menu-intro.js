@@ -498,7 +498,11 @@ function applyGameplayMusicVolumeNow() {
     try {
       const isMuted = gameplayMusicMuted || (typeof muted !== "undefined" && muted);
       if (isMuted) menuEl.volume = 0;
-      else if (!menuEl.paused) menuEl.volume = Math.max(0, Math.min(1, musicVolumePref));
+      else if (!menuEl.paused) {
+        var mv = Math.max(0, Math.min(1, musicVolumePref));
+        if (window.__airborneMenuMusicDuck) mv *= 0.5;
+        menuEl.volume = mv;
+      }
     } catch (e) {}
   }
 }
@@ -667,11 +671,25 @@ function menuMusicFadeStep() {
   } else if (t > d - MENU_MUSIC_FADE_SEC) {
     vol = musicVolumePref * Math.max(0, (d - t) / MENU_MUSIC_FADE_SEC);
   }
+  // Duck 50% while power-up preview is open
+  if (window.__airborneMenuMusicDuck) vol *= 0.5;
   menuMusic.volume = Math.max(0, Math.min(musicVolumePref, vol));
 }
 if (menuMusic) menuMusic.addEventListener("timeupdate", menuMusicFadeStep);
 
+function setMenuMusicVolumeNow() {
+  if (!menuMusic) return;
+  try {
+    if (menuMusic.dataset.userMuted === "1") { menuMusic.volume = 0; return; }
+    var isMuted = gameplayMusicMuted || (typeof muted !== "undefined" && muted);
+    var vol = isMuted ? 0 : Math.max(0, Math.min(1, typeof musicVolumePref === "number" ? musicVolumePref : 0.20));
+    if (window.__airborneMenuMusicDuck) vol *= 0.5;
+    menuMusic.volume = vol;
+  } catch (e) {}
+}
+
 function startMenuMusic() {
+
   if (!menuMusic) return;
   // Never play menu track while splash is still up
   try {
@@ -689,7 +707,11 @@ function startMenuMusic() {
     if (p && typeof p.then === "function") {
       p.then(function () {
         menuMusicUnlocked = true;
-        try { menuMusic.volume = isMuted ? 0 : Math.max(0, Math.min(1, musicVolumePref)); } catch (e) {}
+        try {
+          var _mv = isMuted ? 0 : Math.max(0, Math.min(1, musicVolumePref));
+          if (window.__airborneMenuMusicDuck) _mv *= 0.5;
+          menuMusic.volume = _mv;
+        } catch (e) {}
       }).catch(function () {});
     } else {
       menuMusicUnlocked = true;
@@ -1966,7 +1988,8 @@ function powerPreviewKindFor(key) {
     // Restore menu music volume
     try {
       window.__airborneMenuMusicDuck = false;
-      if (typeof menuMusicFadeStep === "function") menuMusicFadeStep();
+      if (typeof setMenuMusicVolumeNow === "function") setMenuMusicVolumeNow();
+      else if (typeof menuMusicFadeStep === "function") menuMusicFadeStep();
       else if (menuMusic && !menuMusic.paused) {
         menuMusic.volume = Math.max(0, Math.min(1, musicVolumePref || 0.2));
       }
@@ -1984,7 +2007,8 @@ function powerPreviewKindFor(key) {
     // Keep menu music playing; duck 50%
     try {
       window.__airborneMenuMusicDuck = true;
-      if (typeof menuMusicFadeStep === "function") menuMusicFadeStep();
+      if (typeof setMenuMusicVolumeNow === "function") setMenuMusicVolumeNow();
+      else if (typeof menuMusicFadeStep === "function") menuMusicFadeStep();
       else if (menuMusic && !menuMusic.paused) {
         menuMusic.volume = Math.max(0, Math.min(1, (musicVolumePref || 0.2) * 0.5));
       }

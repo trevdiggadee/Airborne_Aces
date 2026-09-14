@@ -3735,39 +3735,45 @@ canvas {
   display: block;
   background: transparent;
 }
-/* Top plate — blimp name (lowered ~25%) */
+/* Top plate — blimp name centered on brass plate */
 .powerPreviewTitle {
   position: absolute;
   left: 50%;
-  top: 6.85%;
-  transform: translateX(-50%);
-  width: 48%;
+  top: 6.8%;
+  transform: translate(-50%, -50%);
+  width: 42%;
   text-align: center;
-  font: 800 clamp(11px, 3.2vw, 15px) Rockwell, Georgia, serif;
-  letter-spacing: 0.08em;
-  color: #2a1a08;
-  text-shadow: 0 1px 0 rgba(255, 230, 180, 0.35);
-  pointer-events: none;
-  line-height: 1.1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-/* Bottom plate — power name (raised ~25%) */
-.powerPreviewCaption {
-  position: absolute;
-  left: 50%;
-  bottom: 2.85%;
-  transform: translateX(-50%);
-  width: 52%;
-  text-align: center;
-  font: 800 clamp(10px, 2.9vw, 14px) Rockwell, Georgia, serif;
+  font: 800 clamp(11px, 3.1vw, 15px) Rockwell, Georgia, serif;
   letter-spacing: 0.06em;
   color: #2a1a08;
   text-shadow: 0 1px 0 rgba(255, 230, 180, 0.35);
   pointer-events: none;
-  line-height: 1.15;
+  line-height: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin: 0;
+  padding: 0;
 }
+/* Bottom plate — power-up name centered on brass plate */
+.powerPreviewCaption {
+  position: absolute;
+  left: 50%;
+  top: 92.2%;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  width: 46%;
+  text-align: center;
+  font: 800 clamp(10px, 2.8vw, 14px) Rockwell, Georgia, serif;
+  letter-spacing: 0.05em;
+  color: #2a1a08;
+  text-shadow: 0 1px 0 rgba(255, 230, 180, 0.35);
+  pointer-events: none;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+  padding: 0;
+}
+
