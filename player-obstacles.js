@@ -412,8 +412,14 @@ window.__airborneRingDebug = false;
   }
 
   function pickObstacleType() {
-    // Flight training: birds only (drones off)
+    // Flight training: birds + steampunk drones
     if (window.__airborneAirfield || window.__airborneTrainingFlight) {
+      var st = window.__airborneRuffStage || "";
+      if (st === "obstacles" || st === "combined" || st === "shield") {
+        var r = Math.random();
+        if (r < 0.30) return "drone_scout";
+        return r < 0.65 ? "bird_a" : "bird_b";
+      }
       return Math.random() < 0.5 ? "bird_a" : "bird_b";
     }
     const next = nextBossConfig();
@@ -454,9 +460,9 @@ window.__airborneRingDebug = false;
     if (window.__droneSheetLoading) return null;
     window.__droneSheetLoading = true;
     var paths = [
-      "drone_scout_sheet.png?v=ruff491",
+      "drone_scout_sheet.png?v=ruff493",
       "drone_scout_sheet.png",
-      "drone_scout_sheet.webp?v=ruff491",
+      "drone_scout_sheet.webp?v=ruff493",
       "drone_scout_sheet.webp"
     ];
     var i = 0;
@@ -479,7 +485,11 @@ window.__airborneRingDebug = false;
     tryNext();
     return null;
   }
-  try { setTimeout(ensureDroneSheet, 300); } catch (e) {}
+  try {
+    window.__droneSheetImg = null;
+    window.__droneSheetLoading = false;
+    setTimeout(ensureDroneSheet, 200);
+  } catch (e) {}
 
   function ensureTrainingBirdSheets() {
     var list = window.__TRAINING_BIRD_SHEETS || [];
