@@ -257,14 +257,18 @@
   }
 
   function showWorldMap(opts) {
-    if (window.__airborneReturnToHangar) {
+    opts = opts || {};
+    // Hangar "Take Flight" always opens the map (ignore stale return flag)
+    if (opts.fromHangar || opts.mode === "start") {
+      window.__airborneReturnToHangar = false;
+    }
+    if (window.__airborneReturnToHangar && !opts.force) {
       try {
         var map = document.getElementById("worldMapScreen");
         if (map) { map.style.display = "none"; map.classList.add("hidden"); }
       } catch (e) {}
       return;
     }
-    opts = opts || {};
     mapMode = opts.mode || "start";
     mapPendingResume = opts.onContinue || null;
     syncProgressFromGame();

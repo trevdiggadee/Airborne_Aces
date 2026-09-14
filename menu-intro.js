@@ -277,51 +277,85 @@ function selectBlimp(key, btn) {
 window.selectBlimp = selectBlimp;
 
 // ---------- Take Flight button → world map ----------
+var __takeFlightLock = 0;
 function onTakeFlightClick(e) {
   try {
-    if (e) { e.preventDefault(); e.stopPropagation(); }
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
   } catch (err) {}
+  // Debounce double-fire (click + touchend)
+  var now = Date.now();
+  if (now - __takeFlightLock < 600) return;
+  __takeFlightLock = now;
+
+  console.log("[Take Flight] pressed");
   try { if (typeof sfxClick === "function") sfxClick(); } catch (e) {}
   try { if (typeof ensureAudio === "function") ensureAudio(); } catch (e) {}
   try {
-    // Close power preview if open
-    if (typeof closePowerPreviewModal === "function") closePowerPreviewModal();
-    else if (typeof window.closePowerPreviewModal === "function") window.closePowerPreviewModal();
+    if (typeof window.closePowerPreviewModal === "function") window.closePowerPreviewModal();
   } catch (e) {}
+
+  // Clear hangar-return latch so map can open
+  window.__airborneReturnToHangar = false;
+
   try {
     if (typeof window.__airborneShowWorldMap === "function") {
-      window.__airborneShowWorldMap({ mode: "start" });
-    } else if (typeof showWorldMap === "function") {
-      showWorldMap({ mode: "start" });
-    } else {
-      console.warn("[Take Flight] world map not ready");
+      window.__airborneShowWorldMap({ mode: "start", fromHangar: true, force: true });
+      return;
     }
   } catch (err) {
-    console.warn("Take Flight", err);
+    console.warn("Take Flight map error", err);
+  }
+  // Fallback: jump straight into training level 1
+  try {
+    window.__airbornePendingMapLevel = 1;
+    window.__airborneForceTrainRestart = true;
+    var menu = document.getElementById("menuScreen");
+    var game = document.getElementById("gameScreen");
+    if (menu) menu.style.display = "none";
+    if (game) game.style.display = "";
+    if (typeof window.__airborneHardResetTraining === "function") window.__airborneHardResetTraining();
+    if (typeof window.__airborneBeginRuff === "function") window.__airborneBeginRuff();
+    else if (typeof startGame === "function") startGame();
+  } catch (e2) {
+    console.warn("Take Flight fallback", e2);
   }
 }
 window.onTakeFlightClick = onTakeFlightClick;
 
 function bindTakeFlightButton() {
   var btn = document.getElementById("flyBtn");
-  if (!btn || btn.__takeFlightBound) return;
-  btn.__takeFlightBound = true;
+  if (!btn) return;
   btn.style.pointerEvents = "auto";
   btn.style.cursor = "pointer";
-  btn.style.zIndex = "30";
-  ["click", "pointerup", "touchend"].forEach(function (ev) {
-    btn.addEventListener(ev, function (e) {
-      if (ev === "touchend") {
-        try { e.preventDefault(); } catch (err) {}
-      }
+  btn.style.zIndex = "40";
+  btn.style.position = "absolute";
+  if (!btn.__takeFlightBound) {
+    btn.__takeFlightBound = true;
+    btn.addEventListener("click", onTakeFlightClick, true);
+    btn.addEventListener("pointerup", function (e) {
+      if (e.pointerType === "touch" || e.pointerType === "pen") onTakeFlightClick(e);
+    }, true);
+  }
+}
+// Capture-phase document delegation (survives re-renders)
+if (!window.__takeFlightDocBound) {
+  window.__takeFlightDocBound = true;
+  document.addEventListener("click", function (e) {
+    var t = e.target;
+    if (!t) return;
+    if (t.id === "flyBtn" || (t.closest && t.closest("#flyBtn"))) {
       onTakeFlightClick(e);
-    }, { passive: false });
-  });
+    }
+  }, true);
 }
 try {
   document.addEventListener("DOMContentLoaded", bindTakeFlightButton);
-  setTimeout(bindTakeFlightButton, 100);
-  setTimeout(bindTakeFlightButton, 800);
+  setTimeout(bindTakeFlightButton, 50);
+  setTimeout(bindTakeFlightButton, 500);
+  setTimeout(bindTakeFlightButton, 1500);
 } catch (e) {}
 
 
