@@ -412,15 +412,8 @@ window.__airborneRingDebug = false;
   }
 
   function pickObstacleType() {
-    // Flight training: birds + steampunk scout drones
+    // Flight training: birds only (drones off)
     if (window.__airborneAirfield || window.__airborneTrainingFlight) {
-      var st = window.__airborneRuffStage || "";
-      // Obstacles lesson: include drones (~35%); other training stages: birds only
-      if (st === "obstacles" || st === "combined" || st === "shield") {
-        var r = Math.random();
-        if (r < 0.35) return "drone_scout";
-        return r < 0.675 ? "bird_a" : "bird_b";
-      }
       return Math.random() < 0.5 ? "bird_a" : "bird_b";
     }
     const next = nextBossConfig();

@@ -1281,7 +1281,7 @@
       window.__airborneAirfieldObstacles = true;
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldInvuln = false; // allow collision damage
-      if (typeof spawnInterval !== "undefined") spawnInterval = 0.087;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 0.174;
       try { if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 198; } catch (e) {}
       // Hard clear platforms so they cannot appear after rings
       try {
@@ -4349,14 +4349,14 @@ function finishToMap() {
         ruffCoins = (ruffCoins || []).filter(function (c) { return c && !c.fixedToPlatform && !c.collected; });
         ruffCrystals = (ruffCrystals || []).filter(function (c) { return c && !c.fixedToPlatform && !c.collected; });
       } catch (e) {}
-      if (typeof spawnInterval !== "undefined") spawnInterval = 0.087;
+      if (typeof spawnInterval !== "undefined") spawnInterval = 0.174;
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 198;
 
       if (ruffLessonPendingNext) {
         stopLessonSpawns();
       } else {
         window.__airborneAirfieldObstacles = true;
-        if (typeof spawnInterval !== "undefined") spawnInterval = 0.087;
+        if (typeof spawnInterval !== "undefined") spawnInterval = 0.174;
         if (ruffStageT > 16) {
           window.__airborneAirfieldObstacles = false;
           if (typeof spawnInterval !== "undefined") spawnInterval = 999;
