@@ -412,8 +412,15 @@ window.__airborneRingDebug = false;
   }
 
   function pickObstacleType() {
-    // Flight training: birds + scout drones
+    // Flight training: birds + steampunk scout drones
     if (window.__airborneAirfield || window.__airborneTrainingFlight) {
+      var st = window.__airborneRuffStage || "";
+      // Obstacles lesson: include drones (~35%); other training stages: birds only
+      if (st === "obstacles" || st === "combined" || st === "shield") {
+        var r = Math.random();
+        if (r < 0.35) return "drone_scout";
+        return r < 0.675 ? "bird_a" : "bird_b";
+      }
       return Math.random() < 0.5 ? "bird_a" : "bird_b";
     }
     const next = nextBossConfig();
@@ -454,9 +461,9 @@ window.__airborneRingDebug = false;
     if (window.__droneSheetLoading) return null;
     window.__droneSheetLoading = true;
     var paths = [
-      "drone_scout_sheet.png?v=ruff427",
-      "drone_scout_sheet.webp?v=ruff427",
+      "drone_scout_sheet.png?v=ruff491",
       "drone_scout_sheet.png",
+      "drone_scout_sheet.webp?v=ruff491",
       "drone_scout_sheet.webp"
     ];
     var i = 0;
@@ -541,17 +548,18 @@ window.__airborneRingDebug = false;
     var drawnSheet = false;
     if (img && img.complete && img.naturalWidth > 8) {
       try {
-        var cols = 6, rows = 6, n = 36;
+        // New steampunk orb sheet: 9×9 = 81 frames
+        var cols = 9, rows = 9, n = 81;
         var fr = ((o.animFrame || 0) % n + n) % n;
         var col = fr % cols;
         var row = Math.floor(fr / cols) % rows;
         var fw = img.naturalWidth / cols;
         var fh = img.naturalHeight / rows;
-        // glow
-        ctx.globalAlpha = 0.45;
+        // soft lens glow
+        ctx.globalAlpha = 0.35;
         ctx.fillStyle = "#3dfe9a";
         ctx.beginPath();
-        ctx.arc(cx, cy - dh * 0.3, dw * 0.2, 0, Math.PI * 2);
+        ctx.arc(cx, cy - dh * 0.12, dw * 0.18, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 1;
         ctx.drawImage(img, col * fw, row * fh, fw, fh, x, y, dw, dh);
@@ -977,7 +985,7 @@ window.__airborneRingDebug = false;
         h: dw,
         scored: false,
         speedMult: 0.43,
-        animFrame: Math.floor(Math.random() * 36),
+        animFrame: Math.floor(Math.random() * 81),
         animT: 0,
         bobPhase: Math.random() * Math.PI * 2,
         bobAmount: 0,
@@ -1908,7 +1916,7 @@ window.__airborneRingDebug = false;
           o.animT = (o.animT || 0) + dt;
           if (o.animT > 0.07) {
             o.animT = 0;
-            o.animFrame = ((o.animFrame || 0) + 1) % 36;
+            o.animFrame = ((o.animFrame || 0) + 1) % 81;
           }
           // Trail samples for drone motion effect
           o.droneTrail = o.droneTrail || [];
