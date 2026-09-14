@@ -3698,7 +3698,9 @@ canvas {
   font-size: 0 !important;
 }
 
-/* ---- Power preview (video frame is in the footage) ---- */
+
+
+/* ---- Power preview (transparent video + plate labels) ---- */
 .powerPreviewModal {
   position: fixed;
   inset: 0;
@@ -3706,7 +3708,7 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.72);
+  background: rgba(0, 0, 0, 0.55);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.28s ease;
@@ -3719,10 +3721,9 @@ canvas {
   position: relative;
   width: min(86vw, 420px);
   aspect-ratio: 1 / 1;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
   background: transparent;
+  box-shadow: none;
+  overflow: visible;
 }
 .powerPreviewVideo {
   width: 100%;
@@ -3731,11 +3732,11 @@ canvas {
   display: block;
   background: transparent;
 }
-/* Top brass nameplate on the video frame */
+/* Top plate — blimp name (lowered ~25%) */
 .powerPreviewTitle {
   position: absolute;
   left: 50%;
-  top: 4.2%;
+  top: 5.25%;
   transform: translateX(-50%);
   width: 48%;
   text-align: center;
@@ -3749,11 +3750,11 @@ canvas {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* Bottom brass nameplate — power-up name */
+/* Bottom plate — power name (raised ~25%) */
 .powerPreviewCaption {
   position: absolute;
   left: 50%;
-  bottom: 5.5%;
+  bottom: 4.1%;
   transform: translateX(-50%);
   width: 52%;
   text-align: center;
@@ -3766,23 +3767,4 @@ canvas {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.powerPreviewClose {
-  position: absolute;
-  top: 2.5%;
-  right: 3.5%;
-  z-index: 3;
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(20, 12, 6, 0.55);
-  color: #ffe8b0;
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
-  border: 1px solid rgba(212, 160, 74, 0.45);
-}
-.powerPreviewClose:active {
-  transform: scale(0.94);
 }

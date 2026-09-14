@@ -1866,7 +1866,8 @@ function powerPreviewKindFor(key) {
   
   
   // Shared placeholder video for all ships until individual clips are uploaded
-  var POWER_PREVIEW_VIDEO_SRC = "power_preview_zeppelin_ace.mp4?v=ruff494";
+  var POWER_PREVIEW_VIDEO_SRC = "power_preview_zeppelin_ace.webm?v=ruff495";
+  var POWER_PREVIEW_VIDEO_FALLBACK = "power_preview_zeppelin_ace.mp4?v=ruff495";
 
   // Fallback power names if SHIP_DATA is missing an ability
   var POWER_NAME_BY_SHIP = {
@@ -1937,7 +1938,19 @@ function powerPreviewKindFor(key) {
     vid.playsInline = true;
     vid.setAttribute("playsinline", "");
     vid.setAttribute("webkit-playsinline", "");
+    // Prefer alpha WebM (black keyed out); MP4 fallback
     vid.src = POWER_PREVIEW_VIDEO_SRC;
+    vid.onerror = function () {
+      try {
+        if (vid.src.indexOf(".webm") >= 0 && typeof POWER_PREVIEW_VIDEO_FALLBACK === "string") {
+          vid.onerror = null;
+          vid.src = POWER_PREVIEW_VIDEO_FALLBACK;
+          vid.load();
+          var p2 = vid.play();
+          if (p2 && p2.catch) p2.catch(function () {});
+        }
+      } catch (eFb) {}
+    };
     vid.load();
     modal.classList.add("open");
     modal.setAttribute("aria-hidden", "false");
@@ -1947,264 +1960,47 @@ function powerPreviewKindFor(key) {
   }
 
   function playMenuPowerPreview(optKey) {
-    // Video popup instead of live canvas FX on the menu blimp
     openPowerPreviewModal(optKey);
   }
 
   function bindMenuPowerPreview() {
     var icon = document.getElementById("bpPowerIcon");
-    if (!icon) return;
-    icon.style.pointerEvents = "auto";
-    icon.style.cursor = "pointer";
-    icon.title = "Preview power-up";
-    if (!icon.dataset.previewBound) {
-      icon.dataset.previewBound = "1";
+    if (icon && !icon.__powerPreviewBound) {
+      icon.__powerPreviewBound = true;
       icon.addEventListener("click", function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        playMenuPowerPreview();
+        try { e.preventDefault(); e.stopPropagation(); } catch (err) {}
+        openPowerPreviewModal();
       });
     }
-    var closeBtn = document.getElementById("powerPreviewClose");
     var modal = document.getElementById("powerPreviewModal");
-    if (closeBtn && !closeBtn.dataset.bound) {
-      closeBtn.dataset.bound = "1";
-      closeBtn.addEventListener("click", function (e) {
-        e.preventDefault();
-        e.stopPropagation();
+    if (modal && !modal.__outsideCloseBound) {
+      modal.__outsideCloseBound = true;
+      modal.addEventListener("click", function (e) {
+        var stage = modal.querySelector(".powerPreviewStage");
+        if (stage && stage.contains(e.target)) return;
         closePowerPreviewModal();
       });
     }
-    if (modal && !modal.dataset.bound) {
-      modal.dataset.bound = "1";
-      modal.addEventListener("click", function (e) {
-        if (e.target === modal) closePowerPreviewModal();
-      });
-    }
   }
-
-
-function selectBlimp(key, el) {
-  selectedBlimp = key;
-  const data = BLIMP_DATA[key];
-
-  startHeroAnimation(key);
-  setEffect(data.effect);
-  try { bindMenuPowerPreview(); } catch (e) {}
-  // Do not auto-play power FX on select — only when profile power icon is clicked
+  window.__airborneBindPowerPreview = bindMenuPowerPreview;
+  window.openPowerPreviewModal = openPowerPreviewModal;
+  window.closePowerPreviewModal = closePowerPreviewModal;
   try {
-    if (key !== "blimp1") stopHeroFireAura();
-  } catch (e) {}
-
-  // Keep menu preview sizes consistent; Little Spy stays smaller
-  try { resetHeroPreviewSlot(); } catch (e) {}
-
-
-  document.querySelectorAll(".numBtn").forEach(b => b.classList.remove("active"));
-  if (el) el.classList.add("active");
-
-  updateProfile(key);
-}
-
-// initialize the default selection's effect + profile panel
-setEffect(BLIMP_DATA.blimp1.effect);
-updateProfile(selectedBlimp);
-const _hw = document.querySelector(".heroBlimpWrap");
-if (_hw) _hw.classList.remove("hero-small");
-
-function enterGameplay(){
-  document.getElementById("menuScreen").style.display = "none";
-  document.getElementById("gameScreen").style.display = "block";
-  try {
-    var so = document.getElementById("startOverlay");
-    if (so) { so.classList.add("hidden"); so.style.display = "none"; so.setAttribute("aria-hidden", "true"); }
-  } catch (e) {}
-  fadeOutMenuMusic();
-  try { if (window.__airborneShowUnifiedDock) window.__airborneShowUnifiedDock(); } catch (e) {}
-  try {
-    ["ruffRadio","ruffReport","ruffTitleBanner","ruffFlightTrace"].forEach(function(id){
-      var el = document.getElementById(id);
-      if (el && !el.classList.contains("visible")) {
-        el.style.display = "none";
-      }
+    document.addEventListener("DOMContentLoaded", function () {
+      setTimeout(bindMenuPowerPreview, 300);
+      setTimeout(bindMenuPowerPreview, 1200);
     });
-  } catch (e) {}
-  if (window.__airborneGameStart) window.__airborneGameStart();
-}
-
-// quick fade-out (rather than an abrupt cut) when handing off to gameplay music
-function fadeOutMenuMusic() {
-  if (!menuMusic || menuMusic.paused) return;
-  menuMusic.removeEventListener("timeupdate", menuMusicFadeStep);
-  const fadeMs = 350;
-  const startVol = menuMusic.volume;
-  const startedAt = performance.now();
-  (function step() {
-    const p = Math.min(1, (performance.now() - startedAt) / fadeMs);
-    menuMusic.volume = startVol * (1 - p);
-    if (p < 1) {
-      requestAnimationFrame(step);
-    } else {
-      stopMenuMusicImmediately();
-      menuMusic.addEventListener("timeupdate", menuMusicFadeStep);
-    }
-  })();
-}
-
-const flyBtn = document.getElementById("flyBtn");
-flyBtn.addEventListener("pointerdown", (e) => {
-  e.preventDefault();
-  flyBtn.classList.add("pressed");
-});
-["pointerup", "pointercancel", "pointerleave"].forEach(evt => {
-  flyBtn.addEventListener(evt, () => flyBtn.classList.remove("pressed"));
-});
-flyBtn.addEventListener("click", () => { showTutorCutscene(); });
-
-// ---------- Take-Flight cutscene: close-up briefing from the flight tutor ----------
-const TUTOR_LINES = [
-  "Alright, ace \u2014 engines primed, dial locked in. Let's get you airborne!",
-  "Keep her nose up, watch the skyline, and dodge anything that isn't sky.",
-  "Reach every boss marker to keep the run going. Ready? Let's fly!"
-];
-const CUTSCENE_LINE_MS = 6000; // 3 lines x 6s = 18s total, 3x the original 6s hold
-
-const cutsceneScreen = document.getElementById("cutsceneScreen");
-const cutsceneBlimpImg = document.getElementById("cutsceneBlimpImg");
-const cutsceneTutorWrap = document.getElementById("cutsceneTutorWrap");
-const cutsceneTextEl = document.getElementById("cutsceneText");
-const cutsceneSkipBtn = document.getElementById("cutsceneSkip");
-
-let tutorAnimTimer = null;
-function setTutorFrame(i) {
-  const col = i % TUTOR_COLS;
-  const row = Math.floor(i / TUTOR_COLS);
-  const posX = (col / (TUTOR_COLS - 1)) * 100;
-  const posY = (row / (TUTOR_ROWS - 1)) * 100;
-  cutsceneTutorWrap.style.backgroundPosition = posX + "% " + posY + "%";
-}
-function startTutorSpriteAnim() {
-  cutsceneTutorWrap.style.backgroundImage = 'url("' + TUTOR_SHEET_URL + '")';
-  let frame = 0;
-  setTutorFrame(0);
-  if (tutorAnimTimer) clearInterval(tutorAnimTimer);
-  tutorAnimTimer = setInterval(() => {
-    frame = (frame + 1) % TUTOR_FRAMES;
-    setTutorFrame(frame);
-  }, 1000 / TUTOR_FPS);
-}
-function stopTutorSpriteAnim() {
-  if (tutorAnimTimer) { clearInterval(tutorAnimTimer); tutorAnimTimer = null; }
-}
-
-let cutsceneAdvanceTimer = null;
-let cutsceneDone = true;
-let cutsceneLineIndex = 0;
-
-function showTutorCutscene() {
-  cutsceneDone = false;
-  cutsceneLineIndex = 0;
-  document.getElementById("menuScreen").style.display = "none";
-  cutsceneScreen.style.display = "block";
-
-  const data = BLIMP_DATA[selectedBlimp] || BLIMP_DATA.blimp1;
-  cutsceneBlimpImg.src = blimpSrc(data);
-  showCutsceneLine(0);
-
-  startTutorSpriteAnim();
-
-  cutsceneScreen.addEventListener("click", advanceCutsceneLine);
-  cutsceneSkipBtn.addEventListener("click", endCutscene);
-}
-
-function showCutsceneLine(i) {
-  cutsceneLineIndex = i;
-  cutsceneTextEl.textContent = TUTOR_LINES[i];
-  // re-trigger the dialogue box's entrance animation for each new line
-  const box = document.getElementById("cutsceneDialogue");
-  box.style.animation = "none";
-  void box.offsetWidth;
-  box.style.animation = "";
-  if (cutsceneAdvanceTimer) clearTimeout(cutsceneAdvanceTimer);
-  cutsceneAdvanceTimer = setTimeout(advanceCutsceneLine, CUTSCENE_LINE_MS);
-}
-
-function advanceCutsceneLine() {
-  if (cutsceneDone) return;
-  if (cutsceneLineIndex < TUTOR_LINES.length - 1) {
-    showCutsceneLine(cutsceneLineIndex + 1);
-  } else {
-    endCutscene();
-  }
-}
-
-function endCutscene() {
-  if (cutsceneDone) return;
-  cutsceneDone = true;
-  if (cutsceneAdvanceTimer) { clearTimeout(cutsceneAdvanceTimer); cutsceneAdvanceTimer = null; }
-  cutsceneScreen.removeEventListener("click", advanceCutsceneLine);
-  cutsceneSkipBtn.removeEventListener("click", endCutscene);
-  stopTutorSpriteAnim();
-  cutsceneScreen.style.display = "none";
-  // World map before first level
-  try {
-    if (typeof window.__airborneShowWorldMap === "function") {
-      window.__airborneShowWorldMap({ mode: "start" });
-    } else {
-      var ms = document.getElementById("worldMapScreen");
-      if (ms) {
-        ms.style.cssText = "display:flex !important; position:fixed !important; inset:0 !important; z-index:120 !important;";
-      } else {
-        enterGameplay();
-      }
-    }
-  } catch (e) {
-    console.warn("map show failed", e);
-    enterGameplay();
-  }
-}
-
-// Exposed for world-map continue
-window.__airborneEnterGameplay = enterGameplay;
+    setTimeout(bindMenuPowerPreview, 500);
+  } catch (eBind) {}
 
 
-
-
-
-/* ---------- Splash particles + radar blip beep ---------- */
-(function initSplashParticles() {
-  var host = document.getElementById("splashParticles");
-  if (!host) return;
-  host.innerHTML = "";
-  var n = 36;
-  for (var i = 0; i < n; i++) {
-    var p = document.createElement("span");
-    var kind = i % 3 === 0 ? "dustUp" : (i % 3 === 1 ? "dustDrift" : "dustMote");
-    p.className = "splashParticle " + kind;
-    var size = 0.8 + Math.random() * 2.2;
-    if (Math.random() < 0.12) size = 2.5 + Math.random() * 2;
-    p.style.width = size + "px";
-    p.style.height = size + "px";
-    p.style.left = (Math.random() * 100) + "%";
-    p.style.top = (Math.random() * 100) + "%";
-    p.style.setProperty("--drift", ((Math.random() - 0.5) * 120) + "px");
-    p.style.setProperty("--fall", ((Math.random() * 40) + 15) + "vh");
-    p.style.setProperty("--max-op", (0.25 + Math.random() * 0.45).toFixed(2));
-    var dur = 12 + Math.random() * 22;
-    p.style.animationDuration = dur + "s";
-    p.style.animationDelay = (-Math.random() * dur) + "s";
-    host.appendChild(p);
-  }
-})();
-
-(function initRadarBeeps() {
-  // Radar bleep — only while the splash screen is visible
-  var PERIOD = 4;
-  var HITS = [0.392];
+(function splashRadarBeep() {
   var ctx = null;
+  var active = false;
   var started = false;
   var timer = null;
-  var active = true;
+  var PERIOD = 1.25;
+  var HITS = [0.05, 0.42, 0.78];
 
   function splashVisible() {
     var s = document.getElementById("splashScreen");
@@ -2295,26 +2091,15 @@ window.__airborneEnterGameplay = enterGameplay;
   }
 
   window.__airborneStopSplashRadar = stopRadar;
-
   document.addEventListener("click", start);
   document.addEventListener("touchstart", start, { passive: true });
   document.addEventListener("keydown", start);
-
   document.addEventListener("visibilitychange", function () {
     if (document.hidden && ctx && ctx.state === "running") {
       try { ctx.suspend(); } catch (e) {}
     }
   });
 })();
-
-window.__airborneBindPowerPreview = bindMenuPowerPreview;
-try {
-  document.addEventListener("DOMContentLoaded", function () {
-    setTimeout(bindMenuPowerPreview, 300);
-    setTimeout(bindMenuPowerPreview, 1200);
-  });
-  setTimeout(bindMenuPowerPreview, 500);
-} catch (e) {}
 
 (function bindDockVisibility() {
   function hideDock() {
