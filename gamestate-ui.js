@@ -1093,10 +1093,13 @@
   // queued and fires the moment loading finishes.
   let pendingStart = false;
   function bridgeStart() {
-    if (assetsLoaded === assetKeys.length) {
-      // Always go straight into gameplay / airfield training (skip old tip overlay)
+    // Never gate on cross-script `let assetsLoaded` (not visible here).
+    // Assets are already loaded by the time the player reaches the map.
+    try {
+      pendingStart = false;
       startGame();
-    } else {
+    } catch (e) {
+      console.error("[bridgeStart]", e);
       pendingStart = true;
     }
   }
@@ -1107,12 +1110,13 @@
 
   // When assets finish loading after a map-start was queued
   window.__airborneOnAssetsReady = function() {
-    if (!pendingStart) return;
-    pendingStart = false;
-    if (window.__airbornePendingMapLevel && Number(window.__airbornePendingMapLevel) >= 1) {
-      startGame();
-    } else {
-      startTutorial();
+    if (pendingStart) {
+      pendingStart = false;
+      if (window.__airbornePendingMapLevel && Number(window.__airbornePendingMapLevel) >= 1) {
+        startGame();
+      } else {
+        startTutorial();
+      }
     }
   };
 

@@ -174,22 +174,34 @@
         }
         if (typeof window.stopMenuMusicImmediately === "function") window.stopMenuMusicImmediately();
       } catch (eShow) {}
-      // Prefer dedicated bridge, then startGame aliases
-      try {
-        if (typeof window.__airborneEnterGameplay === "function") {
-          window.__airborneEnterGameplay();
-        } else if (typeof window.__airborneGameStart === "function") {
-          window.__airborneGameStart();
-        } else if (typeof window.startGame === "function") {
-          window.startGame();
-        } else if (typeof startGame === "function") {
-          startGame();
-        } else {
-          console.error("[Map] No startGame / EnterGameplay bridge");
+      // Start gameplay (training on post 1)
+      var started = false;
+      function tryStart(fn, label) {
+        if (started || typeof fn !== "function") return;
+        try {
+          fn();
+          started = true;
+          console.log("[Map] started via", label);
+        } catch (e) {
+          console.error("[Map] start failed via", label, e);
         }
-      } catch (eStart) {
-        console.error("[Map] start failed", eStart);
       }
+      tryStart(window.__airborneEnterGameplay, "EnterGameplay");
+      tryStart(window.__airborneGameStart, "GameStart");
+      tryStart(window.startGame, "window.startGame");
+      // Last-resort training kick
+      if (!started) {
+        try {
+          if (typeof window.beginAirfieldTraining === "function") {
+            window.beginAirfieldTraining();
+            started = true;
+            console.log("[Map] started via beginAirfieldTraining");
+          }
+        } catch (e3) {
+          console.error("[Map] training fallback failed", e3);
+        }
+      }
+      if (!started) console.error("[Map] No start path succeeded");
     } else if (mapMode === "between") {
       // Mid-run jump: apply progress then resume
       if (typeof window.__airborneApplyMapLevel === "function") {

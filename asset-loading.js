@@ -1440,6 +1440,7 @@
   const images = {};
   let assetsLoaded = 0;
   const assetKeys = Object.keys(ASSET_SOURCES);
+  try { window.assetsLoaded = 0; window.assetKeys = assetKeys; } catch (e) {}
 
   let failedAssetKeys = [];
 
@@ -1484,6 +1485,7 @@
       if (!PLACEHOLDER_MODE) img.crossOrigin = "anonymous";
       const settle = () => {
         assetsLoaded++;
+        try { window.assetsLoaded = assetsLoaded; } catch (e) {}
         if (assetsLoaded === assetKeys.length) {
           validateAnimationFrames();
           onDone();
@@ -1596,3 +1598,5 @@
   window.addEventListener("orientationchange", resize);
   resize();
 
+
+try { if (typeof ASSET_SOURCES !== "undefined") ASSET_SOURCES.push({ key: "drone_scout_sheet", src: "drone_scout_sheet.png?v=ruff491" }); } catch (e) {}
