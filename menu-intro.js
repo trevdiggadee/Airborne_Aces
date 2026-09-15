@@ -526,7 +526,22 @@ function startHeroAnimation(key) {
 }
 
 // Set the default hero image right away (placeholder mode skips the network round trip)
-startHeroAnimation(selectedBlimp || "blimp1");
+// Sync hangar to last selected ship (preview + profile + active chip)
+(function syncHangarSelection() {
+  var key = selectedBlimp || "blimp1";
+  if (typeof BLIMP_DATA !== "undefined" && BLIMP_DATA && !BLIMP_DATA[key]) key = "blimp1";
+  selectedBlimp = key;
+  window.selectedBlimp = key;
+  try { startHeroAnimation(key); } catch (e) {}
+  try { updateProfile(key); } catch (e) {}
+  try {
+    var buttons = document.querySelectorAll(".numBtn");
+    for (var i = 0; i < buttons.length; i++) buttons[i].classList.remove("active");
+    var match = document.querySelector('.numBtn[onclick*="' + key + '"]');
+    if (match) match.classList.add("active");
+  } catch (e) {}
+})();
+
 
 // Preload every blimp asset (static hero images + full animation sets) once
 // up front so switching, and the animation itself, never stutters. This also
@@ -833,14 +848,27 @@ document.addEventListener("pointerdown", function unlockSplashOrMenu() {
 }, { passive: true });
 
 window.__airborneShowMenu = () => {
-  startHeroAnimation(selectedBlimp);
+  var key = selectedBlimp || "blimp1";
+  try {
+    var saved = localStorage.getItem("aa_selected_blimp");
+    if (saved && typeof BLIMP_DATA !== "undefined" && BLIMP_DATA[saved]) key = saved;
+  } catch (e) {}
+  selectedBlimp = key;
+  window.selectedBlimp = key;
+  try { startHeroAnimation(key); } catch (e) {}
+  try {
+    var buttons = document.querySelectorAll(".numBtn");
+    for (var i = 0; i < buttons.length; i++) buttons[i].classList.remove("active");
+    var match = document.querySelector('.numBtn[onclick*="' + key + '"]');
+    if (match) match.classList.add("active");
+  } catch (e) {}
   try {
     var splash = document.getElementById("splashScreen");
     var onSplash = splash && !splash.classList.contains("hidden") && splash.style.display !== "none";
     if (!onSplash) startMenuMusic();
   } catch (e) { startMenuMusic(); }
   try { stopHeroFireAura(); } catch (e) {}
-  try { updateProfile(selectedBlimp); } catch (e) {}
+  try { updateProfile(key); } catch (e) {}
 };
 
 window.__airborneLeftSplash = false;

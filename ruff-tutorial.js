@@ -738,7 +738,7 @@
   ];
   const TRACE_LABELS = {
     intro: "Radio check",
-    takeoff: "Takeoff",
+    // takeoff suppressed,
     altitude: "Altitude",
     crystals: "Sky crystals",
     obstacles: "Obstacles",
@@ -791,8 +791,9 @@
   window.__airborneShowLessonBanner = showLessonBanner;
 
   function showFlightTraceBanner() {
-    // Use only the smaller lesson banner style (no large double title)
+    // Only at the very start of a training run
     try {
+      if (window.__airborneFlightTitleShown) return;
       showLessonBanner("Flight Training");
       window.__airborneFlightTitleShown = true;
     } catch (e) {}
@@ -1113,7 +1114,7 @@
     try {
       var lessonTitles = {
         intro: "Flight Training",
-        takeoff: "Takeoff",
+        // takeoff: no title popup
         // cruise: skip — already shown at intro
         // altitude / rings: no banner
         obstacles: "Obstacles",
@@ -1123,7 +1124,18 @@
         landing: "Landing",
         // report: no lesson banner
       };
-      if (name !== "report" && name !== "platforms" && lessonTitles[name]) showLessonBanner(lessonTitles[name]);
+      // Lesson banners — skip takeoff; Flight Training only once per run
+      if (name !== "report" && name !== "platforms" && name !== "takeoff" && name !== "cruise" && lessonTitles[name]) {
+        if (name === "intro") {
+          if (!window.__airborneFlightTitleShown) {
+            showLessonBanner(lessonTitles[name]);
+            window.__airborneFlightTitleShown = true;
+          }
+        } else if (name !== "intro") {
+          // Never re-show "Flight Training" for non-intro stages
+          if (lessonTitles[name] !== "Flight Training") showLessonBanner(lessonTitles[name]);
+        }
+      }
     } catch (eBan) {}
 
     ruffStageT = 0;
@@ -1231,7 +1243,7 @@
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       try { ruffCoins = []; ruffCrystals = []; } catch (e) {}
     } else if (name === "altitude") {
-      try { showLessonBanner("Flight Training"); } catch (e) {}
+      // no Flight Training banner here (only once at intro)
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
@@ -3708,6 +3720,7 @@
     window.__airborneTrainingReportShown = false;
     window.__airborneForceTrainRestart = true;
     window.__airborneAirfieldAllowPowerup = true;
+    window.__airborneFlightTitleShown = false;
     window.__airborneEndCelebrationDone = false;
     window.__airborneEndCelebration = null;
     window.__airborneRingResultsShown = false;
@@ -4031,6 +4044,7 @@ function finishToMap() {
       if (ft) { ft.style.display = "none"; ft.style.visibility = "hidden"; }
     } catch (e) {}
     // Large centered FLIGHT TRAINING banner
+    window.__airborneFlightTitleShown = false;
     window.__airborneEndCelebrationDone = false;
     window.__airborneEndCelebration = null;
     window.__airborneRingResultsShown = false;
