@@ -1101,6 +1101,9 @@
     }
   }
   window.__airborneGameStart = bridgeStart;
+  window.__airborneEnterGameplay = bridgeStart;
+  window.startGame = startGame;
+
 
   // When assets finish loading after a map-start was queued
   window.__airborneOnAssetsReady = function() {

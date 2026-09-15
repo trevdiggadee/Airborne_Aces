@@ -162,10 +162,33 @@
     } catch (e) {}
 
     if (mapMode === "start") {
-      if (typeof window.__airborneEnterGameplay === "function") {
-        window.__airborneEnterGameplay();
-      } else if (typeof enterGameplay === "function") {
-        enterGameplay();
+      // Show canvas / hide menu
+      try {
+        var menuEl = document.getElementById("menuScreen");
+        if (menuEl) menuEl.style.display = "none";
+        var gsEl = document.getElementById("gameScreen");
+        if (gsEl) {
+          gsEl.style.display = "block";
+          gsEl.style.visibility = "visible";
+          gsEl.style.opacity = "1";
+        }
+        if (typeof window.stopMenuMusicImmediately === "function") window.stopMenuMusicImmediately();
+      } catch (eShow) {}
+      // Prefer dedicated bridge, then startGame aliases
+      try {
+        if (typeof window.__airborneEnterGameplay === "function") {
+          window.__airborneEnterGameplay();
+        } else if (typeof window.__airborneGameStart === "function") {
+          window.__airborneGameStart();
+        } else if (typeof window.startGame === "function") {
+          window.startGame();
+        } else if (typeof startGame === "function") {
+          startGame();
+        } else {
+          console.error("[Map] No startGame / EnterGameplay bridge");
+        }
+      } catch (eStart) {
+        console.error("[Map] start failed", eStart);
       }
     } else if (mapMode === "between") {
       // Mid-run jump: apply progress then resume
