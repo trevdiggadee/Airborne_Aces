@@ -321,6 +321,14 @@
   function beginAirfieldTraining() {
     try { if (window.resetUnifiedProgress) window.resetUnifiedProgress(); } catch (e) {}
     try {
+      window.__airborneFlightTitleShown = false;
+      if (typeof window.__airborneShowLessonBanner === "function") {
+        window.__airborneShowLessonBanner("Flight Training");
+        window.__airborneFlightTitleShown = true;
+      }
+    } catch (eBan) {}
+
+    try {
       if (window.__airborneClearAllGameplay) window.__airborneClearAllGameplay();
     } catch (e) {}
     try {

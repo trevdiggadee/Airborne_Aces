@@ -643,9 +643,8 @@
     "rings",
     "obstacles",
     "platforms",
-    "combined",
     "shield",
-    "airship",
+    "combined",
     "boss1",
     "landing",
     "report"
@@ -780,7 +779,7 @@
       title: String(title).toUpperCase(),
       style: style,
       t: 0,
-      life: 2.6,
+      life: (style === "flight") ? 3.4 : 2.6,
       frame: 0
     };
     try {
@@ -1127,13 +1126,11 @@
       // Lesson banners — skip takeoff; Flight Training only once per run
       if (name !== "report" && name !== "platforms" && name !== "takeoff" && name !== "cruise" && lessonTitles[name]) {
         if (name === "intro") {
-          if (!window.__airborneFlightTitleShown) {
-            showLessonBanner(lessonTitles[name]);
-            window.__airborneFlightTitleShown = true;
-          }
-        } else if (name !== "intro") {
-          // Never re-show "Flight Training" for non-intro stages
-          if (lessonTitles[name] !== "Flight Training") showLessonBanner(lessonTitles[name]);
+          window.__airborneFlightTitleShown = false; // reset so title always shows at run start
+          showLessonBanner("Flight Training");
+          window.__airborneFlightTitleShown = true;
+        } else if (lessonTitles[name] && lessonTitles[name] !== "Flight Training") {
+          showLessonBanner(lessonTitles[name]);
         }
       }
     } catch (eBan) {}
@@ -1169,7 +1166,7 @@
 
     // Progress UI — show dock + update percent
     try {
-      var stages = ["intro","takeoff","cruise","altitude","rings","obstacles","platforms","combined","shield","airship","boss1","landing","report"];
+      var stages = ["intro","takeoff","cruise","altitude","rings","obstacles","platforms","shield","combined","boss1","landing","report"];
       var si = stages.indexOf(name);
       if (si < 0) si = 0;
       var pct = (name === "report" || name === "landing") ? 100 : ((si / (stages.length - 1)) * 100);
@@ -4346,11 +4343,11 @@ function finishToMap() {
         return p && (p.x + (p.w || 0) > -20);
       });
       if (!anyPlat && ruffStageT > 8) {
-        setStage("combined");
-        console.log("[R.U.F.F.] platforms → combined (cleared)");
+        setStage("shield");
+        console.log("[R.U.F.F.] platforms → shield (cleared)");
       } else if (ruffStageT > 60) {
-        setStage("combined");
-        console.log("[R.U.F.F.] platforms → combined (timeout)");
+        setStage("shield");
+        console.log("[R.U.F.F.] platforms → shield (timeout)");
       }
     } else if (ruffStage === "obstacles") {
       window.__airborneAirfieldInvuln = false;
@@ -4383,7 +4380,7 @@ function finishToMap() {
         }
       }
     } else if (ruffStage === "airship") {
-      setStage("combined");
+      setStage("boss1");
     } else if (ruffStage === "shield") {
       try { ruffCoins = []; ruffCrystals = []; } catch (e) {}
       window.__airborneAirfieldAllowShield = true;
@@ -4406,9 +4403,11 @@ function finishToMap() {
         window.__airborneAirfieldObstacles = false;
         if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       }
-      if (ruffStageT > 30) {
+      if (ruffStageT > 22) {
+        window.__airborneAirfieldObstacles = false;
+        if (typeof spawnInterval !== "undefined") spawnInterval = 999;
         setStage("combined");
-        console.log("[R.U.F.F.] shield → airship");
+        console.log("[R.U.F.F.] shield → combined");
       }
       if (false && !ruffLessonPendingNext && ruffStageT > 30) {
         requestNextStage();
@@ -4484,8 +4483,8 @@ function finishToMap() {
       // Wait until airship fully cleared the left edge
       if ((ruffStageT > 2 && !ruffAirship) || ruffStageT > 28) {
         ruffAirship = null;
-        setStage("combined");
-        console.log("[R.U.F.F.] airship → combined");
+        setStage("boss1");
+        console.log("[R.U.F.F.] airship → boss1");
       }
     } else if (ruffStage === "boss1") {
       // Sweep any leftover platforms immediately so boss is clean
@@ -4569,10 +4568,12 @@ function finishToMap() {
       }
       try { updateTrainingPlatforms(dt); } catch (e) {}
       var platsLeftC = (ruffPlatforms || []).length;
-      if (!ruffLessonPendingNext && ((ruffStageT > 14 && platsLeftC === 0) || ruffStageT > 70)) {
+      if (!ruffLessonPendingNext && ((ruffStageT > 14 && platsLeftC === 0) || ruffStageT > 45)) {
         ruffPlatforms = [];
         window.__airborneRuffPlatforms = [];
-        requestNextStage();
+        window.__airborneAirfieldObstacles = false;
+        setStage("boss1");
+        console.log("[R.U.F.F.] combined → boss1");
       }
     } else if (ruffStage === "landing") {
       // Sweep collectibles off as descent begins
@@ -5075,7 +5076,7 @@ window.__airborneDrawLessonBanner = function (ctx, W, H, dt) {
   var style = lb.style || "default";
   var cx = W * 0.5;
   var cy = H * 0.26;
-  var R = Math.min(W, H) * 0.14 * scale;
+  var R = Math.min(W, H) * ((style === "flight") ? 0.20 : 0.14) * scale;
 
   // Unique gold-family accents + spin rates (no blue)
   var accent = "#e0b050";

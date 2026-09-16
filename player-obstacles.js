@@ -2162,8 +2162,12 @@ window.__airborneRingDebug = false;
 
             // === Blimp: cartoon bounce (believable spring) ===
             var pvy = player.vy || 0;
-            var bounceVy = ny * -(useShield ? 340 : 280) - Math.abs(pvy) * 0.15;
+            var bounceVy = ny * -(useShield ? 520 : 280) - Math.abs(pvy) * (useShield ? 0.35 : 0.15);
             player.vy = bounceVy;
+            if (useShield) {
+              player.vx = (player.vx || 0) + nx * 120;
+              try { if (typeof player.x === "number") player.x += nx * 8; } catch (eX) {}
+            }
             if (player.vy > 360) player.vy = 360;
             if (player.vy < -420) player.vy = -420;
             // Tiny horizontal wobble
@@ -2182,13 +2186,14 @@ window.__airborneRingDebug = false;
 
             // === Bird: clear path deflection (no flip) ===
             co.hitKnockT = useShield ? 0.55 : 0.42;
-            co.knockVx = -55 - Math.abs(nx) * 40; // visible shove left
-            co.knockVy = -ny * (useShield ? 200 : 160) + (Math.random() - 0.5) * 30;
+            co.knockVx = -(useShield ? 220 : 55) - Math.abs(nx) * (useShield ? 140 : 40);
+            co.knockVy = -ny * (useShield ? 380 : 160) + (Math.random() - 0.5) * (useShield ? 80 : 30);
             co.knockSpin = 0;
+            if (useShield) co.hitKnockT = Math.max(co.hitKnockT || 0, 0.55);
             co.rot = 0;
             co.hitFlash = 0;
             co.squashT = 0;
-            co.bounceCool = 0.35; // prevent multi-hit glitch
+            co.bounceCool = useShield ? 0.55 : 0.35;
 
             // === Funny impact FX: stars + feathers + puff ===
             try {
@@ -2197,8 +2202,9 @@ window.__airborneRingDebug = false;
                 var cols = useShield
                   ? ["#c8f0ff", "#ffffff", "#a0e0ff", "#ffe8b0"]
                   : ["#fff6d0", "#ffd24a", "#ffffff", "#c9a06a", "#ff9040"];
-                // Burst ring
-                for (var pi = 0; pi < 14; pi++) {
+                // Burst ring (more on shield)
+                var burstN = useShield ? 22 : 14;
+                for (var pi = 0; pi < burstN; pi++) {
                   var ang = (pi / 14) * Math.PI * 2 + Math.random() * 0.2;
                   var spd = 90 + Math.random() * 160;
                   particles.push({
@@ -2210,7 +2216,7 @@ window.__airborneRingDebug = false;
                   });
                 }
                 // Cartoon stars
-                for (var si = 0; si < 5; si++) {
+                for (var si = 0; si < (useShield ? 10 : 5); si++) {
                   var sa = Math.random() * Math.PI * 2;
                   particles.push({
                     x: ix, y: iy,
@@ -2228,7 +2234,7 @@ window.__airborneRingDebug = false;
                 x: ix, y: iy, t: 0, life: 0.35, shield: useShield
               };
             } catch (eP) {}
-            try { if (typeof triggerScreenShake === "function") triggerScreenShake(useShield ? 5 : 7, 160); } catch (eS) {}
+            try { if (typeof triggerScreenShake === "function") triggerScreenShake(useShield ? 9 : 7, useShield ? 220 : 160); } catch (eS) {}
             try { if (typeof sfxHit === "function" && !useShield) sfxHit(); } catch (eH0) {}
             try { if (typeof sfxDeflect === "function" && useShield) sfxDeflect(); } catch (eD0) {}
 
