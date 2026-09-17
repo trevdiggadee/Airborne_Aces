@@ -720,16 +720,17 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
       try { ensureDefeatSprites(); } catch (e) {}
       var fi = Math.min(35, Math.max(0, s.frame | 0));
       var simg = __defeatSpriteImgs && __defeatSpriteImgs[fi];
-      // Exact same size as live boss (no shrink)
-      if (!s._fitW) {
-        s._fitW = Math.max(s.w || 100, 60);
-        s._fitH = Math.max(s.h || (s._fitW * 864 / 480), s._fitW * 864 / 480);
-      }
+      // Lock size to live boss box — never recompute aspect from sprite
+      s._fitW = s.w || s._fitW || 100;
+      s._fitH = s.h || s._fitH || 100;
       if (simg && simg.complete && simg.naturalWidth > 0) {
         ctx.globalAlpha = 1;
-        // Full sheet rect every frame (fixed size source) → no squeeze between frames
-        ctx.drawImage(simg, 0, 0, simg.naturalWidth, simg.naturalHeight,
-          -s._fitW / 2, -s._fitH / 2, s._fitW, s._fitH);
+        // Contain sprite inside boss box without stretching
+        var nw = simg.naturalWidth, nh = simg.naturalHeight;
+        var boxW = s._fitW, boxH = s._fitH;
+        var sc = Math.min(boxW / nw, boxH / nh);
+        var dw = nw * sc, dh = nh * sc;
+        ctx.drawImage(simg, 0, 0, nw, nh, -dw / 2, -dh / 2, dw, dh);
       } else if (img && img.naturalWidth) {
         ctx.drawImage(img, -s._fitW / 2, -s._fitH / 2, s._fitW, s._fitH);
       }
@@ -795,7 +796,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         mode = "train_sprite";
       }
       var bx = boss.x, by = boss.y, bw = boss.w, bh = boss.h;
-      // Keep original boss size — do not expand
+      // Keep exact live boss size (no aspect stretch)
       bossSinking = {
         mode: mode,
         x: bx,
@@ -805,7 +806,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         _dw: bw,
         _dh: bh,
         _fitW: bw,
-        _fitH: Math.max(bh, bw * (864 / 480)),
+        _fitH: bh,
         img: img,
         age: 0,
         duration: isTrain ? 2.25 : ((mode === "heli_spin" ? 2.2 : (mode === "ink_dissolve" ? 2.5 : 2.6)) * 0.75),

@@ -101,6 +101,11 @@
   function onRingPassed(quality) {
     // quality 0..1 — 1 = perfect center
     ruffStats.rings = (ruffStats.rings || 0) + 1;
+    try {
+      window.__airborneCollectRings = ruffStats.rings;
+      if (typeof updateCollectDock === "function") updateCollectDock();
+      else if (typeof window.updateCollectDock === "function") window.updateCollectDock();
+    } catch (eHud) {}
     ruffStats.ringStreak = (ruffStats.ringStreak || 0) + 1;
     if (ruffStats.ringStreak > (ruffStats.ringBestStreak || 0)) {
       ruffStats.ringBestStreak = ruffStats.ringStreak;
