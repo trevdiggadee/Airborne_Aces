@@ -18,9 +18,17 @@
     return;
   }
 
-  // Preload poster so it is ready when we transition
+  // Preload poster so it is ready when we transition (never block forever)
   const posterImg = new Image();
+  let posterReady = false;
+  function markPosterReady() { posterReady = true; }
+  posterImg.onload = markPosterReady;
+  posterImg.onerror = markPosterReady;
   posterImg.src = 'airborne_aces_poster.png';
+  // Cached images may already be complete
+  if (posterImg.complete) posterReady = true;
+  // Absolute safety: never stick on loading screen
+  setTimeout(markPosterReady, 4000);
 
   // ---------- Simulated asset loading ----------
   // Replace this with real progress from your game loader if you have one.
@@ -31,11 +39,23 @@
   let current = 0;
   let loaded  = 0;
   const total = assets.reduce((s, a) => s + a.weight, 0);
+  let finishCalled = false;
 
   function loadNext() {
     if (current >= assets.length) {
-      if (posterImg.complete) finish();
-      else posterImg.onload = finish;
+      function tryFinish() {
+        if (posterReady || posterImg.complete) finish();
+        else setTimeout(tryFinish, 50);
+      }
+      // Max wait 1.5s after fake load for poster, then force finish
+      var waitStart = performance.now();
+      (function poll() {
+        if (posterReady || posterImg.complete || (performance.now() - waitStart > 1500)) {
+          finish();
+        } else {
+          setTimeout(poll, 50);
+        }
+      })();
       return;
     }
     const asset = assets[current];
@@ -70,6 +90,8 @@
   }
 
   function finish() {
+    if (finishCalled) return;
+    finishCalled = true;
     if (progressFill) {
       if (progressFill.tagName === 'CIRCLE' || progressFill.classList.contains('otg-ring-fill')) {
         progressFill.style.strokeDasharray = String(2 * Math.PI * 52);
@@ -78,14 +100,23 @@
         progressFill.style.width = '100%';
       }
     }
-    progressPct.textContent = '100%';
+    if (progressPct) progressPct.textContent = '100%';
     const txt = loadingEl.querySelector('.otg-loading-text');
     if (txt) txt.textContent = 'ENGINES READY';
 
-    setTimeout(() => {
-      loadingEl.classList.add('otg-hidden');
-      splashEl.classList.add('otg-visible');
-      createSparkles();
+    setTimeout(function () {
+      try {
+        loadingEl.classList.add('otg-hidden');
+        loadingEl.style.pointerEvents = 'none';
+        splashEl.classList.add('otg-visible');
+        splashEl.style.opacity = '1';
+        splashEl.style.visibility = 'visible';
+        splashEl.style.pointerEvents = 'auto';
+        createSparkles();
+        console.log('[OTG Launch] loading → splash');
+      } catch (e) {
+        console.warn('[OTG Launch] finish transition', e);
+      }
     }, 450);
   }
 
@@ -145,11 +176,7 @@
      EDIT THIS FUNCTION – this is where your real game starts
      ================================================================ */
   function onEnterHangar() {
-    // Hand off to Airborne Aces hangar / blimp select
-    try {
-      if (window.__airborneStopSplashRadar) window.__airborneStopSplashRadar();
-    } catch (e) {}
-    // Stop splash track hard, then start hangar music
+    try { if (window.__airborneStopSplashRadar) window.__airborneStopSplashRadar(); } catch (e) {}
     try { window.__airborneLeftSplash = true; } catch (e) {}
     try {
       var sm = document.getElementById('splashMusic');
@@ -158,6 +185,23 @@
     try {
       if (typeof stopSplashMusicImmediately === 'function') stopSplashMusicImmediately();
     } catch (e) {}
+
+    // Fully tear down launch screens so they cannot block the hangar
+    try {
+      if (loadingEl) {
+        loadingEl.classList.add('otg-hidden');
+        loadingEl.style.display = 'none';
+        loadingEl.style.pointerEvents = 'none';
+      }
+      if (splashEl) {
+        splashEl.classList.remove('otg-visible');
+        splashEl.style.display = 'none';
+        splashEl.style.visibility = 'hidden';
+        splashEl.style.opacity = '0';
+        splashEl.style.pointerEvents = 'none';
+      }
+    } catch (eLay) {}
+
     const oldSplash = document.getElementById('splashScreen');
     if (oldSplash) {
       oldSplash.classList.add('hidden');
@@ -165,22 +209,20 @@
     }
     const menu = document.getElementById('menuScreen');
     if (menu) {
-      menu.style.display = '';
+      menu.style.display = 'flex';
+      menu.style.visibility = 'visible';
+      menu.style.opacity = '1';
       menu.classList.remove('hidden');
     }
     try {
-      if (typeof window.__airborneShowMenu === 'function') {
-        window.__airborneShowMenu();
-      }
+      if (typeof window.__airborneShowMenu === 'function') window.__airborneShowMenu();
     } catch (e) {
       console.warn('[OTG Launch] showMenu', e);
     }
-    // Start menu music after splash is gone
     try {
       if (typeof startMenuMusic === 'function') startMenuMusic();
       else if (window.startMenuMusic) window.startMenuMusic();
     } catch (e) {}
-    // Safety: kill splash audio again after a beat
     setTimeout(function () {
       try {
         var sm2 = document.getElementById('splashMusic');

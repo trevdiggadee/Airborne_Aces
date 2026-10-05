@@ -183,6 +183,11 @@
 #otg-splash.otg-visible {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
+  display: block;
+}
+#otg-splash:not(.otg-visible) {
+  pointer-events: none !important;
 }
 
 .otg-poster {
@@ -262,6 +267,8 @@
 }
 
 .otg-enter-wrap {
+  pointer-events: auto;
+  z-index: 20;
   position: absolute;
   bottom: 4.5%; /* down another 1% */
   left: 0; right: 0;
