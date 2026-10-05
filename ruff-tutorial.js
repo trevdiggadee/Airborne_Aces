@@ -3425,7 +3425,7 @@
     // Epic celebration before score UI
     if (!window.__airborneEndCelebrationDone) {
       window.__airborneEndCelebrationDone = true;
-      window.__airborneEndCelebration = { t: 0, life: 0.45 };
+      window.__airborneEndCelebration = { t: 0, life: 3.8 };
       try {
         // Burst fireworks + confetti
         if (typeof spawnVictoryFirework === "function") {
@@ -4735,7 +4735,8 @@ function finishToMap() {
         } catch (e) {}
       }
       // Report when world-buildings signals ready, or failsafe
-      if (ph === "score" || ph === "done" || window.__airborneTrainingReportReady || window.__airborneTrainingReportShown) {
+      var titleHolding = (window.__airborneAirfieldPhase === "score" && (window.__airborneScoreT || 0) < 3.9 && !window.__airborneTrainingReportShown);
+      if (!titleHolding && (ph === "score" || ph === "done" || window.__airborneTrainingReportReady || window.__airborneTrainingReportShown)) {
         try {
           if (!window.__airborneTrainingReportShown) {
             window.__airborneTrainingReportShown = true;
@@ -4875,6 +4876,21 @@ function finishToMap() {
   window.__airborneForceRuffCruise = false;
   window.__airborneBeginRuff = beginRuffTraining;
   window.placeTrainingPowerIcon = placeTrainingPowerIcon;
+  // Called by world-buildings the moment the blimp has stopped: title + fireworks first, report later
+  window.__airborneStartTrainingComplete = function () {
+    if (window.__airborneEndCelebrationDone) return;
+    window.__airborneEndCelebrationDone = true;
+    window.__airborneEndCelebration = { t: 0, life: 3.8 };
+    try {
+      var W0 = (typeof W !== "undefined") ? W : 400, H0 = (typeof H !== "undefined") ? H : 600;
+      if (typeof spawnVictoryFirework === "function") {
+        spawnVictoryFirework(W0 * 0.3, H0 * 0.28);
+        spawnVictoryFirework(W0 * 0.7, H0 * 0.3);
+      }
+      if (typeof spawnFirework === "function") spawnFirework(W0 * 0.5, H0 * 0.24);
+      trainChord([523, 659, 784, 1046, 1318], 0.3, 0.22);
+    } catch (e) {}
+  };
   function updateEndCelebration(dt) {
     var c = window.__airborneEndCelebration;
     if (!c) return;
@@ -4895,14 +4911,14 @@ function finishToMap() {
     var W0 = (typeof W !== "undefined") ? W : 400;
     var H0 = (typeof H !== "undefined") ? H : 700;
     var u = c.t / c.life;
-    var alpha = u < 0.12 ? (u / 0.12) : (u > 0.8 ? Math.max(0, 1 - (u - 0.8) / 0.2) : 1);
+    var alpha = u < 0.1 ? (u / 0.1) : (u > 0.85 ? Math.max(0, 1 - (u - 0.85) / 0.15) : 1);
     ctx.save();
-    ctx.globalAlpha = alpha * 0.35;
+    ctx.globalAlpha = alpha * 0.22;
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, W0, H0);
     ctx.globalAlpha = alpha;
     ctx.translate(W0 * 0.5, H0 * 0.34);
-    var sc = u < 0.2 ? (0.6 + 0.4 * (u / 0.2)) : 1;
+    var sc = u < 0.12 ? (0.7 + 0.3 * (u / 0.12)) : 1;
     ctx.scale(sc, sc);
     ctx.font = "900 " + Math.max(20, Math.min(40, W0 * 0.08)) + "px Rockwell, Georgia, serif";
     ctx.textAlign = "center";

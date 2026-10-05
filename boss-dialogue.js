@@ -208,8 +208,15 @@ function triggerBoss(num) {
     // height-based sizing formula made it read as oversized once divided by its aspect
     // ratio — scale it down specifically so it matches the others visually
     const kindSizeScale = num === 2 ? (2 / 3) : 1; // boss 2 at 2x original size
-    const dispH = Math.min(H * (isGround ? 0.32 : 0.42) * sizeMult, isGround ? 220 : 300) * kindSizeScale;
-    const dispW = dispH / aspect;
+    let dispH = Math.min(H * (isGround ? 0.32 : 0.42) * sizeMult, isGround ? 220 : 300) * kindSizeScale;
+    let dispW = dispH / aspect;
+    // Phone-width screens: a wide sprite (or placeholder) could be wider than the screen, which pushed
+    // targetX negative so the boss parked mostly off-screen ("boss never appeared"). Cap to 72% of W.
+    const maxBossW = W * 0.72;
+    if (dispW > maxBossW) {
+      dispH = dispH * (maxBossW / dispW);
+      dispW = maxBossW;
+    }
     const groundY = groundLevelY();
 
     boss = {

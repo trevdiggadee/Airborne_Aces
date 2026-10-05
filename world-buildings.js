@@ -320,9 +320,21 @@
       ? (img.naturalWidth / img.naturalHeight) : 5.3;
     let h = Math.max(70, Math.min(H * 0.36, 160));
     let w = Math.max(W * 0.85, h * aspect);
+    // Keep the strip where it already is on screen so touchdown doesn't make the runway jump
+    var keepX = (airfieldTiles && airfieldTiles[0] && isFinite(airfieldTiles[0].x)) ? airfieldTiles[0].x : null;
     airfieldTiles = [];
     for (var i = 0; i < 3; i++) {
       airfieldTiles.push({ x: i * w * 0.98 - w * 0.2, w: w, h: h, startX: 0 });
+    }
+    if (keepX !== null) {
+      var shift = keepX - airfieldTiles[0].x;
+      // wrap so the first tile always covers the left edge
+      var period = w * 0.98;
+      shift = ((shift % period) + period) % period;
+      if (shift > period * 0.5) shift -= period;
+      airfieldTiles.forEach(function (t) { t.x += shift; });
+      // make sure the screen is still fully covered after the shift
+      while (airfieldTiles[0].x > 0) { airfieldTiles.forEach(function (t) { t.x -= period; }); }
     }
   }
 
@@ -391,6 +403,7 @@
     airfieldSub = "tip";
     airfieldLandT = 0;
     airfieldScoreT = 0;
+    window.__airborneScoreT = 0;
     airfieldDidLand = false;
     airfieldSkidT = 0;
     airfieldSkidDriveDist = 0;
@@ -537,6 +550,7 @@
     airfieldDidLand = false;
     airfieldLandContact = 0;
     airfieldScoreT = 0;
+    window.__airborneScoreT = 0;
     airfieldLandT = 0;
     airfieldFireworks = [];
     window.__airborneAirfieldHold = false;
@@ -744,10 +758,12 @@
           try { emitSkidFx(spd, 260, dt); } catch (eFx) {}
           // Pin blimp
           var thPin = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
-          var landY = (H || 600) - Math.max(36, thPin * 0.22) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10);
+          var landY = (H || 600) - Math.max(40, thPin * 0.28) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10);
           if (typeof player !== "undefined" && player) {
             player.x = (W || 400) * 0.25;
-            player.y = landY;
+            // ease to deck height (same formula as the approach) instead of snapping
+            player.y += (landY - player.y) * Math.min(1, dt * 14);
+            if (Math.abs(landY - player.y) < 0.3) player.y = landY;
             player.vy = 0;
             player.rotation = skidRotation(airfieldSkidT, skidProg);
           }
@@ -762,6 +778,7 @@
           if (typeof player !== "undefined" && player) player.rotation = 0;
           airfieldPhase = "score";
           airfieldScoreT = 0.05;
+          try { if (typeof window.__airborneStartTrainingComplete === "function") window.__airborneStartTrainingComplete(); } catch (eTc) {}
           window.__airborneTrainingReportReady = true;
           airfieldFireworkT = 0;
           syncAirfieldGlobals();
@@ -1265,7 +1282,6 @@
           player.vy = 0;
           player.rotation = 0;
           airfieldTip = "Taxiing…";
-          airfieldTiles = [];
           try { ensureTaxiRunwayStrip(); } catch (eTr) {}
           window.__airborneTaxiUntil = performance.now() + 5000; // score after 5s
           try { syncAirfieldGlobals(); } catch (eSync) {}
@@ -1318,7 +1334,7 @@
       airfieldSkidT = (airfieldSkidT || 0) + dt;
 
       // Keep landing_field looping tiles for scroll
-      if (airfieldSkidT < 0.05 || !airfieldTiles || airfieldTiles.length < 2) {
+      if (!airfieldTiles || airfieldTiles.length < 2) {
         try { ensureTaxiRunwayStrip(); } catch (eTr) {
           try { ensureAirfieldStripVisible(); } catch (e2) {}
         }
@@ -1354,10 +1370,11 @@
 
       // Pin blimp on runway
       var thPin = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
-      var landY = H - Math.max(36, thPin * 0.22) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10);
+      var landY = H - Math.max(40, thPin * 0.28) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10);
       if (typeof player !== "undefined" && player) {
         player.x = W * 0.25;
-        player.y = landY;
+        player.y += (landY - player.y) * Math.min(1, dt * 14);
+        if (Math.abs(landY - player.y) < 0.3) player.y = landY;
         player.vy = 0;
         player.rotation = (airfieldSkidT >= scrollSec) ? 0 : skidRotation(airfieldSkidT, skidProg2);
       }
@@ -1376,6 +1393,7 @@
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 0; // strip + world stay put after the skid
       airfieldScoreT = (airfieldScoreT || 0) + dt;
       airfieldFireworkT = (airfieldFireworkT || 0) + dt;
+      window.__airborneScoreT = airfieldScoreT;
       // Keep strip at rest height (don't jump stripY to 0)
       if (typeof player !== "undefined" && player) {
         const th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
@@ -1418,7 +1436,7 @@
         airfieldFireworks = airfieldFireworks.filter(function(fw) { return fw.age < fw.life; });
       }
       // Score pops immediately after taxi
-      if (!window.__airborneTrainingReportShown) {
+      if (!window.__airborneTrainingReportShown && airfieldScoreT >= 3.9) {
         window.__airborneTrainingReportShown = true;
         window.__airborneTrainingReportReady = true;
         window.__airborneAirfieldDidLand = true;
@@ -1514,7 +1532,7 @@
   // Nose-down jolt on touchdown + shudder that dies out with the speed, ending level
   function skidRotation(t, progress) {
     var u = Math.max(0, Math.min(1, progress));
-    var jolt = 0.11 * Math.exp(-4.0 * t);
+    var jolt = 0.10 * Math.min(1, t / 0.12) * Math.exp(-3.2 * t); // ramps in, then settles
     var shudder = Math.sin(t * 38) * 0.012 * Math.pow(1 - u, 1.5);
     return jolt + shudder;
   }
@@ -1822,7 +1840,7 @@
         ctx.fill();
         ctx.restore();
       }
-      if ((airfieldScoreT || 0) < 0.15) {
+      if (false && (airfieldScoreT || 0) < 0.15) {
         ctx.save();
         ctx.textAlign = "center";
         const fs = Math.floor((typeof W !== "undefined" ? W : 400) * 0.065);
