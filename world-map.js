@@ -189,7 +189,23 @@
       tryStart(window.__airborneEnterGameplay, "EnterGameplay");
       tryStart(window.__airborneGameStart, "GameStart");
       tryStart(window.startGame, "window.startGame");
-      // Last-resort training kick
+      // Always ensure training for post 1 even if startGame ran but training did not stick
+      if (Number(levelId) === 1) {
+        try {
+          if (!window.__airborneAirfield && typeof window.beginAirfieldTraining === "function") {
+            window.beginAirfieldTraining();
+            console.log("[Map] training re-kick beginAirfieldTraining");
+          }
+          var gsFix = document.getElementById("gameScreen");
+          if (gsFix) {
+            gsFix.style.display = "block";
+            gsFix.style.visibility = "visible";
+            gsFix.style.opacity = "1";
+          }
+        } catch (eKick) {
+          console.error("[Map] training re-kick failed", eKick);
+        }
+      }
       if (!started) {
         try {
           if (typeof window.beginAirfieldTraining === "function") {

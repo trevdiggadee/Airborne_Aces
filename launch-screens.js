@@ -113,6 +113,10 @@
         splashEl.style.visibility = 'visible';
         splashEl.style.pointerEvents = 'auto';
         createSparkles();
+        try {
+          if (typeof window.startSplashMusic === "function") window.startSplashMusic();
+          else if (typeof startSplashMusic === "function") startSplashMusic();
+        } catch (eMus) {}
         console.log('[OTG Launch] loading → splash');
       } catch (e) {
         console.warn('[OTG Launch] finish transition', e);

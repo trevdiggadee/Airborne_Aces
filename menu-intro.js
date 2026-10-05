@@ -828,24 +828,42 @@ window.startSplashMusic = startSplashMusic;
 window.startMenuMusic = startMenuMusic;
 window.stopMenuMusicImmediately = stopMenuMusicImmediately;
 
-// Splash music on load (menu music only after Enter Hangar)
+// Splash music: OTG loading/poster counts as splash (legacy #splashScreen is hidden)
+function __aaIsSplashPhase() {
+  if (window.__airborneLeftSplash) return false;
+  try {
+    var load = document.getElementById("otg-loading");
+    if (load && !load.classList.contains("otg-hidden") && load.style.display !== "none") return true;
+    var otg = document.getElementById("otg-splash");
+    if (otg && otg.classList.contains("otg-visible")) return true;
+    var splash = document.getElementById("splashScreen");
+    if (splash && !splash.classList.contains("hidden") && splash.style.display !== "none") {
+      var vis = window.getComputedStyle(splash).visibility;
+      if (vis !== "hidden") return true;
+    }
+  } catch (e) {}
+  return false;
+}
+window.__aaIsSplashPhase = __aaIsSplashPhase;
+
 startSplashMusic();
 document.addEventListener("pointerdown", function unlockSplashOrMenu() {
   if (window.__airborneLeftSplash) {
-    // Hangar / game — never restart splash track
     try { stopSplashMusicImmediately(); } catch (e) {}
     if (!menuMusicUnlocked) startMenuMusic();
     return;
   }
-  var splash = document.getElementById("splashScreen");
-  var onSplash = splash && !splash.classList.contains("hidden") && splash.style.display !== "none";
-  if (onSplash) {
-    if (!splashMusicUnlocked) startSplashMusic();
+  if (__aaIsSplashPhase()) {
+    startSplashMusic();
   } else {
     try { stopSplashMusicImmediately(); } catch (e) {}
     if (!menuMusicUnlocked) startMenuMusic();
   }
 }, { passive: true });
+// Also unlock on first touch/click anywhere during load
+document.addEventListener("touchstart", function () {
+  if (!window.__airborneLeftSplash && __aaIsSplashPhase()) startSplashMusic();
+}, { passive: true, once: false });
 
 window.__airborneShowMenu = () => {
   var key = selectedBlimp || "blimp1";

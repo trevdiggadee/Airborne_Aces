@@ -620,18 +620,22 @@
     initParallaxLayers();
 
     // Map level select — jump progress so you're actually on that stage
-    const mapLvl = window.__airbornePendingMapLevel;
+    const mapLvl = Number(window.__airbornePendingMapLevel) || 0;
     window.__airbornePendingMapLevel = null;
     state = "playing";
-    startOverlay.classList.add("hidden");
-    gameOverOverlay.classList.add("hidden");
+    try {
+      startOverlay.classList.add("hidden");
+      startOverlay.style.display = "none";
+    } catch (e) {}
+    try { gameOverOverlay.classList.add("hidden"); } catch (e) {}
     try { if (typeof window.__airborneShowUnifiedDock === "function") window.__airborneShowUnifiedDock(); } catch (e) {}
 
-    if (mapLvl && mapLvl >= 2) {
+    if (mapLvl >= 2) {
       applyMapLevelProgress(mapLvl);
     } else {
-      // Always train on level 1 / hangar start
+      // Always train on level 1 / hangar start / Take Flight
       window.__airbornePendingMapLevel = null;
+      window.__airborneForceTrainRestart = true;
       try { if (window.__airborneHardResetTraining) window.__airborneHardResetTraining(); } catch (e) {}
       const startTrain = window.beginAirfieldTraining ||
         (typeof beginAirfieldTraining === "function" ? beginAirfieldTraining : null);
@@ -655,6 +659,23 @@
           if (typeof obstacles !== "undefined") obstacles = [];
           if (typeof birdFlocks !== "undefined") birdFlocks = [];
           console.log("[Airborne] Training started", window.__airborneAirfield, window.__airborneAirfieldPhase, window.__airborneRuffStage);
+          // Ensure training flags + screen after beginAirfieldTraining
+          try {
+            window.__airborneAirfield = true;
+            window.__airborneTrainingFlight = true;
+            if (typeof state !== "undefined") state = "playing";
+            var gs2 = document.getElementById("gameScreen");
+            if (gs2) {
+              gs2.style.display = "block";
+              gs2.style.visibility = "visible";
+              gs2.style.opacity = "1";
+            }
+            var menu2 = document.getElementById("menuScreen");
+            if (menu2) menu2.style.display = "none";
+            var map2 = document.getElementById("worldMapScreen");
+            if (map2) map2.style.display = "none";
+            if (typeof resize === "function") resize();
+          } catch (eForce) { console.warn("[Airborne] train force", eForce); }
         } catch (err) {
           console.error("[Airborne] Training failed", err);
         }
