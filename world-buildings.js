@@ -410,6 +410,7 @@
     window.__airborneTrainingFlight = true;
     window.__airborneAirfieldPhase = "taxi";
     window.__airborneForceTrainRestart = false;
+    window.__airborneAirfieldHoldUntil = 0;
     window.__airborneResetRunway = false;
     airfieldStripGone = false;
     airfieldUseLandingArt = false;
@@ -818,7 +819,7 @@
     }
 
     airfieldRunwayT = (airfieldRunwayT || 0) + dt;
-    const holding = !!window.__airborneAirfieldHold;
+    const holding = !!window.__airborneAirfieldHold || performance.now() < (window.__airborneAirfieldHoldUntil || 0);
     if (!(airfieldTakeoffSpeed > 0)) airfieldTakeoffSpeed = 50;
 
     // Give Ruff time to appear; only unlock if intro hangs too long
@@ -846,7 +847,7 @@
       if (!introStill) {
         if (airfieldPhase === "taxi" || airfieldPhase === "accel") {
           // Only scroll while player is actively holding
-          scrollSpd = window.__airborneAirfieldHold
+          scrollSpd = holding
             ? Math.max(airfieldTakeoffSpeed || 50, 40) : 0;
         } else {
           scrollSpd = Math.max(airfieldTakeoffSpeed || 210, (airfieldPhase === "lesson" ? 210 : 0));
@@ -898,6 +899,7 @@
         // Wait for R.U.F.F. intro — strip frozen, blimp on deck
         window.__airborneAirfieldPaused = true;
         window.__airborneAirfieldHold = false;
+        window.__airborneAirfieldHoldUntil = 0;
         window.__airborneAirfieldBoostPending = false;
         airfieldTakeoffSpeed = 50;
         if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 0;
@@ -940,7 +942,7 @@
           player.rotation = holding ? -0.1 : 0;
         }
 
-        airfieldTip = holding ? "Accelerating…" : "HOLD to accelerate!";
+        airfieldTip = holding ? "Accelerating…" : "HOLD or TAP to accelerate!";
         if (airfieldPhase === "taxi") {
           airfieldPhase = "accel";
         }

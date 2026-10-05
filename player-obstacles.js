@@ -64,9 +64,14 @@ window.__airborneRingDebug = false;
     }
   }
 
+  var __lastFlapAt = 0;
   function flap() {
     // Allow runway hold during training even if state glitched
     if (state !== "playing" && !window.__airborneAirfield) return;
+    // One physical tap fires touchstart + pointerdown (+ mousedown): count it once
+    var __nowF = (typeof performance !== "undefined") ? performance.now() : Date.now();
+    if (__nowF - __lastFlapAt < 35) return;
+    __lastFlapAt = __nowF;
     // Don't flap-react while docked on the pad
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) return;
     // Airfield runway / post-land taxi: never flap (prevents jump)
@@ -79,6 +84,8 @@ window.__airborneRingDebug = false;
         window.__airborneAirfieldHold = true;
         window.__airbornePointerDown = true;
         window.__airborneAirfieldBoostPending = true;
+        // A quick TAP also drives the runway: keeps "holding" true for a short window
+        window.__airborneAirfieldHoldUntil = __nowF + 450;
       }
       return; // no vertical jump
     }
@@ -2264,6 +2271,40 @@ window.__airborneRingDebug = false;
         // advanced in draw path; mark for drawObstacles/main
       }
     } catch (eIP) {}
+
+    // Score obstacles the player successfully passes (not only power-up kills)
+    try {
+      if (obstacles && obstacles.length && typeof player !== "undefined" && player) {
+        for (var pi = 0; pi < obstacles.length; pi++) {
+          var ob = obstacles[pi];
+          if (!ob || ob.isRing || ob.type === "gold_ring") continue;
+          if (ob.scored || ob.fromHitBurst) continue;
+          // Passed when fully left of blimp nose
+          if (ob.x + (ob.w || 40) < player.x - 6) {
+            ob.scored = true;
+            try {
+              if (typeof score === "number") score += 10;
+              if (typeof gameplayScore === "number") gameplayScore += 10;
+              if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
+            } catch (eSc) {}
+            try {
+              if (typeof ruffStats !== "undefined" && ruffStats) {
+                ruffStats.obstaclesAvoided = (ruffStats.obstaclesAvoided || 0) + 1;
+              }
+            } catch (eRs) {}
+            try {
+              if (typeof dodgeStreak === "number") {
+                dodgeStreak += 1;
+                if (dodgeStreak > 1 && dodgeStreak % 5 === 0) {
+                  score += 5;
+                  if (scoreVal) scoreVal.textContent = String(score);
+                }
+              }
+            } catch (eDs) {}
+          }
+        }
+      }
+    } catch (ePass) {}
 
     // In-place prune (never reassign obstacles — keeps shared references valid)
     for (var fi = obstacles.length - 1; fi >= 0; fi--) {
