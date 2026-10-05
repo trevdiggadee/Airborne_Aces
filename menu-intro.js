@@ -499,7 +499,7 @@ function startHeroAnimation(key) {
           if (window.PowerFX && __heroFxKind) {
             var fadeM = Math.max(0, Math.min(1, (__heroFxUntil - now) / 5000));
             var tM = now * 0.001;
-            [cBack, cFront].forEach(function (cv) {
+            [document.getElementById("heroFireCanvasBack"), document.getElementById("heroFireCanvas")].forEach(function (cv) {
               if (!cv) return;
               var c = cv.getContext("2d");
               if (!c) return;
@@ -1015,7 +1015,7 @@ function setEffect(effect) {
 
 
 function powerPreviewKindFor(key) {
-    return POWER_PREVIEW_KIND[key] || "storm";
+    return ((typeof POWER_PREVIEW_KIND !== "undefined" && POWER_PREVIEW_KIND) ? POWER_PREVIEW_KIND[key] : null) || "storm";
   }
 
   /* removed */

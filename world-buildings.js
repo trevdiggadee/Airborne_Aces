@@ -174,6 +174,14 @@
   let airfieldStripY = 0;
   let airfieldStripGone = false;
   let airfieldUseLandingArt = false;
+  // Previously undeclared (strict mode -> ReferenceError on training start)
+  let airfieldSkidT = 0;
+  let airfieldDriveDist = 0;
+  let airfieldSkidDriveDist = 0;
+  let airfieldSkidStartX = 0;
+  let airfieldHoldTime = 0;
+  let airfieldFireworkT = 0;
+  let airfieldFireworks = [];
 
   function isAirfieldMode() { return !!airfieldMode; }
 
@@ -320,6 +328,14 @@
 
   function beginAirfieldTraining() {
     try { if (window.resetUnifiedProgress) window.resetUnifiedProgress(); } catch (e) {}
+    try {
+      window.__airborneFlightTitleShown = false;
+      if (typeof window.__airborneShowLessonBanner === "function") {
+        window.__airborneShowLessonBanner("Flight Training");
+        window.__airborneFlightTitleShown = true;
+      }
+    } catch (eBan) {}
+
     try {
       if (window.__airborneClearAllGameplay) window.__airborneClearAllGameplay();
     } catch (e) {}
@@ -587,9 +603,14 @@
     window.__airborneRuffFollowBlend = 0;
     window.__airborneTrainT = 0;
     window.__airborneRuffStage = "intro";
-    startRuffNow();
-    setTimeout(startRuffNow, 100);
-    setTimeout(startRuffNow, 400);
+    // Retry only if the first begin didn't take (re-beginning resets dialogue/timers)
+    function retryRuffIfNeeded() {
+      var st = window.__airborneRuffStage;
+      if (window.__airborneAirfield && (!window.__airborneRuffActive || !st || st === "idle")) startRuffNow();
+    }
+    if (!window.__airborneRuffActive) startRuffNow();
+    setTimeout(retryRuffIfNeeded, 100);
+    setTimeout(retryRuffIfNeeded, 400);
     syncAirfieldGlobals();
   }
 

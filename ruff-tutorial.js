@@ -101,6 +101,11 @@
   function onRingPassed(quality) {
     // quality 0..1 — 1 = perfect center
     ruffStats.rings = (ruffStats.rings || 0) + 1;
+    try {
+      window.__airborneCollectRings = ruffStats.rings;
+      if (typeof updateCollectDock === "function") updateCollectDock();
+      else if (typeof window.updateCollectDock === "function") window.updateCollectDock();
+    } catch (eHud) {}
     ruffStats.ringStreak = (ruffStats.ringStreak || 0) + 1;
     if (ruffStats.ringStreak > (ruffStats.ringBestStreak || 0)) {
       ruffStats.ringBestStreak = ruffStats.ringStreak;
@@ -327,6 +332,53 @@
       console.warn("trainEnsure", e);
       return false;
     }
+  }
+
+  function trainEngineStart() {
+    if (!trainEnsure() || __trainEngine) return;
+    try {
+      var o = __trainCtx.createOscillator();
+      var lp = __trainCtx.createBiquadFilter();
+      var g = __trainCtx.createGain();
+      o.type = "sawtooth";
+      o.frequency.value = 52;
+      lp.type = "lowpass";
+      lp.frequency.value = 220;
+      g.gain.value = 0.0001;
+      o.connect(lp); lp.connect(g); g.connect(__trainMaster);
+      g.gain.linearRampToValueAtTime(0.07, __trainCtx.currentTime + 0.6);
+      o.start();
+      __trainEngine = { o: o, g: g, lp: lp };
+    } catch (e) { __trainEngine = null; }
+  }
+  function trainEngineStop() {
+    var n = __trainEngine; __trainEngine = null;
+    if (!n) return;
+    try { n.g.gain.cancelScheduledValues(0); n.g.gain.setValueAtTime(0.0001, __trainCtx.currentTime); n.o.stop(); n.o.disconnect(); n.g.disconnect(); } catch (e) {}
+  }
+  function trainWindStart() {
+    if (!trainEnsure() || __trainWind) return;
+    try {
+      var len = __trainCtx.sampleRate * 2;
+      var buf = __trainCtx.createBuffer(1, len, __trainCtx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      var src = __trainCtx.createBufferSource();
+      src.buffer = buf; src.loop = true;
+      var bp = __trainCtx.createBiquadFilter();
+      bp.type = "bandpass"; bp.frequency.value = 500; bp.Q.value = 0.6;
+      var g = __trainCtx.createGain();
+      g.gain.value = 0.0001;
+      src.connect(bp); bp.connect(g); g.connect(__trainMaster);
+      g.gain.linearRampToValueAtTime(0.05, __trainCtx.currentTime + 0.8);
+      src.start();
+      __trainWind = { s: src, g: g, bp: bp };
+    } catch (e) { __trainWind = null; }
+  }
+  function trainWindStop() {
+    var n = __trainWind; __trainWind = null;
+    if (!n) return;
+    try { n.g.gain.cancelScheduledValues(0); n.g.gain.setValueAtTime(0.0001, __trainCtx.currentTime); n.s.stop(); n.s.disconnect(); n.g.disconnect(); } catch (e) {}
   }
 
   function trainBeep(freq, dur, vol, type) {
@@ -4776,7 +4828,8 @@ function finishToMap() {
       setStage("cruise");
     }
   };
-  window.__airborneForceRuffCruise = window.__airborneForceRuffAltitude;
+  // Boolean flag consumed in updateRuff (was wrongly assigned the function above -> always truthy -> skipped intro)
+  window.__airborneForceRuffCruise = false;
   window.__airborneBeginRuff = beginRuffTraining;
   window.placeTrainingPowerIcon = placeTrainingPowerIcon;
   function updateEndCelebration(dt) {
