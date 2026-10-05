@@ -517,39 +517,70 @@
     } catch (e) {}
   }
 
+  // Boss track is routed through a Web Audio GainNode so the fade-in also works on iOS/Android WebViews,
+  // where HTMLMediaElement.volume is ignored (it jumped straight to full volume there).
+  var __bossGainNode = null;
+  function getBossGainNode(el) {
+    try {
+      if (__bossGainNode) return __bossGainNode;
+      if (!trainEnsure()) return null;
+      if (!el.__aaMediaSrc) el.__aaMediaSrc = __trainCtx.createMediaElementSource(el);
+      __bossGainNode = __trainCtx.createGain();
+      __bossGainNode.gain.value = 0;
+      el.__aaMediaSrc.connect(__bossGainNode);
+      __bossGainNode.connect(__trainCtx.destination);
+      return __bossGainNode;
+    } catch (e) { __bossGainNode = null; return null; }
+  }
+
   function playTrainingBossMusic() {
     try {
       var train = getTrainingMusicEl();
       var boss = getTrainingBossMusicEl();
       if (!boss) return;
       boss.loop = true;
-      boss.volume = 0;
-      // Start boss under training track, then crossfade ~2s
+      var FADE_MS = 4500; // slow, cinematic fade-in
+      var gain = getBossGainNode(boss);
+      if (gain) {
+        try {
+          var now = __trainCtx.currentTime;
+          gain.gain.cancelScheduledValues(now);
+          gain.gain.setValueAtTime(0.0001, now);
+          // smooth ease-in curve 0 -> TRAIN_BOSS_VOL
+          var curve = new Float32Array(64);
+          for (var ci = 0; ci < curve.length; ci++) {
+            var cu = ci / (curve.length - 1);
+            curve[ci] = Math.max(0.0001, TRAIN_BOSS_VOL * cu * cu * (3 - 2 * cu));
+          }
+          gain.gain.setValueCurveAtTime(curve, now + 0.05, FADE_MS / 1000);
+        } catch (eG) { try { gain.gain.value = TRAIN_BOSS_VOL; } catch (eG2) {} }
+        boss.volume = 1; // level is controlled by the gain node
+      } else {
+        boss.volume = 0;
+      }
       var startBoss = function () {
+        try { if (boss.paused && boss.currentTime > 0) boss.currentTime = 0; } catch (eT) {}
         var p = boss.play();
         if (p && p.then) {
           p.catch(function () {
-            try { boss.load(); boss.volume = 0; boss.play().catch(function () {}); } catch (e2) {}
+            try { boss.load(); boss.play().catch(function () {}); } catch (e2) {}
           });
         }
         var t0 = performance.now();
-        var dur = 2200;
+        var dur = FADE_MS;
         var trainStart = 0;
         try { trainStart = train ? (train.volume || TRAIN_BGM_VOL) : 0; } catch (e) { trainStart = TRAIN_BGM_VOL; }
         if (window.__trainXfadeRaf) cancelAnimationFrame(window.__trainXfadeRaf);
         (function step() {
           var u = Math.min(1, (performance.now() - t0) / dur);
-          // smoothstep
-          var s = u * u * (3 - 2 * u);
+          var s = u * u * (3 - 2 * u); // smoothstep
           try { if (train) train.volume = Math.max(0, trainStart * (1 - s)); } catch (e) {}
-          try { boss.volume = TRAIN_BOSS_VOL * s; } catch (e) {}
+          if (!gain) { try { boss.volume = TRAIN_BOSS_VOL * s; } catch (e) {} }
           if (u < 1) {
             window.__trainXfadeRaf = requestAnimationFrame(step);
           } else {
-            try {
-              if (train) { train.pause(); train.volume = 0; }
-            } catch (e3) {}
-            try { boss.volume = TRAIN_BOSS_VOL; } catch (e4) {}
+            try { if (train) { train.pause(); train.volume = 0; } } catch (e3) {}
+            if (!gain) { try { boss.volume = TRAIN_BOSS_VOL; } catch (e4) {} }
           }
         })();
       };
@@ -561,6 +592,7 @@
     try {
       var el = getTrainingBossMusicEl();
       if (!el) return;
+      try { if (__bossGainNode) { __bossGainNode.gain.cancelScheduledValues(0); __bossGainNode.gain.value = 0; } } catch (eg) {}
       try { el.pause(); el.volume = 0; } catch (e) {}
     } catch (e) {}
   }
@@ -604,6 +636,8 @@
   window.__airbornePlayTrainingMusic = playTrainingMusic;
   window.__airborneStopTrainingMusic = stopTrainingMusic;
   window.stopTrainingBossMusic = stopTrainingBossMusic;
+  window.__airbornePlayTrainingBossMusic = playTrainingBossMusic;
+  window.__airborneBossGainValue = function () { return __bossGainNode ? Math.round(__bossGainNode.gain.value * 1000) / 1000 : null; };
   window.stopTrainingMusic = stopTrainingMusic;
   window.stopAllTrainingAudio = stopAllTrainingAudio;
 
@@ -1321,6 +1355,7 @@
         }
       } catch (eClr) {}
       window.__airborneRingResultsShown = false;
+      window.__airborneRingsHoldT = 0;
       console.log("[R.U.F.F.] rings stage start — sequential 20");
       window.__airborneRingMult = 1;
       ruffStats.rings = 0;
@@ -4369,9 +4404,17 @@ function finishToMap() {
       } catch (eRL) {}
 
       if ((spawned >= 20 && ringsLeft === 0 && ruffStageT > 16) || ruffStageT > 100) {
-        try { showRingResultsBanner(); } catch (e) {}
-        setStage("obstacles");
-        console.log("[R.U.F.F.] rings → obstacles + summary");
+        // Show the score popup first and HOLD the lesson until it has finished (obstacles used to start under it)
+        if (!(window.__airborneRingsHoldT > 0)) {
+          if (!window.__airborneRingResultsShown) { try { showRingResultsBanner(); } catch (e) {} }
+          window.__airborneRingsHoldT = 0.001;
+        }
+        window.__airborneRingsHoldT = (window.__airborneRingsHoldT || 0) + dt;
+        if (window.__airborneRingsHoldT >= 4.2) {
+          window.__airborneRingsHoldT = 0;
+          setStage("obstacles");
+          console.log("[R.U.F.F.] rings → obstacles (after score popup)");
+        }
       }
     } else if (ruffStage === "crystals" || ruffStage === "powerup") {
       setStage("obstacles");
@@ -4701,8 +4744,8 @@ function finishToMap() {
           }
         } catch (eRep) {}
         nextStage(); // → report
-      } else if (ruffStageT > 8) {
-        // Failsafe only after full land + drive window
+      } else if (ruffStageT > 22) {
+        // Failsafe only after full land + skid-to-stop window (descent ~5s + skid 5s)
         try {
           window.__airborneTrainingReportShown = true;
           window.__airborneTrainingReportReady = true;

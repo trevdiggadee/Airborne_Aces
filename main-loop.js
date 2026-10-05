@@ -251,13 +251,26 @@ window.__AIRBORNE_MAIN_BUILD = "ruff412";
           plats && plats.length > 0) {
         return; // do not force next stage while platforms still scrolling
       }
+      // Failsafe budget is PER STAGE: restart it whenever the stage changes (it used to carry over,
+      // so rings/boss were skipped almost instantly after the previous stage had used the time up)
+      if (window.__airborneLessonDriverStage !== st) {
+        window.__airborneLessonDriverStage = st;
+        window.__airborneLessonDriverT = 0;
+      }
+      // Never force past a boss fight, the boss cinematic, or the ring score popup
+      if ((typeof bossActive !== "undefined" && bossActive) || window.__airborneBossCamPause ||
+          window.__airborneRingResultsCanvas) {
+        window.__airborneLessonDriverT = Math.min(window.__airborneLessonDriverT || 0, 1);
+        return;
+      }
       window.__airborneLessonDriverT += dt;
-      var order = ["cruise","altitude","rings","platforms","obstacles","shield","combined","boss1","landing"];
+      // Must match STAGE_ORDER in ruff-tutorial.js (rings -> obstacles -> platforms -> shield -> combined -> boss1 -> landing)
+      var order = ["cruise","altitude","rings","obstacles","platforms","shield","combined","boss1","landing"];
       var idx = order.indexOf(st);
       if (idx < 0) return;
-      // Failsafe only — primary progression is ruff-tutorial setStage timers
-      var durations = [12, 18, 32, 90, 30, 32, 90, 50, 24];
-      var need = durations[idx] || 30;
+      // Failsafe only — primary progression is ruff-tutorial setStage timers, so these sit well above each stage's own cap
+      var durations = [30, 45, 140, 45, 100, 70, 80, 100, 60];
+      var need = durations[idx] || 60;
       if (window.__airborneLessonDriverT >= need) {
         window.__airborneLessonDriverT = 0;
         var next = order[idx + 1];
