@@ -126,19 +126,19 @@
   }
 
   function startPlaying(levelId) {
+    levelId = Number(levelId) || 1;
+    console.log("[Map] startPlaying", levelId, "mode=", mapMode);
+
     try {
       var so = document.getElementById("startOverlay");
       if (so) { so.classList.add("hidden"); so.style.display = "none"; }
     } catch (e) {}
 
-    const els = getEls();
     mapFlying = false;
-    if (els.screen) els.screen.style.display = "none";
+    window.__airborneReturnToHangar = false;
+    window.__airbornePendingMapLevel = levelId;
 
-    // Tell the game which map post we're entering (1–6)
-    window.__airbornePendingMapLevel = Number(levelId) || 1;
-    // Force training to restart from intro whenever level 1 is chosen
-    if (Number(levelId) === 1) {
+    if (levelId === 1) {
       try { if (window.__airborneHardResetTraining) window.__airborneHardResetTraining(); } catch (e) {}
       window.__airborneForceTrainRestart = true;
       window.__airborneRuffStage = "intro";
@@ -147,13 +147,51 @@
       window.__airborneTrainingReportShown = false;
     }
 
-    // Reveal far-right power / progress / clock dock
+    // Hide map + menu; show game canvas
+    try {
+      var els = getEls();
+      if (els.screen) {
+        els.screen.style.display = "none";
+        els.screen.classList.add("hidden");
+      }
+      var menuEl = document.getElementById("menuScreen");
+      if (menuEl) menuEl.style.display = "none";
+      var cut = document.getElementById("cutsceneScreen");
+      if (cut) cut.style.display = "none";
+      // Kill launch overlays if still around
+      ["otg-loading", "otg-splash", "splashScreen"].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.style.display = "none";
+        el.style.pointerEvents = "none";
+        el.classList.add("otg-hidden");
+        el.classList.add("hidden");
+      });
+      var gsEl = document.getElementById("gameScreen");
+      if (gsEl) {
+        gsEl.style.display = "block";
+        gsEl.style.visibility = "visible";
+        gsEl.style.opacity = "1";
+        gsEl.style.pointerEvents = "auto";
+        gsEl.style.zIndex = "5";
+      }
+      var cv = document.getElementById("gameCanvas");
+      if (cv) {
+        cv.style.display = "block";
+        cv.style.visibility = "visible";
+        cv.style.opacity = "1";
+      }
+    } catch (eShow) {
+      console.error("[Map] show game", eShow);
+    }
+
+    // Dock
     try {
       var dock = document.getElementById("unifiedDock");
       if (dock) {
         dock.classList.remove("menuHidden");
         dock.classList.add("gameActive");
-        if (Number(levelId) === 1) dock.classList.add("trainingShow");
+        if (levelId === 1) dock.classList.add("trainingShow");
         dock.style.display = "flex";
         dock.style.opacity = "1";
         dock.style.visibility = "visible";
@@ -161,20 +199,12 @@
       if (typeof window.__airborneShowUnifiedDock === "function") window.__airborneShowUnifiedDock();
     } catch (e) {}
 
-    if (mapMode === "start") {
-      // Show canvas / hide menu
-      try {
-        var menuEl = document.getElementById("menuScreen");
-        if (menuEl) menuEl.style.display = "none";
-        var gsEl = document.getElementById("gameScreen");
-        if (gsEl) {
-          gsEl.style.display = "block";
-          gsEl.style.visibility = "visible";
-          gsEl.style.opacity = "1";
-        }
-        if (typeof window.stopMenuMusicImmediately === "function") window.stopMenuMusicImmediately();
-      } catch (eShow) {}
-      // Start gameplay (training on post 1)
+    try {
+      if (typeof window.stopMenuMusicImmediately === "function") window.stopMenuMusicImmediately();
+      if (typeof window.stopSplashMusicImmediately === "function") window.stopSplashMusicImmediately();
+    } catch (e) {}
+
+    if (mapMode === "start" || mapMode === "between" || true) {
       var started = false;
       function tryStart(fn, label) {
         if (started || typeof fn !== "function") return;
@@ -189,47 +219,52 @@
       tryStart(window.__airborneEnterGameplay, "EnterGameplay");
       tryStart(window.__airborneGameStart, "GameStart");
       tryStart(window.startGame, "window.startGame");
-      // Always ensure training for post 1 even if startGame ran but training did not stick
-      if (Number(levelId) === 1) {
+
+      // Direct training path if still not in airfield after startGame
+      if (levelId === 1) {
         try {
-          if (!window.__airborneAirfield && typeof window.beginAirfieldTraining === "function") {
-            window.beginAirfieldTraining();
-            console.log("[Map] training re-kick beginAirfieldTraining");
-          }
-          var gsFix = document.getElementById("gameScreen");
-          if (gsFix) {
-            gsFix.style.display = "block";
-            gsFix.style.visibility = "visible";
-            gsFix.style.opacity = "1";
+          if (typeof window.beginAirfieldTraining === "function") {
+            if (!window.__airborneAirfield) {
+              window.beginAirfieldTraining();
+              console.log("[Map] beginAirfieldTraining forced");
+            }
           }
         } catch (eKick) {
-          console.error("[Map] training re-kick failed", eKick);
+          console.error("[Map] training force failed", eKick);
+        }
+      } else if (levelId >= 2) {
+        try {
+          if (typeof window.__airborneApplyMapLevel === "function") {
+            window.__airborneApplyMapLevel(levelId);
+          }
+        } catch (eL) {
+          console.error("[Map] apply level failed", eL);
         }
       }
+
+      // Final visibility pass
+      try {
+        var gs2 = document.getElementById("gameScreen");
+        if (gs2) {
+          gs2.style.display = "block";
+          gs2.style.visibility = "visible";
+          gs2.style.opacity = "1";
+        }
+        if (typeof resize === "function") resize();
+        else if (typeof window.resize === "function") window.resize();
+      } catch (eR) {}
+
       if (!started) {
         try {
           if (typeof window.beginAirfieldTraining === "function") {
             window.beginAirfieldTraining();
             started = true;
-            console.log("[Map] started via beginAirfieldTraining");
           }
         } catch (e3) {
-          console.error("[Map] training fallback failed", e3);
+          console.error("[Map] last-resort training failed", e3);
         }
       }
-      if (!started) console.error("[Map] No start path succeeded");
-    } else if (mapMode === "between") {
-      // Mid-run jump: apply progress then resume
-      if (typeof window.__airborneApplyMapLevel === "function") {
-        window.__airborneApplyMapLevel(levelId);
-      }
-      if (typeof mapPendingResume === "function") {
-        const fn = mapPendingResume;
-        mapPendingResume = null;
-        fn();
-      }
-      const gs = document.getElementById("gameScreen");
-      if (gs) gs.style.display = "block";
+      if (!started) console.error("[Map] No start path succeeded — startGame missing?");
     }
   }
 

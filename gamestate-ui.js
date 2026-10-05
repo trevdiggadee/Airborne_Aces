@@ -498,9 +498,9 @@
   }
 
   function startGame() {
-    ensureAudio();
-    setMusicTheme(THEME_NORMAL);
-    startMusic();
+    try { ensureAudio(); } catch (eA) { console.warn("[startGame] ensureAudio", eA); }
+    try { if (typeof setMusicTheme === "function") setMusicTheme(THEME_NORMAL); } catch (eT) {}
+    try { if (typeof startMusic === "function") startMusic(); } catch (eM) {}
     // Clear freeze/pause leftover from prior run
     try {
       state = "playing";
@@ -519,8 +519,12 @@
       if (gsEl) { gsEl.style.display = "block"; gsEl.style.visibility = "visible"; gsEl.style.opacity = "1"; }
     } catch (eClr) {}
     // force hide overlays
-    document.getElementById("startOverlay").classList.add("hidden");
-    document.getElementById("gameOverOverlay").classList.add("hidden");
+    try {
+      var _so = document.getElementById("startOverlay");
+      if (_so) { _so.classList.add("hidden"); _so.style.display = "none"; }
+      var _go = document.getElementById("gameOverOverlay");
+      if (_go) _go.classList.add("hidden");
+    } catch (eOv) {}
     score = 0;
     gameplayScore = 0;
     dodgeStreak = 0;
@@ -532,7 +536,7 @@
     lightningState = null;
     lightningTimer = 3 + Math.random() * 3;
     stormCloudsDecorative = []; cloudWisps = [];
-    scoreVal.textContent = "0";
+    try { if (scoreVal) scoreVal.textContent = "0"; } catch (eSc) {}
     elapsedMs = 0;
     runStartTime = performance.now();
     updateFlipClock(elapsedMs);
@@ -1114,14 +1118,29 @@
   // queued and fires the moment loading finishes.
   let pendingStart = false;
   function bridgeStart() {
-    // Never gate on cross-script `let assetsLoaded` (not visible here).
-    // Assets are already loaded by the time the player reaches the map.
     try {
       pendingStart = false;
+      var gsEl = document.getElementById("gameScreen");
+      if (gsEl) {
+        gsEl.style.display = "block";
+        gsEl.style.visibility = "visible";
+        gsEl.style.opacity = "1";
+      }
+      var mapEl = document.getElementById("worldMapScreen");
+      if (mapEl) { mapEl.style.display = "none"; }
+      var menuEl = document.getElementById("menuScreen");
+      if (menuEl) menuEl.style.display = "none";
       startGame();
     } catch (e) {
       console.error("[bridgeStart]", e);
       pendingStart = true;
+      // Still try training if level 1
+      try {
+        if ((Number(window.__airbornePendingMapLevel) || 1) <= 1 &&
+            typeof window.beginAirfieldTraining === "function") {
+          window.beginAirfieldTraining();
+        }
+      } catch (e2) {}
     }
   }
   window.__airborneGameStart = bridgeStart;

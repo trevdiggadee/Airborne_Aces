@@ -1217,6 +1217,11 @@ html, body {
 
 #gameScreen {
     background: #3b2a1a;
+    position: relative;
+    z-index: 4;
+  }
+  #worldMapScreen {
+    z-index: 30;
   }
 
   
