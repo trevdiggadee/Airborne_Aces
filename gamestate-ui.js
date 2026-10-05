@@ -1186,7 +1186,7 @@
   window.addEventListener("mouseup", __aaClearHold, true);
   function handleInput(e) {
     if (e.cancelable) e.preventDefault();
-    ensureAudio();
+    try { ensureAudio(); } catch (eAu) {}
     window.__airbornePointerDown = true;
     var afp = window.__airborneAirfieldPhase;
     // Any active airfield runway/drive — do not require state==playing
@@ -1228,7 +1228,7 @@
   window.addEventListener("keydown", (e) => {
     if (e.code === "Space") {
       e.preventDefault();
-      ensureAudio();
+      try { ensureAudio(); } catch (eAu2) {}
       window.__airbornePointerDown = true;
       var afp = window.__airborneAirfieldPhase;
       if (window.__airborneAirfield &&

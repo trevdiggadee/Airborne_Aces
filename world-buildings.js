@@ -1001,7 +1001,16 @@
           player.y = H * 0.4;
           player.vy = 0;
           player.rotation = 0;
+          // Finger still down from the hold-to-takeoff, or tapped during the climb:
+          // give an immediate flap so the blimp doesn't sag while the player re-taps
+          if (window.__airborneClimbTapBuffered || window.__airbornePointerDown) {
+            player.vy = (typeof FLAP_VELOCITY === "number") ? FLAP_VELOCITY : -430;
+          }
         }
+        // Finger carried over from hold-to-takeoff: auto-flap until it is lifted (see updatePlayer)
+        window.__airborneCarryHold = !!window.__airbornePointerDown;
+        window.__airborneCarryHoldT = 0;
+        window.__airborneClimbTapBuffered = false;
         if (typeof obstacles !== "undefined") obstacles = [];
         if (typeof spawnInterval !== "undefined") spawnInterval = 999;
         window.__airborneAirfieldRings = false;

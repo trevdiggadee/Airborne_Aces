@@ -78,8 +78,14 @@ window.__airborneRingDebug = false;
     var afp = window.__airborneAirfieldPhase;
     if (window.__airborneAirfield &&
         (afp === "taxi" || afp === "accel" || afp === "skid" || afp === "score" ||
-         afp === "done" || afp === "rollout" || afp === "climb" || !afp)) {
+         afp === "rollout" || afp === "climb")) {
+      // NOTE: "done"/no-phase deliberately NOT blocked here: updatePlayer() applies gravity in
+      // those phases, so blocking taps made the blimp sink with dead controls.
       window.__airborneAirfield = true;
+      if (afp === "climb") {
+        // Scripted climb ignores taps, but remember one so the handoff to free flight feels responsive
+        window.__airborneClimbTapBuffered = true;
+      }
       if (afp === "taxi" || afp === "accel") {
         window.__airborneAirfieldHold = true;
         window.__airbornePointerDown = true;
@@ -98,9 +104,9 @@ window.__airborneRingDebug = false;
     } else {
       player.vy = FLAP_VELOCITY;
     }
-    sfxFlap();
+    try { sfxFlap(); } catch (eSfx) {}
     // Visual pulse on every ship (squash kick, fin lag, exhaust)
-    if (window.__airborneFlapPulse) window.__airborneFlapPulse();
+    try { if (window.__airborneFlapPulse) window.__airborneFlapPulse(); } catch (ePulse) {}
   }
 
   function updatePlayer(dt) {
@@ -150,6 +156,19 @@ window.__airborneRingDebug = false;
         player.x += (lockX - player.x) * Math.min(1, 4 * dt);
       } else {
         player.x = lockX;
+      }
+    }
+
+    // Carried-over takeoff hold: keep gentle auto-flaps until the finger lifts, then normal tap-to-flap
+    if (window.__airborneCarryHold) {
+      if (!window.__airbornePointerDown) {
+        window.__airborneCarryHold = false;
+      } else {
+        window.__airborneCarryHoldT = (window.__airborneCarryHoldT || 0) + dt;
+        if (window.__airborneCarryHoldT >= 0.5) {
+          window.__airborneCarryHoldT = 0;
+          flap();
+        }
       }
     }
 
