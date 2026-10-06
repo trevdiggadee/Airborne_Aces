@@ -404,6 +404,8 @@
     airfieldLandT = 0;
     airfieldScoreT = 0;
     window.__airborneScoreT = 0;
+    window.__airborneSkidMaxSpd = 0;
+    window.__airborneSkidMaxSpd2 = 0;
     airfieldDidLand = false;
     airfieldSkidT = 0;
     airfieldSkidDriveDist = 0;
@@ -551,6 +553,8 @@
     airfieldLandContact = 0;
     airfieldScoreT = 0;
     window.__airborneScoreT = 0;
+    window.__airborneSkidMaxSpd = 0;
+    window.__airborneSkidMaxSpd2 = 0;
     airfieldLandT = 0;
     airfieldFireworks = [];
     window.__airborneAirfieldHold = false;
@@ -740,7 +744,8 @@
           airfieldSkidT = (airfieldSkidT || 0) + dt;
           var taxiTotalMs = window.__airborneTaxiTotalMs || 5000;
           var skidProg = 1 - Math.min(1, Math.max(0, taxiUntil - nowT) / taxiTotalMs);
-          var spd = skidSpeedAt(skidProg, 260); // decelerates to a stop
+          if (!window.__airborneSkidMaxSpd) window.__airborneSkidMaxSpd = planSkidMaxSpd(260, taxiTotalMs / 1000);
+          var spd = skidSpeedAt(skidProg, window.__airborneSkidMaxSpd); // decelerates to a stop
           (airfieldTiles || []).forEach(function (tile) {
             if (!tile) return;
             tile.x -= spd * dt;
@@ -755,7 +760,7 @@
           });
           airfieldTip = "Taxiing…";
           if (typeof obstacleSpeed !== "undefined") obstacleSpeed = spd * 0.3;
-          try { emitSkidFx(spd, 260, dt); } catch (eFx) {}
+          try { emitSkidFx(spd, window.__airborneSkidMaxSpd || 260, dt); } catch (eFx) {}
           // Pin blimp
           var thPin = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
           var landY = (H || 600) - Math.max(40, thPin * 0.28) - ((typeof player !== "undefined" && player && player.h) ? player.h * 0.22 : 10);
@@ -773,6 +778,8 @@
         } else {
           // Taxi finished → score immediately
           window.__airborneTaxiUntil = 0;
+          window.__airborneSkidMaxSpd = 0;
+    window.__airborneSkidMaxSpd2 = 0;
           airfieldTip = "";
           if (typeof obstacleSpeed !== "undefined") obstacleSpeed = 0;
           if (typeof player !== "undefined" && player) player.rotation = 0;
@@ -1343,9 +1350,10 @@
 
       var scrollSec = 4.875; // +30% landing drive
       var skidProg2 = Math.min(1, airfieldSkidT / scrollSec);
-      var spd = skidSpeedAt(skidProg2, 240); // decelerates to a stop
+      if (!window.__airborneSkidMaxSpd2) window.__airborneSkidMaxSpd2 = planSkidMaxSpd(240, scrollSec);
+      var spd = skidSpeedAt(skidProg2, window.__airborneSkidMaxSpd2); // decelerates to a stop
       if (airfieldSkidT < scrollSec) {
-        try { emitSkidFx(spd, 240, dt); } catch (eFx2) {}
+        try { emitSkidFx(spd, window.__airborneSkidMaxSpd2 || 240, dt); } catch (eFx2) {}
         (airfieldTiles || []).forEach(function (tile) {
           if (!tile) return;
           tile.x -= spd * dt;
@@ -1523,6 +1531,29 @@
           r: 1.5 + Math.random() * 1.5, a: 1, age: 0, life: 0.25 + Math.random() * 0.25 });
       }
     }
+  }
+  // Plan the skid so the blimp comes to rest with ~25% of the runway tile still ahead of the
+  // point where the strip loops ("restarts"). Returns the max skid speed that gives that stop distance.
+  function planSkidMaxSpd(baseSpd, T) {
+    try {
+      var tiles = airfieldTiles || [];
+      if (!tiles.length || !tiles[0]) return baseSpd;
+      var tw = tiles[0].w || (W || 400);
+      var period = Math.max(120, tw - 4);
+      var d0 = Infinity;
+      tiles.forEach(function (t) { if (t) d0 = Math.min(d0, t.x + (t.w || tw) + 30); });
+      if (!isFinite(d0) || d0 <= 0) d0 = period;
+      var want = 0.25 * period;
+      var dDef = baseSpd * T / 3.2;               // travel of the default deceleration curve
+      var n = Math.round((dDef - d0 + want) / period);
+      var D = d0 - want + n * period;
+      while (D < dDef * 0.55) D += period;
+      while (D > dDef * 1.7 && D - period > dDef * 0.55) D -= period;
+      var spd = D * 3.2 / T;
+      spd = Math.max(baseSpd * 0.5, Math.min(baseSpd * 1.7, spd));
+      window.__airborneSkidPlan = { d0: Math.round(d0), period: Math.round(period), dist: Math.round(spd * T / 3.2), left: Math.round(d0 - spd * T / 3.2 + 0 ) };
+      return spd;
+    } catch (e) { return baseSpd; }
   }
   // Speed profile for the post-touchdown skid: starts fast, eases to a dead stop at the end
   function skidSpeedAt(progress, maxSpd) {
@@ -1792,7 +1823,7 @@
   window.drawAirfieldRollSmoke = drawAirfieldRollSmoke;
   window.__airborneSkidDebug = function () {
     var t0 = (airfieldTiles && airfieldTiles[0]) ? airfieldTiles[0].x : null;
-    return { phase: airfieldPhase, tileX: t0 === null ? null : Math.round(t0 * 10) / 10, rot: (typeof player !== "undefined" && player) ? Math.round(player.rotation * 1000) / 1000 : null, smoke: (window.__airborneRollSmoke || []).length };
+    return { phase: airfieldPhase, tileX: t0 === null ? null : Math.round(t0 * 10) / 10, rot: (typeof player !== "undefined" && player) ? Math.round(player.rotation * 1000) / 1000 : null, smoke: (window.__airborneRollSmoke || []).length, tiles: (airfieldTiles || []).map(function (t) { return t ? [Math.round(t.x), Math.round(t.w)] : null; }), plan: window.__airborneSkidPlan || null };
   };
 
   function drawAirfieldShadow() {

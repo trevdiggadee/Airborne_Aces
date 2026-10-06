@@ -1431,6 +1431,9 @@
       window.__airborneTrainingBoss = true;
       window.__airborneTrainingBossDone = false;
       window.__airborneTrainingBossTried = false;
+      window.__airborneTrainingBossRetried = false;
+      window.__airborneTrainingBossRespawns = 0;
+      window.__airborneBossGoneT = 0;
       try { playTrainingBossMusic(); } catch (e) {}
     } else if (name === "landing") {
       window.__airborneRuffRequestLand = true;
@@ -4593,19 +4596,35 @@ function finishToMap() {
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       try { bossBanner = null; } catch (e) {}
       // Balloons drift in first (~4s), sky darkens gradually, then boss
-      // Keep continuous balloons — only seed if empty, without jump-resetting positions
-      if (!ruffBgBalloons || !ruffBgBalloons.length) {
-        try { spawnTrainingBgBalloons(); } catch (e) {}
-      }
-      updateTrainingBgBalloons(dt);
-      ensureScreenDust();
-      updateScreenDust(dt);
-      // No screen darken when boss appears
-      updateTrainingBossDark(dt, 0);
-      ruffBossDark = 0;
+      // Decorative effects are isolated: an error in any of them must never stop the boss from spawning
+      try {
+        if (!ruffBgBalloons || !ruffBgBalloons.length) {
+          try { spawnTrainingBgBalloons(); } catch (e) {}
+        }
+        updateTrainingBgBalloons(dt);
+        ensureScreenDust();
+        updateScreenDust(dt);
+        // No screen darken when boss appears
+        updateTrainingBossDark(dt, 0);
+        ruffBossDark = 0;
+      } catch (eDeco) { if (!window.__airborneBossDecoWarned) { window.__airborneBossDecoWarned = true; console.warn("[R.U.F.F.] boss-stage decor error", eDeco); } }
       // Boss arrives after short intro (~1.2s) — no long pause
+      // If the boss vanished without being defeated (error / reset / early clear), bring it back (max 3x)
+      var __bossGone = !(typeof bossActive !== "undefined" && bossActive) &&
+                       !(typeof bossSinking !== "undefined" && bossSinking);
+      if (window.__airborneTrainingBossTried && !window.__airborneTrainingBossDone && __bossGone && ruffStageT > 2) {
+        window.__airborneBossGoneT = (window.__airborneBossGoneT || 0) + dt;
+        if (window.__airborneBossGoneT > 0.8 && (window.__airborneTrainingBossRespawns || 0) < 3) {
+          window.__airborneTrainingBossRespawns = (window.__airborneTrainingBossRespawns || 0) + 1;
+          window.__airborneTrainingBossTried = false;
+          window.__airborneBossGoneT = 0;
+          console.warn("[R.U.F.F.] boss vanished before defeat (t=" + ruffStageT.toFixed(1) + "s) — respawn #" + window.__airborneTrainingBossRespawns);
+        }
+      } else {
+        window.__airborneBossGoneT = 0;
+      }
       if (ruffStageT > 1.2 && !window.__airborneTrainingBossTried && !window.__airborneTrainingBossDone &&
-          !(typeof bossActive !== "undefined" && bossActive) && !ruffLessonPendingNext) {
+          !(typeof bossActive !== "undefined" && bossActive) && (!ruffLessonPendingNext || ruffStageT > 5)) {
         try {
           window.__airborneTrainingBossTried = true;
           window.__airborneTrainingBoss = true;
@@ -4626,7 +4645,7 @@ function finishToMap() {
       if (!ruffLessonPendingNext && !window.__airborneBossCamPause) {
         // Account for ~7s cinematic (zoom + 5s hold + zoom in)
         if (window.__airborneTrainingBossDone ||
-            (ruffStageT > 14 && window.__airborneTrainingBossTried &&
+            (ruffStageT > 14 && window.__airborneTrainingBossTried && (window.__airborneTrainingBossRespawns || 0) >= 3 &&
              typeof bossActive !== "undefined" && !bossActive && !bossSinking)) {
           window.__airborneTrainingBoss = false;
     window.__airborneRingSerial = 0;
