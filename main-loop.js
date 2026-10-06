@@ -506,6 +506,23 @@ function loop(ts) {
         try { window.__airborneUpdateRuff(dt); } catch (e) { console.warn("updRuff", e); }
       }
       try { tickTrainingLessonDriver(dt); } catch (eLD) {}
+
+      // Training uses a separate update branch from normal campaign play.
+      // Keep the core combat systems ticking here too: the training boss is
+      // spawned at x=W+width and needs updateBoss() to fly onto the screen,
+      // while powers need updateStorm() to actually execute after activation.
+      if (bossActive) {
+        try { updateBoss(dt); } catch (eBoss) { console.warn("training updateBoss", eBoss); }
+        try { updateBombs(dt); } catch (eBomb) {}
+        try { updateShellTrailParticles(dt); } catch (eShell) {}
+        try { updateRockets(dt); } catch (eRocket) {}
+        try { updatePlayerBombs(dt); } catch (ePlayerBomb) {}
+      }
+      try { if (typeof updateBossSinking === "function") updateBossSinking(dt); } catch (eSink) {}
+      try { updatePowerup(dt); } catch (ePowerup) {}
+      try { updateBullets(dt); } catch (eBullets) {}
+      try { updateStorm(dt); } catch (eStorm) { console.warn("training updateStorm", eStorm); }
+      try { if (window.PowerFX) window.PowerFX.update(dt); } catch (ePowerFx) {}
       try {
         if (typeof window.__airborneRuffPlatforms !== "undefined") {
           // force canvas draw + DOM every frame while platforms exist

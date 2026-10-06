@@ -317,7 +317,7 @@
           : boss.variant === 4
             ? images[BOSS4_FRAME_KEYS[boss.animFrame]]
             : images[bossImgKey(boss.variant)]);
-    if (!img || !img.naturalWidth) return;
+    const bossImgReady = !!(img && img.naturalWidth);
 
     // brief shake offset while recently hit
     let shakeX = 0;
@@ -326,8 +326,28 @@
       shakeX = Math.sin(remaining * 0.9) * 5 * (remaining / 220);
     }
 
-    drawMotionBlur(img, boss.x + boss.w / 2 + shakeX, boss.y + boss.h / 2, boss.w, boss.h, 0, 80, 0);
-    ctx.drawImage(img, boss.x + shakeX, boss.y, boss.w, boss.h);
+    if (bossImgReady) {
+      drawMotionBlur(img, boss.x + boss.w / 2 + shakeX, boss.y + boss.h / 2, boss.w, boss.h, 0, 80, 0);
+      ctx.drawImage(img, boss.x + shakeX, boss.y, boss.w, boss.h);
+    } else {
+      // Sprite missing / still loading: draw a stand-in so the boss (and its health bar) is never invisible
+      ctx.save();
+      var fx = boss.x + shakeX, fy = boss.y, fw = boss.w, fh = boss.h;
+      var fg = ctx.createLinearGradient(fx, fy, fx, fy + fh);
+      fg.addColorStop(0, "#b8863a"); fg.addColorStop(1, "#5a3a14");
+      ctx.fillStyle = fg;
+      ctx.beginPath();
+      ctx.ellipse(fx + fw / 2, fy + fh * 0.45, fw * 0.5, fh * 0.38, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(fx + fw * 0.35, fy + fh * 0.75, fw * 0.3, fh * 0.2);
+      ctx.strokeStyle = "#ffd27a"; ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold " + Math.max(14, Math.round(fh * 0.16)) + "px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("BOSS", fx + fw / 2, fy + fh * 0.5);
+      ctx.restore();
+    }
 
     // Hit feedback without white flash (shake + particles + damage nums only)
 
