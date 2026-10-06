@@ -729,7 +729,6 @@
     "rings",
     "obstacles",
     "platforms",
-    "shield",
     "combined",
     "boss1",
     "landing",
@@ -1203,7 +1202,6 @@
         // cruise: skip — already shown at intro
         // altitude / rings: no banner
         obstacles: "Obstacles",
-        shield: "Shield",
         combined: "Combined Practice",
         boss1: "Boss Fight",
         landing: "Landing",
@@ -4350,16 +4348,16 @@ function finishToMap() {
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
       window.__airborneFirePickup = null;
-      if (ruffStageT > 8) {
-        setStage("altitude");
-        console.log("[R.U.F.F.] cruise → altitude");
+      // Keep the tutorial moving: rings are the first hands-on lesson.
+      if (ruffStageT > 3.5) {
+        setStage("rings");
+        console.log("[R.U.F.F.] cruise → rings (first lesson)");
       }
     } else if (ruffStage === "altitude") {
+      // Legacy altitude stage kept for compatibility; skip it in training flow.
       ruffMarkers = [];
-      if (ruffStageT > 15) {
-        setStage("rings");
-        console.log("[R.U.F.F.] altitude → rings");
-      }
+      setStage("rings");
+      console.log("[R.U.F.F.] altitude skipped → rings");
     } else if (ruffStage === "rings") {
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false; // dedicated spawner only
@@ -4440,12 +4438,12 @@ function finishToMap() {
       var anyPlat = ruffPlatforms && ruffPlatforms.some(function (p) {
         return p && (p.x + (p.w || 0) > -20);
       });
-      if (!anyPlat && ruffStageT > 8) {
-        setStage("shield");
-        console.log("[R.U.F.F.] platforms → shield (cleared)");
-      } else if (ruffStageT > 60) {
-        setStage("shield");
-        console.log("[R.U.F.F.] platforms → shield (timeout)");
+      if (!anyPlat && ruffStageT > 5) {
+        setStage("combined");
+        console.log("[R.U.F.F.] platforms → combined (shield lesson removed)");
+      } else if (ruffStageT > 35) {
+        setStage("combined");
+        console.log("[R.U.F.F.] platforms → combined (timeout; shield lesson removed)");
       }
     } else if (ruffStage === "obstacles") {
       window.__airborneAirfieldInvuln = false;
@@ -4480,7 +4478,13 @@ function finishToMap() {
     } else if (ruffStage === "airship") {
       setStage("boss1");
     } else if (ruffStage === "shield") {
+      // Shield lesson removed from training; shield can be taught in later lessons.
       try { ruffCoins = []; ruffCrystals = []; } catch (e) {}
+      window.__airborneAirfieldAllowShield = false;
+      setStage("combined");
+      console.log("[R.U.F.F.] shield lesson skipped");
+      return;
+      /* legacy shield lesson retained below for compatibility */
       window.__airborneAirfieldAllowShield = true;
       // Spawn shield early
       if ((typeof shieldPickup === "undefined" || !shieldPickup || shieldPickup.x < -50) && ruffStageT < 8 && !(typeof shieldActive !== "undefined" && shieldActive)) {
@@ -4629,6 +4633,8 @@ function finishToMap() {
           window.__airborneTrainingBossTried = true;
           window.__airborneTrainingBoss = true;
           try { bossBanner = null; } catch (e0) {}
+          // Start the boss track at the encounter, before the boss enters from off-screen.
+          try { if (typeof playTrainingBossMusic === "function") playTrainingBossMusic(); } catch (eMusic) {}
           if (typeof triggerBoss === "function") {
             triggerBoss(1);
             if (typeof boss !== "undefined" && boss) {

@@ -322,20 +322,11 @@
     let w = Math.max(W * 0.85, h * aspect);
     // Keep the strip where it already is on screen so touchdown doesn't make the runway jump
     var keepX = (airfieldTiles && airfieldTiles[0] && isFinite(airfieldTiles[0].x)) ? airfieldTiles[0].x : null;
-    airfieldTiles = [];
-    for (var i = 0; i < 3; i++) {
-      airfieldTiles.push({ x: i * w * 0.98 - w * 0.2, w: w, h: h, startX: 0 });
-    }
-    if (keepX !== null) {
-      var shift = keepX - airfieldTiles[0].x;
-      // wrap so the first tile always covers the left edge
-      var period = w * 0.98;
-      shift = ((shift % period) + period) % period;
-      if (shift > period * 0.5) shift -= period;
-      airfieldTiles.forEach(function (t) { t.x += shift; });
-      // make sure the screen is still fully covered after the shift
-      while (airfieldTiles[0].x > 0) { airfieldTiles.forEach(function (t) { t.x -= period; }); }
-    }
+    // Use one landing-field image after touchdown. It scrolls toward the
+    // end of the artwork and then stays fixed — no repeating runway tiles.
+    var x0 = (keepX !== null) ? keepX : (W || 400) * 0.55;
+    var stopX = (W || 400) * 0.10 - w; // keep the final ~10% visible
+    airfieldTiles = [{ x: x0, w: w, h: h, startX: x0, stopX: stopX }];
   }
 
   function beginAirfieldTraining() {
@@ -750,13 +741,9 @@
             if (!tile) return;
             tile.x -= spd * dt;
             var tw = tile.w || (W || 400);
-            if (tile.x + tw < -30) {
-              var right = -Infinity;
-              for (var j = 0; j < airfieldTiles.length; j++) {
-                if (airfieldTiles[j]) right = Math.max(right, airfieldTiles[j].x + (airfieldTiles[j].w || tw));
-              }
-              tile.x = (isFinite(right) ? right : (W || 400)) - 4;
-            }
+            // Single landing image: scroll to its end, then hold it there.
+            var stopX = (typeof tile.stopX === "number") ? tile.stopX : ((W || 400) * 0.10 - tw);
+            if (tile.x <= stopX) tile.x = stopX;
           });
           airfieldTip = "Taxiing…";
           if (typeof obstacleSpeed !== "undefined") obstacleSpeed = spd * 0.3;
@@ -1358,16 +1345,10 @@
           if (!tile) return;
           tile.x -= spd * dt;
           var tw = tile.w || W;
-          if (tile.x + tw < -20) {
-            var right = -Infinity;
-            for (var j = 0; j < airfieldTiles.length; j++) {
-              if (airfieldTiles[j]) {
-                right = Math.max(right, airfieldTiles[j].x + (airfieldTiles[j].w || tw));
-              }
-            }
-            if (!isFinite(right)) right = W;
-            tile.x = right - 2;
-          }
+          // Never wrap the landing artwork. Once its end is nearly reached,
+          // freeze the image while the blimp continues its existing skid/stop.
+          var stopX2 = (typeof tile.stopX === "number") ? tile.stopX : ((W || 400) * 0.10 - tw);
+          if (tile.x <= stopX2) tile.x = stopX2;
         });
         airfieldTip = "Taxiing…";
         if (typeof obstacleSpeed !== "undefined") obstacleSpeed = spd * 0.35;
