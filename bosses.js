@@ -875,9 +875,9 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       // Opening broadside fan — 6 cannonballs
       var px0 = (typeof player !== "undefined" && player) ? player.x : 100;
       var py0 = (typeof player !== "undefined" && player) ? player.y : 200;
-      for (var ji = 0; ji < 6; ji++) {
-        var ang = -0.95 + ji * 0.32;
-        var sp = 170 + Math.random() * 40;
+      for (var ji = 0; ji < 3; ji++) {
+        var ang = -0.65 + ji * 0.65;
+        var sp = (170 + Math.random() * 40) * 0.5;
         window.__airborneHeatseekers.push({
           x: px0 + 10, y: py0,
           vx: Math.cos(ang) * sp,
@@ -4664,7 +4664,7 @@ if (window.__airbornePlasmaIgnite) {
               // Flip side: left fires left-ish, right fires right-ish but mostly forward
               var baseAng = cn.side < 0 ? -0.6 + cn.ang * 0.5 : 0.3 + cn.ang * 0.4;
               baseAng += (Math.random() - 0.5) * 0.25;
-              var sp = 160 + Math.random() * 70;
+              var sp = (160 + Math.random() * 70) * 0.5;
               jr.skullEvery++;
               var isSkull = tN > 0.35 && (jr.skullEvery % 4 === 0);
               var isHeavy = Math.random() < 0.18;
@@ -4689,14 +4689,14 @@ if (window.__airbornePlasmaIgnite) {
           // Ghost cannon every ~1s
           jr.ghostT -= dt;
           if (jr.ghostT <= 0 && typeof player !== "undefined" && player) {
-            jr.ghostT = 1.0;
+            jr.ghostT = 2.0;
             var gAng = -0.1 + (Math.random() - 0.5) * 0.2;
             jr.ghostCannons[0].life = 0.55;
             jr.ghostCannons[0].flash = 1;
             jr.ghostCannons[0].ang = gAng;
             window.__airborneHeatseekers.push({
               x: player.x - 10, y: player.y,
-              vx: Math.cos(gAng) * 260,
+              vx: Math.cos(gAng) * 130,
               vy: Math.sin(gAng) * 40,
               life: 2.5, age: 0,
               rot: 0, spin: 4,
@@ -4717,12 +4717,12 @@ if (window.__airbornePlasmaIgnite) {
           // Finale broadside
           if (jr.age > jr.life - 0.5 && !jr.finaleDone && typeof player !== "undefined" && player) {
             jr.finaleDone = true;
-            for (var fi = 0; fi < 10; fi++) {
-              var fa = -1.0 + fi * 0.22;
+            for (var fi = 0; fi < 5; fi++) {
+              var fa = -0.7 + fi * 0.35;
               window.__airborneHeatseekers.push({
                 x: player.x, y: player.y,
-                vx: Math.cos(fa) * (180 + Math.random() * 50),
-                vy: Math.sin(fa) * 100 - 20,
+                vx: Math.cos(fa) * (90 + Math.random() * 25),
+                vy: Math.sin(fa) * 50 - 10,
                 life: 2.8, age: 0,
                 rot: Math.random() * Math.PI * 2,
                 spin: 8 + Math.random() * 5,

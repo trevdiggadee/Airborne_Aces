@@ -1335,7 +1335,7 @@
       }
       airfieldUseLandingArt = true;
 
-      var scrollSec = 2.875; // stop the landing-strip scroll 2 seconds sooner
+      var scrollSec = 0.875; // stop the landing-strip scroll 2 seconds sooner than the current 2.875s timing
       var skidProg2 = Math.min(1, airfieldSkidT / scrollSec);
       if (!window.__airborneSkidMaxSpd2) window.__airborneSkidMaxSpd2 = planSkidMaxSpd(240, scrollSec);
       var spd = skidSpeedAt(skidProg2, window.__airborneSkidMaxSpd2); // decelerates to a stop
