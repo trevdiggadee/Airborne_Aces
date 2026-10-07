@@ -294,7 +294,7 @@ function triggerBoss(num) {
 
       if (boss.variant === 3) {
         // boss 3 has a real 36-frame idle animation — cycle through it
-        boss.animTimer += dt;
+        boss.animTimer += dt * (window.__airborneTrainingBoss ? 0.5 : 1);
         const frameDur = 1 / BOSS3_ANIM_FPS;
         while (boss.animTimer >= frameDur) {
           boss.animTimer -= frameDur;
@@ -337,7 +337,7 @@ function triggerBoss(num) {
 
       if (boss.variant === 2) {
         // boss 2 has a real 36-frame idle animation — cycle through it
-        boss.animTimer += dt;
+        boss.animTimer += dt * (window.__airborneTrainingBoss ? 0.5 : 1);
         const frameDur = 1 / BOSS2_ANIM_FPS;
         while (boss.animTimer >= frameDur) {
           boss.animTimer -= frameDur;
@@ -345,7 +345,7 @@ function triggerBoss(num) {
         }
       } else if (boss.variant === 4) {
         // boss 4 also has a real 36-frame idle animation — cycle through it
-        boss.animTimer += dt;
+        boss.animTimer += dt * (window.__airborneTrainingBoss ? 0.5 : 1);
         const frameDur = 1 / BOSS4_ANIM_FPS;
         while (boss.animTimer >= frameDur) {
           boss.animTimer -= frameDur;

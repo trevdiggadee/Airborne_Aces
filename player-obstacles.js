@@ -1286,8 +1286,8 @@ window.__airborneRingDebug = false;
           for (var oi = 0; oi < nOrb; oi++) {
             window.__airborneFireOrbiters.push({
               phase: (oi / nOrb) * Math.PI * 2,
-              speed: isJade ? (1.6 + Math.random() * 0.4) : (2.4 + Math.random() * 0.9),
-              baseSpeed: isJade ? (3.2 + Math.random() * 0.6) : (2.4 + Math.random() * 0.9),
+              speed: (isJade ? (1.6 + Math.random() * 0.4) : (2.4 + Math.random() * 0.9)) * (window.__airborneTrainingBoss ? 0.5 : 1),
+              baseSpeed: (isJade ? (3.2 + Math.random() * 0.6) : (2.4 + Math.random() * 0.9)) * (window.__airborneTrainingBoss ? 0.5 : 1),
               radius: isJade ? (0.95 + Math.random() * 0.12) : ((0.52 + Math.random() * 0.18) * 1.15),
               targetRadius: isJade ? ((0.55 + Math.random() * 0.12) * 1.15) : ((0.52 + Math.random() * 0.18) * 1.15),
               tilt: 0.55 + Math.random() * 0.35,
@@ -1308,7 +1308,7 @@ window.__airborneRingDebug = false;
           var nShot = 10;
           for (var si = 0; si < nShot; si++) {
             var sang = (si / nShot) * Math.PI * 2 + Math.random() * 0.12;
-            var ssp = 240 + Math.random() * 90;
+            var ssp = (240 + Math.random() * 90) * (window.__airborneTrainingBoss ? 0.5 : 1);
             window.__airborneFireballs.push({
               x: player.x + Math.cos(sang) * (player.w || 40) * 0.45,
               y: player.y + Math.sin(sang) * (player.h || 30) * 0.45,
@@ -1407,7 +1407,7 @@ window.__airborneRingDebug = false;
         var orbs = window.__airborneFireOrbiters;
         for (var oi = 0; oi < orbs.length; oi++) {
           var orb = orbs[oi];
-          var act = Math.min(1, (window.__airborneFireActivateT || 0) / 0.45);
+          var act = Math.min(1, (window.__airborneFireActivateT || 0) / (window.__airborneTrainingBoss ? 0.9 : 0.45));
           var ox, oy;
           if (orb.mode === "outbound") {
             orb.outAge = (orb.outAge || 0) + dt;
@@ -1700,7 +1700,7 @@ window.__airborneRingDebug = false;
       }
       if (window.__airborneFirePowerActive && typeof player !== "undefined" && player) {
         ctx.save();
-        var act = Math.min(1, (window.__airborneFireActivateT || 0) / 0.45);
+        var act = Math.min(1, (window.__airborneFireActivateT || 0) / (window.__airborneTrainingBoss ? 0.9 : 0.45));
         var pulse = 0.85 + 0.15 * Math.sin(performance.now() * 0.012);
         // Heat shimmer / dense core aura around blimp
         var coreR = Math.max(player.w, player.h) * (0.55 + 0.25 * act) * pulse;

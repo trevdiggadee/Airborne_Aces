@@ -1335,7 +1335,7 @@
       }
       airfieldUseLandingArt = true;
 
-      var scrollSec = 4.875; // +30% landing drive
+      var scrollSec = 2.875; // stop the landing-strip scroll 2 seconds sooner
       var skidProg2 = Math.min(1, airfieldSkidT / scrollSec);
       if (!window.__airborneSkidMaxSpd2) window.__airborneSkidMaxSpd2 = planSkidMaxSpd(240, scrollSec);
       var spd = skidSpeedAt(skidProg2, window.__airborneSkidMaxSpd2); // decelerates to a stop
@@ -1347,7 +1347,7 @@
           var tw = tile.w || W;
           // Never wrap the landing artwork. Once its end is nearly reached,
           // freeze the image while the blimp continues its existing skid/stop.
-          var stopX2 = (typeof tile.stopX === "number") ? tile.stopX : ((W || 400) * 0.10 - tw);
+          var stopX2 = (typeof tile.stopX === "number") ? tile.stopX : ((W || 400) * 0.90 - tw);
           if (tile.x <= stopX2) tile.x = stopX2;
         });
         airfieldTip = "Taxiing…";
