@@ -196,6 +196,9 @@
   let stormChainBolts = []; // secondary bolts branching from the cloud to each zapped obstacle
   let nextStormLightningAt = 0;
   let stormMode = "storm"; // "storm" | "pirate" | "swarm" | "missile"
+  // Missile/power-up balancing: slower flight and less frequent volleys, applied consistently.
+  const POWER_MISSILE_SPEED_SCALE = 0.62;
+  const POWER_MISSILE_RATE_SCALE = 1.55;
   let stormSwarm = [];
   const SHIP_POWER_ICON_KEYS = {
     blimp3: "power_icon_blimp3",
@@ -992,7 +995,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       ];
       window.__airborneSkyJets = [];
       var leaderStartX = -20; // leader enters from left first
-      var speed = 270; // +15% formation speed
+      var speed = 270 * POWER_MISSILE_SPEED_SCALE; // balanced missile/jet travel speed
       for (var ji = 0; ji < 5; ji++) {
         var f = form[ji];
         window.__airborneSkyJets.push({
@@ -4569,7 +4572,7 @@ if (window.__airbornePlasmaIgnite) {
         var spawnGap = (stormMode === "warshark")
           ? (tN < 0.2 ? 0.44 : (tN < 0.6 ? 0.35 : (tN < 0.9 ? 0.22 : 0.12))) // ~25% fewer
           : (stormMode === "barrelbomb") ? 0.75 : 0.45;
-        window.__airborneHeatseekSpawnT = spawnGap;
+        window.__airborneHeatseekSpawnT = spawnGap * POWER_MISSILE_RATE_SCALE;
         if (stormMode === "jollybomb") {
           // Handled by Dead Man's Broadside brain below
         } else {
@@ -4887,8 +4890,8 @@ if (window.__airbornePlasmaIgnite) {
             if (rk.y > Hh - 8 && rk.vy > 0) { rk.vy *= -0.75; rk.ricochet--; rk.y = Hh - 8; }
           }
         }
-        rk.x += rk.vx * dt;
-        rk.y += rk.vy * dt;
+        rk.x += rk.vx * POWER_MISSILE_SPEED_SCALE * dt;
+        rk.y += rk.vy * POWER_MISSILE_SPEED_SCALE * dt;
         // Exhaust trail at rear (lighter for barrel bombs)
         if (Math.random() < ((rk.kind === "barrelbomb" || rk.kind === "jollybomb") ? 0.35 : 0.85)) {
           var bx = -Math.cos(rk.rot);
@@ -5081,8 +5084,8 @@ if (window.__airbornePlasmaIgnite) {
       for (var wi = wbs.length - 1; wi >= 0; wi--) {
         var wb = wbs[wi];
         wb.age = (wb.age || 0) + dt;
-        wb.x += (wb.vx || 0) * dt;
-        wb.y += (wb.vy || 0) * dt;
+        wb.x += (wb.vx || 0) * POWER_MISSILE_SPEED_SCALE * dt;
+        wb.y += (wb.vy || 0) * POWER_MISSILE_SPEED_SCALE * dt;
         var hitB = false;
         if (typeof obstacles !== "undefined") {
           for (var oi = obstacles.length - 1; oi >= 0; oi--) {
@@ -5129,8 +5132,9 @@ if (window.__airbornePlasmaIgnite) {
       stormSwarm.forEach(function(p) {
         if (p.delay && p.age + dt < p.delay) { p.age += dt; return; }
         p.age += dt;
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
+        var pSpeedScale = POWER_MISSILE_SPEED_SCALE;
+        p.x += p.vx * pSpeedScale * dt;
+        p.y += p.vy * pSpeedScale * dt;
         if (p.style === "missile") {
           p.vy += 28 * dt;
           p.spin = Math.atan2(p.vy, p.vx);

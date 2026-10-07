@@ -200,7 +200,7 @@
       try { ensureTaxiRunwayStrip(); } catch (e) {
         try { ensureAirfieldStripVisible(); } catch (e2) {}
       }
-      window.__airborneTaxiUntil = performance.now() + 3000; // score after 3s — stop the strip 2s sooner
+      window.__airborneTaxiUntil = performance.now() + 5000; // score after 5s
       if (typeof player !== "undefined" && player && typeof H !== "undefined") {
         var th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
         var landY = H - Math.max(40, th * 0.28) - (player.h ? player.h * 0.22 : 10);
@@ -322,11 +322,20 @@
     let w = Math.max(W * 0.85, h * aspect);
     // Keep the strip where it already is on screen so touchdown doesn't make the runway jump
     var keepX = (airfieldTiles && airfieldTiles[0] && isFinite(airfieldTiles[0].x)) ? airfieldTiles[0].x : null;
-    // Use one landing-field image after touchdown. It scrolls toward the
-    // end of the artwork and then stays fixed — no repeating runway tiles.
-    var x0 = (keepX !== null) ? keepX : (W || 400) * 0.55;
-    var stopX = (W || 400) * 0.80 - w; // stop with the landing image ending ~20% shy of the right edge
-    airfieldTiles = [{ x: x0, w: w, h: h, startX: x0, stopX: stopX }];
+    airfieldTiles = [];
+    for (var i = 0; i < 3; i++) {
+      airfieldTiles.push({ x: i * w * 0.98 - w * 0.2, w: w, h: h, startX: 0 });
+    }
+    if (keepX !== null) {
+      var shift = keepX - airfieldTiles[0].x;
+      // wrap so the first tile always covers the left edge
+      var period = w * 0.98;
+      shift = ((shift % period) + period) % period;
+      if (shift > period * 0.5) shift -= period;
+      airfieldTiles.forEach(function (t) { t.x += shift; });
+      // make sure the screen is still fully covered after the shift
+      while (airfieldTiles[0].x > 0) { airfieldTiles.forEach(function (t) { t.x -= period; }); }
+    }
   }
 
   function beginAirfieldTraining() {
@@ -733,7 +742,7 @@
         if (nowT < taxiUntil) {
           airfieldPhase = "skid";
           airfieldSkidT = (airfieldSkidT || 0) + dt;
-          var taxiTotalMs = window.__airborneTaxiTotalMs || 3000;
+          var taxiTotalMs = window.__airborneTaxiTotalMs || 5000;
           var skidProg = 1 - Math.min(1, Math.max(0, taxiUntil - nowT) / taxiTotalMs);
           if (!window.__airborneSkidMaxSpd) window.__airborneSkidMaxSpd = planSkidMaxSpd(260, taxiTotalMs / 1000);
           var spd = skidSpeedAt(skidProg, window.__airborneSkidMaxSpd); // decelerates to a stop
@@ -741,9 +750,13 @@
             if (!tile) return;
             tile.x -= spd * dt;
             var tw = tile.w || (W || 400);
-            // Single landing image: scroll to its end, then hold it there.
-            var stopX = (typeof tile.stopX === "number") ? tile.stopX : ((W || 400) * 0.10 - tw);
-            if (tile.x <= stopX) tile.x = stopX;
+            if (tile.x + tw < -30) {
+              var right = -Infinity;
+              for (var j = 0; j < airfieldTiles.length; j++) {
+                if (airfieldTiles[j]) right = Math.max(right, airfieldTiles[j].x + (airfieldTiles[j].w || tw));
+              }
+              tile.x = (isFinite(right) ? right : (W || 400)) - 4;
+            }
           });
           airfieldTip = "Taxiing…";
           if (typeof obstacleSpeed !== "undefined") obstacleSpeed = spd * 0.3;
@@ -1277,7 +1290,7 @@
           player.rotation = 0;
           airfieldTip = "Taxiing…";
           try { ensureTaxiRunwayStrip(); } catch (eTr) {}
-          window.__airborneTaxiUntil = performance.now() + 3000; // score after 3s — stop the strip 2s sooner
+          window.__airborneTaxiUntil = performance.now() + 5000; // score after 5s
           try { syncAirfieldGlobals(); } catch (eSync) {}
           try {
             if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();
@@ -1335,7 +1348,7 @@
       }
       airfieldUseLandingArt = true;
 
-      var scrollSec = 0.875; // stop the landing-strip scroll 2 seconds sooner than the current 2.875s timing
+      var scrollSec = 6.875; // landing strip travels 2s longer before the fixed stop
       var skidProg2 = Math.min(1, airfieldSkidT / scrollSec);
       if (!window.__airborneSkidMaxSpd2) window.__airborneSkidMaxSpd2 = planSkidMaxSpd(240, scrollSec);
       var spd = skidSpeedAt(skidProg2, window.__airborneSkidMaxSpd2); // decelerates to a stop
@@ -1345,10 +1358,16 @@
           if (!tile) return;
           tile.x -= spd * dt;
           var tw = tile.w || W;
-          // Never wrap the landing artwork. Once its end is nearly reached,
-          // freeze the image while the blimp continues its existing skid/stop.
-          var stopX2 = (typeof tile.stopX === "number") ? tile.stopX : ((W || 400) * 0.80 - tw);
-          if (tile.x <= stopX2) tile.x = stopX2;
+          if (tile.x + tw < -20) {
+            var right = -Infinity;
+            for (var j = 0; j < airfieldTiles.length; j++) {
+              if (airfieldTiles[j]) {
+                right = Math.max(right, airfieldTiles[j].x + (airfieldTiles[j].w || tw));
+              }
+            }
+            if (!isFinite(right)) right = W;
+            tile.x = right - 2;
+          }
         });
         airfieldTip = "Taxiing…";
         if (typeof obstacleSpeed !== "undefined") obstacleSpeed = spd * 0.35;
