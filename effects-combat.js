@@ -748,7 +748,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         // Contain sprite inside boss box without stretching
         var nw = simg.naturalWidth, nh = simg.naturalHeight;
         var boxW = s._fitW, boxH = s._fitH;
-        var sc = Math.min(boxW / nw, boxH / nh);
+        var sc = Math.min(boxW / nw, boxH / nh) * 1.18;
         var dw = nw * sc, dh = nh * sc;
         ctx.drawImage(simg, 0, 0, nw, nh, -dw / 2, -dh / 2, dw, dh);
       } else if (img && img.naturalWidth) {
@@ -1546,7 +1546,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
   }
 
   function updateHitParticles(dt) {
-    try { if (window.PowerFX) window.PowerFX.update(window.__airborneTrainingBoss ? (dt / 3) : dt); } catch (e) {}
+    try { if (window.PowerFX) window.PowerFX.update(dt); } catch (e) {}
 
     hitParticles.forEach(p => {
       p.age += dt;

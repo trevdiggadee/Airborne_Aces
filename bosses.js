@@ -1935,7 +1935,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
               y: player.y + Math.sin(fa) * 20,
               vx: Math.cos(fa) * 180,
               vy: Math.sin(fa) * 180,
-              life: 2.5, age: 0, rot: fa,
+              life: 3.2, age: 0, rot: fa,
               w: 40, h: 28,
               waveAmp: 0, waveFreq: 1, wavePhase: 0,
               heavy: true, homeT: 0.8, cage: true, trail: []
@@ -4657,7 +4657,7 @@ if (window.__airbornePlasmaIgnite) {
             cn.fireT -= dt;
             if (cn.flash > 0) cn.flash = Math.max(0, cn.flash - dt * 4);
             if (cn.fireT <= 0 && typeof player !== "undefined" && player) {
-              var gap = tN < 0.2 ? 0.38 : (tN < 0.6 ? 0.28 : (tN < 0.9 ? 0.18 : 0.12));
+              var gap = tN < 0.2 ? 0.76 : (tN < 0.6 ? 0.56 : (tN < 0.9 ? 0.36 : 0.24));
               cn.fireT = gap + Math.random() * 0.08;
               cn.flash = 1;
               var fang = cn.ang + (cn.side > 0 ? 0.15 : -0.15) + (Math.random() - 0.5) * 0.2;
@@ -4698,7 +4698,7 @@ if (window.__airbornePlasmaIgnite) {
               x: player.x - 10, y: player.y,
               vx: Math.cos(gAng) * 130,
               vy: Math.sin(gAng) * 40,
-              life: 2.5, age: 0,
+              life: 3.2, age: 0,
               rot: 0, spin: 4,
               trails: [], target: null,
               kind: "jollybomb",
@@ -4932,7 +4932,7 @@ if (window.__airbornePlasmaIgnite) {
         }
         // Mid-air fuse for War Shark barrel bombs (~0.55s then AOE)
         var fuseBoom = false;
-        if ((rk.kind === "barrelbomb" || rk.kind === "jollybomb") && rk.age >= (rk.kind === "jollybomb" ? 0.85 : 1.05) && !rk.fused) {
+        if ((rk.kind === "barrelbomb" || rk.kind === "jollybomb") && rk.age >= (rk.kind === "jollybomb" ? 1.35 : 1.05) && !rk.fused) {
           rk.fused = true;
           fuseBoom = true;
         }
