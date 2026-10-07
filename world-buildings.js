@@ -325,7 +325,7 @@
     // Use one landing-field image after touchdown. It scrolls toward the
     // end of the artwork and then stays fixed — no repeating runway tiles.
     var x0 = (keepX !== null) ? keepX : (W || 400) * 0.55;
-    var stopX = (W || 400) * 0.90 - w; // stop with the landing image ending ~10% shy of the right edge
+    var stopX = (W || 400) * 0.80 - w; // stop with the landing image ending ~20% shy of the right edge
     airfieldTiles = [{ x: x0, w: w, h: h, startX: x0, stopX: stopX }];
   }
 
@@ -1347,7 +1347,7 @@
           var tw = tile.w || W;
           // Never wrap the landing artwork. Once its end is nearly reached,
           // freeze the image while the blimp continues its existing skid/stop.
-          var stopX2 = (typeof tile.stopX === "number") ? tile.stopX : ((W || 400) * 0.90 - tw);
+          var stopX2 = (typeof tile.stopX === "number") ? tile.stopX : ((W || 400) * 0.80 - tw);
           if (tile.x <= stopX2) tile.x = stopX2;
         });
         airfieldTip = "Taxiing…";

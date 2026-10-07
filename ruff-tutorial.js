@@ -1416,12 +1416,11 @@
       try { ruffCoins = []; ruffCrystals = []; } catch (e) {}
       try { spawnTrainingPlatformsLesson(); } catch (e) { console.warn("combined plats", e); }
     } else if (name === "boss1") {
-      // Only hard-clear leftovers; prefer natural scroll-off before boss
+      // Preserve platforms when the boss lesson begins; let them naturally scroll off.
+      // Only non-platform collectibles are cleared for the clean boss encounter.
       try {
         ruffCoins = [];
         ruffCrystals = [];
-        ruffPlatforms = [];
-        window.__airborneRuffPlatforms = [];
       } catch (e) {}
       window.__airborneAirfieldRings = false;
       window.__airborneAirfieldObstacles = false;
@@ -4590,12 +4589,9 @@ function finishToMap() {
         console.log("[R.U.F.F.] airship → boss1");
       }
     } else if (ruffStage === "boss1") {
-      // Sweep any leftover platforms immediately so boss is clean
-      if (ruffPlatforms && ruffPlatforms.length) {
-        ruffPlatforms = [];
-        window.__airborneRuffPlatforms = [];
-      }
-      try { ruffCoins = []; ruffCrystals = []; ruffPlatforms = []; } catch (e) {}
+      // Keep the existing training platforms visible during the boss lesson.
+      // They continue scrolling naturally and disappear only when they leave the screen.
+      try { ruffCoins = []; ruffCrystals = []; } catch (e) {}
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;

@@ -519,10 +519,14 @@ function loop(ts) {
         try { updatePlayerBombs(dt); } catch (ePlayerBomb) {}
       }
       try { if (typeof updateBossSinking === "function") updateBossSinking(dt); } catch (eSink) {}
-      try { updatePowerup(dt); } catch (ePowerup) {}
-      try { updateBullets(dt); } catch (eBullets) {}
-      try { updateStorm(dt); } catch (eStorm) { console.warn("training updateStorm", eStorm); }
-      try { if (window.PowerFX) window.PowerFX.update(dt); } catch (ePowerFx) {}
+      // Training boss weapon/power-up motion is deliberately slowed to 1/4 speed.
+      // This applies consistently to fire power, Jolly Roger, rockets, and other
+      // projectile-style power-ups without changing normal campaign gameplay.
+      var trainingPowerDt = window.__airborneTrainingBoss ? (dt / 4) : dt;
+      try { updatePowerup(trainingPowerDt); } catch (ePowerup) {}
+      try { updateBullets(trainingPowerDt); } catch (eBullets) {}
+      try { updateStorm(trainingPowerDt); } catch (eStorm) { console.warn("training updateStorm", eStorm); }
+      try { if (window.PowerFX) window.PowerFX.update(trainingPowerDt); } catch (ePowerFx) {}
       try {
         if (typeof window.__airborneRuffPlatforms !== "undefined") {
           // force canvas draw + DOM every frame while platforms exist
