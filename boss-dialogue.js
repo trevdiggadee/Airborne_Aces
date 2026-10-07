@@ -273,6 +273,8 @@ function triggerBoss(num) {
 
   function updateBoss(dt) {
     if (!boss) return;
+    // Training boss encounter: deliberately slow the boss, its attacks, and animation to 1/3 speed.
+    if (window.__airborneTrainingBoss) dt *= (1 / 3);
 
     if (!boss.arrived) {
       const arriveSpeed = boss.kind === "tank" ? 1.2 : 1.8; // the tank rolls in, everyone else flies in

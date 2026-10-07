@@ -2796,6 +2796,7 @@
   }
 
   function updateTrainingCoins(dt) {
+    if (window.__airborneTrainingBoss) dt *= (1 / 3);
     if (!ruffCoins.length) return;
     // Stable scroll — same every lesson (combined included)
     var spd = 210;

@@ -200,7 +200,7 @@
       try { ensureTaxiRunwayStrip(); } catch (e) {
         try { ensureAirfieldStripVisible(); } catch (e2) {}
       }
-      window.__airborneTaxiUntil = performance.now() + 5000; // score after 5s
+      window.__airborneTaxiUntil = performance.now() + 3000; // score after 3s — stop the strip 2s sooner
       if (typeof player !== "undefined" && player && typeof H !== "undefined") {
         var th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
         var landY = H - Math.max(40, th * 0.28) - (player.h ? player.h * 0.22 : 10);
@@ -325,7 +325,7 @@
     // Use one landing-field image after touchdown. It scrolls toward the
     // end of the artwork and then stays fixed — no repeating runway tiles.
     var x0 = (keepX !== null) ? keepX : (W || 400) * 0.55;
-    var stopX = (W || 400) * 0.10 - w; // keep the final ~10% visible
+    var stopX = (W || 400) * 0.90 - w; // stop with the landing image ending ~10% shy of the right edge
     airfieldTiles = [{ x: x0, w: w, h: h, startX: x0, stopX: stopX }];
   }
 
@@ -733,7 +733,7 @@
         if (nowT < taxiUntil) {
           airfieldPhase = "skid";
           airfieldSkidT = (airfieldSkidT || 0) + dt;
-          var taxiTotalMs = window.__airborneTaxiTotalMs || 5000;
+          var taxiTotalMs = window.__airborneTaxiTotalMs || 3000;
           var skidProg = 1 - Math.min(1, Math.max(0, taxiUntil - nowT) / taxiTotalMs);
           if (!window.__airborneSkidMaxSpd) window.__airborneSkidMaxSpd = planSkidMaxSpd(260, taxiTotalMs / 1000);
           var spd = skidSpeedAt(skidProg, window.__airborneSkidMaxSpd); // decelerates to a stop
@@ -1277,7 +1277,7 @@
           player.rotation = 0;
           airfieldTip = "Taxiing…";
           try { ensureTaxiRunwayStrip(); } catch (eTr) {}
-          window.__airborneTaxiUntil = performance.now() + 5000; // score after 5s
+          window.__airborneTaxiUntil = performance.now() + 3000; // score after 3s — stop the strip 2s sooner
           try { syncAirfieldGlobals(); } catch (eSync) {}
           try {
             if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();

@@ -18,6 +18,12 @@
     return;
   }
 
+  // Attempt splash music immediately when the page/loading screen begins.
+  // Browsers may still require a user gesture before audible autoplay is permitted.
+  try {
+    if (typeof window.startSplashMusic === 'function') window.startSplashMusic();
+  } catch (eSplashEarly) {}
+
   // Preload poster so it is ready when we transition (never block forever)
   const posterImg = new Image();
   let posterReady = false;

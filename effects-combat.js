@@ -1546,7 +1546,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
   }
 
   function updateHitParticles(dt) {
-    try { if (window.PowerFX) window.PowerFX.update(dt); } catch (e) {}
+    try { if (window.PowerFX) window.PowerFX.update(window.__airborneTrainingBoss ? (dt / 3) : dt); } catch (e) {}
 
     hitParticles.forEach(p => {
       p.age += dt;
