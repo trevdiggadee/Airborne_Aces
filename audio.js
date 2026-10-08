@@ -165,14 +165,17 @@
                        startDelay = 0, attack = 0.006, detune = 0, reverbSend = 0 }) {
     if (muted || !audioCtx) return;
     const t0 = audioCtx.currentTime + Math.max(0, startDelay);
+    // Small musical/performance variation keeps repeated effects from sounding machine-identical.
+    const humanFreq = freq * (0.985 + Math.random() * 0.03);
+    const humanVol = vol * (0.94 + Math.random() * 0.10);
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = type;
-    osc.frequency.setValueAtTime(freq, t0);
+    osc.frequency.setValueAtTime(humanFreq, t0);
     if (detune) osc.detune.setValueAtTime(detune, t0);
-    if (sweep) osc.frequency.exponentialRampToValueAtTime(Math.max(20, freq + sweep), t0 + duration);
+    if (sweep) osc.frequency.exponentialRampToValueAtTime(Math.max(20, humanFreq + sweep), t0 + duration);
     gain.gain.setValueAtTime(0.0001, t0);
-    gain.gain.exponentialRampToValueAtTime(Math.max(vol, 0.0005), t0 + attack);
+    gain.gain.exponentialRampToValueAtTime(Math.max(humanVol, 0.0005), t0 + attack);
     gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
     osc.connect(gain);
     gain.connect(sfxGainNode);
@@ -191,6 +194,7 @@
                         filterFreq = 2000, filterFreqEnd = null, Q = 1, reverbSend = 0 }) {
     if (muted || !audioCtx) return;
     const t0 = audioCtx.currentTime + Math.max(0, startDelay);
+    const humanVol = vol * (0.92 + Math.random() * 0.12);
     const buffer = getSharedNoiseBuffer();
     if (!buffer) return;
     const src = audioCtx.createBufferSource();
@@ -201,7 +205,7 @@
     if (filterFreqEnd !== null) filter.frequency.exponentialRampToValueAtTime(Math.max(40, filterFreqEnd), t0 + duration);
     filter.Q.value = Q;
     const gain = audioCtx.createGain();
-    gain.gain.setValueAtTime(vol, t0);
+    gain.gain.setValueAtTime(humanVol, t0);
     gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
     src.connect(filter); filter.connect(gain); gain.connect(sfxGainNode);
     if (reverbSend > 0 && reverbNode) {
@@ -223,41 +227,38 @@
   }
 
   function sfxShoot() {
-    const bend = (Math.random() - 0.5) * 90;
-    const punch = 0.85 + Math.random() * 0.3;
-    playNoise({ duration: 0.035 + Math.random() * 0.018, vol: 0.045 * punch, filterType: "bandpass", filterFreq: 1500 + Math.random() * 900, Q: 1.1 });
-    playTone({ freq: 860 + bend, duration: 0.055 + Math.random() * 0.018, type: Math.random() < 0.5 ? "square" : "sawtooth", vol: 0.06 * punch, sweep: -430 - Math.random() * 180, attack: 0.002 });
-    playTone({ freq: 1320 + Math.random() * 420, duration: 0.022, type: "triangle", vol: 0.028 * punch, startDelay: 0.008, reverbSend: 0.12 });
+    var p = 0.94 + Math.random() * 0.12;
+    playNoise({ duration: 0.04 + Math.random() * 0.018, vol: 0.04, filterType: "bandpass", filterFreq: 1650 + Math.random() * 500, Q: 1.2 });
+    playTone({ freq: 920 * p, duration: 0.055 + Math.random() * 0.018, type: "square", vol: 0.055, sweep: -520, attack: 0.002 });
+    playTone({ freq: 1500 * p, duration: 0.022 + Math.random() * 0.012, type: "square", vol: 0.035, attack: 0.001, startDelay: 0.006 });
+    if (Math.random() < 0.45) playNoise({ duration: 0.025, vol: 0.025, filterType: "highpass", filterFreq: 3200, startDelay: 0.012 });
   }
 
   function sfxExplosion(size = 1) {
-    const n = 0.9 + Math.random() * 0.2;
-    playNoise({ duration: 0.24 + size * 0.14, vol: (0.16 + size * 0.085) * n, filterType: "lowpass",
-      filterFreq: 2800 + Math.random() * 900, filterFreqEnd: 140, Q: 0.75, reverbSend: 0.48 });
-    playTone({ freq: 68 + Math.random() * 24, duration: 0.22 + size * 0.11, type: "sawtooth", vol: (0.11 + size * 0.065) * n,
-      sweep: -35 - Math.random() * 30, attack: 0.004, reverbSend: 0.22 });
-    playTone({ freq: 150 + Math.random() * 45, duration: 0.11, type: "triangle", vol: 0.055 * n, sweep: -70, startDelay: 0.015 });
-    for (let i = 0; i < 4; i++) {
-      playNoise({ duration: 0.025 + Math.random() * 0.018, vol: 0.035 + Math.random() * 0.025, filterType: "highpass", filterFreq: 2400 + Math.random() * 1400, startDelay: 0.015 + i * 0.04 });
+    var p = 0.90 + Math.random() * 0.20;
+    playNoise({ duration: 0.26 + size * 0.12, vol: 0.17 + size * 0.08, filterType: "lowpass",
+      filterFreq: (2800 + Math.random() * 900), filterFreqEnd: 150 + Math.random() * 80, Q: 0.8, reverbSend: 0.45 });
+    playNoise({ duration: 0.08 + size * 0.035, vol: 0.045 + size * 0.018, filterType: "highpass", filterFreq: 1800 + Math.random() * 900, startDelay: 0.008 });
+    playTone({ freq: 82, duration: 0.22 + size * 0.1, type: "sawtooth", vol: 0.12 + size * 0.06,
+      sweep: -45, attack: 0.005, reverbSend: 0.2 });
+    for (let i = 0; i < 3; i++) {
+      playNoise({ duration: 0.03, vol: 0.05, filterType: "highpass", filterFreq: 2600, startDelay: 0.02 + i * 0.045 });
     }
   }
 
   function sfxHit() {
-    const f = 1250 + Math.random() * 500;
-    playNoise({ duration: 0.12 + Math.random() * 0.04, vol: 0.14 + Math.random() * 0.045, filterType: "bandpass", filterFreq: f, filterFreqEnd: 420, Q: 1.5 });
-    playNoise({ duration: 0.07, vol: 0.05 + Math.random() * 0.03, filterType: "highpass", filterFreq: 2600 + Math.random() * 1200 });
-    playTone({ freq: 125 + Math.random() * 35, duration: 0.14, type: "sawtooth", vol: 0.15 + Math.random() * 0.05, sweep: -80 - Math.random() * 45, attack: 0.002 });
-    playTone({ freq: 60 + Math.random() * 20, duration: 0.17, type: "sine", vol: 0.07, sweep: -18, attack: 0.004, reverbSend: 0.15 });
+    playNoise({ duration: 0.14, vol: 0.16, filterType: "bandpass", filterFreq: 1400, filterFreqEnd: 500, Q: 1.4 });
+    playNoise({ duration: 0.08, vol: 0.06, filterType: "highpass", filterFreq: 2800 });
+    playTone({ freq: 145, duration: 0.16, type: "sawtooth", vol: 0.18, sweep: -95, attack: 0.002 });
+    playTone({ freq: 70, duration: 0.18, type: "sine", vol: 0.08, sweep: -20, attack: 0.004 });
   }
 
   function sfxPowerup() {
-    const root = 62 + Math.floor(Math.random() * 3);
-    [0, 4, 7, 12, 16, 19].forEach((iv, i) => {
-      playTone({ freq: noteFreq(root + iv), duration: 0.14 + i * 0.012, type: i % 2 ? "triangle" : "sine", vol: 0.095 + Math.random() * 0.025,
-        sweep: 45 + Math.random() * 35, startDelay: i * 0.052, attack: 0.004, reverbSend: 0.32 });
+    [0, 4, 7, 12, 16].forEach((iv, i) => {
+      playTone({ freq: noteFreq(64 + iv), duration: 0.15, type: "triangle", vol: 0.11,
+        sweep: 50, startDelay: i * 0.06, attack: 0.004, reverbSend: 0.35 });
     });
-    playNoise({ duration: 0.24, vol: 0.035, filterType: "bandpass", filterFreq: 2100 + Math.random() * 800, filterFreqEnd: 700, reverbSend: 0.35 });
-    playTone({ freq: noteFreq(root + 24), duration: 0.35, type: "triangle", vol: 0.055, startDelay: 0.24, reverbSend: 0.5 });
+    playNoise({ duration: 0.2, vol: 0.04, filterType: "bandpass", filterFreq: 2400, filterFreqEnd: 800, reverbSend: 0.3 });
   }
 
   function sfxCrystalCollect() {

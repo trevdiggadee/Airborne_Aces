@@ -538,7 +538,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       blimp11: "warshark",
       blimp12: "heatseek",
       blimp13: "swarm",
-      blimp14: "barrelbomb",
+      blimp14: "piraterocket",
       blimp15: "meteors"
     };
     const powerMode = SHIP_POWER_MODE[sel] || "storm";
@@ -904,54 +904,52 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       return;
     }
 
-    if (powerMode === "barrelbomb") {
+    if (powerMode === "piraterocket") {
+      // Pirate Rocket — Sky Rocket-style homing missiles using pirate rocket artwork.
       if (typeof sfxShoot === "function") sfxShoot();
-      if (typeof sfxExplosion === "function") sfxExplosion(0.35);
+      if (typeof sfxExplosion === "function") sfxExplosion(0.30);
       stormActive = true;
-      stormMode = "barrelbomb";
+      stormMode = "piraterocket";
       stormTimer = POWER_DURATION_SEC;
       stormCharge = 0;
-      // Short window — all 5 fire at once, no continuous spawn
       window.__airborneHeatseekUntil = performance.now() + POWER_DURATION_MS;
-      window.__airborneActivePowerVisual = "barrelbomb";
+      window.__airborneActivePowerVisual = "piraterocket";
       window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
       window.__airborneHeatseekers = [];
       window.__airborneWarBullets = [];
-      var bi = new Image();
-      bi.crossOrigin = "anonymous";
-      bi.src = "pirate_barrel_bomb.png?v=ruff359";
-      window.__airborneBarrelBombImg = bi;
-      // Fallback to pirate_bomb if barrel art fails
-      bi.onerror = function () {
-        try {
-          if (typeof images !== "undefined" && images.pirate_bomb) {
-            window.__airborneBarrelBombImg = images.pirate_bomb;
-          } else {
-            var b2 = new Image();
-            b2.src = "pirate_bomb.webp?v=ruff359";
-            window.__airborneBarrelBombImg = b2;
-          }
-        } catch (e) {}
+      window.__airbornePirateRocketImg = null;
+      var pri = new Image();
+      pri.crossOrigin = "anonymous";
+      var pirateRocketCandidates = [
+        "pirate_rocket_missile.webp?v=ruff500",
+        "pirate_rocket.webp?v=ruff500",
+        "pirate_rocket.png?v=ruff500",
+        "blimp14_flight_01.webp?v=ruff500"
+      ];
+      var piTry = 0;
+      pri.onload = function(){ window.__airbornePirateRocketImg = pri; };
+      pri.onerror = function(){
+        piTry++;
+        if (piTry < pirateRocketCandidates.length) pri.src = pirateRocketCandidates[piTry];
       };
-      // Pirate Rocket uses the same homing-missile flight style as Sky Rocket,
-      // but keeps the pirate barrel asset. No Sky Rocket jet formation.
+      pri.src = pirateRocketCandidates[0];
       if (typeof player !== "undefined" && player) {
-        for (var bi5 = 0; bi5 < 3; bi5++) {
-          var ang5 = -0.22 + (bi5 / 2) * 0.44;
-          var sp5 = 145 + Math.random() * 20;
+        for (var pri0 = 0; pri0 < 3; pri0++) {
+          var pang = -0.34 + pri0 * 0.34;
+          var psp = 150 + Math.random() * 35;
           window.__airborneHeatseekers.push({
-            x: player.x + (player.w || 40) * 0.35,
-            y: player.y + (bi5 - 1) * 10,
-            vx: Math.cos(ang5) * sp5,
-            vy: Math.sin(ang5) * sp5,
-            life: 5.0, age: 0, rot: ang5, spin: 0,
-            target: null, kind: "barrelbomb", fused: false, trail: []
+            x: player.x + (player.w || 40) * 0.30,
+            y: player.y + (pri0 - 1) * 12,
+            vx: Math.cos(pang) * psp * 0.55,
+            vy: Math.sin(pang) * psp * 0.35,
+            life: 3.4, age: 0, rot: pang, trails: [], target: null,
+            kind: "piraterocket", mode: "hunt", circleT: 0, hold: 0, circleAng: 0, circleR: 0,
+            eyeFlash: 0, huntSnap: false
           });
         }
       }
-      try {
-        if (window.PowerFX && player) window.PowerFX.activate("barrelbomb", player.x, player.y);
-      } catch (e) {}
+      window.__airborneHeatseekSpawnT = 0.45 * POWER_MISSILE_RATE_SCALE;
+      try { if (window.PowerFX && player) window.PowerFX.activate("piraterocket", player.x, player.y); } catch (e) {}
       updateStormMeterDisplay();
       return;
     }
@@ -3486,7 +3484,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       }
     }
     // Keep updating in-flight missiles after power window ends
-    if ((!stormActive || (stormMode !== "heatseek" && stormMode !== "warshark" && stormMode !== "barrelbomb" && stormMode !== "jollybomb")) &&
+    if ((!stormActive || (stormMode !== "heatseek" && stormMode !== "warshark" && stormMode !== "barrelbomb" && stormMode !== "piraterocket" && stormMode !== "jollybomb")) &&
         window.__airborneHeatseekers && window.__airborneHeatseekers.length) {
       stormMode = window.__airborneHeatseekers[0].kind || "heatseek";
       stormActive = true;
@@ -4504,26 +4502,26 @@ if (window.__airbornePlasmaIgnite) {
     // Pirate Rocket continuous volleys
     if (stormMode === "barrelbomb" && window.__airborneHeatseekUntil && performance.now() < window.__airborneHeatseekUntil) {
       window.__airborneBarrelReload = (window.__airborneBarrelReload || 0) + dt;
-      if (window.__airborneBarrelReload >= 1.35) {
+      if (window.__airborneBarrelReload >= 0.85) {
         window.__airborneBarrelReload = 0;
         if (typeof player !== "undefined" && player) {
           if (!window.__airborneHeatseekers) window.__airborneHeatseekers = [];
-          for (var bi5 = 0; bi5 < 2; bi5++) {
-            var ang5 = -0.16 + bi5 * 0.32;
-            var sp5 = 145 + Math.random() * 20;
+          for (var bi5 = 0; bi5 < 3; bi5++) {
+            var ang5 = -0.4 + (bi5 / 2) * 0.8;
+            var sp5 = 170 + Math.random() * 50;
             window.__airborneHeatseekers.push({
               x: player.x + (player.w || 40) * 0.3,
               y: player.y + (bi5 - 1) * 12,
               vx: Math.cos(ang5) * sp5,
               vy: Math.sin(ang5) * sp5 * 0.5 - 30,
-              life: 5.0, age: 0, rot: ang5, spin: 0, target: null,
+              life: 3.0, age: 0, rot: ang5, spin: Math.random() * 6,
               kind: "barrelbomb", fused: false, trail: []
             });
           }
         }
       }
     }
-    if (stormMode === "heatseek" || stormMode === "warshark" || stormMode === "barrelbomb" || stormMode === "jollybomb") {
+    if (stormMode === "heatseek" || stormMode === "warshark" || stormMode === "piraterocket" || stormMode === "barrelbomb" || stormMode === "jollybomb") {
       var nowHs = performance.now();
       var untilHs = window.__airborneHeatseekUntil || 0;
       if (!untilHs || nowHs >= untilHs) {
@@ -4572,20 +4570,20 @@ if (window.__airbornePlasmaIgnite) {
         var tN = pred ? (pred.age / pred.life) : 0.5;
         var spawnGap = (stormMode === "warshark")
           ? (tN < 0.2 ? 0.44 : (tN < 0.6 ? 0.35 : (tN < 0.9 ? 0.22 : 0.12))) // ~25% fewer
-          : (stormMode === "barrelbomb") ? 0.75 : 0.45;
+          : (stormMode === "piraterocket") ? 0.70 : (stormMode === "barrelbomb") ? 0.75 : 0.45;
         window.__airborneHeatseekSpawnT = spawnGap * POWER_MISSILE_RATE_SCALE;
         if (stormMode === "jollybomb") {
           // Handled by Dead Man's Broadside brain below
         } else {
         var ang = -0.35 + Math.random() * 0.7;
         var sp = 180 + Math.random() * 70;
-        if (stormMode === "heatseek") sp *= 1.25; // Sky Rocket missiles +25%
+        if (stormMode === "heatseek" || stormMode === "piraterocket") sp *= 1.15; // rocket family
         var shark = {
           x: player.x + (player.w || 40) * 0.25,
           y: player.y + (Math.random() - 0.5) * (player.h || 30) * 0.4,
-          vx: Math.cos(ang) * sp * (stormMode === "heatseek" ? 0.55 : 0.35),
-          vy: Math.sin(ang) * sp * (stormMode === "heatseek" ? 0.35 : 0.25),
-          life: stormMode === "barrelbomb" ? 3.2 : 2.8,
+          vx: Math.cos(ang) * sp * ((stormMode === "heatseek" || stormMode === "piraterocket") ? 0.55 : 0.35),
+          vy: Math.sin(ang) * sp * ((stormMode === "heatseek" || stormMode === "piraterocket") ? 0.35 : 0.25),
+          life: (stormMode === "barrelbomb" || stormMode === "piraterocket") ? 3.4 : 2.8,
           age: 0,
           rot: ang,
           trails: [],
@@ -4899,7 +4897,7 @@ if (window.__airbornePlasmaIgnite) {
           var by = -Math.sin(rk.rot);
           // Perpendicular for dual ports
           var px = -by, py = bx;
-          if (rk.kind === "heatseek") {
+          if (rk.kind === "heatseek" || rk.kind === "piraterocket") {
             // Both upper + lower exhaust streams
             for (var pi = -1; pi <= 1; pi += 2) {
               var ox = bx * 22 + px * pi * 7;
@@ -4936,7 +4934,7 @@ if (window.__airbornePlasmaIgnite) {
         }
         // Mid-air fuse for War Shark barrel bombs (~0.55s then AOE)
         var fuseBoom = false;
-        if (rk.kind === "jollybomb" && rk.age >= 2.70 && !rk.fused) {
+        if ((rk.kind === "barrelbomb" || rk.kind === "jollybomb") && rk.age >= (rk.kind === "jollybomb" ? 2.70 : 1.05) && !rk.fused) {
           rk.fused = true;
           fuseBoom = true;
         }
@@ -4993,7 +4991,7 @@ if (window.__airbornePlasmaIgnite) {
             var oy = o.y + o.h * 0.5;
             if (Math.hypot(rk.x - ox, rk.y - oy) < 22 + Math.max(o.w, o.h) * 0.3) {
               hit = true;
-              if (rk.kind === "jollybomb") {
+              if (rk.kind === "barrelbomb" || rk.kind === "jollybomb") {
                 aoeDestroyAt(rk.x, rk.y, rk.heavy || rk.ghost ? 110 : 90);
                 // Skull bomb splits into 5 scatter shots
                 if (rk.kind === "jollybomb" && rk.skull) {
@@ -5066,7 +5064,7 @@ if (window.__airbornePlasmaIgnite) {
           }
         }
         if (hit || rk.x < -100 || rk.x > (typeof W !== "undefined" ? W : 400) + 100 || rk.y < -100 || rk.y > (typeof H !== "undefined" ? H : 700) + 100 || rk.age > 20) {
-          if (hit && window.PowerFX && rk.kind !== "jollybomb") {
+          if (hit && window.PowerFX && rk.kind !== "barrelbomb" && rk.kind !== "jollybomb") {
             try { window.PowerFX.burst(rk.x, rk.y, { count: 14, colors: ["#ff8a1a", "#fff5c0"], speed: 100, glow: true }); } catch (e) {}
           }
           if (!window.__airborneOrphanTrails) window.__airborneOrphanTrails = [];
@@ -7583,7 +7581,8 @@ function drawMeteorMarks() {
     ctx.save();
     for (var i = 0; i < rockets.length; i++) {
       var rk = rockets[i];
-      var img = (rk.kind === "barrelbomb") ? window.__airborneBarrelBombImg
+      var img = (rk.kind === "piraterocket") ? window.__airbornePirateRocketImg
+        : (rk.kind === "barrelbomb") ? window.__airborneBarrelBombImg
         : (rk.kind === "warshark") ? window.__airborneWarSharkImg
         : (rk.kind === "jollybomb") ? null
         : window.__airborneRocketImg;
@@ -7615,11 +7614,11 @@ function drawMeteorMarks() {
       var rw = 48, rh = 22;
       if (img && img.complete && img.naturalWidth) {
         var aspect = img.naturalHeight / img.naturalWidth;
-        rw = (rk.kind === "barrelbomb") ? 47 : (rk.kind === "warshark") ? 39 : (rk.kind === "heatseek") ? 72 : 52; // heatseek +15%
+        rw = (rk.kind === "piraterocket") ? 68 : (rk.kind === "barrelbomb") ? 47 : (rk.kind === "warshark") ? 39 : (rk.kind === "heatseek") ? 72 : 52; // heatseek +15%
         rh = rw * aspect;
         // Sky Rocket: sprite faces right (flame left, nose right).
         // Anchor on metal body so exhaust lines up with rear nozzles.
-        if (rk.kind === "heatseek") {
+        if (rk.kind === "heatseek" || rk.kind === "piraterocket") {
           ctx.drawImage(img, -rw * 0.62, -rh / 2, rw, rh);
         } else {
           ctx.drawImage(img, -rw * 0.35, -rh / 2, rw, rh);
@@ -7672,7 +7671,7 @@ function drawMeteorMarks() {
       }
       // Exhaust glow at correct nozzle positions
       ctx.globalCompositeOperation = "lighter";
-      if (rk.kind === "heatseek") {
+      if (rk.kind === "heatseek" || rk.kind === "piraterocket") {
         // Dual rear ports (upper + lower) — aligned to thruster ring on sprite
         var nx = -rw * 0.28;
         var ports = [{ x: nx, y: -rh * 0.18 }, { x: nx, y: rh * 0.18 }];

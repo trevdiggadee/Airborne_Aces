@@ -946,10 +946,9 @@
 
   function setSfxVolFromUI(pct) {
     const v = Math.max(0, Math.min(1, pct / 100));
-    if (typeof ensureAudio === "function") ensureAudio();
+    try { if (typeof ensureAudio === "function") ensureAudio(); } catch (e) {}
     if (typeof setSfxVolumePref === "function") setSfxVolumePref(v);
     else if (window.__airborneSetSfxVolume) window.__airborneSetSfxVolume(v);
-    try { if (typeof sfxClick === "function" && v > 0) sfxClick(); } catch (e) {}
     if (pauseSfxVal) pauseSfxVal.textContent = Math.round(v * 100) + "%";
   }
 
