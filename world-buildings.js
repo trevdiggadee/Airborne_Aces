@@ -200,7 +200,7 @@
       try { ensureTaxiRunwayStrip(); } catch (e) {
         try { ensureAirfieldStripVisible(); } catch (e2) {}
       }
-      window.__airborneTaxiUntil = performance.now() + 5000; // score after 5s
+      window.__airborneTaxiUntil = performance.now() + 1000; // stop 5 seconds sooner (1s minimum visible taxi)
       if (typeof player !== "undefined" && player && typeof H !== "undefined") {
         var th = (airfieldTiles[0] && airfieldTiles[0].h) ? airfieldTiles[0].h : 90;
         var landY = H - Math.max(40, th * 0.28) - (player.h ? player.h * 0.22 : 10);
@@ -742,7 +742,7 @@
         if (nowT < taxiUntil) {
           airfieldPhase = "skid";
           airfieldSkidT = (airfieldSkidT || 0) + dt;
-          var taxiTotalMs = window.__airborneTaxiTotalMs || 5000;
+          var taxiTotalMs = window.__airborneTaxiTotalMs || 1000;
           var skidProg = 1 - Math.min(1, Math.max(0, taxiUntil - nowT) / taxiTotalMs);
           if (!window.__airborneSkidMaxSpd) window.__airborneSkidMaxSpd = planSkidMaxSpd(260, taxiTotalMs / 1000);
           var spd = skidSpeedAt(skidProg, window.__airborneSkidMaxSpd); // decelerates to a stop
@@ -1290,7 +1290,7 @@
           player.rotation = 0;
           airfieldTip = "Taxiing…";
           try { ensureTaxiRunwayStrip(); } catch (eTr) {}
-          window.__airborneTaxiUntil = performance.now() + 5000; // score after 5s
+          window.__airborneTaxiUntil = performance.now() + 1000; // stop 5 seconds sooner (1s minimum visible taxi)
           try { syncAirfieldGlobals(); } catch (eSync) {}
           try {
             if (typeof sfxAirfieldLand === "function") sfxAirfieldLand();

@@ -4935,7 +4935,7 @@ if (window.__airbornePlasmaIgnite) {
         }
         // Mid-air fuse for War Shark barrel bombs (~0.55s then AOE)
         var fuseBoom = false;
-        if ((rk.kind === "barrelbomb" || rk.kind === "jollybomb") && rk.age >= (rk.kind === "jollybomb" ? 1.35 : 1.05) && !rk.fused) {
+        if ((rk.kind === "barrelbomb" || rk.kind === "jollybomb") && rk.age >= (rk.kind === "jollybomb" ? 2.70 : 1.05) && !rk.fused) {
           rk.fused = true;
           fuseBoom = true;
         }
@@ -5064,7 +5064,7 @@ if (window.__airbornePlasmaIgnite) {
             }
           }
         }
-        if (hit || rk.age >= rk.life || rk.x > (typeof W !== "undefined" ? W : 400) + 60) {
+        if (hit || rk.x < -100 || rk.x > (typeof W !== "undefined" ? W : 400) + 100 || rk.y < -100 || rk.y > (typeof H !== "undefined" ? H : 700) + 100 || rk.age > 20) {
           if (hit && window.PowerFX && rk.kind !== "barrelbomb" && rk.kind !== "jollybomb") {
             try { window.PowerFX.burst(rk.x, rk.y, { count: 14, colors: ["#ff8a1a", "#fff5c0"], speed: 100, glow: true }); } catch (e) {}
           }
@@ -5110,7 +5110,7 @@ if (window.__airbornePlasmaIgnite) {
             try { damageBossFromPower(Math.max(1, Math.ceil((boss.maxHealth || 30) * 0.04)), bx, by); } catch (e) {}
           }
         }
-        if (hitB || wb.age >= (wb.life || 0.9) || wb.x > (typeof W !== "undefined" ? W : 400) + 40) {
+        if (hitB || wb.x < -80 || wb.x > (typeof W !== "undefined" ? W : 400) + 80 || wb.y < -80 || wb.y > (typeof H !== "undefined" ? H : 700) + 80 || wb.age > 20) {
           wbs.splice(wi, 1);
         }
       }

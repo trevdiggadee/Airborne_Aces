@@ -2302,8 +2302,8 @@ window.__airborneRingDebug = false;
           if (ob.x + (ob.w || 40) < player.x - 6) {
             ob.scored = true;
             try {
-              if (typeof score === "number") score += 10;
-              if (typeof gameplayScore === "number") gameplayScore += 10;
+              if (typeof score === "number") score += 1;
+              if (typeof gameplayScore === "number") gameplayScore += 1;
               if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
             } catch (eSc) {}
             try {
@@ -2314,10 +2314,7 @@ window.__airborneRingDebug = false;
             try {
               if (typeof dodgeStreak === "number") {
                 dodgeStreak += 1;
-                if (dodgeStreak > 1 && dodgeStreak % 5 === 0) {
-                  score += 5;
-                  if (scoreVal) scoreVal.textContent = String(score);
-                }
+                /* No streak bonus: each passed obstacle is exactly 1 point. */
               }
             } catch (eDs) {}
           }
