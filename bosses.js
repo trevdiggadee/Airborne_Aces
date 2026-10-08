@@ -933,18 +933,19 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
           }
         } catch (e) {}
       };
-      // Fire 5 barrel bombs at once in a spread
+      // Pirate Rocket uses the same homing-missile flight style as Sky Rocket,
+      // but keeps the pirate barrel asset. No Sky Rocket jet formation.
       if (typeof player !== "undefined" && player) {
-        for (var bi5 = 0; bi5 < 5; bi5++) {
-          var ang5 = -0.55 + (bi5 / 4) * 1.1;
-          var sp5 = 180 + Math.random() * 50;
+        for (var bi5 = 0; bi5 < 3; bi5++) {
+          var ang5 = -0.22 + (bi5 / 2) * 0.44;
+          var sp5 = 145 + Math.random() * 20;
           window.__airborneHeatseekers.push({
             x: player.x + (player.w || 40) * 0.35,
-            y: player.y + (bi5 - 2) * 14,
+            y: player.y + (bi5 - 1) * 10,
             vx: Math.cos(ang5) * sp5,
-            vy: Math.sin(ang5) * sp5 * 0.5 - 35,
-            life: 3.2, age: 0, rot: ang5, spin: 4 + Math.random() * 4,
-            kind: "barrelbomb", fused: false, trail: []
+            vy: Math.sin(ang5) * sp5,
+            life: 5.0, age: 0, rot: ang5, spin: 0,
+            target: null, kind: "barrelbomb", fused: false, trail: []
           });
         }
       }
@@ -4503,19 +4504,19 @@ if (window.__airbornePlasmaIgnite) {
     // Pirate Rocket continuous volleys
     if (stormMode === "barrelbomb" && window.__airborneHeatseekUntil && performance.now() < window.__airborneHeatseekUntil) {
       window.__airborneBarrelReload = (window.__airborneBarrelReload || 0) + dt;
-      if (window.__airborneBarrelReload >= 0.85) {
+      if (window.__airborneBarrelReload >= 1.35) {
         window.__airborneBarrelReload = 0;
         if (typeof player !== "undefined" && player) {
           if (!window.__airborneHeatseekers) window.__airborneHeatseekers = [];
-          for (var bi5 = 0; bi5 < 3; bi5++) {
-            var ang5 = -0.4 + (bi5 / 2) * 0.8;
-            var sp5 = 170 + Math.random() * 50;
+          for (var bi5 = 0; bi5 < 2; bi5++) {
+            var ang5 = -0.16 + bi5 * 0.32;
+            var sp5 = 145 + Math.random() * 20;
             window.__airborneHeatseekers.push({
               x: player.x + (player.w || 40) * 0.3,
               y: player.y + (bi5 - 1) * 12,
               vx: Math.cos(ang5) * sp5,
               vy: Math.sin(ang5) * sp5 * 0.5 - 30,
-              life: 3.0, age: 0, rot: ang5, spin: Math.random() * 6,
+              life: 5.0, age: 0, rot: ang5, spin: 0, target: null,
               kind: "barrelbomb", fused: false, trail: []
             });
           }
@@ -4935,7 +4936,7 @@ if (window.__airbornePlasmaIgnite) {
         }
         // Mid-air fuse for War Shark barrel bombs (~0.55s then AOE)
         var fuseBoom = false;
-        if ((rk.kind === "barrelbomb" || rk.kind === "jollybomb") && rk.age >= (rk.kind === "jollybomb" ? 2.70 : 1.05) && !rk.fused) {
+        if (rk.kind === "jollybomb" && rk.age >= 2.70 && !rk.fused) {
           rk.fused = true;
           fuseBoom = true;
         }
@@ -4992,7 +4993,7 @@ if (window.__airbornePlasmaIgnite) {
             var oy = o.y + o.h * 0.5;
             if (Math.hypot(rk.x - ox, rk.y - oy) < 22 + Math.max(o.w, o.h) * 0.3) {
               hit = true;
-              if (rk.kind === "barrelbomb" || rk.kind === "jollybomb") {
+              if (rk.kind === "jollybomb") {
                 aoeDestroyAt(rk.x, rk.y, rk.heavy || rk.ghost ? 110 : 90);
                 // Skull bomb splits into 5 scatter shots
                 if (rk.kind === "jollybomb" && rk.skull) {
@@ -5065,7 +5066,7 @@ if (window.__airbornePlasmaIgnite) {
           }
         }
         if (hit || rk.x < -100 || rk.x > (typeof W !== "undefined" ? W : 400) + 100 || rk.y < -100 || rk.y > (typeof H !== "undefined" ? H : 700) + 100 || rk.age > 20) {
-          if (hit && window.PowerFX && rk.kind !== "barrelbomb" && rk.kind !== "jollybomb") {
+          if (hit && window.PowerFX && rk.kind !== "jollybomb") {
             try { window.PowerFX.burst(rk.x, rk.y, { count: 14, colors: ["#ff8a1a", "#fff5c0"], speed: 100, glow: true }); } catch (e) {}
           }
           if (!window.__airborneOrphanTrails) window.__airborneOrphanTrails = [];

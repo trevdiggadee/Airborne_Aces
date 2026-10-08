@@ -131,7 +131,8 @@
         burst(x, y, { count: 16, colors: ["#1a1a1a", "#c9a227", "#ff8a1a", "#fff"], speed: 100, glow: true });
         break;
       case "barrelbomb":
-        burst(x, y, { count: 14, colors: ["#c4a574", "#8B4513", "#ffd24a", "#ff6b3d"], speed: 110, glow: true });
+        burst(x, y, { count: 18, colors: ["#c4a574", "#8B4513", "#ffd24a", "#ff6b3d", "#fff1c2"], speed: 125, glow: true });
+        ring(x, y, { r0: 8, r1: 72, color: "rgba(255,170,70,0.72)", life: 0.38, width: 4 });
         break;
       case "warshark":
         burst(x, y, { count: 14, colors: ["#a3e635", "#ffd24a", "#84cc16"], speed: 110, glow: true });
@@ -286,8 +287,8 @@
       ctx.beginPath();
       ctx.arc(cx + 16, dropY, 10.8, 0, Math.PI * 2);
       ctx.fill();
-    } else if (kind === "heatseek") {
-      // Soft engine glow only — no orbiting orbs
+    } else if (kind === "heatseek" || kind === "barrelbomb") {
+      // Missile-style engine glow; Pirate Rocket uses the same visual language with its own asset
       g = ctx.createRadialGradient(cx, cy, 2, cx, cy, 28);
       g.addColorStop(0, "rgba(255,200,100," + (0.35 * fade) + ")");
       g.addColorStop(1, "rgba(255,80,0,0)");
