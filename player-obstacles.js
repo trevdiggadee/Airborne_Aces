@@ -72,6 +72,11 @@ window.__airborneRingDebug = false;
     var __nowF = (typeof performance !== "undefined") ? performance.now() : Date.now();
     if (__nowF - __lastFlapAt < 35) return;
     __lastFlapAt = __nowF;
+    // Level 2 launch platform: a tap drives the deck (like the training runway), never a jump
+    if (window.__airbornePlatformTakeoffActive) {
+      try { if (window.__airbornePlatformTap) window.__airbornePlatformTap(); } catch (eP) {}
+      return;
+    }
     // Don't flap-react while docked on the pad
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) return;
     // Airfield runway / post-land taxi: never flap (prevents jump)
@@ -131,6 +136,12 @@ window.__airborneRingDebug = false;
       return;
     }
 
+    // Level 2 launch platform: scripted take-off owns the blimp's position
+    if (window.__airbornePlatformTakeoffActive) {
+      player.vy = 0;
+      updateBlimpPersonality(dt);
+      return;
+    }
     // Airfield: scripted phases freeze physics; still run exhaust personality
     const afPhase = window.__airborneAirfieldPhase;
     if (window.__airborneAirfield &&
@@ -2302,8 +2313,8 @@ window.__airborneRingDebug = false;
           if (ob.x + (ob.w || 40) < player.x - 6) {
             ob.scored = true;
             try {
-              if (typeof score === "number") score += 1;
-              if (typeof gameplayScore === "number") gameplayScore += 1;
+              if (typeof score === "number") score += 10;
+              if (typeof gameplayScore === "number") gameplayScore += 10;
               if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
             } catch (eSc) {}
             try {
@@ -2314,7 +2325,10 @@ window.__airborneRingDebug = false;
             try {
               if (typeof dodgeStreak === "number") {
                 dodgeStreak += 1;
-                /* No streak bonus: each passed obstacle is exactly 1 point. */
+                if (dodgeStreak > 1 && dodgeStreak % 5 === 0) {
+                  score += 5;
+                  if (scoreVal) scoreVal.textContent = String(score);
+                }
               }
             } catch (eDs) {}
           }

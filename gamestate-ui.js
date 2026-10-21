@@ -437,6 +437,7 @@
        window.__airborneRuffStage === "combined");
     if (state !== "playing" && !trainingCombat) return;
     if (bonusActive) return;
+    if (window.__airbornePlatformTakeoffActive) return; // Level 2 launch platform: safe on the deck
     // Only fully block damage during scripted takeoff/landing phases
     var phase = window.__airborneAirfieldPhase || "";
     if (phase === "taxi" || phase === "accel" || phase === "climb" ||
@@ -501,6 +502,7 @@
     try { ensureAudio(); } catch (eA) { console.warn("[startGame] ensureAudio", eA); }
     try { if (typeof setMusicTheme === "function") setMusicTheme(THEME_NORMAL); } catch (eT) {}
     try { if (typeof startMusic === "function") startMusic(); } catch (eM) {}
+    try { if (window.__airbornePlatformReset) window.__airbornePlatformReset(); } catch (ePl) {}
     // Clear freeze/pause leftover from prior run
     try {
       state = "playing";
@@ -725,6 +727,10 @@
     if (typeof initClouds === "function") initClouds();
     // Banner after art refresh so it isn't overwritten by LEVEL 1
     showBanner("LEVEL " + lvl, 2400, "level");
+    // Level 2 begins on the launch platform (hold to accelerate, then lift off)
+    if (lvl === 2) {
+      try { if (window.__airborneBeginPlatformTakeoff) window.__airborneBeginPlatformTakeoff(); } catch (ePl) { console.warn("[Airborne] platform takeoff", ePl); }
+    }
   }
   window.__airborneApplyMapLevel = applyMapLevelProgress;
 

@@ -581,6 +581,7 @@ function loop(ts) {
         }
       } catch (eP2) {}
       }
+      try { if (window.__airborneUpdatePlatformTakeoff) window.__airborneUpdatePlatformTakeoff(dt); } catch (ePl) { console.warn("platform update", ePl); }
       updateBuildings(dtScale);
       updatePowerlines(dtScale);
       updateSketchSkyline(dtScale);
@@ -658,6 +659,7 @@ function loop(ts) {
     try { if (window.__airborneDrawTrainingBgBalloons) window.__airborneDrawTrainingBgBalloons(); } catch (e) {}
     // Platforms behind blimps, birds, ruff, coins
     try { if (window.__airborneDrawTrainingPlatforms) window.__airborneDrawTrainingPlatforms(); } catch (e) {}
+    try { if (window.__airborneDrawPlatformTakeoff) window.__airborneDrawPlatformTakeoff("world"); } catch (e) {}
     try { if (typeof drawObstacles === "function") drawObstacles(); } catch (eObs) { console.warn("drawObstacles", eObs); }
     try { if (window.__airborneDrawRingStreakHud) window.__airborneDrawRingStreakHud(ctx); } catch (eHud) {}
 
@@ -722,6 +724,7 @@ try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePow
     drawBossBanner();
     if (typeof drawAirfieldRollSmoke === "function") drawAirfieldRollSmoke();
     if (typeof drawAirfieldTip === "function") drawAirfieldTip();
+    try { if (window.__airborneDrawPlatformTakeoff) window.__airborneDrawPlatformTakeoff("hud"); } catch (e) {}
     drawDefeatDebris();
     drawShockwaves();
     drawBonusHUD();

@@ -42,6 +42,7 @@
     bldg_l3_pipeworks:   "IMG_0770.png",
     streetrow1: "streetrow1.webp",
     airfield_strip: "airfield_strip.webp",
+    level2_platform: "level2_takeoff_platform.webp?v=ruff517",
     parallax_mountains: "mountains_cutout.webp",
     art_deco_sky: "art_deco_sky.webp",
     art_deco_clouds: "art_deco_clouds.webp",
@@ -1504,7 +1505,7 @@
         // game appear stuck.
         const skipFeather =
           /_flight_|player_blimp_|boss_throw_|boss\d+_|rocket_flight_|ship_(pirate|wood|ivory|purple|cargo|lightning)_\d/.test(key) ||
-          /skylineFar|streetrow|Far_Bg|hangar_bg|airborne_aces_map|medal_badge|parallax_mountains|mountains_cutout|airfield_strip|landing_field|wind_flag_left|finish_flag|wind_sock|ruff_|blue_crystal_|cloud_soft_/.test(key);
+          /skylineFar|streetrow|Far_Bg|hangar_bg|airborne_aces_map|medal_badge|parallax_mountains|mountains_cutout|airfield_strip|level2_platform|landing_field|wind_flag_left|finish_flag|wind_sock|ruff_|blue_crystal_|cloud_soft_/.test(key);
         if (skipFeather) {
           images[key] = img;
           settle();

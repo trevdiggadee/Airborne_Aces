@@ -1,0 +1,257 @@
+// =====================================================================
+// LEVEL 2 TAKE-OFF PLATFORM  (build ruff517)
+// ---------------------------------------------------------------------
+// Level 2 starts with the blimp parked on a steampunk launch platform.
+// Same take-off mechanics as the Flight Training runway:
+//   * HOLD (or keep TAPPING) to accelerate — the platform scrolls left
+//     under the blimp only while you are driving
+//   * let go and the engine spools down
+//   * at liftoff speed (or the end of the deck) the blimp climbs away
+//     on a scripted 2s ease, then normal Level 2 flight begins
+// It is deliberately NOT built on the training/airfield state machine, so
+// there is no R.U.F.F., no tutorial flags and no training restrictions:
+// at hand-off the game is in plain "playing" state.
+//
+// Hooks into the rest of the game (all tiny, all guarded):
+//   gamestate-ui.js   startGame()  -> __airbornePlatformReset()
+//                     applyMapLevelProgress(2) -> __airborneBeginPlatformTakeoff()
+//                     takeHit() ignores damage while active
+//   player-obstacles  flap() -> __airbornePlatformTap(); updatePlayer() freezes physics
+//   main-loop.js      update before the world update, draw before obstacles (world)
+//                     and near the end of the frame (HUD tip)
+// Art: level2_takeoff_platform.webp (transparent), key "level2_platform".
+// =====================================================================
+(function () {
+  "use strict";
+
+  // ---- Layout, as fractions of the platform image so any re-export still works ----
+  var HEIGHT_FRAC   = 0.50;          // platform height as a fraction of screen height
+  var REST_Y_F      = 290 / 495;     // runway deck surface (blimp rests here)
+  var START_X_F     = 610 / 1403;    // blimp's starting spot along the deck
+  var END_X_F       = 1140 / 1403;   // end of the deck — forced liftoff if reached
+
+  // ---- Feel (mirrors the training runway, tuned for the shorter deck) ----
+  var MIN_SPEED  = 40;
+  var MAX_SPEED  = 340;
+  var ACCEL      = 80;     // px/s^2 while holding
+  var DECEL      = 40;     // px/s^2 when you let go
+  var TAP_BOOST  = 28;     // px/s per tap
+  var TAP_HOLD_MS = 450;   // a quick tap keeps "holding" true this long
+  var LIFT_SPEED = 250;
+  var CLIMB_DUR  = 2.0;    // seconds
+  var DRIVE_X    = 0.22;   // blimp x (fraction of W) — same as training
+
+  var P = null; // platform state; null when there is no platform
+
+  function img() {
+    return (typeof images !== "undefined" && images) ? images.level2_platform : null;
+  }
+  function imgReady() {
+    var im = img();
+    return !!(im && im.naturalWidth && im.naturalHeight);
+  }
+  function geom() {
+    var im = img();
+    var aspect = (im && im.naturalWidth) ? im.naturalWidth / im.naturalHeight : 1403 / 495;
+    var h = H * HEIGHT_FRAC;
+    return { w: h * aspect, h: h };
+  }
+  function deckY() {                  // screen y of the deck surface
+    var g = geom();
+    return (H - g.h) + REST_Y_F * g.h;
+  }
+  function restPlayerY() {
+    var ph = (player && player.h > 0) ? player.h : 40;
+    return deckY() - ph * 0.42;       // same seat as the level-end landing pad
+  }
+  function now() { return (typeof performance !== "undefined") ? performance.now() : Date.now(); }
+  function smooth(t) { return t * t * (3 - 2 * t); }
+
+  function holdingNow() {
+    return !!(window.__airbornePointerDown || window.__airborneAirfieldHold || now() < (P ? P.holdUntil : 0));
+  }
+
+  function stopEngine() {
+    try { if (typeof sfxAirfieldEngineStop === "function") sfxAirfieldEngineStop(); } catch (e) {}
+    if (P) P.engineOn = false;
+  }
+
+  // ------------------------------------------------------------------
+  // Public API
+  // ------------------------------------------------------------------
+  window.__airbornePlatformReset = function () {
+    stopEngine();
+    P = null;
+    window.__airbornePlatformTakeoffActive = false;
+  };
+
+  window.__airborneBeginPlatformTakeoff = function () {
+    // Called once per level-2 start (the map path can call it twice): ignore repeats
+    if (window.__airbornePlatformTakeoffActive && P && P.phase !== "climb") return true;
+    if (!imgReady() || typeof player === "undefined" || !player) return false; // art missing → just fly
+    var g = geom();
+    player.x = W * DRIVE_X;
+    P = {
+      phase: "ready",             // ready → accel → climb → (leaving)
+      speed: MIN_SPEED,
+      holdUntil: 0,
+      t: 0,
+      climbT: 0,
+      climbStartY: 0,
+      tileX: player.x - START_X_F * g.w,
+      engineOn: false,
+      pulse: 0
+    };
+    window.__airbornePlatformTakeoffActive = true;
+    try { if (typeof obstacles !== "undefined") obstacles = []; } catch (e) {}
+    try { if (typeof birdFlocks !== "undefined") birdFlocks = []; } catch (e) {}
+    try { spawnInterval = 999; spawnTimer = 0; } catch (e) {}
+    try { obstacleSpeed = 1; } catch (e) {}          // ~0: city stays parked (0 would fall back to 220)
+    player.y = restPlayerY();
+    player.vy = 0;
+    player.rotation = 0;
+    return true;
+  };
+
+  // A tap (called from flap()) drives the deck just like the training runway
+  window.__airbornePlatformTap = function () {
+    if (!P || (P.phase !== "ready" && P.phase !== "accel")) return;
+    P.holdUntil = now() + TAP_HOLD_MS;
+    P.speed = Math.min(MAX_SPEED, P.speed + TAP_BOOST);
+  };
+
+  // ------------------------------------------------------------------
+  // Update — called every playing frame, before updatePlayer()
+  // ------------------------------------------------------------------
+  window.__airborneUpdatePlatformTakeoff = function (dt) {
+    if (!P) return;
+    if (!(dt > 0) || !isFinite(dt)) dt = 0.016;
+    P.t += dt;
+    P.pulse += dt;
+    var g = geom();
+
+    // ---- platform has been left behind: just scroll away with the world ----
+    if (P.phase === "leaving") {
+      var sp = (typeof obstacleSpeed === "number" && obstacleSpeed > 0) ? obstacleSpeed : 220;
+      P.tileX -= sp * dt;
+      if (P.tileX + g.w < -40) P = null;
+      return;
+    }
+
+    // keep the world quiet while we are on the deck
+    try { spawnInterval = 999; spawnTimer = 0; } catch (e) {}
+    try { if (typeof birdFlockTimer !== "undefined" && birdFlockTimer < 6) birdFlockTimer = 6; } catch (e) {}
+    try { if (typeof healSpawnTimer !== "undefined" && healSpawnTimer < 6) healSpawnTimer = 6; } catch (e) {}
+    try { if (typeof shieldSpawnTimer !== "undefined" && shieldSpawnTimer < 10) shieldSpawnTimer = 10; } catch (e) {}
+
+    var holding = holdingNow();
+
+    if (P.phase === "ready" || P.phase === "accel") {
+      if (P.phase === "ready") {
+        P.speed = MIN_SPEED;
+        try { obstacleSpeed = 1; } catch (e) {}
+        if (holding) {
+          P.phase = "accel";
+          try { if (typeof sfxAirfieldEngineStart === "function") { sfxAirfieldEngineStart(); P.engineOn = true; } } catch (e) {}
+        }
+      }
+      if (P.phase === "accel") {
+        if (holding) P.speed = Math.min(MAX_SPEED, P.speed + ACCEL * dt);
+        else         P.speed = Math.max(MIN_SPEED, P.speed - DECEL * dt);
+        // deck only moves while you are driving
+        var scroll = holding ? P.speed : 0;
+        P.tileX -= scroll * dt;
+        try { obstacleSpeed = holding ? P.speed : 1; } catch (e) {}
+        try {
+          if (P.engineOn && typeof sfxAirfieldEngineSetSpeed === "function") sfxAirfieldEngineSetSpeed(P.speed / MAX_SPEED, 0);
+        } catch (e) {}
+
+        // Liftoff: fast enough, or we ran out of deck
+        var endX = P.tileX + END_X_F * g.w;
+        if (holding && (P.speed >= LIFT_SPEED || player.x >= endX)) {
+          P.phase = "climb";
+          P.climbT = 0;
+          P.climbStartY = player.y;
+          try { if (typeof sfxAirfieldTakeoff === "function") sfxAirfieldTakeoff(); } catch (e) {}
+          stopEngine();
+        }
+      }
+      // pin blimp on the deck
+      player.x = W * DRIVE_X;
+      player.y = restPlayerY();
+      player.vy = 0;
+      player.rotation = (P.phase === "accel" && holding) ? -0.06 : 0;
+      return;
+    }
+
+    if (P.phase === "climb") {
+      P.climbT += dt;
+      var tc = Math.min(1, P.climbT / CLIMB_DUR);
+      var e = smooth(tc);
+      var endY = H * 0.4;
+      player.y = P.climbStartY + (endY - P.climbStartY) * e;
+      player.x = W * 0.20 + (W * DRIVE_X - W * 0.20) * e;
+      player.vy = 0;
+      player.rotation = -0.2 * Math.sin(tc * Math.PI);
+      P.speed = Math.max(180, 160 + e * 60);
+      try { obstacleSpeed = P.speed; } catch (ex) {}
+      P.tileX -= P.speed * dt;
+
+      if (tc >= 1) {
+        // ---- hand off to normal Level 2 flight ----
+        window.__airbornePlatformTakeoffActive = false;
+        P.phase = "leaving";
+        try { obstacleSpeed = 220; spawnInterval = 1.7; spawnTimer = 0; } catch (ex) {}
+        player.x = W * DRIVE_X;
+        player.y = endY;
+        player.rotation = 0;
+        // finger still down from the take-off hold: same carry-over as the training climb
+        player.vy = 0;
+        if (window.__airbornePointerDown) {
+          player.vy = (typeof FLAP_VELOCITY === "number") ? FLAP_VELOCITY : -430;
+          window.__airborneCarryHold = true;
+          window.__airborneCarryHoldT = 0;
+        }
+        window.__airborneClimbTapBuffered = false;
+      }
+    }
+  };
+
+  // ------------------------------------------------------------------
+  // Draw
+  // ------------------------------------------------------------------
+  // layer "world": the platform itself (behind obstacles and the blimp)
+  // layer "hud":   the on-screen tip
+  window.__airborneDrawPlatformTakeoff = function (layer) {
+    if (!P) return;
+    try {
+      if (layer === "hud") {
+        if (P.phase === "leaving") return;
+        var holding = holdingNow();
+        var text = (P.phase === "climb") ? "Liftoff!"
+                 : (holding ? "Accelerating…" : "HOLD or TAP to take off!");
+        var pulse = (P.phase === "climb") ? 1 : (holding ? 0.85 : 0.65 + 0.35 * Math.sin(P.pulse * 5));
+        var fs = Math.max(16, Math.floor(W * 0.055));
+        ctx.save();
+        ctx.globalAlpha = pulse;
+        ctx.textAlign = "center";
+        ctx.font = "bold " + fs + "px Rockwell, Georgia, serif";
+        var cx = W / 2, cy = H * 0.31;   // below the LEVEL banner, above the platform
+        ctx.lineWidth = Math.max(3, fs * 0.16);
+        ctx.strokeStyle = "rgba(40,24,8,0.85)";
+        ctx.lineJoin = "round";
+        ctx.strokeText(text, cx, cy);
+        ctx.fillStyle = "#ffe9a8";
+        ctx.fillText(text, cx, cy);
+        ctx.restore();
+        return;
+      }
+      // world layer
+      var im = img();
+      if (!im || !im.naturalWidth) return;
+      var g = geom();
+      if (P.tileX > W + 20 || P.tileX + g.w < -20) return;
+      ctx.drawImage(im, P.tileX, H - g.h, g.w, g.h);
+    } catch (e) { /* never break the game loop */ }
+  };
+})();
