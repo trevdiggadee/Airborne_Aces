@@ -503,6 +503,7 @@
     try { if (typeof setMusicTheme === "function") setMusicTheme(THEME_NORMAL); } catch (eT) {}
     try { if (typeof startMusic === "function") startMusic(); } catch (eM) {}
     try { if (window.__airbornePlatformReset) window.__airbornePlatformReset(); } catch (ePl) {}
+    try { if (window.__airborneResetBossGate) window.__airborneResetBossGate(); } catch (eBg) {}
     // Clear freeze/pause leftover from prior run
     try {
       state = "playing";
@@ -621,13 +622,14 @@
     blimpPersonality.propBlurOpacity = 0;
     initBuildings();
     initClouds();
-    birdFlocks = [];
+    birdFlocks = []; try { particles = []; } catch (e) {}
     birdFlockTimer = 6 + Math.random() * 8;
     initParallaxLayers();
 
     // Map level select — jump progress so you're actually on that stage
     const mapLvl = Number(window.__airbornePendingMapLevel) || 0;
     window.__airbornePendingMapLevel = null;
+    window.__airborneLastMapLevel = mapLvl >= 2 ? mapLvl : 0;
     state = "playing";
     try {
       startOverlay.classList.add("hidden");
@@ -762,7 +764,7 @@
   }
 
   document.getElementById("startBtn").addEventListener("click", () => { ensureAudio(); sfxClick(); startGame(); document.getElementById("startOverlay").classList.add("hidden"); });
-  document.getElementById("retryBtn").addEventListener("click", () => { ensureAudio(); sfxClick(); startGame(); });
+  document.getElementById("retryBtn").addEventListener("click", () => { ensureAudio(); sfxClick(); if (Number(window.__airborneLastMapLevel) >= 2) window.__airbornePendingMapLevel = window.__airborneLastMapLevel; startGame(); });
 
   document.getElementById("checkpointBtn").addEventListener("click", () => {
     ensureAudio();

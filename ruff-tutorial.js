@@ -1483,7 +1483,7 @@
   }
 
   function nextStage() {
-    try { sfxTrainingStageClear(); } catch (e) {}
+    try { if (typeof sfxTrainingStageClear === "function") sfxTrainingStageClear(); else if (typeof sfxRingCollect === "function") sfxRingCollect(); } catch (e) {}
     const i = STAGE_ORDER.indexOf(ruffStage);
     if (i < 0 || i >= STAGE_ORDER.length - 1) {
       setStage("report");
@@ -4591,8 +4591,7 @@ function finishToMap() {
     } else if (ruffStage === "boss1") {
       // Keep the existing training platforms visible during the boss lesson.
       // They continue scrolling naturally and disappear only when they leave the screen.
-      // Keep all training items alive across lesson transitions; they must scroll off naturally.
-      try { updateTrainingPlatforms(dt); } catch (e) {}
+      try { ruffCoins = []; ruffCrystals = []; } catch (e) {}
       window.__airborneAirfieldObstacles = false;
       window.__airborneAirfieldRings = false;
       if (typeof spawnInterval !== "undefined") spawnInterval = 999;
@@ -4687,7 +4686,8 @@ function finishToMap() {
       try { updateTrainingPlatforms(dt); } catch (e) {}
       var platsLeftC = (ruffPlatforms || []).length;
       if (!ruffLessonPendingNext && ((ruffStageT > 14 && platsLeftC === 0) || ruffStageT > 45)) {
-        // Do not clear platforms at the lesson boundary; let the remaining items scroll off.
+        ruffPlatforms = [];
+        window.__airborneRuffPlatforms = [];
         window.__airborneAirfieldObstacles = false;
         setStage("boss1");
         console.log("[R.U.F.F.] combined → boss1");

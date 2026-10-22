@@ -1892,8 +1892,36 @@ window.__airborneRingDebug = false;
 
 
   function updateObstacles_camGate(dt){ if(window.__airborneBossCamPause) return; return updateObstacles(dt); }
+  // ---------- Campaign boss gate ----------
+  // When the dodge score reaches the next boss's threshold: show the warning, wait out its
+  // timer, then run the pre-boss dialogue (which calls triggerBoss when it finishes).
+  // (build ruff517: nothing in the codebase called startBossDialogue/triggerBossWarning, so
+  // campaign bosses never started.)
+  var __bossGateAt = 0;
+  function checkCampaignBossGate() {
+    var blocked = window.__airborneAirfield || window.__airborneTrainingFlight || window.__airborneTrainingBoss ||
+      window.__airbornePlatformTakeoffActive || state !== "playing" || bossActive || bonusActive || bonusPending ||
+      (typeof isLevelEndActive === "function" && isLevelEndActive()) ||
+      (typeof levelEndActive !== "undefined" && levelEndActive);
+    var next = blocked ? null : nextBossConfig();
+    if (!next || gameplayScore < next.threshold) { __bossGateAt = 0; return; }
+    var nowG = performance.now();
+    if (!__bossGateAt) {
+      __bossGateAt = nowG;
+      try { if (typeof triggerBossWarning === "function") triggerBossWarning(next.num); } catch (e) {}
+      return;
+    }
+    var wait = (typeof BOSS_WARNING_DURATION === "number") ? BOSS_WARNING_DURATION : 2500;
+    if (nowG - __bossGateAt >= wait) {
+      __bossGateAt = 0;
+      if (typeof startBossDialogue === "function") startBossDialogue(next.num);
+    }
+  }
+  window.__airborneResetBossGate = function () { __bossGateAt = 0; };
+
   function updateObstacles(dt) {
     try { updateFirePower(dt); } catch (e) {}
+    try { checkCampaignBossGate(); } catch (eBg) { console.warn("boss gate", eBg); }
     try { updateHitCoins(dt); } catch (e) {}
     if (!bossActive && !bonusActive && !bonusPending && !(typeof isLevelEndActive === "function" && isLevelEndActive())) {
       spawnTimer += dt;
@@ -3322,6 +3350,42 @@ window.__airborneDrawImpactPop = function (ctx, dt) {
     ctx.beginPath();
     ctx.arc(sx, sy, 2.5 * (1 - u * 0.5), 0, Math.PI * 2);
     ctx.fill();
+  }
+  ctx.restore();
+};
+
+// ---- Shared burst-particle system (impact stars, confetti, landing puff) ----
+// Other files push {x,y,vx,vy,life,color,size,star?} into `particles`; before
+// this existed nothing updated or drew them, so those effects never appeared.
+let particles = [];
+window.__airborneDrawParticles = function (ctx, dt) {
+  if (!particles || !particles.length || !ctx) return;
+  if (!(dt > 0) || dt > 0.1) dt = 0.016;
+  if (particles.length > 400) particles.splice(0, particles.length - 400);
+  ctx.save();
+  for (var i = particles.length - 1; i >= 0; i--) {
+    var p = particles[i];
+    p.age = (p.age || 0) + dt;
+    if (p.age >= p.life) { particles.splice(i, 1); continue; }
+    p.vy += 260 * dt;
+    p.vx *= (1 - Math.min(1, 1.2 * dt));
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    var a = 1 - p.age / p.life;
+    ctx.globalAlpha = Math.max(0, a);
+    ctx.fillStyle = p.color || "#fff";
+    var s = p.size || 3;
+    if (p.star) {
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.age * 6);
+      ctx.beginPath();
+      for (var k = 0; k < 10; k++) {
+        var r = (k % 2 ? s * 0.5 : s * 1.3);
+        var an = k * Math.PI / 5;
+        ctx.lineTo(Math.cos(an) * r, Math.sin(an) * r);
+      }
+      ctx.closePath(); ctx.fill(); ctx.restore();
+    } else {
+      ctx.beginPath(); ctx.arc(p.x, p.y, s * (0.6 + 0.4 * a), 0, Math.PI * 2); ctx.fill();
+    }
   }
   ctx.restore();
 };

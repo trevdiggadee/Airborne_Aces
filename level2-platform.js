@@ -231,7 +231,7 @@
         var text = (P.phase === "climb") ? "Liftoff!"
                  : (holding ? "Accelerating…" : "HOLD or TAP to take off!");
         var pulse = (P.phase === "climb") ? 1 : (holding ? 0.85 : 0.65 + 0.35 * Math.sin(P.pulse * 5));
-        var fs = Math.max(16, Math.floor(W * 0.055));
+        var fs = Math.max(14, Math.floor(Math.min(W * 0.055, H * 0.06)));
         ctx.save();
         ctx.globalAlpha = pulse;
         ctx.textAlign = "center";
