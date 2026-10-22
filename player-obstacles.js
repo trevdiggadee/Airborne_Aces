@@ -455,8 +455,8 @@ window.__airborneRingDebug = false;
     }
     const next = nextBossConfig();
     if (next && !bossActive) {
-      const leadInStart = next.threshold - 25;
-      if (gameplayScore >= leadInStart && gameplayScore < next.threshold && Math.random() < 0.3) {
+      const leadInStart = next.threshold - 16;
+      if (gameplayScore >= leadInStart && gameplayScore < next.threshold && Math.random() < 0.5) {
         return next.miniType;
       }
     }
@@ -1072,6 +1072,13 @@ window.__airborneRingDebug = false;
       const tallestRoofY = groundY - H * 0.5;
       const bobBuffer = 20;
       maxY = Math.max(minY + 40, tallestRoofY - dispH - bobBuffer);
+    }
+    // Boss lead-in minis are big: keep them clear of the top HUD panel and in the
+    // open mid-sky so they are actually visible (they used to spawn at y≈32-72,
+    // hidden behind the score panel on shorter screens).
+    if (type === "mini_blimp" || type === "mini_tank" || type === "mini_heli" || type === "mini_ebomb") {
+      minY = Math.max(96, H * 0.14);
+      maxY = Math.max(minY + 40, H * 0.58 - dispH);
     }
     const y = minY + Math.random() * Math.max(20, (maxY - minY));
 
@@ -2341,8 +2348,8 @@ window.__airborneRingDebug = false;
           if (ob.x + (ob.w || 40) < player.x - 6) {
             ob.scored = true;
             try {
-              if (typeof score === "number") score += 10;
-              if (typeof gameplayScore === "number") gameplayScore += 10;
+              if (typeof score === "number") score += 1;
+              if (typeof gameplayScore === "number") gameplayScore += 1;
               if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
             } catch (eSc) {}
             try {
@@ -2353,10 +2360,7 @@ window.__airborneRingDebug = false;
             try {
               if (typeof dodgeStreak === "number") {
                 dodgeStreak += 1;
-                if (dodgeStreak > 1 && dodgeStreak % 5 === 0) {
-                  score += 5;
-                  if (scoreVal) scoreVal.textContent = String(score);
-                }
+                // (no streak bonus: every obstacle passed is worth exactly 1 point)
               }
             } catch (eDs) {}
           }
@@ -2810,6 +2814,10 @@ window.__airborneRingDebug = false;
       var frames = OBSTACLE_ANIM_SETS[o.type];
       if (!frames) return;
       var img = (typeof images !== "undefined" && images) ? images[frames[(o.animFrame || 0) % frames.length]] : null;
+      if ((!img || !img.naturalWidth) && /^mini_/.test(o.type) && images) {
+        // frame sheet missing → fall back to the still sprite so the lead-in mini never vanishes
+        img = images[o.type];
+      }
       if (!img || !img.naturalWidth) return;
       var speed = obstacleSpeed * (o.speedMult || 1);
       try {

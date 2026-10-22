@@ -1,10 +1,10 @@
 "use strict";
 
-  // ---------- Boss encounters — five bosses, one every 50 gameplay points ----------
+  // ---------- Boss encounters — five bosses; each gap is longer than the last (60, 160, 310, 520, 800 cumulative gameplay points = 60, 100, 150, 210, 280 obstacles per level, at exactly 1 point per obstacle or bird passed) ----------
   // "gameplayScore" only counts normal dodge-scoring, so bonus-round points never
   // shift boss pacing (see the scoring block in updateObstacles).
   const BOSSES = [
-    { num: 1, threshold: 50,  maxHealth: 32,  kind: "bomber",  miniType: "balloon_anim",
+    { num: 1, threshold: 60,  maxHealth: 32,  kind: "bomber",  miniType: "balloon_anim",
       label: "BOSS INCOMING!",         defeatLabel: "BOSS DEFEATED!",         powerupKind: "gold",    defeatBonus: 25,  bonusRound: "balloon",
       name: "Baron Blackpowder",
       taunts: [
@@ -21,7 +21,7 @@
         "This sky's got room for one more win.",
         "Better duck, old man!"
       ] },
-    { num: 2, threshold: 100, maxHealth: 128,  kind: "rocket",  miniType: "mini_blimp",
+    { num: 2, threshold: 160, maxHealth: 128,  kind: "rocket",  miniType: "mini_blimp",
       label: "SECOND BOSS INCOMING!",  defeatLabel: "SECOND BOSS DEFEATED!",  powerupKind: "blue",    defeatBonus: 60,  bonusRound: "coin",
       name: "Marshal Cinderfuse",
       taunts: [
@@ -36,7 +36,7 @@
         "I've flown through worse than you!",
         "Fuse THIS, Marshal!"
       ] },
-    { num: 3, threshold: 150, maxHealth: 192,  kind: "tank",    miniType: "mini_tank",
+    { num: 3, threshold: 310, maxHealth: 192,  kind: "tank",    miniType: "mini_tank",
       label: "THIRD BOSS INCOMING!",   defeatLabel: "THIRD BOSS DEFEATED!",   powerupKind: "arcbomb", defeatBonus: 90,  bonusRound: "balloon",
       name: "General Grimtread",
       taunts: [
@@ -51,7 +51,7 @@
         "Let's see you aim at a moving target!",
         "Enjoy the view from down there!"
       ] },
-    { num: 4, threshold: 200, maxHealth: 280, kind: "heli",    miniType: "mini_heli",
+    { num: 4, threshold: 520, maxHealth: 280, kind: "heli",    miniType: "mini_heli",
       label: "FOURTH BOSS INCOMING!",  defeatLabel: "FOURTH BOSS DEFEATED!",  powerupKind: "gold",    defeatBonus: 130, bonusRound: "coin",
       name: "Captain Rotorbane",
       taunts: [
@@ -66,7 +66,7 @@
         "Let's see whose blades are sharper!",
         "Smiling all the way to your defeat!"
       ] },
-    { num: 5, threshold: 250, maxHealth: 400, kind: "octopus", miniType: "mini_ebomb",
+    { num: 5, threshold: 800, maxHealth: 400, kind: "octopus", miniType: "mini_ebomb",
       label: "FIFTH BOSS INCOMING!",   defeatLabel: "FIFTH BOSS DEFEATED!",   powerupKind: "blue",    defeatBonus: 190, bonusRound: "balloon",
       name: "Admiral Octavius Squall",
       taunts: [
@@ -133,7 +133,8 @@
 
   // ---------- Storm power-up (gas tank meter, fills every 25 points) ----------
   const STORM_MAX = 100;
-  const STORM_CHARGE_PER_MILESTONE = 25; // one gas-tank "notch" every 25 score points
+  const STORM_CHARGE_PER_MILESTONE = 25; // charge added per gas-tank "notch" (4 notches = full)
+  const STORM_POINTS_PER_NOTCH = 10;     // score points per notch (1 point per obstacle passed)
   // Unified power duration for all ships (seconds / ms)
   const POWER_DURATION_SEC = 6.5;
   const POWER_DURATION_MS = 6500;
@@ -341,7 +342,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
 
       return;
     }
-    const crossedTotal = Math.floor(currentScore / STORM_CHARGE_PER_MILESTONE);
+    const crossedTotal = Math.floor(currentScore / STORM_POINTS_PER_NOTCH);
     if (crossedTotal <= stormMilestoneCount) return;
     const newNotches = crossedTotal - stormMilestoneCount;
     stormMilestoneCount = crossedTotal;
@@ -9202,6 +9203,7 @@ function drawFireballs() {
       if (levelEndTimer > 5.0) {
         levelEndPhase = "fadeOut";
         levelEndTimer = 0;
+        window.__airborneLevelEndMapShown = false;
         if (typeof sfxLevelFadeOut === "function") sfxLevelFadeOut();
       }
       return;
@@ -9212,7 +9214,10 @@ function drawFireballs() {
       levelEndFade = Math.min(1, levelEndTimer / 1.2);
       // DOM HUD (score, power meter, gear) fades with the canvas
       setHudFade(1 - levelEndFade);
-      if (levelEndTimer > 1.5) {
+      if (levelEndTimer > 1.5 && !window.__airborneLevelEndMapShown) {
+        // Once only: calling this every frame rebuilt the map buttons constantly,
+        // so taps never landed and no next level could be picked.
+        window.__airborneLevelEndMapShown = true;
         finishLevelEndAndResume();
       }
     } else if (levelEndPhase === "stats" || levelEndPhase === "victory") {
