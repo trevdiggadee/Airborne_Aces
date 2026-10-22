@@ -603,7 +603,7 @@
     healPickup = null;
     healSpawnTimer = 6 + Math.random() * 5;
     stormCharge = 0;
-    stormMilestoneCount = Math.floor(score / STORM_CHARGE_PER_MILESTONE);
+    stormAnchor = gameplayScore || 0; stormMilestoneCount = 0;
     stormWasReady = false;
     stormActive = false;
     stormCloud = null;
@@ -706,8 +706,7 @@
   function applyMapLevelProgress(mapLevelId) {
     const lvl = Math.max(1, Math.min(6, Number(mapLevelId) || 1));
     const defeated = Math.min(5, lvl - 1);
-    const thresholds = [0, 50, 100, 150, 200, 250];
-    const gp = thresholds[defeated] || 0;
+    const gp = defeated > 0 ? (BOSSES[defeated - 1].threshold | 0) : 0;
 
     // Write progress in bosses.js scope (shared lets), not a phantom global
     if (typeof window.__airborneSetRunProgress === "function") {
@@ -718,6 +717,9 @@
     }
     gameplayScore = gp;
     score = gp;
+    stormCharge = 0;
+    stormAnchor = gp; stormMilestoneCount = 0;
+    try { updateStormMeterDisplay(); } catch (eSm) {}
     if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
     checkpointReached = defeated;
     checkpointScore = score;
@@ -880,7 +882,7 @@
     // Reset storm
     stormCharge = 0;
     stormCloudsDecorative = []; cloudWisps = [];
-    stormMilestoneCount = 0;
+    stormMilestoneCount = 0; stormAnchor = (typeof gameplayScore === "number") ? gameplayScore : 0;
     stormWasReady = false;
     stormActive = false;
     stormCloud = null;

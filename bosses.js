@@ -134,7 +134,7 @@
   // ---------- Storm power-up (gas tank meter, fills every 25 points) ----------
   const STORM_MAX = 100;
   const STORM_CHARGE_PER_MILESTONE = 25; // charge added per gas-tank "notch" (4 notches = full)
-  const STORM_POINTS_PER_NOTCH = 10;     // score points per notch (1 point per obstacle passed)
+  const STORM_POINTS_PER_NOTCH = 6.25;   // 4 notches = 25 obstacles passed (1 point each) to fully charge the power
   // Unified power duration for all ships (seconds / ms)
   const POWER_DURATION_SEC = 6.5;
   const POWER_DURATION_MS = 6500;
@@ -143,6 +143,7 @@
   window.__airbornePowerDurationMs = POWER_DURATION_MS;
   window.__airbornePowerFadeMs = POWER_FADE_MS;
   let stormCharge = 0;
+  let stormAnchor = 0; // gameplayScore when the current charge cycle began (25 passes after this = full)
   let stormMilestoneCount = 0; // how many 25-point thresholds have been counted toward charge so far
   let stormWasReady = false;   // tracks ready-state transitions so the ready sound only fires once
   let stormActive = false;
@@ -159,7 +160,7 @@
         if (el) el.textContent = String(score);
       }
       if (typeof bumpScorePop === "function") bumpScorePop();
-      if (typeof addStormChargeForScore === "function") addStormChargeForScore(score);
+      if (typeof addStormChargeForScore === "function") addStormChargeForScore(gameplayScore);
     } catch (e) {}
   }
   window.creditPowerKillScore = creditPowerKillScore;
@@ -342,7 +343,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
 
       return;
     }
-    const crossedTotal = Math.floor(currentScore / STORM_POINTS_PER_NOTCH);
+    const crossedTotal = Math.floor(Math.max(0, currentScore - stormAnchor) / STORM_POINTS_PER_NOTCH);
     if (crossedTotal <= stormMilestoneCount) return;
     const newNotches = crossedTotal - stormMilestoneCount;
     stormMilestoneCount = crossedTotal;
@@ -492,6 +493,8 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
 
     stormActive = true;
     stormCharge = 0;
+    // next charge needs a fresh 25 obstacles (don't bank notches earned while firing)
+    if (!window.__airborneAirfield && typeof gameplayScore === "number") { stormAnchor = gameplayScore; stormMilestoneCount = 0; }
     if (window.__airborneAirfield) {
       window.__airborneTrainingPowerUsed = true;
       // Testing: refill meter after short delay so all blimps can re-test powers

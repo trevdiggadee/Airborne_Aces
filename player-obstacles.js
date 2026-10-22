@@ -161,7 +161,13 @@ window.__airborneRingDebug = false;
     // Keep training blimp further back — but never during land/skid drive
     var afp = window.__airborneAirfieldPhase;
     var landingDrive = (afp === "land" || afp === "skid" || afp === "score" || afp === "done" || afp === "rollout");
-    if (!landingDrive && (window.__airborneAirfield || window.__airborneTrainingFlight)) {
+    // Campaign flight too: knocks/bounces nudge player.x and nothing ever pulled it back,
+    // so the blimp crept off-screen as a level went on. Always ease home.
+    var campaignHome = (state === "playing" && !window.__airbornePlatformTakeoffActive &&
+      !(typeof levelEndActive !== "undefined" && levelEndActive) &&
+      !(typeof bonusActive !== "undefined" && bonusActive) &&
+      !(typeof bonusPending !== "undefined" && bonusPending));
+    if (!landingDrive && (window.__airborneAirfield || window.__airborneTrainingFlight || campaignHome)) {
       var lockX = (typeof W !== "undefined" ? W : 400) * 0.22;
       if (Math.abs(player.x - lockX) > 2) {
         player.x += (lockX - player.x) * Math.min(1, 4 * dt);
@@ -2351,6 +2357,7 @@ window.__airborneRingDebug = false;
               if (typeof score === "number") score += 1;
               if (typeof gameplayScore === "number") gameplayScore += 1;
               if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
+              if (typeof addStormChargeForScore === "function") addStormChargeForScore(gameplayScore);
             } catch (eSc) {}
             try {
               if (typeof ruffStats !== "undefined" && ruffStats) {
