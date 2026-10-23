@@ -85,6 +85,8 @@
     initPowerlines();
     initSketchSkyline();
     initStreetTiles();
+    // Level 2: swap the colliding strip for the industrial skyline (parallax layers untouched)
+    try { if (typeof window.__airborneL2Sync === "function") window.__airborneL2Sync(); } catch (eL2) { console.warn("[L2] sync", eL2); }
   }
 
   function updateBuildings(dtScale) {
@@ -1899,6 +1901,10 @@
 
   function drawBuildings() {
     if (airfieldMode) return;
+    if (typeof window.__airborneL2On === "function" && window.__airborneL2On()) {
+      try { window.__airborneL2Draw(); } catch (eL2) { console.warn("[L2] draw", eL2); }
+      return;
+    }
     const groundY = groundLevelY();
     const img = images[buildingRowKey];
     if (!img || !img.naturalWidth) return;
@@ -2249,6 +2255,10 @@
     if (bonusActive) return; // invincible during the bonus round
     if (window.__airborneAirfield || (typeof airfieldMode !== "undefined" && airfieldMode)) return;
     if (window.__airborneAirfieldInvuln && (window.__airborneAirfield || window.__airborneRuffActive)) return;
+    if (typeof window.__airborneL2On === "function" && window.__airborneL2On()) {
+      try { window.__airborneL2Collide(); } catch (eL2) {}
+      return;
+    }
     const groundY = groundLevelY();
     const px1 = player.x - (player.w / 2) * 0.7;
     const px2 = player.x + (player.w / 2) * 0.7;

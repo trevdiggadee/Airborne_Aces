@@ -1399,6 +1399,8 @@
   function drawArtDecoCloudBand() {
     // Sporadic individual back clouds (behind mountains)
     if (typeof ctx === "undefined") return;
+    // Level 2 has no clouds — they only belong to the training level
+    try { if (window.__airborneL2CloudsOff && window.__airborneL2CloudsOff()) return; } catch (eC) {}
     var list = window.__airborneBackClouds;
     if (!list || !list.length) return;
     ctx.save();

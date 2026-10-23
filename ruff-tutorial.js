@@ -2089,6 +2089,7 @@
     ruffCoins = []; ruffCrystals = []; campCollectT = 3; campCoinsInGroup = 0;
   };
   function campaignCollectiblesAllowed() {
+    if (window.__airborneL2On && window.__airborneL2On()) return false; // level 2 places its own pickups on the course
     if (window.__airborneAirfield || window.__airborneTrainingFlight || window.__airborneTrainingBoss || ruffActive) return false;
     if (window.__airbornePlatformTakeoffActive) return false;
     if (typeof state === "undefined" || state !== "playing") return false;
@@ -2115,6 +2116,17 @@
         r: 18, frame: Math.floor(Math.random() * CRYSTAL_FRAME_COUNT), frameT: 0, collected: false });
     }
   }
+  // Level 2 course designer: place a coin / crystal that rides with a structure.
+  // ref = any object with x,y (screen top-left of its structure); offX/offY relative to it.
+  window.__airborneAddCollectible = function (kind, ref, offX, offY) {
+    if (kind === "crystal") {
+      ruffCrystals.push({ x: 0, y: 0, r: 18, frame: Math.floor(Math.random() * CRYSTAL_FRAME_COUNT), frameT: 0, collected: false,
+        fixedToPlatform: true, platRef: ref, platOffX: offX, platOffY: offY });
+    } else {
+      ruffCoins.push({ x: 0, y: 0, yBase: 0, r: 14, spin: 0, bob: Math.random() * 6.28, speed: 0, collected: false, spark: 0,
+        fixedToPlatform: true, platRef: ref, platOffX: offX, platOffY: offY });
+    }
+  };
   window.__airborneUpdateCampaignCollectibles = function (dt) {
     if (!(dt > 0) || dt > 0.1) dt = 0.016;
     var allowed = campaignCollectiblesAllowed();

@@ -584,6 +584,7 @@ function loop(ts) {
       try { if (window.__airborneUpdatePlatformTakeoff) window.__airborneUpdatePlatformTakeoff(dt); } catch (ePl) { console.warn("platform update", ePl); }
       try { if (window.__airborneUpdateCampaignCollectibles) window.__airborneUpdateCampaignCollectibles(dt); } catch (eCc) { console.warn("collectibles", eCc); }
       updateBuildings(dtScale);
+      try { if (window.__airborneL2Update) window.__airborneL2Update(dt); } catch (eL2) { console.warn("[L2] update", eL2); }
       updatePowerlines(dtScale);
       updateSketchSkyline(dtScale);
       updateStreet(dtScale);
