@@ -1937,7 +1937,7 @@ window.__airborneRingDebug = false;
     try { checkCampaignBossGate(); } catch (eBg) { console.warn("boss gate", eBg); }
     try { updateHitCoins(dt); } catch (e) {}
     if (!bossActive && !bonusActive && !bonusPending && !(typeof isLevelEndActive === "function" && isLevelEndActive())) {
-      spawnTimer += dt;
+      spawnTimer += dt * ((window.__airborneAirfield || window.__airborneTrainingFlight) ? 1 : 1.25); // campaign: +25% birds/obstacles
       if (spawnTimer >= spawnInterval) {
         spawnTimer = 0;
         spawnObstacle();
@@ -2828,11 +2828,15 @@ window.__airborneRingDebug = false;
       if (!img || !img.naturalWidth) return;
       var speed = obstacleSpeed * (o.speedMult || 1);
       try {
+        // drawMotionBlur only paints faint ghost trails — the solid sprite must be drawn too,
+        // otherwise balloons / boss minis show up ghostly and semi-transparent.
         if (typeof drawMotionBlur === "function") {
           drawMotionBlur(img, o.x + o.w / 2, drawY + o.h / 2, o.w, o.h, 0, speed, 0);
-        } else {
-          ctx.drawImage(img, o.x, drawY, o.w, o.h);
         }
+        ctx.save();
+        ctx.globalAlpha = 1;
+        ctx.drawImage(img, o.x, drawY, o.w, o.h);
+        ctx.restore();
       } catch (eD) {
         try { ctx.drawImage(img, o.x, drawY, o.w, o.h); } catch (e2) {}
       }
@@ -2957,6 +2961,8 @@ function spawnHealPickup() {
     const t = performance.now() / 1000;
 
     ctx.save();
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = "source-over";
     ctx.translate(healPickup.x + healPickup.w / 2, drawY + healPickup.h / 2);
     const pulse = 1 + Math.sin(performance.now() / 160) * 0.06;
     ctx.scale(pulse, pulse);
@@ -2967,8 +2973,23 @@ function spawnHealPickup() {
     ctx.beginPath();
     ctx.arc(0, 0, healPickup.w * 0.9, 0, Math.PI * 2);
     ctx.fill();
-    drawMotionBlur(img, 0, 0, healPickup.w, healPickup.h, 0, 150, 0);
-    ctx.drawImage(img, -healPickup.w / 2, -healPickup.h / 2, healPickup.w, healPickup.h);
+    if (typeof failedAssetKeys !== "undefined" && failedAssetKeys.indexOf("heartPickup") >= 0) {
+      // art missing from the repo → solid vector heart instead of a see-through placeholder box
+      const hw = healPickup.w * 0.5;
+      ctx.fillStyle = "#e8344a";
+      ctx.strokeStyle = "#7a0f20";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, hw * 0.9);
+      ctx.bezierCurveTo(-hw * 1.5, -hw * 0.1, -hw * 0.7, -hw * 1.1, 0, -hw * 0.35);
+      ctx.bezierCurveTo(hw * 0.7, -hw * 1.1, hw * 1.5, -hw * 0.1, 0, hw * 0.9);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    } else {
+      drawMotionBlur(img, 0, 0, healPickup.w, healPickup.h, 0, 150, 0);
+      ctx.drawImage(img, -healPickup.w / 2, -healPickup.h / 2, healPickup.w, healPickup.h);
+    }
 
     // orbiting sparkle motes for a little extra magic while it floats
     const orbitR = healPickup.w * 0.62;

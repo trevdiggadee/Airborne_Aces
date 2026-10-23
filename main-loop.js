@@ -582,6 +582,7 @@ function loop(ts) {
       } catch (eP2) {}
       }
       try { if (window.__airborneUpdatePlatformTakeoff) window.__airborneUpdatePlatformTakeoff(dt); } catch (ePl) { console.warn("platform update", ePl); }
+      try { if (window.__airborneUpdateCampaignCollectibles) window.__airborneUpdateCampaignCollectibles(dt); } catch (eCc) { console.warn("collectibles", eCc); }
       updateBuildings(dtScale);
       updatePowerlines(dtScale);
       updateSketchSkyline(dtScale);
@@ -700,6 +701,7 @@ try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePow
     } catch (eRuff) { console.warn("drawRuff failed", eRuff); }
     try { if (window.__airborneDrawTrainingCrystals) window.__airborneDrawTrainingCrystals(); } catch (e) {}
     try { if (window.__airborneDrawTrainingCoins) window.__airborneDrawTrainingCoins(); } catch (e) {}
+    try { if (window.__airborneDrawCampaignSparkles) window.__airborneDrawCampaignSparkles(); } catch (e) {}
 
     try { drawTrainingRuffEmergency(typeof dt === "number" ? dt : 0.016); } catch (eER) {}
     try { if (window.__airborneDrawRingSummary) window.__airborneDrawRingSummary(ctx, W, H, typeof dt==="number"?dt:0.016); } catch(eRS) {}

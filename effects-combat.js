@@ -748,7 +748,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         // Contain sprite inside boss box without stretching
         var nw = simg.naturalWidth, nh = simg.naturalHeight;
         var boxW = s._fitW, boxH = s._fitH;
-        var sc = Math.min(boxW / nw, boxH / nh) * 1.18;
+        var sc = Math.min(boxW / nw, boxH / nh);
         var dw = nw * sc, dh = nh * sc;
         ctx.drawImage(simg, 0, 0, nw, nh, -dw / 2, -dh / 2, dw, dh);
       } else if (img && img.naturalWidth) {
@@ -798,6 +798,9 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     const img = boss ? (
       (kind === "bomber" && bossThrowFrame > 0)
         ? images[`boss_throw_${String(bossThrowFrame).padStart(2, "0")}`]
+        : (boss.variant === 2 && images[BOSS2_FRAME_KEYS[boss.animFrame]]) ? images[BOSS2_FRAME_KEYS[boss.animFrame]]
+        : (boss.variant === 3 && images[BOSS3_FRAME_KEYS[boss.animFrame]]) ? images[BOSS3_FRAME_KEYS[boss.animFrame]]
+        : (boss.variant === 4 && images[BOSS4_FRAME_KEYS[boss.animFrame]]) ? images[BOSS4_FRAME_KEYS[boss.animFrame]]
         : images[bossImgKey(boss.variant)]
     ) : null;
 
@@ -1546,7 +1549,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
   }
 
   function updateHitParticles(dt) {
-    try { if (window.PowerFX) window.PowerFX.update(dt); } catch (e) {}
+    try { if (window.PowerFX) window.PowerFX.update(window.__airborneTrainingBoss ? (dt / 3) : dt); } catch (e) {}
 
     hitParticles.forEach(p => {
       p.age += dt;

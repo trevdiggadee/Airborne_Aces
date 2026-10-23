@@ -2079,6 +2079,61 @@
   window.__airborneDrawTrainingCoins = drawTrainingCoins;
   window.__airborneDrawTrainingCrystals = drawCrystals;
 
+  // ---------- Campaign collectibles: floating coins + crystals (1 crystal per 4 coins) ----------
+  // Reuses the training coin/crystal sprites, physics and HUD counters so the campaign
+  // levels get the same pickups. Only runs in plain "playing" flight (no training, boss,
+  // bonus round, take-off platform or landing sequence).
+  var campCollectT = 3;       // first group ~3s after the level starts
+  var campCoinsInGroup = 0;
+  window.__airborneResetCampaignCollectibles = function () {
+    ruffCoins = []; ruffCrystals = []; campCollectT = 3;
+  };
+  function campaignCollectiblesAllowed() {
+    if (window.__airborneAirfield || window.__airborneTrainingFlight || window.__airborneTrainingBoss || ruffActive) return false;
+    if (window.__airbornePlatformTakeoffActive) return false;
+    if (typeof state === "undefined" || state !== "playing") return false;
+    if (typeof bossActive !== "undefined" && bossActive) return false;
+    if (typeof bonusActive !== "undefined" && (bonusActive || bonusPending)) return false;
+    if (typeof levelEndActive !== "undefined" && levelEndActive) return false;
+    return true;
+  }
+  function spawnCampaignGroup() {
+    var W0 = (typeof W !== "undefined" ? W : 400), H0 = (typeof H !== "undefined" ? H : 600);
+    var baseY = H0 * (0.26 + Math.random() * 0.30);
+    var amp = H0 * 0.05;
+    var x0 = W0 + 60;
+    // 4 coins in a gentle arc
+    for (var i = 0; i < 4; i++) {
+      var cy = baseY + Math.sin(i * 0.9) * amp;
+      ruffCoins.push({ x: x0 + i * 62, y: cy, yBase: cy, r: 14, spin: 0, bob: Math.random() * 6.28,
+        speed: 210, collected: false, spark: 0 });
+    }
+    // exactly one crystal for every four coins, floating just behind the arc
+    ruffCrystals.push({ x: x0 + 4 * 62 + 40, y: Math.max(H0 * 0.2, Math.min(H0 * 0.66, baseY + (Math.random() - 0.5) * H0 * 0.12)),
+      r: 18, frame: Math.floor(Math.random() * CRYSTAL_FRAME_COUNT), frameT: 0, collected: false });
+  }
+  window.__airborneUpdateCampaignCollectibles = function (dt) {
+    if (!(dt > 0) || dt > 0.1) dt = 0.016;
+    var allowed = campaignCollectiblesAllowed();
+    if (allowed) {
+      campCollectT -= dt;
+      if (campCollectT <= 0) {
+        campCollectT = 6 + Math.random() * 4;
+        spawnCampaignGroup();
+      }
+    }
+    // keep existing pickups moving/collectable even while a boss is on screen
+    if (!window.__airborneAirfield && !ruffActive && (ruffCoins.length || ruffCrystals.length || ruffSparkles.length)) {
+      try { updateTrainingCoins(dt); } catch (e) {}
+      try { updateCrystals(dt); } catch (e) {}
+      try { updateSparkles(dt); } catch (e) {}
+    }
+  };
+  window.__airborneDrawCampaignSparkles = function () {
+    if (window.__airborneAirfield || ruffActive) return;
+    try { drawSparkles(); } catch (e) {}
+  };
+
 
 
 
@@ -2848,7 +2903,7 @@
         try { sfxTrainingCoin(); } catch (e) {}
         window.__airborneCollectCoins = (window.__airborneCollectCoins || 0) + 1;
         try {
-          if (typeof window.addStormChargeForScore === "function") window.addStormChargeForScore(typeof score === "number" ? score : 0);
+          if (typeof window.addStormChargeForScore === "function") window.addStormChargeForScore((!window.__airborneAirfield && typeof gameplayScore === "number") ? gameplayScore : (typeof score === "number" ? score : 0));
         } catch (e) {}
 
         try {

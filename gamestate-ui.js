@@ -603,7 +603,7 @@
     healPickup = null;
     healSpawnTimer = 6 + Math.random() * 5;
     stormCharge = 0;
-    stormAnchor = gameplayScore || 0; stormMilestoneCount = 0;
+    stormAnchor = gameplayScore || 0; stormMilestoneCount = 0; try { window.__airborneUpdateStormProgressRing && window.__airborneUpdateStormProgressRing(); } catch (eSr) {}
     stormWasReady = false;
     stormActive = false;
     stormCloud = null;
@@ -622,7 +622,7 @@
     blimpPersonality.propBlurOpacity = 0;
     initBuildings();
     initClouds();
-    birdFlocks = []; try { particles = []; } catch (e) {}
+    birdFlocks = []; try { particles = []; } catch (e) {} try { window.__airborneResetCampaignCollectibles && window.__airborneResetCampaignCollectibles(); } catch (e) {}
     birdFlockTimer = 6 + Math.random() * 8;
     initParallaxLayers();
 
@@ -718,7 +718,7 @@
     gameplayScore = gp;
     score = gp;
     stormCharge = 0;
-    stormAnchor = gp; stormMilestoneCount = 0;
+    stormAnchor = gp; stormMilestoneCount = 0; try { window.__airborneUpdateStormProgressRing && window.__airborneUpdateStormProgressRing(); } catch (eSr) {}
     try { updateStormMeterDisplay(); } catch (eSm) {}
     if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
     checkpointReached = defeated;

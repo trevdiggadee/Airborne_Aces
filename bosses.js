@@ -321,13 +321,17 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
   // a score jump that skips past more than one threshold in a single tick — e.g. a dodge point
   // landing in the same frame as a streak bonus — still credits every notch it passed, so the
   // tank can never stall a few points short of full.
+  // Blue ring on the power dock = progress toward the next power recharge (25 obstacles = full)
+  function updateStormProgressRing(currentScore) {
+    if (window.__airborneAirfield || typeof window.updateUnifiedProgress !== "function") return;
+    var cs = (typeof currentScore === "number") ? currentScore : (typeof gameplayScore === "number" ? gameplayScore : 0);
+    var pct = (stormCharge >= STORM_MAX) ? 100
+      : Math.max(0, Math.min(99.5, ((cs - stormAnchor) / (STORM_POINTS_PER_NOTCH * 4)) * 100));
+    window.updateUnifiedProgress(pct);
+  }
+  window.__airborneUpdateStormProgressRing = function () { try { updateStormProgressRing(); } catch (e) {} };
   function addStormChargeForScore(currentScore) {
-    try {
-      if (typeof window.updateUnifiedProgress === "function" && !window.__airborneAirfield) {
-        // Soft progress from score (cap 100)
-        window.updateUnifiedProgress(Math.min(100, (currentScore || 0) / 8));
-      }
-    } catch (e) {}
+    try { updateStormProgressRing(currentScore); } catch (e) {}
 
     // Training: charge power from coins (25 coins = full activation)
     if (window.__airborneAirfield) {
@@ -495,6 +499,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
     stormCharge = 0;
     // next charge needs a fresh 25 obstacles (don't bank notches earned while firing)
     if (!window.__airborneAirfield && typeof gameplayScore === "number") { stormAnchor = gameplayScore; stormMilestoneCount = 0; }
+    try { updateStormProgressRing(); } catch (e) {}
     if (window.__airborneAirfield) {
       window.__airborneTrainingPowerUsed = true;
       // Testing: refill meter after short delay so all blimps can re-test powers
@@ -9241,11 +9246,32 @@ function drawFireballs() {
       const deckCx = p.x + p.w * (p.deckCenterFrac || 0.42);
       const deckCy = p.y + p.h * (p.deckFromTop || 0.525);
 
-      if (img && img.naturalWidth) {
+      const padArtMissing = (typeof failedAssetKeys !== "undefined" && failedAssetKeys.indexOf("landing_pad") >= 0);
+      if (img && img.naturalWidth && !padArtMissing) {
         ctx.drawImage(img, p.x, p.y, p.w, p.h);
       } else {
-        ctx.fillStyle = "#5a4632";
-        ctx.fillRect(p.x, p.y, p.w, p.h);
+        // art missing from the repo (the loader's see-through placeholder is nearly invisible):
+        // draw a solid steampunk landing tower so the pad is always there to land on.
+        const dy = p.y + p.h * (p.deckFromTop || 0.525);
+        const dl = p.x + p.w * 0.16, dw = p.w * 0.52;
+        ctx.fillStyle = "#3b2c1f";
+        ctx.fillRect(dl + dw * 0.12, dy, dw * 0.1, p.y + p.h - dy);
+        ctx.fillRect(dl + dw * 0.78, dy, dw * 0.1, p.y + p.h - dy);
+        ctx.strokeStyle = "#6b5236"; ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(dl + dw * 0.17, dy + 14); ctx.lineTo(dl + dw * 0.83, p.y + p.h);
+        ctx.moveTo(dl + dw * 0.83, dy + 14); ctx.lineTo(dl + dw * 0.17, p.y + p.h);
+        ctx.stroke();
+        ctx.fillStyle = "#8a6a3f";
+        ctx.fillRect(dl, dy - 4, dw, 16);
+        ctx.fillStyle = "#c9a45c";
+        ctx.fillRect(dl, dy - 6, dw, 4);
+        ctx.strokeStyle = "#e8d49a"; ctx.lineWidth = 5;
+        const xc = dl + dw * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(xc - 18, dy - 5); ctx.lineTo(xc + 18, dy + 9);
+        ctx.moveTo(xc + 18, dy - 5); ctx.lineTo(xc - 18, dy + 9);
+        ctx.stroke();
       }
 
       // Soft glow on the deck
