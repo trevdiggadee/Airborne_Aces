@@ -2079,14 +2079,14 @@
   window.__airborneDrawTrainingCoins = drawTrainingCoins;
   window.__airborneDrawTrainingCrystals = drawCrystals;
 
-  // ---------- Campaign collectibles: floating coins + crystals (1 crystal per 4 coins) ----------
+  // ---------- Campaign collectibles: floating coins + crystals (1 crystal per 10 coins) ----------
   // Reuses the training coin/crystal sprites, physics and HUD counters so the campaign
   // levels get the same pickups. Only runs in plain "playing" flight (no training, boss,
   // bonus round, take-off platform or landing sequence).
   var campCollectT = 3;       // first group ~3s after the level starts
   var campCoinsInGroup = 0;
   window.__airborneResetCampaignCollectibles = function () {
-    ruffCoins = []; ruffCrystals = []; campCollectT = 3;
+    ruffCoins = []; ruffCrystals = []; campCollectT = 3; campCoinsInGroup = 0;
   };
   function campaignCollectiblesAllowed() {
     if (window.__airborneAirfield || window.__airborneTrainingFlight || window.__airborneTrainingBoss || ruffActive) return false;
@@ -2100,17 +2100,20 @@
   function spawnCampaignGroup() {
     var W0 = (typeof W !== "undefined" ? W : 400), H0 = (typeof H !== "undefined" ? H : 600);
     var baseY = H0 * (0.26 + Math.random() * 0.30);
-    var amp = H0 * 0.05;
-    var x0 = W0 + 60;
-    // 4 coins in a gentle arc
-    for (var i = 0; i < 4; i++) {
-      var cy = baseY + Math.sin(i * 0.9) * amp;
-      ruffCoins.push({ x: x0 + i * 62, y: cy, yBase: cy, r: 14, spin: 0, bob: Math.random() * 6.28,
+    var amp = H0 * 0.06;
+    var x0 = W0 + 60, gap = 115;           // widely spaced coins
+    for (var i = 0; i < 5; i++) {
+      var cy = baseY + Math.sin(i * 0.8) * amp;
+      ruffCoins.push({ x: x0 + i * gap, y: cy, yBase: cy, r: 14, spin: 0, bob: Math.random() * 6.28,
         speed: 210, collected: false, spark: 0 });
     }
-    // exactly one crystal for every four coins, floating just behind the arc
-    ruffCrystals.push({ x: x0 + 4 * 62 + 40, y: Math.max(H0 * 0.2, Math.min(H0 * 0.66, baseY + (Math.random() - 0.5) * H0 * 0.12)),
-      r: 18, frame: Math.floor(Math.random() * CRYSTAL_FRAME_COUNT), frameT: 0, collected: false });
+    campCoinsInGroup += 5;
+    // exactly one crystal per 10 coins (every second group)
+    if (campCoinsInGroup >= 10) {
+      campCoinsInGroup -= 10;
+      ruffCrystals.push({ x: x0 + 5 * gap + 60, y: Math.max(H0 * 0.2, Math.min(H0 * 0.66, baseY + (Math.random() - 0.5) * H0 * 0.14)),
+        r: 18, frame: Math.floor(Math.random() * CRYSTAL_FRAME_COUNT), frameT: 0, collected: false });
+    }
   }
   window.__airborneUpdateCampaignCollectibles = function (dt) {
     if (!(dt > 0) || dt > 0.1) dt = 0.016;
@@ -2118,7 +2121,7 @@
     if (allowed) {
       campCollectT -= dt;
       if (campCollectT <= 0) {
-        campCollectT = 6 + Math.random() * 4;
+        campCollectT = 8 + Math.random() * 5;
         spawnCampaignGroup();
       }
     }

@@ -167,7 +167,7 @@ window.__airborneRingDebug = false;
       !(typeof levelEndActive !== "undefined" && levelEndActive) &&
       !(typeof bonusActive !== "undefined" && bonusActive) &&
       !(typeof bonusPending !== "undefined" && bonusPending));
-    if (!landingDrive && (window.__airborneAirfield || window.__airborneTrainingFlight || campaignHome)) {
+    if ((!landingDrive && (window.__airborneAirfield || window.__airborneTrainingFlight)) || (campaignHome && !window.__airborneAirfield)) {
       var lockX = (typeof W !== "undefined" ? W : 400) * 0.22;
       if (Math.abs(player.x - lockX) > 2) {
         player.x += (lockX - player.x) * Math.min(1, 4 * dt);
@@ -201,7 +201,7 @@ window.__airborneRingDebug = false;
     if (player.y + player.h / 2 > groundY) {
       player.y = groundY - player.h / 2;
       // Airfield open sky / training: never damage from bottom
-      if (window.__airborneAirfield || window.__airborneAirfieldInvuln ||
+      if (window.__airborneAirfield ||
           (typeof isLevelEndActive === "function" && isLevelEndActive())) {
         player.vy = Math.min(player.vy, 0);
       } else {
@@ -2186,7 +2186,7 @@ window.__airborneRingDebug = false;
       if (typeof player !== "undefined" && player && obsList && obsList.length &&
           !(typeof bossActive !== "undefined" && bossActive)) {
         var phase = window.__airborneAirfieldPhase || "";
-        var block = (phase === "taxi" || phase === "accel" || phase === "climb" ||
+        var block = !!window.__airborneAirfield && (phase === "taxi" || phase === "accel" || phase === "climb" ||
                      phase === "land" || phase === "skid" || phase === "score" || phase === "done");
         if (!block) {
           var nowHit = performance.now();

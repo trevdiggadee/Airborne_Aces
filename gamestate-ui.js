@@ -440,14 +440,16 @@
     if (window.__airbornePlatformTakeoffActive) return; // Level 2 launch platform: safe on the deck
     // Only fully block damage during scripted takeoff/landing phases
     var phase = window.__airborneAirfieldPhase || "";
-    if (phase === "taxi" || phase === "accel" || phase === "climb" ||
+    // (only while the scripted training airfield is actually running — a stale "done"
+    // phase left over from training used to make every campaign collision harmless)
+    if (window.__airborneAirfield && (phase === "taxi" || phase === "accel" || phase === "climb" ||
         phase === "land" || phase === "rollout" || phase === "skid" ||
-        phase === "score" || phase === "done") {
+        phase === "score" || phase === "done")) {
       return;
     }
     // Ignore sticky invuln flag during combat lessons
     var stHit = window.__airborneRuffStage || "";
-    if (window.__airborneAirfieldInvuln &&
+    if (window.__airborneAirfieldInvuln && (window.__airborneAirfield || window.__airborneRuffActive) &&
         stHit !== "obstacles" && stHit !== "shield" && stHit !== "combined" && stHit !== "platforms") {
       return;
     }
@@ -639,6 +641,13 @@
     try { if (typeof window.__airborneShowUnifiedDock === "function") window.__airborneShowUnifiedDock(); } catch (e) {}
 
     if (mapLvl >= 2) {
+      // fresh campaign run: clear every leftover training flag that could suppress damage
+      window.__airborneAirfield = false; window.__airborneTrainingFlight = false; window.__airborneTrainingBoss = false;
+      window.__airborneRuffActive = false; window.__airborneRuffStage = "idle";
+      window.__airborneAirfieldPhase = "idle"; window.__airborneAirfieldInvuln = false;
+      window.__airborneAirfieldPaused = false; window.__airborneShieldActive = false; window.__airborneCarryHold = false;
+      try { shieldActive = false; } catch (eSh) {}
+      invulnerableUntil = 0;
       applyMapLevelProgress(mapLvl);
     } else {
       // Always train on level 1 / hangar start / Take Flight
@@ -715,8 +724,8 @@
       bossesDefeatedCount = defeated;
       lastBossTriggered = defeated;
     }
-    gameplayScore = gp;
-    score = gp;
+    gameplayScore = gp;   // boss pacing keeps the level's floor...
+    score = 0;            // ...but the displayed score always starts from zero on any (re)start
     stormCharge = 0;
     stormAnchor = gp; stormMilestoneCount = 0; try { window.__airborneUpdateStormProgressRing && window.__airborneUpdateStormProgressRing(); } catch (eSr) {}
     try { updateStormMeterDisplay(); } catch (eSm) {}
