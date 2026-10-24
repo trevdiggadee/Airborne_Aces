@@ -9808,7 +9808,35 @@ function drawFireballs() {
     };
   }
 
+  // Mid-level checkpoint gate: a big brass ring offered once per level, halfway
+  // between the previous boss threshold and the next one.
+  function maybeSpawnMidLevelCheckpoint() {
+    if (checkpointPickup || bossActive || bonusActive || bonusPending || levelEndActive) return;
+    if (window.__airborneAirfield || window.__airborneRuffActive || window.__airborneWorldFrozen) return;
+    const nb = nextBossConfig();
+    if (!nb || ckRingSpawnedNum === nb.num ) return;
+    const prev = BOSSES.find(x => x.num === nb.num - 1);
+    const lo = prev ? prev.threshold : 0;
+    const mid = lo + (nb.threshold - lo) * 0.5;
+    if (gameplayScore < mid || gameplayScore >= nb.threshold - 8) return;
+    if (checkpointReached >= nb.num && checkpointGameplayScore >= mid) return; // already saved past the halfway mark
+    ckRingSpawnedNum = nb.num;
+    spawnCheckpointPickup(nb.num);
+    const cp = checkpointPickup;
+    cp.kind = "ring";
+    cp.x = W + 120;
+    cp.y = H * (0.3 + Math.random() * 0.25);
+    cp.r = Math.min(H * 0.17, 90);   // half-height of the gate
+    cp.vx = Math.max(150, (typeof obstacleSpeed !== "undefined" ? obstacleSpeed : 199) * 0.9);
+    showBanner("CHECKPOINT AHEAD", 1800, "checkpoint");
+  }
+
   function updateCheckpointPickup(dt) {
+    for (let i = checkpointBursts.length - 1; i >= 0; i--) {
+      checkpointBursts[i].age += dt;
+      if (checkpointBursts[i].age > checkpointBursts[i].life) checkpointBursts.splice(i, 1);
+    }
+    maybeSpawnMidLevelCheckpoint();
     if (!checkpointPickup || checkpointPickup.collected) return;
 
     checkpointPickup.bobPhase += dt * 2.8;
@@ -9817,7 +9845,7 @@ function drawFireballs() {
     checkpointPickup.x -= checkpointPickup.vx * dt;
 
     // bob up and down as it drifts left
-    const drawY = checkpointPickup.y + Math.sin(checkpointPickup.bobPhase) * 14;
+    const drawY = checkpointPickup.y + (checkpointPickup.kind === "ring" ? 0 : Math.sin(checkpointPickup.bobPhase) * 14);
 
     // off-screen cleanup
     if (checkpointPickup.x < -checkpointPickup.r * 2) {
@@ -9828,8 +9856,16 @@ function drawFireballs() {
     // collision with player
     const dx = Math.abs(player.x - checkpointPickup.x);
     const dy = Math.abs(player.y - drawY);
-    if (dx < player.w * 0.5 + checkpointPickup.r * 0.9 && dy < player.h * 0.5 + checkpointPickup.r * 0.9) {
+    const isRing = checkpointPickup.kind === "ring";
+    const hit = isRing
+      ? (dx < player.w * 0.35 + 16 && dy < checkpointPickup.r * 1.05)
+      : (dx < player.w * 0.5 + checkpointPickup.r * 0.9 && dy < player.h * 0.5 + checkpointPickup.r * 0.9);
+    if (hit) {
       checkpointPickup.collected = true;
+      if (isRing) {
+        checkpointBursts.push({ x: checkpointPickup.x, y: drawY, r: checkpointPickup.r, age: 0, life: 0.9 });
+        checkpointBursts.push({ x: checkpointPickup.x, y: drawY, r: checkpointPickup.r, age: -0.15, life: 1.1 });
+      }
       checkpointReached = Math.max(checkpointReached, checkpointPickup.targetNum);
       checkpointScore = score; // save score at checkpoint for restart
       checkpointGameplayScore = gameplayScore;
@@ -9842,9 +9878,10 @@ function drawFireballs() {
         updateHealthDisplay();
       }
       // small confetti burst
-      for (let i = 0; i < 14; i++) {
+      const burstN = isRing ? 40 : 14;
+      for (let i = 0; i < burstN; i++) {
         const angle = Math.random() * Math.PI * 2;
-        const speed = 80 + Math.random() * 120;
+        const speed = 80 + Math.random() * (isRing ? 260 : 120);
         hitParticles.push({
           type: "spark",
           x: checkpointPickup.x,
@@ -9860,9 +9897,106 @@ function drawFireballs() {
     }
   }
 
+  function drawCheckpointBursts() {
+    for (const bu of checkpointBursts) {
+      if (bu.age < 0) continue;
+      const t = bu.age / bu.life;
+      ctx.save();
+      ctx.translate(bu.x, bu.y);
+      ctx.globalAlpha = (1 - t) * 0.9;
+      ctx.strokeStyle = "rgba(255,226,140,1)";
+      ctx.lineWidth = 5 * (1 - t) + 1;
+      ctx.shadowColor = "rgba(255,190,60,0.9)";
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, bu.r * (0.5 + t * 1.6) * 0.6, bu.r * (0.5 + t * 1.6), 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function drawCheckpointRing(cp) {
+    const R = cp.r, Rx = R * 0.42;
+    const pulse = 1 + Math.sin(cp.glowPhase) * 0.05;
+    ctx.save();
+    ctx.translate(cp.x, cp.y);
+
+    // light beams up and down so the gate reads from far away
+    const beam = ctx.createLinearGradient(0, -H, 0, H);
+    beam.addColorStop(0, "rgba(255,214,120,0)");
+    beam.addColorStop(0.5, "rgba(255,214,120," + (0.16 + Math.sin(cp.glowPhase) * 0.05) + ")");
+    beam.addColorStop(1, "rgba(255,214,120,0)");
+    ctx.fillStyle = beam;
+    ctx.fillRect(-Rx * 0.5, -H, Rx, H * 2);
+
+    // soft halo
+    const halo = ctx.createRadialGradient(0, 0, R * 0.2, 0, 0, R * 1.6);
+    halo.addColorStop(0, "rgba(255,230,160,0.35)");
+    halo.addColorStop(1, "rgba(255,180,40,0)");
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.ellipse(0, 0, Rx * 2.4, R * 1.6, 0, 0, Math.PI * 2); ctx.fill();
+
+    // shimmering inner veil
+    const veil = ctx.createLinearGradient(-Rx, 0, Rx, 0);
+    veil.addColorStop(0, "rgba(255,200,90,0.05)");
+    veil.addColorStop(0.5, "rgba(255,240,190,0.28)");
+    veil.addColorStop(1, "rgba(255,200,90,0.05)");
+    ctx.fillStyle = veil;
+    ctx.beginPath(); ctx.ellipse(0, 0, Rx * pulse, R * pulse, 0, 0, Math.PI * 2); ctx.fill();
+
+    // brass ring body
+    ctx.shadowColor = "rgba(255,190,60,0.9)";
+    ctx.shadowBlur = 16;
+    ctx.strokeStyle = "#3a2410";
+    ctx.lineWidth = 11;
+    ctx.beginPath(); ctx.ellipse(0, 0, Rx * pulse, R * pulse, 0, 0, Math.PI * 2); ctx.stroke();
+    const brass = ctx.createLinearGradient(-Rx, -R, Rx, R);
+    brass.addColorStop(0, "#fff0b0"); brass.addColorStop(0.5, "#f5c542"); brass.addColorStop(1, "#b9791a");
+    ctx.strokeStyle = brass;
+    ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.ellipse(0, 0, Rx * pulse, R * pulse, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.shadowColor = "transparent";
+
+    // rotating dashed outer ring
+    ctx.strokeStyle = "rgba(255,226,140,0.55)";
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([10, 8]);
+    ctx.lineDashOffset = -cp.ringPhase * 14;
+    ctx.beginPath(); ctx.ellipse(0, 0, Rx * 1.25, R * 1.15, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // orbiting sparks racing around the ring
+    for (let i = 0; i < 8; i++) {
+      const a = cp.ringPhase * 0.9 + i * Math.PI / 4;
+      const sx = Math.cos(a) * Rx * 1.08, sy = Math.sin(a) * R * 1.08;
+      ctx.fillStyle = "rgba(255,244,200," + (0.5 + 0.5 * Math.sin(a * 2 + cp.glowPhase)) + ")";
+      ctx.beginPath(); ctx.arc(sx, sy, 3.2, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // rising embers inside the gate
+    for (let i = 0; i < 6; i++) {
+      const f = ((cp.ringPhase * 0.12 + i / 6) % 1);
+      ctx.fillStyle = "rgba(255,226,150," + (1 - f) * 0.8 + ")";
+      ctx.beginPath();
+      ctx.arc(Math.sin(i * 7.3 + cp.ringPhase) * Rx * 0.5, R * 0.9 - f * R * 1.8, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // label
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = "bold 13px Georgia, serif";
+    ctx.fillStyle = "#fff4cf";
+    ctx.shadowColor = "rgba(58,36,16,0.9)"; ctx.shadowBlur = 4;
+    ctx.fillText("CHECKPOINT", 0, -R - 22);
+    ctx.shadowColor = "transparent";
+    ctx.restore();
+  }
+
   function drawCheckpointPickup() {
+    drawCheckpointBursts();
     if (!checkpointPickup || checkpointPickup.collected) return;
     const cp = checkpointPickup;
+    if (cp.kind === "ring") { drawCheckpointRing(cp); return; }
     const drawY = cp.y + Math.sin(cp.bobPhase) * 14;
     const pulse = 1 + Math.sin(cp.glowPhase) * 0.12;
     const r = cp.r * pulse;

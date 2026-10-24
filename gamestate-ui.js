@@ -10,6 +10,8 @@
   } catch (e) { best = 0; }
 
   // ---------- Checkpoint pickup — collectible glowing item after each bonus round ----------
+  let ckRingSpawnedNum = 0; // boss number whose mid-level checkpoint ring has already been offered
+  let checkpointBursts = []; // shockwave rings after passing through the checkpoint gate
   let checkpointPickup = null; // { x, y, r, bobPhase, targetNum, collected, vx }
   let checkpointReached = 0; // next boss number the player still has to face (0 = none)
   let checkpointScore = 0; // score stored when checkpoint was collected — enables second life
@@ -554,6 +556,8 @@
     obstacleSpeed = 220;
     lastBossTriggered = 0;
     checkpointPickup = null;
+    ckRingSpawnedNum = 0;
+    checkpointBursts = [];
     checkpointReached = 0;
     checkpointScore = 0;
     checkpointGameplayScore = 0;
