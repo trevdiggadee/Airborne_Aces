@@ -115,10 +115,49 @@
 
 <div id="menuScreen">
 <audio id="splashMusic" loop preload="auto" src="banking_into_the_blue.mp3?v=ruff517"></audio>
-<audio id="menuMusic" loop preload="auto" src="Menu.mp3"></audio>
-<audio id="gameplayMusic" loop preload="auto" src="skyward-march%202.mp3"></audio>
-<audio id="trainingMusic" loop preload="auto" playsinline webkit-playsinline src="Cloud_Cruisers.mp3"></audio>
-<audio id="trainingBossMusic" loop preload="auto" src="the_engine_s_decree.mp3"></audio>
+<audio id="menuMusic" loop preload="none" src="Menu.mp3"></audio>
+<audio id="gameplayMusic" loop preload="none" src="skyward-march%202.mp3"></audio>
+<audio id="trainingMusic" loop preload="none" playsinline webkit-playsinline src="Cloud_Cruisers.mp3"></audio>
+<audio id="trainingBossMusic" loop preload="none" src="the_engine_s_decree.mp3"></audio>
+<script>
+// Splash music: start the instant the page parses (before the big asset load) and keep it
+// going until Enter Hangar. Browsers block audible autoplay, so if that is refused we start it
+// MUTED right away (always allowed) and unmute on the very first tap/key — no buffering delay.
+// The other tracks stay unloaded until the splash track is ready so they don't steal bandwidth.
+(function () {
+  var sm = document.getElementById("splashMusic");
+  if (!sm) return;
+  var others = ["menuMusic", "gameplayMusic", "trainingMusic", "trainingBossMusic"];
+  var othersLoaded = false;
+  function loadOthers() {
+    if (othersLoaded) return; othersLoaded = true;
+    others.forEach(function (id) { var a = document.getElementById(id); if (a) { try { a.preload = "auto"; a.load(); } catch (e) {} } });
+  }
+  sm.addEventListener("canplaythrough", loadOthers, { once: true });
+  setTimeout(loadOthers, 6000);
+  function left() { return !!window.__airborneLeftSplash; }
+  function tryPlay() {
+    if (left()) return;
+    sm.loop = true; sm.volume = 0.2;
+    var p; try { p = sm.play(); } catch (e) {}
+    if (p && p.catch) p.catch(function () {
+      if (left()) return;
+      sm.muted = true;                       // muted autoplay is permitted
+      try { var q = sm.play(); if (q && q.catch) q.catch(function () {}); } catch (e) {}
+    });
+  }
+  function unlock() {
+    if (left()) return;
+    if (sm.muted) sm.muted = false;
+    if (sm.paused) tryPlay();
+    if (!sm.paused && !sm.muted) {
+      ["pointerdown", "touchstart", "keydown", "click"].forEach(function (ev) { document.removeEventListener(ev, unlock, true); });
+    }
+  }
+  ["pointerdown", "touchstart", "keydown", "click"].forEach(function (ev) { document.addEventListener(ev, unlock, true); });
+  tryPlay();
+})();
+</script>
 <div class="stage">
   <img class="stageBg" crossorigin="anonymous" src="hangar_bg_v2.jpg" alt="Airborne Aces" />
 

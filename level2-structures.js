@@ -182,12 +182,7 @@
         st.hasVent = true;
       }
     }
-    // ---- sideways jet from tall walls (aimed back at the approaching blimp) ----
-    if (allowVent && cls === "tall" && !st.hasVent && Math.random() < 0.65 && st.name.indexOf("truss") !== 0) {
-      var wy = st.y + st.h * rnd(0.45, 0.7);
-      addVent(st, "left", 0, wy - st.y, Math.min(W * 0.34, 150 * u));
-      st.hasVent = true;
-    }
+    // (no sideways jets — steam only blasts straight up from stacks)
     return st;
   }
 
@@ -342,7 +337,7 @@
     var frozen = (typeof worldScrollFrozen === "function") && worldScrollFrozen();
     var scale = (typeof obstacleSpeedScale === "function") ? obstacleSpeedScale() : 1;
     var ending = (typeof levelEndActive !== "undefined" && levelEndActive);
-    var sp = frozen ? 0 : 48 * scale * dt * (ending ? 8 : 1);   // same ground speed as the street
+    var sp = frozen ? 0 : 48 * scale * dt;   // same ground speed as the street (also during the landing approach)
 
     structs.forEach(function (s) {
       if (s.isStack) return;

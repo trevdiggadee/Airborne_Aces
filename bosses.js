@@ -9149,7 +9149,7 @@ function drawFireballs() {
 
       // Scroll pad left until it reaches target dock position
       if (levelEndPad.x > levelEndPad.targetX) {
-        levelEndPad.x -= 160 * dt;
+        levelEndPad.x -= (typeof obstacleSpeedScale === "function" ? 48 * obstacleSpeedScale() : 48) * dt; // ground speed — same as the world scroll
         if (levelEndPad.x <= levelEndPad.targetX) {
           levelEndPad.x = levelEndPad.targetX;
           if (levelEndPhase === "approach") {
