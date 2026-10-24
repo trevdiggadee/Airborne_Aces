@@ -1953,6 +1953,8 @@
     if (typeof airfieldMode !== "undefined" && airfieldMode) return;
     const img = images.sketchSkyline;
     if (!img || !img.naturalWidth) return;
+    // Level 2 has its own industrial skyline — no sketch skyline there (Level 1 and 3+ keep it)
+    try { if (typeof currentLevelBgKey === "function" && currentLevelBgKey() === "skylineFarL2") return; } catch (eSk) {}
     const groundY = groundLevelY();
     // Anchored to the same ground base as the power lines (not floating above
     // them) — taller now, so it still reaches well above where it used to.
