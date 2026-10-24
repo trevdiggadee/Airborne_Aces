@@ -730,7 +730,7 @@
     stormAnchor = gp; stormMilestoneCount = 0; try { window.__airborneUpdateStormProgressRing && window.__airborneUpdateStormProgressRing(); } catch (eSr) {}
     try { updateStormMeterDisplay(); } catch (eSm) {}
     if (typeof scoreVal !== "undefined" && scoreVal) scoreVal.textContent = String(score);
-    checkpointReached = defeated;
+    checkpointReached = defeated > 0 ? defeated + 1 : 0; // = the NEXT boss still to face (matches the pickup's targetNum)
     checkpointScore = score;
     checkpointGameplayScore = gameplayScore;
     checkpointBossesDefeated = defeated;
@@ -845,6 +845,10 @@
     windParticles = [];
     comboPopups = [];
 
+    // Clear any level-end / bonus leftovers so a checkpoint resume is a clean level
+    if (typeof levelEndActive !== "undefined") { levelEndActive = false; levelEndPhase = null; levelEndPad = null; levelEndFade = 0; }
+    window.__airborneLevelEndMapShown = false;
+    try { if (window.__airbornePlatformReset) window.__airbornePlatformReset(); } catch (ePl) {}
     // Clear boss state
     bossActive = false;
     boss = null;

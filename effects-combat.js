@@ -1226,6 +1226,8 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     // Never during landing, bonus, or black fade
     if (typeof levelEndActive !== "undefined" && levelEndActive) return false;
     if (typeof bonusActive !== "undefined" && bonusActive) return false;
+    if (typeof bonusPending !== "undefined" && bonusPending) return false;
+    if (typeof worldWindDown !== "undefined" && worldWindDown) return false;
     if (typeof levelEndPhase === "string" && levelEndPhase === "fadeOut") return false;
     if (bossActive) return !!(boss && boss.kind === "tank");
     // Only between boss 2 clear and boss 3 start (not earlier landings)

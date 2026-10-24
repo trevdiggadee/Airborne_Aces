@@ -16,14 +16,16 @@
     }
     let key = "skylineFar";
     if (typeof bossesDefeatedCount === "number") {
-      if (bossesDefeatedCount >= 2) key = "skylineFarL3";
-      else if (bossesDefeatedCount >= 1) {
-        const stillInL1Outro =
-          (typeof bonusActive !== "undefined" && bonusActive) ||
-          (typeof bonusPending !== "undefined" && bonusPending) ||
-          (typeof levelEndActive !== "undefined" && levelEndActive);
-        key = stillInL1Outro ? "skylineFar" : "skylineFarL2";
-      }
+      // After a boss falls the bonus round + landing still belong to the level just beaten —
+      // only switch to the next level's backdrop once that outro is over.
+      const inOutro =
+        (typeof bonusActive !== "undefined" && bonusActive) ||
+        (typeof bonusPending !== "undefined" && bonusPending) ||
+        (typeof levelEndActive !== "undefined" && levelEndActive) ||
+        (typeof worldWindDown !== "undefined" && worldWindDown);
+      const lvl = bossesDefeatedCount - (inOutro && bossesDefeatedCount >= 1 ? 1 : 0);
+      if (lvl >= 2) key = "skylineFarL3";
+      else if (lvl >= 1) key = "skylineFarL2";
     }
     // Fall back if that level's art isn't in the repo / failed to load
     if (!hasImg(key)) {
