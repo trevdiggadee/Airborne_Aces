@@ -9,6 +9,9 @@
   // Each level uses its own far-background image; when the score crosses a
   // boss threshold (i.e. the level changes) the two backgrounds blend into
   // each other over a couple of seconds instead of popping.
+  // Level 2's far backdrop (IMG_0845.png) is drawn 25% more transparent than the other levels'
+  function bgKeyFade(key) { return key === "skylineFarL2" ? 0.75 : 1; }
+
   function currentLevelBgKey() {
     function hasImg(key) {
       const img = (typeof images !== "undefined") ? images[key] : null;
@@ -205,13 +208,13 @@
           var rawT = bgTransition.t;
           var t = rawT * rawT * (3 - 2 * rawT); // smoothstep ease — gentler start/end than a linear fade
           if (fromImg && fromImg.naturalWidth) {
-            ctx.globalAlpha = 0.55 * (1 - t);
+            ctx.globalAlpha = 0.55 * bgKeyFade(bgTransition.from) * (1 - t);
             layer.items.forEach(function(item) {
               ctx.drawImage(fromImg, item.x, groundY - item.h, item.w, item.h);
             });
           }
           if (toImg && toImg.naturalWidth) {
-            ctx.globalAlpha = 0.55 * t;
+            ctx.globalAlpha = 0.55 * bgKeyFade(bgTransition.to) * t;
             layer.items.forEach(function(item) {
               ctx.drawImage(toImg, item.x, groundY - item.h, item.w, item.h);
             });
@@ -219,7 +222,7 @@
         } else {
           var img = images[layer.imgKey];
           if (img && img.naturalWidth) {
-            ctx.globalAlpha = 0.55;
+            ctx.globalAlpha = 0.55 * bgKeyFade(layer.imgKey);
             layer.items.forEach(function(item) {
               ctx.drawImage(img, item.x, groundY - item.h, item.w, item.h);
             });
@@ -319,7 +322,7 @@
     const g = l2CityGeom(img);
     if (!l2CityTiles.length) updateL2City(0);
     ctx.save();
-    ctx.globalAlpha = 0.85;
+    ctx.globalAlpha = 1;
     for (let i = 0; i < l2CityTiles.length; i++) {
       try { ctx.drawImage(img, l2CityTiles[i], g.y, g.tileW, g.tileH); } catch (e) {}
     }

@@ -533,6 +533,8 @@
       if (_go) _go.classList.add("hidden");
     } catch (eOv) {}
     score = 0;
+    window.__airborneCollectCoins = 0; window.__airborneCollectCrystals = 0; window.__airborneCollectRings = 0;
+    try { if (typeof updateCollectDock === "function") updateCollectDock(); } catch (eCd) {}
     gameplayScore = 0;
     dodgeStreak = 0;
     comboPopups = [];
@@ -822,9 +824,12 @@
     if (typeof stopWorldWindDown === "function") stopWorldWindDown();
     if (typeof resetHudFade === "function") resetHudFade();
 
-    // Restore score to checkpoint level
-    score = checkpointScore;
+    // Score, coins and crystals always start fresh after a death (boss pacing below still resumes)
+    score = 0;
     scoreVal.textContent = score;
+    window.__airborneCollectCoins = 0; window.__airborneCollectCrystals = 0; window.__airborneCollectRings = 0;
+    try { if (typeof updateCollectDock === "function") updateCollectDock(); } catch (eCd) {}
+
     // gameplayScore and lastBossTriggered drive boss pacing — without restoring
     // these too, they'd stay at their pre-crash values (later than the checkpoint),
     // which could let the player skip straight past a boss they never actually beat

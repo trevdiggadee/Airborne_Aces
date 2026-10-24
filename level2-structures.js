@@ -362,6 +362,8 @@
       while (spawnX < W + 420 && guard++ < 8) spawnOne(false);
     }
 
+    updateAtmo(dt, sp);
+
     // steam timing + damage
     var canHurt = (typeof state !== "undefined" && state === "playing") && !window.__airbornePlatformTakeoffActive &&
       !(typeof bonusActive !== "undefined" && bonusActive) && !ending && typeof takeHit === "function";
@@ -454,10 +456,74 @@
     ctx.restore();
   }
 
+  // ------------------------------------------------------------------
+  // Level 2 atmosphere: smoggy ground haze, drifting soot-smoke wisps (behind the buildings)
+  // and glowing furnace embers floating past (in front of them)
+  // ------------------------------------------------------------------
+  var wisps = [], embers = [];
+  function seedAtmo() {
+    var w = (typeof W === "number" ? W : 412), h = (typeof H === "number" ? H : 800), u = U();
+    wisps = []; embers = [];
+    for (var i = 0; i < 9; i++) wisps.push({ x: rnd(0, w * 1.4), y: rnd(h * 0.42, h * 0.8), r: rnd(70, 150) * u, a: rnd(0.10, 0.2), v: rnd(5, 14), ph: rnd(0, 6.3) });
+    for (var j = 0; j < 26; j++) embers.push(newEmber(true));
+  }
+  function newEmber(anywhere) {
+    var w = (typeof W === "number" ? W : 412), h = (typeof H === "number" ? H : 800), u = U();
+    return { x: anywhere ? rnd(0, w) : w + rnd(0, 80), y: anywhere ? rnd(h * 0.2, gY()) : rnd(h * 0.45, gY()),
+             vy: -rnd(10, 32) * u, drift: rnd(18, 46), r: rnd(1.1, 2.6) * u, ph: rnd(0, 6.3), life: rnd(0.6, 1) };
+  }
+  function updateAtmo(dt, sp) {
+    if (!wisps.length) seedAtmo();
+    var w = (typeof W === "number" ? W : 412), h = (typeof H === "number" ? H : 800);
+    var move = sp / Math.max(dt, 1e-4) / 48;     // world speed factor (1 = normal)
+    wisps.forEach(function (s) {
+      s.x -= (s.v * move) * dt; s.ph += dt * 0.4;
+      if (s.x < -s.r * 1.5) { s.x = w + s.r * 1.5; s.y = rnd(h * 0.42, h * 0.8); }
+    });
+    embers.forEach(function (e, i) {
+      e.ph += dt * 3;
+      e.x -= e.drift * dt * (0.6 + 0.4 * move) + Math.sin(e.ph) * 6 * dt;
+      e.y += e.vy * dt;
+      if (e.x < -10 || e.y < h * 0.12) embers[i] = newEmber(false);
+    });
+  }
+  function drawAtmoBack() {
+    if (!wisps.length) return;
+    var w = (typeof W === "number" ? W : 412), h = (typeof H === "number" ? H : 800), gy = gY();
+    ctx.save();
+    // warm smog bank hugging the ground
+    var g = ctx.createLinearGradient(0, gy - h * 0.5, 0, gy);
+    g.addColorStop(0, "rgba(214,160,100,0)"); g.addColorStop(1, "rgba(214,160,100,0.26)");
+    ctx.fillStyle = g; ctx.fillRect(0, gy - h * 0.5, w, h * 0.5);
+    // drifting soot wisps
+    wisps.forEach(function (s) {
+      var a = s.a * (0.75 + 0.25 * Math.sin(s.ph));
+      var rg = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r);
+      rg.addColorStop(0, "rgba(120,104,92," + a + ")"); rg.addColorStop(1, "rgba(120,104,92,0)");
+      ctx.fillStyle = rg; ctx.beginPath(); ctx.ellipse(s.x, s.y, s.r * 1.5, s.r * 0.8, 0, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.restore();
+  }
+  function drawAtmoFront() {
+    if (!embers.length) return;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    embers.forEach(function (e) {
+      var fl = 0.55 + 0.45 * Math.sin(e.ph * 2.3);
+      var gr = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.r * 4);
+      gr.addColorStop(0, "rgba(255,190,90," + (0.8 * fl * e.life) + ")"); gr.addColorStop(1, "rgba(255,90,20,0)");
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(e.x, e.y, e.r * 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "rgba(255,235,170," + (0.9 * fl) + ")";
+      ctx.beginPath(); ctx.arc(e.x, e.y, e.r * 0.7, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.restore();
+  }
+
   window.__airborneL2Draw = function () {
     if (!on || !atlasReady) return;
     ctx.save();
     ctx.globalAlpha = 1;
+    drawAtmoBack();
     // buildings first, stacks over them
     var order = structs.slice().sort(function (a, b) { return (a.isStack ? 1 : 0) - (b.isStack ? 1 : 0); });
     for (var i = 0; i < order.length; i++) {
@@ -468,6 +534,7 @@
     }
     vents.forEach(function (v) { if (v.kind === "left") drawWallNozzle(v); });
     vents.forEach(drawSteam);
+    drawAtmoFront();
     ctx.restore();
   };
 

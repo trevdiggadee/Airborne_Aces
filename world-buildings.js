@@ -2411,7 +2411,7 @@
       y: H * (0.08 + Math.random() * 0.32),
       size: 16 + Math.random() * 8, // small — reads as distant
       speed: 26 + Math.random() * 18, // slow parallax drift, much slower than gameplay obstacles
-      alpha: 0.4 + Math.random() * 0.22,
+      alpha: 1,
       keys,
       members,
       animFrame: Math.floor(Math.random() * OBSTACLE_ANIM_FRAME_COUNT),
