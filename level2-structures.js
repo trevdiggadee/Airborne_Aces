@@ -18,7 +18,7 @@
 (function () {
   "use strict";
 
-  var ATLAS = {"truss3": [0, 0, 36, 227], "truss2": [38, 0, 59, 221], "truss1": [99, 0, 40, 213], "clock_mansion": [141, 0, 120, 193], "mega_factory": [263, 0, 237, 183], "factory3": [502, 0, 147, 171], "fac_tower": [651, 0, 217, 157], "apartment": [870, 0, 81, 150], "steam_co": [0, 229, 157, 128], "gable_house": [159, 229, 72, 120], "silo_a": [233, 229, 40, 116], "long_hall": [275, 229, 158, 114], "green_dome": [435, 229, 76, 110], "stack_a": [513, 229, 14, 110], "tall_tower": [529, 229, 41, 107], "silo_b": [572, 229, 34, 104], "arch_complex": [608, 229, 223, 102], "chimney_dome": [833, 229, 90, 102], "mansard": [925, 229, 95, 101], "gothic": [0, 359, 53, 101], "warehouse": [55, 359, 157, 100], "arch_hall": [214, 359, 120, 100], "clock_small": [336, 359, 48, 99], "stack_c": [386, 359, 14, 95], "awning_house": [402, 359, 64, 91], "stack_b": [468, 359, 28, 86], "barn_arch": [498, 359, 104, 85], "tower_house": [604, 359, 61, 80], "small_house": [667, 359, 65, 80], "long_low": [734, 359, 97, 78], "small_green": [833, 359, 67, 63]};
+  var ATLAS = {"truss3": [0, 0, 35, 227], "truss2": [37, 0, 63, 221], "truss1": [102, 0, 37, 213], "clock_mansion": [141, 0, 110, 193], "mega_factory": [253, 0, 217, 183], "factory3": [472, 0, 134, 171], "fac_tower": [608, 0, 208, 157], "apartment": [818, 0, 84, 150], "steam_co": [0, 229, 163, 128], "gable_house": [165, 229, 72, 120], "silo_a": [239, 229, 42, 116], "long_hall": [283, 229, 148, 114], "green_dome": [433, 229, 71, 110], "stack_a": [506, 229, 16, 110], "tall_tower": [524, 229, 36, 107], "silo_b": [562, 229, 31, 104], "arch_complex": [595, 229, 208, 102], "chimney_dome": [805, 229, 84, 102], "mansard": [891, 229, 82, 101], "gothic": [0, 359, 59, 101], "warehouse": [61, 359, 169, 100], "arch_hall": [232, 359, 125, 100], "clock_small": [359, 359, 50, 99], "stack_c": [411, 359, 14, 95], "awning_house": [427, 359, 63, 91], "stack_b": [492, 359, 9, 86], "barn_arch": [503, 359, 106, 85], "tower_house": [611, 359, 68, 80], "small_house": [681, 359, 58, 80], "long_low": [741, 359, 99, 78], "small_green": [842, 359, 57, 63]};
 
   var CLASSES = {
     tall: ["mega_factory", "fac_tower", "factory3", "clock_mansion", "steam_co", "apartment", "truss1", "truss2", "truss3"],
@@ -87,7 +87,7 @@
       }
     };
     atlasImg.onerror = function () { atlasFailed = true; console.warn("[L2] level2_structures.webp missing — using classic buildings"); };
-    atlasImg.src = "level2_structures.webp?v=ruff525";
+    atlasImg.src = "level2_structures.webp?v=ruff526";
   }
   loadAtlas();
 
