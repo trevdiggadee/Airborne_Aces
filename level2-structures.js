@@ -427,16 +427,6 @@
       ctx.fillStyle = "#ff8a3c";
       ctx.beginPath(); ctx.arc(x, y, 7 * u + 3 * pulse * u, 0, Math.PI * 2); ctx.fill();
     }
-    // faint hazard column during the blast so the danger zone reads clearly
-    if (ph.p === "blast") {
-      var zw = 15 * u * (0.8 + 0.5 * ph.f);
-      var g = (v.kind === "up") ? ctx.createLinearGradient(0, y, 0, y - v.len) : ctx.createLinearGradient(x, 0, x - v.len, 0);
-      g.addColorStop(0, "rgba(255,255,255,0.55)"); g.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.globalAlpha = 0.55;
-      ctx.fillStyle = g;
-      if (v.kind === "up") ctx.fillRect(x - zw, y - v.len, zw * 2, v.len);
-      else ctx.fillRect(x - v.len, y - zw, v.len, zw * 2);
-    }
     for (var i = 0; i < N; i++) {
       var sp = (ph.p === "blast") ? 1.8 : 0.7;
       var u1 = ((t * sp + i / N + v.seed) % 1);

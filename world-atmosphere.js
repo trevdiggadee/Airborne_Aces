@@ -227,6 +227,7 @@
         }
         ctx.restore();
       } else if (layer.mountain || layer.imgKey === "parallax_mountains") {
+        if (!trainingNowForBg()) return;   // mountains live on the training level only
         var mImg = (typeof images !== "undefined") ? images.parallax_mountains : null;
         if (!mImg || !mImg.naturalWidth) {
           // Image may load late — try to seed tiles once available
@@ -284,6 +285,47 @@
     });
   }
 
+  // ---------- Mountains are training-level only; Level 2 gets its own steampunk city layer ----------
+  function trainingNowForBg() {
+    return !!(window.__airborneAirfield || window.__airborneTrainingFlight || window.__airborneTrainingBoss ||
+              window.__airborneRuffActive || (typeof airfieldMode !== "undefined" && airfieldMode));
+  }
+  function isLevel2Bg() {
+    try { return !trainingNowForBg() && currentLevelBgKey() === "skylineFarL2"; } catch (e) { return false; }
+  }
+  let l2CityTiles = [];
+  function l2CityGeom(img) {
+    const tileH = H * 0.62;
+    const tileW = tileH * (img.naturalWidth / Math.max(1, img.naturalHeight));
+    return { tileH: tileH, tileW: tileW, y: groundLevelY() - tileH * 0.906 + H * 0.01 };
+  }
+  function updateL2City(dtScale) {
+    const img = (typeof images !== "undefined") ? images.l2_city_layer : null;
+    if (!img || !img.naturalWidth) return;
+    if (typeof worldScrollFrozen === "function" && worldScrollFrozen()) return;
+    const g = l2CityGeom(img);
+    if (!l2CityTiles.length || l2CityTiles._w !== g.tileW) {
+      l2CityTiles = []; l2CityTiles._w = g.tileW;
+      for (let x = 0; x < W + g.tileW * 2; x += g.tileW - 2) l2CityTiles.push(x);
+    }
+    const sp = 0.25 * dtScale * (typeof obstacleSpeedScale === "function" ? obstacleSpeedScale() : 1);
+    for (let i = 0; i < l2CityTiles.length; i++) l2CityTiles[i] -= sp;
+    while (l2CityTiles.length && l2CityTiles[0] + g.tileW < -10) l2CityTiles.shift();
+    while (l2CityTiles[l2CityTiles.length - 1] < W + 50) l2CityTiles.push(l2CityTiles[l2CityTiles.length - 1] + g.tileW - 2);
+  }
+  function drawL2City() {
+    const img = (typeof images !== "undefined") ? images.l2_city_layer : null;
+    if (!img || !img.naturalWidth) return;
+    const g = l2CityGeom(img);
+    if (!l2CityTiles.length) updateL2City(0);
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    for (let i = 0; i < l2CityTiles.length; i++) {
+      try { ctx.drawImage(img, l2CityTiles[i], g.y, g.tileW, g.tileH); } catch (e) {}
+    }
+    ctx.restore();
+  }
+
   function mountainImage() {
     if (typeof images === "undefined" || !images) return null;
     const a = images.mountains_cutout;
@@ -294,6 +336,7 @@
   }
 
   function drawMountainParallax() {
+    if (!trainingNowForBg()) { if (isLevel2Bg()) drawL2City(); return; }
     const img = mountainImage();
     if (!img) return;
     mountainReady = true;
@@ -321,6 +364,7 @@
   }
 
   function updateMountainParallax(dtScale) {
+    if (!trainingNowForBg()) { if (isLevel2Bg()) updateL2City(dtScale); return; }
     const img = mountainImage();
     if (!img) return;
     const aspect = img.naturalHeight / Math.max(1, img.naturalWidth);
