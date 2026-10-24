@@ -32,6 +32,7 @@
   var T_IDLE = 1.9, T_WARN = 1.0, T_BLAST = 1.1, T_COOL = 0.5;
   var T_CYCLE = T_IDLE + T_WARN + T_BLAST + T_COOL;
 
+  var AS = 1;                 // atlas pixel multiple; ATLAS rects stay in 1x units
   var atlasImg = null, atlasReady = false, atlasFailed = false;
   var tops = {};              // per sprite: Int16Array of first-solid-row for every pixel column
   var on = false;             // layer currently replacing the strip
@@ -63,16 +64,18 @@
       try {
         var c = document.createElement("canvas");
         c.width = atlasImg.naturalWidth; c.height = atlasImg.naturalHeight;
+        AS = Math.max(1, Math.round(atlasImg.naturalWidth / 1024));   // atlas resolution multiple (1 = original, 4 = 4x upscaled)
         var g = c.getContext("2d", { willReadFrequently: true });
         g.drawImage(atlasImg, 0, 0);
         Object.keys(ATLAS).forEach(function (k) {
           var r = ATLAS[k];
-          var d = g.getImageData(r[0], r[1], r[2], r[3]).data;
+          var d = g.getImageData(r[0] * AS, r[1] * AS, r[2] * AS, r[3] * AS).data;
+          var rowPx = r[2] * AS, half = Math.floor(AS / 2);
           var t = new Int16Array(r[2]);
           for (var x = 0; x < r[2]; x++) {
             t[x] = r[3];
             for (var y = 0; y < r[3]; y++) {
-              if (d[(y * r[2] + x) * 4 + 3] > 70) { t[x] = y; break; }
+              if (d[((y * AS + half) * rowPx + x * AS + half) * 4 + 3] > 70) { t[x] = y; break; }
             }
           }
           tops[k] = t;
@@ -84,7 +87,7 @@
       }
     };
     atlasImg.onerror = function () { atlasFailed = true; console.warn("[L2] level2_structures.webp missing — using classic buildings"); };
-    atlasImg.src = "level2_structures.webp?v=ruff522";
+    atlasImg.src = "level2_structures.webp?v=ruff525";
   }
   loadAtlas();
 
@@ -476,7 +479,7 @@
       var s = order[i];
       if (s.x > W + 10 || s.x + s.w < -10) continue;
       var r = ATLAS[s.name];
-      ctx.drawImage(atlasImg, r[0], r[1], r[2], r[3], s.x, s.y, s.w, s.h);
+      ctx.drawImage(atlasImg, r[0] * AS, r[1] * AS, r[2] * AS, r[3] * AS, s.x, s.y, s.w, s.h);
     }
     vents.forEach(function (v) { if (v.kind === "left") drawWallNozzle(v); });
     vents.forEach(drawSteam);
