@@ -22,7 +22,7 @@
         "Better duck, old man!"
       ] },
     { num: 2, threshold: 160, maxHealth: 128,  kind: "rocket",  miniType: "mini_blimp",
-      label: "SECOND BOSS INCOMING!",  defeatLabel: "SECOND BOSS DEFEATED!",  powerupKind: "blue",    defeatBonus: 60,  bonusRound: "coin",
+      label: "SECOND BOSS INCOMING!",  defeatLabel: "SECOND BOSS DEFEATED!",  powerupKind: "arcbomb", defeatBonus: 60,  bonusRound: "coin",
       name: "Marshal Cinderfuse",
       taunts: [
         "You call that flying? Pathetic!",

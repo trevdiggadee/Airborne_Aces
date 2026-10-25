@@ -72,7 +72,7 @@
   function updatePlayerBombs(dt) {
     // the tank boss floats above the street, out of straight-bullet range for the
     // player's usual guns — instead this fight grants an arcing bomb-drop attack
-    if (hasArcBomb && bossActive && boss && boss.kind === "tank" && state === "playing") {
+    if (hasArcBomb && bossActive && boss && (boss.kind === "tank" || boss.variant === 2) && state === "playing") {
       arcBombTimer -= dt;
       if (arcBombTimer <= 0) {
         arcBombTimer = ARC_BOMB_INTERVAL;
@@ -104,7 +104,8 @@
         if (!boss) return true; // boss was just defeated by an earlier bomb this same pass
         const dx = Math.abs(b.x - (boss.x + boss.w / 2));
         const dy = Math.abs(b.y - (boss.y + boss.h / 2));
-        if (dx < boss.w * 0.38 && dy < boss.h * 0.42) {
+        const ship = boss.variant === 2;
+        if (dx < boss.w * (ship ? 0.47 : 0.38) && dy < boss.h * (ship ? 0.5 : 0.42)) {
           boss.health--;
           bossHitFlashUntil = performance.now() + 220;
           bossShakeUntil = performance.now() + 420;
@@ -306,6 +307,268 @@
     }
   }
 
+
+  // ================= Boss 2 battleship (water, damage fx, sinking) =================
+  let shipFx = [];
+  window.__airborneShipDefer = function () {
+    try {
+      if (bossActive && boss && boss.variant === 2 && boss.kind === "rocket") return true;
+      if (bossSinking && bossSinking.mode === "ship_sink") return true;
+    } catch (e) {}
+    return false;
+  };
+  function l2WaterOn() { try { return !!(window.__airborneL2On && window.__airborneL2On() && window.__airborneL2WaterTop); } catch (e) { return false; } }
+  function shipWaterSurfY() {
+    if (l2WaterOn()) { try { return window.__airborneL2WaterTop(); } catch (e) {} }
+    return H * 0.945;
+  }
+  function shipSurfAt(x) {
+    if (l2WaterOn()) { try { return window.__airborneL2SurfY(x); } catch (e) {} }
+    return shipWaterSurfY();
+  }
+
+  // shared particle engine (fire, smoke, sparks, foam, droplets ...)
+  function fxUpdateList(list, dt) {
+    for (let i = 0; i < list.length; i++) {
+      const p = list[i];
+      p.age += dt; p.x += p.vx * dt; p.y += p.vy * dt;
+      const k = p.kind;
+      if (k === "smoke" || k === "ink") {
+        p.r += (p.r > 20 ? 32 : 20) * dt; p.vy -= (k === "ink" ? -10 : 12) * dt; p.vx *= 0.97;
+      } else if (k === "bsmoke") {
+        p.r += 26 * dt; p.vy -= 10 * dt; p.vx = p.vx * 0.985 + 6 * dt;
+      } else if (k === "ember" || k === "dust") {
+        p.vy += 50 * dt; p.vx *= 0.98;
+      } else if (k === "spark") {
+        p.vy += 30 * dt; p.r = Math.max(0.5, p.r - 3 * dt);
+      } else if (k === "drop") {
+        p.vy += 460 * dt; p.vx *= 0.995;
+      } else if (k === "foam") {
+        p.r += 5 * dt; p.vx *= 0.94; p.vy *= 0.9;
+      } else if (k === "flash") {
+        p.r += 70 * dt;
+      } else {
+        p.r += 8 * dt; p.vy -= 25 * dt;
+      }
+    }
+    const out = list.filter(function (p) { return p.age < p.life; });
+    return out.length > 320 ? out.slice(out.length - 320) : out;
+  }
+  function fxDrawList(list) {
+    for (let i = 0; i < list.length; i++) {
+      const p = list[i];
+      const pt = 1 - p.age / p.life;
+      ctx.save();
+      const k = p.kind;
+      ctx.globalAlpha = Math.max(0, pt * (k === "smoke" || k === "ink" ? (p.r > 18 ? 0.72 : 0.55) : (k === "bsmoke" ? 0.8 : 0.92)));
+      if (k === "fire") {
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+        g.addColorStop(0, "rgba(255,245,200," + (0.95 * pt) + ")"); g.addColorStop(0.35, "rgba(255,140,30," + (0.85 * pt) + ")");
+        g.addColorStop(0.7, "rgba(220,40,10," + (0.45 * pt) + ")"); g.addColorStop(1, "rgba(40,10,0,0)");
+        ctx.fillStyle = g;
+      } else if (k === "flash") {
+        ctx.globalCompositeOperation = "lighter";
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+        g.addColorStop(0, "rgba(255,250,220," + (0.9 * pt) + ")"); g.addColorStop(0.4, "rgba(255,170,60," + (0.5 * pt) + ")"); g.addColorStop(1, "rgba(255,90,20,0)");
+        ctx.fillStyle = g;
+      } else if (k === "ember" || k === "spark") {
+        ctx.fillStyle = "rgba(255," + Math.floor(140 + 90 * pt) + ",40," + (0.95 * pt) + ")";
+      } else if (k === "dust") {
+        ctx.fillStyle = "rgba(140,120,90," + (0.5 * pt) + ")";
+      } else if (k === "ink") {
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+        g.addColorStop(0, "rgba(60,20,90," + (0.7 * pt) + ")"); g.addColorStop(1, "rgba(20,5,40,0)");
+        ctx.fillStyle = g;
+      } else if (k === "bsmoke") {
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+        g.addColorStop(0, "rgba(14,12,12," + (0.8 * pt) + ")"); g.addColorStop(1, "rgba(10,10,10,0)");
+        ctx.fillStyle = g;
+      } else if (k === "drop") {
+        ctx.fillStyle = "rgba(225,242,250," + (0.9 * pt) + ")";
+      } else if (k === "foam") {
+        ctx.fillStyle = "rgba(235,246,252," + (0.55 * pt) + ")";
+        ctx.beginPath(); ctx.ellipse(p.x, p.y, p.r * 1.8, Math.max(1, p.r * 0.55), 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); continue;
+      } else {
+        const g2 = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+        g2.addColorStop(0, "rgba(55,48,40," + (0.55 * pt) + ")"); g2.addColorStop(1, "rgba(25,22,20,0)");
+        ctx.fillStyle = g2;
+      }
+      ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(0.5, p.r), 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+  }
+  function fxPush(list, o) { list.push(o); }
+
+  // fire/smoke hotspots on the hull (fractions of the ship sprite)
+  const SHIP_HOT = [[0.55, 0.22], [0.40, 0.14], [0.30, 0.44], [0.78, 0.50], [0.83, 0.42], [0.50, 0.58], [0.14, 0.56], [0.66, 0.36]];
+  function shipDamageFx(b, dmg, dt) {
+    b._fxS = (b._fxS || 0) - dt; b._fxF = (b._fxF || 0) - dt; b._fxE = (b._fxE || 0) - dt;
+    const n = Math.min(SHIP_HOT.length, 1 + Math.floor(dmg * 8));
+    const pos = function () { const h = SHIP_HOT[(Math.random() * n) | 0]; return [b.x + b.w * h[0] + (Math.random() - 0.5) * 8, b.y + b.h * h[1] + (Math.random() - 0.5) * 6]; };
+    if (dmg > 0.12 && b._fxS <= 0) {
+      b._fxS = Math.max(0.07, 0.42 - dmg * 0.34);
+      const q = pos();
+      shipFx.push({ kind: dmg > 0.45 && Math.random() < 0.6 ? "bsmoke" : "smoke", x: q[0], y: q[1], vx: -8 - Math.random() * 14, vy: -26 - Math.random() * 30, life: 1.6 + Math.random() * 1.2, age: 0, r: 8 + Math.random() * 10 + dmg * 10 });
+    }
+    if (dmg > 0.4 && b._fxF <= 0) {
+      b._fxF = Math.max(0.05, 0.3 - (dmg - 0.4) * 0.32);
+      const q = pos();
+      shipFx.push({ kind: "fire", x: q[0], y: q[1], vx: (Math.random() - 0.5) * 30, vy: -30 - Math.random() * 50, life: 0.35 + Math.random() * 0.4, age: 0, r: 5 + Math.random() * 9 });
+      if (Math.random() < 0.4) shipFx.push({ kind: "ember", x: q[0], y: q[1], vx: (Math.random() - 0.5) * 70, vy: -30 - Math.random() * 60, life: 0.6, age: 0, r: 2 + Math.random() * 2 });
+    }
+    if (dmg > 0.68 && b._fxE <= 0) {
+      b._fxE = 0.8 + Math.random() * 0.9;
+      const q = pos();
+      shipFx.push({ kind: "flash", x: q[0], y: q[1], vx: 0, vy: 0, life: 0.28, age: 0, r: 16 });
+      for (let i = 0; i < 9; i++) { const a = Math.random() * Math.PI * 2, sp = 50 + Math.random() * 150; shipFx.push({ kind: Math.random() < 0.5 ? "fire" : "spark", x: q[0], y: q[1], vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40, life: 0.4 + Math.random() * 0.4, age: 0, r: 3 + Math.random() * 6 }); }
+      try { triggerScreenShake(3, 120); } catch (e) {}
+    }
+  }
+  // bow spray + foam along the waterline (boat wave motion)
+  function shipWaterFx(b, dt, sinking) {
+    b._fxW = (b._fxW || 0) - dt;
+    if (b._fxW > 0) return;
+    b._fxW = sinking ? 0.03 : 0.055;
+    const bowX = b.x + b.w * 0.045;
+    const sy = shipSurfAt(bowX);
+    if (Math.random() < 0.75) {
+      shipFx.push({ kind: "drop", x: bowX + Math.random() * 6, y: sy, vx: -30 - Math.random() * 70, vy: -70 - Math.random() * 90, life: 0.5 + Math.random() * 0.35, age: 0, r: 1.2 + Math.random() * 1.8 });
+    }
+    const fx = b.x + b.w * (0.03 + Math.random() * 0.94);
+    shipFx.push({ kind: "foam", x: fx, y: shipSurfAt(fx) + 1, vx: -10 - Math.random() * 14, vy: 0, life: 0.7 + Math.random() * 0.5, age: 0, r: 2 + Math.random() * 3 });
+    if (Math.random() < 0.18) {
+      const sx = b.x + b.w * (0.04 + Math.random() * 0.9);
+      for (let i = 0; i < 3; i++) shipFx.push({ kind: "drop", x: sx, y: shipSurfAt(sx), vx: (Math.random() - 0.5) * 50, vy: -50 - Math.random() * 60, life: 0.4 + Math.random() * 0.3, age: 0, r: 1 + Math.random() * 1.5 });
+    }
+  }
+  function drawShipFoamLine(x0, x1, tilt) {
+    const t = performance.now() / 1000;
+    ctx.save();
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    for (let pass = 0; pass < 2; pass++) {
+      ctx.strokeStyle = pass ? "rgba(235,246,252,0.35)" : "rgba(245,252,255,0.7)";
+      ctx.lineWidth = pass ? 3.4 : 1.8;
+      ctx.beginPath();
+      for (let x = x0; x <= x1; x += 5) {
+        const y = shipSurfAt(x) + 1 + Math.sin(x * 0.19 + t * 5 + pass * 1.3) * 1.3 - pass * 1.5;
+        if (x === x0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function drawShipBowWave(b) {
+    const t = performance.now() / 1000;
+    const bx = b.x + b.w * 0.03, by = shipSurfAt(bx);
+    ctx.save();
+    for (let i = 0; i < 3; i++) {
+      const ph = (t * 1.4 + i / 3) % 1;
+      const r = 8 + ph * 26;
+      ctx.globalAlpha = (1 - ph) * 0.55;
+      ctx.strokeStyle = "rgba(235,248,255,1)"; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.ellipse(bx - ph * 10, by + 1, r, r * 0.22, 0, Math.PI, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function shipSinkWaterOverlay(s) {
+    if (l2WaterOn() && typeof window.__airborneL2WaterFront === "function") { try { window.__airborneL2WaterFront(); } catch (e) {} }
+    drawShipFoamLine(Math.max(0, s.x - 20), Math.min(W, s.x + s.w + 30), 0);
+  }
+
+  function updateShipBoss(dt) {
+    const b = boss;
+    b.t = (b.t || 0) + dt;
+    const pct = Math.max(0, Math.min(1, b.health / b.maxHealth));
+    const dmg = 1 - pct;
+    const surf = shipWaterSurfY();
+    const keel = surf + H * 0.009;
+    const bob = Math.sin(b.t * 1.25) * H * 0.004 + Math.sin(b.t * 2.3) * H * 0.0015;
+    b.y = keel - b.h + bob + dmg * b.h * 0.1;
+    b.tilt = Math.sin(b.t * 0.9) * 0.012 + Math.sin(b.t * 1.7) * 0.005 - dmg * 0.05;
+
+    // cannon lift cycle: raise barrels (video frames 0 -> 35), volley, lower again
+    if (b.arrived) {
+      const fps = pct < 0.35 ? 40 : 30;
+      b.animF = b.animF || 0;
+      b.fireState = b.fireState || "idle";
+      if (b.fireState === "idle") {
+        b.attackTimer -= dt;
+        if (b.attackTimer <= 0) b.fireState = "rise";
+      } else if (b.fireState === "rise") {
+        b.animF += dt * fps;
+        if (b.animF >= 35) {
+          b.animF = 35; b.fireState = "hold"; b.holdT = 0.28;
+          const n = pct < 0.6 ? 3 : 2;
+          b.shots = []; for (let i = 0; i < n; i++) b.shots.push({ t: 0.05 + i * 0.24, i: i % 2 });
+        }
+      } else if (b.fireState === "hold") {
+        b.holdT -= dt;
+        if (b.holdT <= 0) b.fireState = "lower";
+      } else if (b.fireState === "lower") {
+        b.animF -= dt * fps * 0.9;
+        if (b.animF <= 0) { b.animF = 0; b.fireState = "idle"; b.attackTimer = (0.9 + Math.random() * 1.0) * (pct < 0.35 ? 0.7 : 1); }
+      }
+      b.animFrame = Math.max(0, Math.min(35, Math.round(b.animF)));
+      if (b.shots && b.shots.length) {
+        for (let i = b.shots.length - 1; i >= 0; i--) {
+          b.shots[i].t -= dt;
+          if (b.shots[i].t <= 0) { fireShipCannon(b, b.shots[i].i); b.shots.splice(i, 1); }
+        }
+      }
+    }
+    shipDamageFx(b, dmg, dt);
+    shipWaterFx(b, dt, false);
+    shipFx = fxUpdateList(shipFx, dt);
+  }
+  function fireShipCannon(b, which) {
+    const f = Math.max(0, Math.min(1, (b.animF || 0) / 35));
+    const fx = which === 0 ? 0.21 + 0.01 * f : 0.12;
+    const fy = which === 0 ? 0.51 - 0.053 * f : 0.60 - 0.024 * f;
+    const sx = b.x + b.w * fx, sy = b.y + b.h * fy;
+    const dx = player.x - sx, dy = player.y - sy;
+    const dist = Math.max(1, Math.hypot(dx, dy));
+    const spd = ROCKET_SPEED * 0.92;
+    rockets.push({
+      x: sx, y: sy, vx: (dx / dist) * spd, vy: (dy / dist) * spd,
+      r: Math.min(18, W * 0.045), health: Math.random() < 0.5 ? 2 : 3, maxHealth: 3,
+      angle: Math.atan2(dy, dx), animFrame: 0, animTimer: Math.random() * (1 / ROCKET_ANIM_FPS),
+      frameKeys: ROCKET_FLIGHT_KEYS
+    });
+    // muzzle flash + smoke
+    shipFx.push({ kind: "flash", x: sx, y: sy, vx: 0, vy: 0, life: 0.18, age: 0, r: 14 });
+    for (let i = 0; i < 5; i++) shipFx.push({ kind: "smoke", x: sx, y: sy, vx: -30 - Math.random() * 40, vy: -10 - Math.random() * 25, life: 0.7 + Math.random() * 0.5, age: 0, r: 5 + Math.random() * 6 });
+    try { triggerScreenShake(2, 90); } catch (e) {}
+    try { if (typeof sfxShoot === "function") sfxShoot(); } catch (e) {}
+  }
+  function drawShipBoss(img, shakeX) {
+    const pivX = boss.x + boss.w / 2 + shakeX, pivY = boss.y + boss.h;
+    ctx.save();
+    ctx.translate(pivX, pivY); ctx.rotate(boss.tilt || 0);
+    ctx.drawImage(img, -boss.w / 2, -boss.h, boss.w, boss.h);
+    ctx.restore();
+    // water in front of the hull (deferred from the dock layer), then foam, spray and fire on top
+    if (l2WaterOn() && typeof window.__airborneL2WaterFront === "function") { try { window.__airborneL2WaterFront(); } catch (e) {} }
+    drawShipFoamLine(Math.max(0, boss.x - 12), Math.min(W, boss.x + boss.w + 12), boss.tilt || 0);
+    drawShipBowWave(boss);
+    fxDrawList(shipFx);
+  }
+  function resetShipFx() { shipFx = []; }
+  window.__airborneResetShipFx = resetShipFx;
+  function spawnShipSinkFx(s) {
+    // fire + smoke along the deck while she goes down; foam and spray where the hull meets the water
+    for (let i = 0; i < 2; i++) {
+      const h = SHIP_HOT[(Math.random() * SHIP_HOT.length) | 0];
+      const x = s.x + s.w * h[0], y = s.y + s.h * h[1];
+      if (y < shipSurfAt(x) - 2) {
+        s.fx.push({ kind: Math.random() < 0.5 ? "bsmoke" : "smoke", x: x, y: y, vx: -10 + (Math.random() - 0.5) * 20, vy: -28 - Math.random() * 30, life: 1.6 + Math.random() * 1.0, age: 0, r: 10 + Math.random() * 12 });
+        if (Math.random() < 0.6) s.fx.push({ kind: "fire", x: x, y: y, vx: (Math.random() - 0.5) * 30, vy: -30 - Math.random() * 40, life: 0.4 + Math.random() * 0.4, age: 0, r: 6 + Math.random() * 9 });
+      }
+    }
+    const sx = s.x + s.w * (0.02 + Math.random() * 0.96), sy = shipSurfAt(sx);
+    for (let i = 0; i < 3; i++) s.fx.push({ kind: "drop", x: sx, y: sy, vx: (Math.random() - 0.5) * 90, vy: -60 - Math.random() * 120, life: 0.5 + Math.random() * 0.4, age: 0, r: 1.2 + Math.random() * 2 });
+    s.fx.push({ kind: "foam", x: sx, y: sy + 1, vx: (Math.random() - 0.5) * 20, vy: 0, life: 0.9, age: 0, r: 3 + Math.random() * 4 });
+  }
+
   function drawBoss() {
     if (!boss) return;
     const img = (boss.kind === "bomber" && bossThrowFrame > 0)
@@ -326,7 +589,9 @@
       shakeX = Math.sin(remaining * 0.9) * 5 * (remaining / 220);
     }
 
-    if (bossImgReady) {
+    if (bossImgReady && boss.variant === 2 && boss.kind === "rocket") {
+      drawShipBoss(img, shakeX);
+    } else if (bossImgReady) {
       drawMotionBlur(img, boss.x + boss.w / 2 + shakeX, boss.y + boss.h / 2, boss.w, boss.h, 0, 80, 0);
       ctx.drawImage(img, boss.x + shakeX, boss.y, boss.w, boss.h);
     } else {
@@ -553,6 +818,13 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         spawnBossBalloonFireSmoke(s, false);
         continue;
       }
+      if (mode === "ship_sink") {
+        if (burst) {
+          s.fx.push({ kind: "flash", x: x, y: y, vx: 0, vy: 0, life: 0.35, age: 0, r: 22 });
+          for (let q = 0; q < 3; q++) { const a = Math.random() * Math.PI * 2, sp = 60 + Math.random() * 180; s.fx.push({ kind: q ? "spark" : "fire", x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 50, life: 0.5 + Math.random() * 0.5, age: 0, r: 4 + Math.random() * 8 }); }
+        } else spawnShipSinkFx(s);
+        continue;
+      }
       if (mode === "rocket_blast") {
         const ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.2;
         s.fx.push({
@@ -626,6 +898,12 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         s.fxTimer -= 0.08;
         spawnTrainHoleSmoke(s, false);
       }
+    } else if (mode === "ship_sink") {
+      s.tilt = (s.tilt0 || 0) - Math.pow(t, 1.4) * 0.62;   // bow dips first, then she goes under
+      s.vy = 25 + t * t * 240;
+      s.y += s.vy * dt;
+      s.x -= 5 * dt;
+      s.alpha = 1;
     } else if (mode === "fire_sink") {
       s.vy = 55 + t * t * 280; // 25% faster sink
       s.y += s.vy * dt;
@@ -668,26 +946,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
       }
     }
 
-    s.fx.forEach(function(p) {
-      p.age += dt;
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-      if (p.kind === "smoke" || p.kind === "ink") {
-        p.r += (p.r > 20 ? 32 : 20) * dt; // big hole puffs expand faster
-        p.vy -= (p.kind === "ink" ? -10 : 12) * dt;
-        p.vx *= 0.97;
-      } else if (p.kind === "ember" || p.kind === "dust") {
-        p.vy += 50 * dt;
-        p.vx *= 0.98;
-      } else if (p.kind === "spark") {
-        p.vy += 30 * dt;
-        p.r = Math.max(0.5, p.r - 3 * dt);
-      } else {
-        p.r += 8 * dt;
-        p.vy -= 25 * dt;
-      }
-    });
-    s.fx = s.fx.filter(function(p) { return p.age < p.life; });
+    s.fx = fxUpdateList(s.fx, dt);
 
     var trainOff = (s.mode === "train_sprite") && (s.y > H + (s._dh || s.h || 80) * 0.5);
     var done = trainOff || s.y > H + s.h * 0.4 || (s.mode !== "train_sprite" && s.age >= s.duration) || (s.alpha != null && s.alpha <= 0.02);
@@ -759,37 +1018,8 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     }
     ctx.restore();
 
-    s.fx.forEach(function(p) {
-      const pt = 1 - p.age / p.life;
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, pt * (p.kind === "smoke" || p.kind === "ink" ? (p.r > 18 ? 0.72 : 0.55) : 0.92));
-      if (p.kind === "fire") {
-        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        g.addColorStop(0, "rgba(255,245,200," + (0.95 * pt) + ")");
-        g.addColorStop(0.35, "rgba(255,140,30," + (0.85 * pt) + ")");
-        g.addColorStop(0.7, "rgba(220,40,10," + (0.45 * pt) + ")");
-        g.addColorStop(1, "rgba(40,10,0,0)");
-        ctx.fillStyle = g;
-      } else if (p.kind === "ember" || p.kind === "spark") {
-        ctx.fillStyle = "rgba(255," + Math.floor(140 + 90 * pt) + ",40," + (0.95 * pt) + ")";
-      } else if (p.kind === "dust") {
-        ctx.fillStyle = "rgba(140,120,90," + (0.5 * pt) + ")";
-      } else if (p.kind === "ink") {
-        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        g.addColorStop(0, "rgba(60,20,90," + (0.7 * pt) + ")");
-        g.addColorStop(1, "rgba(20,5,40,0)");
-        ctx.fillStyle = g;
-      } else {
-        const g2 = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        g2.addColorStop(0, "rgba(55,48,40," + (0.55 * pt) + ")");
-        g2.addColorStop(1, "rgba(25,22,20,0)");
-        ctx.fillStyle = g2;
-      }
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, Math.max(0.5, p.r), 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    });
+    if (mode === "ship_sink") shipSinkWaterOverlay(s);
+    fxDrawList(s.fx);
   }
 
   function defeatBoss() {
@@ -807,6 +1037,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     // Map each boss to a unique dramatic death
     let mode = "rocket_blast";
     if (kind === "bomber" || bossNumber === 1) mode = "fire_sink";
+    else if (kind === "rocket" && bossNumber === 2) mode = "ship_sink";
     else if (kind === "rocket") mode = "rocket_blast";
     else if (kind === "tank") mode = "tank_crumble";
     else if (kind === "heli") mode = "heli_spin";
@@ -845,6 +1076,14 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         fxTimer: 0,
         pendingCfg: cfg
       };
+      if (mode === "ship_sink") {
+        bossSinking.tilt0 = boss.tilt || 0;
+        bossSinking.tilt = boss.tilt || 0;
+        bossSinking.duration = 4.2;
+        // carry the live damage fire/smoke/foam into the sinking sequence
+        bossSinking.fx = shipFx.slice();
+        shipFx = [];
+      }
       if (isTrain) {
         try { ensureDefeatSprites(); } catch (e) {}
       }
@@ -854,8 +1093,8 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
         else spawnBossDeathFx(bossSinking, true);
       }
       defeatSlowMo = true;
-      defeatSlowMoUntil = performance.now() + bossSinking.duration * 1000;
-      triggerScreenShake(mode === "tank_crumble" ? 7 : 4, 550);
+      defeatSlowMoUntil = performance.now() + (mode === "ship_sink" ? 1100 : bossSinking.duration * 1000);
+      triggerScreenShake(mode === "tank_crumble" ? 7 : (mode === "ship_sink" ? 8 : 4), mode === "ship_sink" ? 1000 : 550);
       triggerScreenFlash(mode === "ink_dissolve" ? 0.18 : 0.1, 200);
       if (typeof sfxExplosion === "function") sfxExplosion(mode === "rocket_blast" ? 0.9 : 0.4);
     }

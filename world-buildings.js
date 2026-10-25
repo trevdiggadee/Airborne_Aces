@@ -2243,6 +2243,9 @@
     ctx.stroke();
     ctx.restore();
   }
+  window.__airborneL2WaterTop = function () { return l2WaterTop(); };
+  window.__airborneL2SurfY = function (x) { return l2SurfY(x, performance.now() / 1000, l2WaterTop()); };
+  window.__airborneL2WaterFront = function () { drawL2WaterFront(); };
   function drawL2Dock() {
     const img = images.l2_dock;
     if (!img || !img.naturalWidth) return false;
@@ -2265,7 +2268,7 @@
       ctx.drawImage(img, 0, 0, img.naturalWidth, srcTop, dx, y, dw, srcTop * k);
       ctx.drawImage(img, 0, srcTop, img.naturalWidth, srcBot, dx, ySplit, dw, natLower * f);
     }
-    drawL2WaterFront();
+    if (!(window.__airborneShipDefer && window.__airborneShipDefer())) drawL2WaterFront();
     return true;
   }
 

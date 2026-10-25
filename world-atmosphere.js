@@ -1170,6 +1170,7 @@
   // ---------- Boss shadow cast on buildings ----------
   function drawBossShadow() {
     if (!boss || !bossActive) return;
+    if (boss.variant === 2) return; // battleship floats on the water
     const groundY = groundLevelY();
     const shadowY = groundY - 2;
     const shadowW = boss.w * 0.7;

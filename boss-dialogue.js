@@ -212,7 +212,12 @@ function triggerBoss(num) {
     let dispW = dispH / aspect;
     // Phone-width screens: a wide sprite (or placeholder) could be wider than the screen, which pushed
     // targetX negative so the boss parked mostly off-screen ("boss never appeared"). Cap to 72% of W.
-    const maxBossW = W * 0.72;
+    if (num === 2) {
+      // battleship: wide hull, sized by width (capped by height), sitting on the water
+      dispW = Math.min(W * 1.15, (H * 0.30) / aspect);
+      dispH = dispW * aspect;
+    }
+    const maxBossW = num === 2 ? W * 1.2 : W * 0.72;
     if (dispW > maxBossW) {
       dispH = dispH * (maxBossW / dispW);
       dispW = maxBossW;
@@ -232,7 +237,7 @@ function triggerBoss(num) {
       targetX: (function () {
         const edgeMargin = W * 0.02;
         const paddedTarget = W - dispW * 0.55;
-        if (num === 2) return paddedTarget;
+        if (num === 2) return W - dispW * 0.75; // battleship: 75% of the hull on screen
         // Boss 3 (tank) sits ~25% further back (toward the right edge)
         if (num === 3 || cfg.kind === "tank") {
           const back = W - dispW * 0.22;
@@ -267,7 +272,9 @@ function triggerBoss(num) {
     powerup = null;
     hasFirepower = false;
     hasDualFire = false;
-    hasArcBomb = false;
+    hasArcBomb = (num === 2); // battleship fight: the player lobs arcing bomb-missiles at the ship
+    arcBombTimer = 0.6;
+    try { if (window.__airborneResetShipFx) window.__airborneResetShipFx(); } catch (e) {}
     powerupRespawnTimer = 1.2;
   }
 
@@ -275,6 +282,7 @@ function triggerBoss(num) {
     if (!boss) return;
     // Training boss encounter: deliberately slow the boss, its attacks, and animation to 1/3 speed.
     if (window.__airborneTrainingBoss) dt *= (1 / 3);
+    if (boss.variant === 2 && boss.kind === "rocket") { try { updateShipBoss(dt); } catch (eShip) { console.warn("updateShipBoss", eShip); } }
 
     if (!boss.arrived) {
       const arriveSpeed = boss.kind === "tank" ? 1.2 : 1.8; // the tank rolls in, everyone else flies in
@@ -332,6 +340,8 @@ function triggerBoss(num) {
         });
         if (typeof sfxShoot === "function") sfxShoot();
       }
+    } else if (boss.variant === 2 && boss.kind === "rocket") {
+      // battleship: movement, cannon cycle and damage effects live in updateShipBoss()
     } else if (boss.kind === "rocket" || boss.kind === "heli") {
       // floating villain blimp / helicopter — both fire straight-line homing rockets
       boss.bobPhase += dt * 1.1;
