@@ -655,6 +655,7 @@ function loop(ts) {
       drawStreetlamps();
       drawGroundVehicles();
     }
+    try { if (window.__airborneDrawL3Clouds) window.__airborneDrawL3Clouds(); } catch (eL3c) {}
     drawBossShadow();
     drawWindParticlesBack();
     // Training background balloons — behind blimps and clouds

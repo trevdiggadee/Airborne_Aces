@@ -1240,7 +1240,149 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
   const STORM_CLOUD_FPS = 12;
   const STORM_CLOUD_KEYS = Array.from({ length: STORM_CLOUD_FRAME_COUNT }, (_, i) => `storm_cloud_${String(i + 1).padStart(2, "0")}`);
 
+  // ---------- Level 3 storm-cloud ceiling ----------
+  // Dark cloud banks (three kinds, overlapped) fill the top of the screen, just below the HUD. They stay put (gentle sway only,
+  // never scroll off) and the whole bank lights up with lightning flashes. Replaces the old drifting decorative clouds.
+  const L3C = {"A": [[0, 0, 128, 99], [132, 0, 121, 101], [257, 0, 117, 103]], "B": [[378, 0, 129, 88], [511, 0, 134, 85], [649, 0, 133, 85]], "C": [[786, 0, 106, 102], [896, 0, 105, 102], [1005, 0, 104, 103]]};
+  let l3cImg = null, l3cLit = null, l3cReady = false;
+  let l3cList = [], l3cAlpha = 0, l3cT = 0, l3cFlash = null, l3cNextFlash = 2.5, l3cBolt = null, l3cThunderAt = 0, l3cSeedKey = "";
+  (function () {
+    l3cImg = new Image();
+    l3cImg.onload = function () {
+      try {
+        l3cLit = document.createElement("canvas");
+        l3cLit.width = l3cImg.naturalWidth; l3cLit.height = l3cImg.naturalHeight;
+        const g = l3cLit.getContext("2d");
+        g.drawImage(l3cImg, 0, 0);
+        g.globalCompositeOperation = "source-atop";
+        g.fillStyle = "rgba(190,215,255,0.78)";
+        g.fillRect(0, 0, l3cLit.width, l3cLit.height);
+      } catch (e) { l3cLit = null; }
+      l3cReady = true;
+    };
+    l3cImg.src = "level3_clouds.webp?v=ruff535";
+  })();
+
+  function l3cSeed() {
+    l3cList = [];
+    const u = H / 800;
+    // back -> front: wisps (C), jagged (B), dense puffs (A). Fractions of screen width, overlapping on purpose.
+    const plan = [
+      ["C", 0.02, 0.07, 0.62], ["C", 0.34, 0.10, 0.66], ["C", 0.66, 0.06, 0.62], ["C", 0.95, 0.10, 0.60],
+      ["B", 0.10, 0.12, 0.72], ["B", 0.42, 0.08, 0.76], ["B", 0.74, 0.13, 0.72], ["B", 1.0, 0.09, 0.66],
+      ["A", 0.00, 0.05, 0.60], ["A", 0.28, 0.12, 0.58], ["A", 0.56, 0.05, 0.62], ["A", 0.84, 0.11, 0.60]
+    ];
+    plan.forEach(function (p, i) {
+      const frames = L3C[p[0]];
+      const r0 = frames[0];
+      const w = W * p[3];
+      l3cList.push({ t: p[0], cx: W * p[1], cy: H * p[2], w: w, h: w * r0[3] / r0[2], ph: Math.random() * 6.28,
+                     flip: i % 2 === 1, fp: Math.random() * 6.28, fs: 0.25 + Math.random() * 0.2,
+                     a: p[0] === "C" ? 0.85 : 0.95, sway: (6 + Math.random() * 8) * u });
+    });
+    l3cSeedKey = W + "x" + H;
+  }
+
+  function l3cIsOn() { try { return isRainLevel(); } catch (e) { return false; } }
+
+  function updateL3Clouds(dt) {
+    if (!l3cReady) return;
+    const on = l3cIsOn();
+    l3cAlpha += ((on ? 1 : 0) - l3cAlpha) * Math.min(1, dt * 1.8);
+    if (!on && l3cAlpha < 0.01) { l3cAlpha = 0; l3cFlash = null; l3cBolt = null; return; }
+    if (!l3cList.length || l3cSeedKey !== W + "x" + H) l3cSeed();
+    l3cT += dt;
+    // lightning scheduling
+    l3cNextFlash -= dt;
+    if (on && l3cNextFlash <= 0 && !l3cFlash) {
+      l3cNextFlash = 2.2 + Math.random() * 4.2;
+      l3cFlash = { age: 0, life: 0.55, x: W * (0.1 + Math.random() * 0.8), pulses: Math.random() < 0.6 ? 2 : 1 };
+      if (Math.random() < 0.65) {
+        const sx = l3cFlash.x, pts = [[sx, H * 0.18]];
+        let y = H * 0.18, x = sx;
+        const endY = H * (0.34 + Math.random() * 0.22);
+        while (y < endY) { y += 14 + Math.random() * 22; x += (Math.random() - 0.5) * 34; pts.push([x, y]); }
+        l3cBolt = { pts: pts };
+      }
+      l3cThunderAt = performance.now() + 350 + Math.random() * 500;
+    }
+    if (l3cFlash) {
+      l3cFlash.age += dt;
+      if (l3cFlash.age >= l3cFlash.life) { l3cFlash = null; l3cBolt = null; }
+    }
+    if (l3cThunderAt && performance.now() >= l3cThunderAt) {
+      l3cThunderAt = 0;
+      try { if (typeof sfxThunder === "function") sfxThunder(); } catch (e) {}
+    }
+  }
+
+  function l3cFlashIntensity() {
+    if (!l3cFlash) return 0;
+    const t = l3cFlash.age, life = l3cFlash.life;
+    if (l3cFlash.pulses === 2) {
+      // flicker: strong, dip, strong, fade
+      if (t < 0.06) return t / 0.06;
+      if (t < 0.14) return 1 - (t - 0.06) / 0.08 * 0.7;
+      if (t < 0.2) return 0.3 + (t - 0.14) / 0.06 * 0.7;
+      return Math.max(0, 1 - (t - 0.2) / (life - 0.2));
+    }
+    if (t < 0.05) return t / 0.05;
+    return Math.max(0, 1 - (t - 0.05) / (life - 0.05));
+  }
+
+  function drawL3Clouds() {
+    if (!l3cReady || l3cAlpha < 0.01 || !l3cList.length) return;
+    if (typeof levelEndPhase === "string" && levelEndPhase === "fadeOut") return;
+    const I = l3cFlashIntensity();
+    ctx.save();
+    // faint sky flash behind the cloud bank
+    if (I > 0.02) {
+      ctx.fillStyle = "rgba(200,220,255," + (0.16 * I * l3cAlpha) + ")";
+      ctx.fillRect(0, 0, W, H * 0.45);
+    }
+    for (let i = 0; i < l3cList.length; i++) {
+      const c = l3cList[i];
+      const frames = L3C[c.t];
+      // slow morph between two frames of the animation
+      const m = 0.5 + 0.5 * Math.sin(l3cT * c.fs + c.fp);
+      const fa = frames[0], fb = frames[1 + (i % 2)];
+      const x = c.cx + Math.sin(l3cT * 0.25 + c.ph) * c.sway;
+      const y = c.cy + Math.sin(l3cT * 0.19 + c.ph * 1.7) * c.sway * 0.4;
+      ctx.save();
+      ctx.translate(x, y);
+      if (c.flip) ctx.scale(-1, 1);
+      const dx = -c.w / 2, dy = -c.h / 2;
+      ctx.globalAlpha = c.a * l3cAlpha * (1 - m * 0.55);
+      ctx.drawImage(l3cImg, fa[0], fa[1], fa[2], fa[3], dx, dy, c.w, c.h);
+      ctx.globalAlpha = c.a * l3cAlpha * (0.45 + m * 0.55);
+      ctx.drawImage(l3cImg, fb[0], fb[1], fb[2], fb[3], dx, dy, c.w, c.h);
+      if (I > 0.02 && l3cLit) {
+        // lightning lights the cloud from inside; clouds near the strike glow brightest
+        const near = l3cFlash ? Math.max(0.25, 1 - Math.abs(x - l3cFlash.x) / (W * 0.7)) : 0.3;
+        ctx.globalAlpha = Math.min(1, I * near * 0.9) * l3cAlpha;
+        ctx.drawImage(l3cLit, fa[0], fa[1], fa[2], fa[3], dx, dy, c.w, c.h);
+      }
+      ctx.restore();
+    }
+    // forked bolt
+    if (l3cBolt && I > 0.05) {
+      ctx.globalCompositeOperation = "lighter";
+      ctx.lineCap = "round"; ctx.lineJoin = "round";
+      const pts = l3cBolt.pts;
+      [[9, 0.18], [4, 0.45], [1.6, 0.95]].forEach(function (s) {
+        ctx.lineWidth = s[0]; ctx.strokeStyle = "rgba(190,215,255," + (s[1] * I * l3cAlpha) + ")";
+        ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let k = 1; k < pts.length; k++) ctx.lineTo(pts[k][0], pts[k][1]);
+        ctx.stroke();
+      });
+    }
+    ctx.restore();
+  }
+  window.__airborneUpdateL3Clouds = updateL3Clouds;
+  window.__airborneDrawL3Clouds = drawL3Clouds;
+
   function updateRain(dt) {
+    try { updateL3Clouds(dt); } catch (eL3) {}
     const raining = isRainLevel();
     if (!raining && stormCloudsDecorative.length) {
       // Sweep leftover level-3 clouds off during landing / other levels
@@ -1264,7 +1406,8 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
 
         // Spawn floating storm clouds instead of lightning bands
         lightningTimer -= dt;
-        if (lightningTimer <= 0) {
+        if (lightningTimer <= 0 && l3cReady) lightningTimer = 8; // new cloud ceiling replaces the old drifting storm clouds
+        else if (lightningTimer <= 0) {
             lightningTimer = 8 + Math.random() * 6; // more spread out: 8-14 seconds between clouds
             // Spawn a decorative storm cloud that floats across the screen
             const img = images[STORM_CLOUD_KEYS[0]];
