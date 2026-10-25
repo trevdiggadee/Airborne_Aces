@@ -2084,7 +2084,7 @@
   // Water under the dock — canvas port of the menu lake (translucent body, two scrolling
   // sine-wave rows, sliding shimmer streaks, light path and a faint surface line).
   function l2DeckY() { return groundLevelY() - H * 0.045 + H * 0.0433; }  // dock lowered 20% of its height
-  function l2WaterTop() { return l2DeckY() + H * 0.012; }
+  function l2WaterTop() { return l2DeckY() + H * 0.012 + H * 0.0216; }
   function l2WaveRow(t, top, period, amp, secs, dir, rgba, lw, yOff) {
     const off = ((t / secs) % 1) * period * dir;
     ctx.strokeStyle = rgba; ctx.lineWidth = lw; ctx.beginPath();
@@ -2097,38 +2097,65 @@
   }
   function drawL2WaterBack() {
     const top = l2WaterTop(), h = H - top;
+    // dark shadow beneath the deck covers the ground strip above the waterline
+    const sy = l2DeckY() + H * 0.006;
+    const sg = ctx.createLinearGradient(0, sy, 0, top);
+    sg.addColorStop(0, "rgba(10,8,8,0.78)"); sg.addColorStop(1, "rgba(14,22,30,0.96)");
+    ctx.fillStyle = sg; ctx.fillRect(0, sy, W, top - sy);
     const g = ctx.createLinearGradient(0, top, 0, H);
-    g.addColorStop(0, "rgba(52,140,176,0.92)"); g.addColorStop(0.4, "rgba(22,84,120,0.95)"); g.addColorStop(1, "rgba(6,28,52,0.98)");
+    g.addColorStop(0, "rgba(34,62,74,0.95)"); g.addColorStop(0.4, "rgba(16,36,50,0.97)"); g.addColorStop(1, "rgba(4,10,18,0.99)");
     ctx.fillStyle = g; ctx.fillRect(0, top, W, h);
-    const rg = ctx.createRadialGradient(W / 2, top, 0, W / 2, top, W * 0.6);
-    rg.addColorStop(0, "rgba(255,214,160,0.22)"); rg.addColorStop(1, "rgba(255,214,160,0)");
-    ctx.save(); ctx.beginPath(); ctx.rect(0, top, W, h); ctx.clip();
-    ctx.fillStyle = rg; ctx.fillRect(0, top, W, h); ctx.restore();
+    // faint warm sky reflection near the surface
+    const rg = ctx.createLinearGradient(0, top, 0, top + h * 0.5);
+    rg.addColorStop(0, "rgba(190,120,90,0.16)"); rg.addColorStop(1, "rgba(190,120,90,0)");
+    ctx.fillStyle = rg; ctx.fillRect(0, top, W, h * 0.5);
+  }
+  // Layered swell rows: rows nearer the bottom (closer to the viewer) are wider, taller and faster;
+  // each is a sum of two sines with a drifting phase, with brighter crest highlights.
+  function l2SwellRow(t, top, h, i, n) {
+    const d = i / (n - 1);
+    const base = top + h * (0.07 + 0.88 * Math.pow(d, 1.25));
+    const amp = 1.2 + 4.2 * d, period = 64 + 120 * d, speed = 12 + 46 * d;
+    const dir = (i % 2) ? 1 : -1;
+    const ph = t * speed * dir / period * Math.PI * 2;
+    const ph2 = t * (0.35 + 0.2 * d) + i * 1.7;
+    const bob = Math.sin(t * 0.9 + i) * 0.8;
+    const pts = [];
+    for (let x = -10; x <= W + 10; x += 5) {
+      const a = (x / period) * Math.PI * 2 + ph + i * 2.1;
+      pts.push(x, base + bob + Math.sin(a) * amp + Math.sin(a * 2.3 + ph2) * amp * 0.38);
+    }
+    const al = 0.16 + 0.26 * d;
+    ctx.lineWidth = 1 + d * 1.4; ctx.strokeStyle = "rgba(120,180,198," + al.toFixed(3) + ")";
+    ctx.beginPath(); for (let k = 0; k < pts.length; k += 2) { if (!k) ctx.moveTo(pts[k], pts[k + 1]); else ctx.lineTo(pts[k], pts[k + 1]); } ctx.stroke();
+    // crest highlights: only where the wave is near its peak
+    ctx.lineWidth = 1.2 + d * 1.6; ctx.strokeStyle = "rgba(210,235,240," + (0.18 + 0.3 * d).toFixed(3) + ")";
+    ctx.beginPath(); let pen = false;
+    for (let k = 0; k < pts.length; k += 2) {
+      const hi = pts[k + 1] < base + bob - amp * 0.55;
+      if (hi) { if (!pen) { ctx.moveTo(pts[k], pts[k + 1]); pen = true; } else ctx.lineTo(pts[k], pts[k + 1]); }
+      else pen = false;
+    }
+    ctx.stroke();
   }
   function drawL2WaterFront() {
     const top = l2WaterTop(), h = H - top, t = performance.now() / 1000;
     ctx.save(); ctx.beginPath(); ctx.rect(0, top, W, h); ctx.clip();
     // submerged tint over the pillar feet
     const g = ctx.createLinearGradient(0, top, 0, H);
-    g.addColorStop(0, "rgba(60,150,190,0.38)"); g.addColorStop(1, "rgba(6,30,52,0.6)");
+    g.addColorStop(0, "rgba(30,60,76,0.45)"); g.addColorStop(1, "rgba(4,10,18,0.7)");
     ctx.fillStyle = g; ctx.fillRect(0, top, W, h);
+    // slow, soft light patches drifting across the surface
     ctx.globalCompositeOperation = "screen";
-    // shimmer streaks (slanted, sliding)
-    const sh = Math.sin(t * (Math.PI * 2 / 4.2)) * 30;
-    ctx.strokeStyle = "rgba(90,220,255,0.16)"; ctx.lineWidth = 3;
-    for (let x = -60; x < W + 60; x += 48) { ctx.beginPath(); ctx.moveTo(x + sh, top); ctx.lineTo(x + sh - h * 0.35, H); ctx.stroke(); }
-    // sliding light path
-    const lp = ((Math.sin(t * (Math.PI * 2 / 7)) + 1) / 2) * W;
-    const lg = ctx.createLinearGradient(lp - W * 0.3, 0, lp + W * 0.3, 0);
-    lg.addColorStop(0, "rgba(100,230,255,0)"); lg.addColorStop(0.5, "rgba(100,230,255,0.16)"); lg.addColorStop(1, "rgba(100,230,255,0)");
+    const lp = ((Math.sin(t * 0.45) + 1) / 2) * W;
+    const lg = ctx.createLinearGradient(lp - W * 0.35, 0, lp + W * 0.35, 0);
+    lg.addColorStop(0, "rgba(150,190,200,0)"); lg.addColorStop(0.5, "rgba(150,190,200,0.10)"); lg.addColorStop(1, "rgba(150,190,200,0)");
     ctx.fillStyle = lg; ctx.fillRect(0, top, W, h);
-    // wave rows
-    l2WaveRow(t, top, 120, 4, 3.2, -1, "rgba(140,240,255,0.7)", 2, h * 0.30);
-    l2WaveRow(t, top, 180, 5, 5.5, 1, "rgba(110,225,255,0.55)", 2, h * 0.62);
-    l2WaveRow(t, top, 90, 2.5, 2.4, -1, "rgba(200,250,255,0.5)", 1.5, h * 0.10);
-    // surface line
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    const n = 7;
+    for (let i = 0; i < n; i++) l2SwellRow(t, top, h, i, n);
     ctx.globalCompositeOperation = "source-over";
-    ctx.fillStyle = "rgba(200,245,255,0.7)"; ctx.fillRect(0, top, W, 2);
+    ctx.fillStyle = "rgba(190,215,222,0.45)"; ctx.fillRect(0, top, W, 1.5);
     ctx.restore();
   }
   function drawL2Dock() {
