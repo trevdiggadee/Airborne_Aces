@@ -2010,9 +2010,26 @@
     const img = images.powerlines;
     if (!img || !img.naturalWidth) return;
     const groundY = groundLevelY();
+    // Level 2: dark-tinted power lines so they read against the golden skyline
+    let src = img;
+    try {
+      if (typeof currentLevelBgKey === "function" && currentLevelBgKey() === "skylineFarL2") {
+        if (!drawPowerlines._dark || drawPowerlines._src !== img) {
+          const c = document.createElement("canvas");
+          c.width = img.naturalWidth; c.height = img.naturalHeight;
+          const g = c.getContext("2d");
+          g.drawImage(img, 0, 0);
+          g.globalCompositeOperation = "source-atop";
+          g.fillStyle = "rgba(14,8,5,0.72)";
+          g.fillRect(0, 0, c.width, c.height);
+          drawPowerlines._dark = c; drawPowerlines._src = img;
+        }
+        src = drawPowerlines._dark;
+      }
+    } catch (ePl) { src = img; }
     ctx.save();
     powerlineTiles.forEach(t => {
-      ctx.drawImage(img, t.x, groundY - t.h, t.w, t.h);
+      ctx.drawImage(src, t.x, groundY - t.h, t.w, t.h);
     });
     ctx.restore();
   }

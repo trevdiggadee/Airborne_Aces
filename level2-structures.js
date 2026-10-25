@@ -460,62 +460,129 @@
   // Level 2 atmosphere: smoggy ground haze, drifting soot-smoke wisps (behind the buildings)
   // and glowing furnace embers floating past (in front of them)
   // ------------------------------------------------------------------
-  var wisps = [], embers = [];
+  var wisps = [], smokes = [], smokeT = {}, cloudsFar = [], cloudsMid = [];
+  var CLOUDS = {"c0": [19, 24, 130, 72], "c1": [179, 29, 122, 68], "c2": [336, 40, 119, 50], "c3": [492, 37, 106, 57], "c4": [644, 31, 100, 65], "c5": [16, 127, 133, 70], "c6": [223, 136, 70, 46], "c7": [348, 146, 108, 35], "c8": [489, 136, 118, 52], "c9": [645, 129, 97, 63], "c10": [16, 237, 133, 52], "c11": [186, 244, 113, 44], "c12": [335, 244, 115, 49], "c13": [492, 237, 107, 59], "c14": [648, 237, 86, 67], "c15": [16, 354, 133, 27], "c16": [186, 354, 113, 25], "c17": [325, 354, 131, 29], "c18": [520, 354, 82, 28], "c19": [649, 354, 114, 38]};
+  var CLOUD_KEYS = Object.keys(CLOUDS);
+  var cloudImg = null, cloudReady = false;
+  (function () {
+    cloudImg = new Image();
+    cloudImg.onload = function () { cloudReady = true; };
+    cloudImg.onerror = function () { cloudReady = false; };
+    cloudImg.src = "level2_clouds.webp?v=ruff531";
+  })();
+  // chimney tops on level2_city_layer.webp (x, y in the 2172x724 image)
+  var CITY_CHIMNEYS = [[85,145],[140,153],[320,321],[629,117],[1002,246],[1359,332],[1435,229],[1465,226],[1746,227],[1992,281],[2050,294]];
+
+  function newCloud(layer, anywhere) {
+    var w = (typeof W === "number" ? W : 412), h = (typeof H === "number" ? H : 800), u = U();
+    var k = pick(CLOUD_KEYS), r = CLOUDS[k];
+    var far = layer === "far";
+    var dw = (far ? rnd(100, 170) : rnd(130, 230)) * u;
+    return { k: k, w: dw, h: dw * r[3] / r[2],
+             x: anywhere ? rnd(-dw, w) : w + rnd(10, 160),
+             y: far ? rnd(h * 0.12, h * 0.40) : rnd(h * 0.20, h * 0.52),
+             a: far ? rnd(0.55, 0.75) : rnd(0.7, 0.9), v: far ? rnd(0.10, 0.18) : rnd(0.30, 0.5) };
+  }
   function seedAtmo() {
     var w = (typeof W === "number" ? W : 412), h = (typeof H === "number" ? H : 800), u = U();
-    wisps = []; embers = [];
-    for (var i = 0; i < 9; i++) wisps.push({ x: rnd(0, w * 1.4), y: rnd(h * 0.42, h * 0.8), r: rnd(70, 150) * u, a: rnd(0.10, 0.2), v: rnd(5, 14), ph: rnd(0, 6.3) });
-    for (var j = 0; j < 26; j++) embers.push(newEmber(true));
-  }
-  function newEmber(anywhere) {
-    var w = (typeof W === "number" ? W : 412), h = (typeof H === "number" ? H : 800), u = U();
-    return { x: anywhere ? rnd(0, w) : w + rnd(0, 80), y: anywhere ? rnd(h * 0.2, gY()) : rnd(h * 0.45, gY()),
-             vy: -rnd(10, 32) * u, drift: rnd(18, 46), r: rnd(1.1, 2.6) * u, ph: rnd(0, 6.3), life: rnd(0.6, 1) };
+    wisps = []; smokes = []; smokeT = {}; cloudsFar = []; cloudsMid = [];
+    for (var i = 0; i < 10; i++) wisps.push({ x: rnd(0, w * 1.4), y: rnd(h * 0.40, h * 0.82), r: rnd(80, 170) * u, a: rnd(0.14, 0.26), v: rnd(5, 14), ph: rnd(0, 6.3) });
+    for (var f = 0; f < 5; f++) cloudsFar.push(newCloud("far", true));
+    for (var m = 0; m < 4; m++) cloudsMid.push(newCloud("mid", true));
   }
   function updateAtmo(dt, sp) {
     if (!wisps.length) seedAtmo();
-    var w = (typeof W === "number" ? W : 412), h = (typeof H === "number" ? H : 800);
-    var move = sp / Math.max(dt, 1e-4) / 48;     // world speed factor (1 = normal)
+    var w = (typeof W === "number" ? W : 412), h = (typeof H === "number" ? H : 800), u = U();
+    var scale = (typeof obstacleSpeedScale === "function") ? obstacleSpeedScale() : 1;
+    var move = sp > 0 ? scale : 0;                 // world speed factor (0 while frozen)
     wisps.forEach(function (s) {
-      s.x -= (s.v * move) * dt; s.ph += dt * 0.4;
-      if (s.x < -s.r * 1.5) { s.x = w + s.r * 1.5; s.y = rnd(h * 0.42, h * 0.8); }
+      s.x -= (s.v * (0.4 + 0.6 * move)) * dt; s.ph += dt * 0.4;
+      if (s.x < -s.r * 1.6) { s.x = w + s.r * 1.6; s.y = rnd(h * 0.40, h * 0.82); }
     });
-    embers.forEach(function (e, i) {
-      e.ph += dt * 3;
-      e.x -= e.drift * dt * (0.6 + 0.4 * move) + Math.sin(e.ph) * 6 * dt;
-      e.y += e.vy * dt;
-      if (e.x < -10 || e.y < h * 0.12) embers[i] = newEmber(false);
+    [[cloudsFar, "far"], [cloudsMid, "mid"]].forEach(function (pr) {
+      var arr = pr[0];
+      arr.forEach(function (c, i) {
+        c.x -= 48 * move * c.v * dt + 3 * dt;
+        if (c.x + c.w < -10) arr[i] = newCloud(pr[1], false);
+      });
     });
+    // smoke from the city's chimneys (emitters ride the scrolling city layer)
+    var info = (typeof window.__airborneL2CityInfo === "function") ? window.__airborneL2CityInfo() : null;
+    if (info && info.tiles.length) {
+      var k = info.tileW / 2172;
+      for (var ti = 0; ti < info.tiles.length; ti++) {
+        for (var ci = 0; ci < CITY_CHIMNEYS.length; ci++) {
+          var ex = info.tiles[ti] + CITY_CHIMNEYS[ci][0] * k, ey = info.y + CITY_CHIMNEYS[ci][1] * k;
+          if (ex < -30 || ex > w + 30) continue;
+          var key = ti + "_" + ci + "_" + Math.round(info.tiles[ti] - ex + 99999);
+          var id = ci + "_" + Math.floor((ex - info.tiles[ti] * 0) * 0) ;
+          smokeT[ci + "|" + ti] = (smokeT[ci + "|" + ti] || rnd(0, 0.5)) - dt;
+          if (smokeT[ci + "|" + ti] <= 0) {
+            smokeT[ci + "|" + ti] = rnd(0.28, 0.5);
+            smokes.push({ x: ex + rnd(-2, 2) * u, y: ey, r: rnd(3, 5) * u, g: rnd(0.9, 1.5) * u, age: 0, life: rnd(4.5, 7), a: rnd(0.45, 0.7), d: rnd(0, 1) });
+          }
+        }
+      }
+    }
+    for (var si = smokes.length - 1; si >= 0; si--) {
+      var p = smokes[si];
+      p.age += dt;
+      if (p.age >= p.life) { smokes.splice(si, 1); continue; }
+      p.x -= (15 * move + 10 + p.age * 3) * dt;     // city scroll + wind that strengthens with height
+      p.y -= (16 + 10 * p.d) * u * dt;
+      p.r += p.g * 4.5 * dt;
+    }
+    if (smokes.length > 400) smokes.splice(0, smokes.length - 400);
   }
+  function drawCloudArr(arr) {
+    if (!cloudReady) return;
+    arr.forEach(function (c) {
+      var r = CLOUDS[c.k];
+      ctx.globalAlpha = c.a;
+      try { ctx.drawImage(cloudImg, r[0], r[1], r[2], r[3], c.x, c.y, c.w, c.h); } catch (e) {}
+    });
+    ctx.globalAlpha = 1;
+  }
+  // far clouds sit behind the city strip (called from world-atmosphere's city layer)
+  window.__airborneL2CloudsFar = function () {
+    if (!cloudsFar.length) return;
+    ctx.save(); drawCloudArr(cloudsFar); ctx.restore();
+  };
   function drawAtmoBack() {
     if (!wisps.length) return;
     var w = (typeof W === "number" ? W : 412), h = (typeof H === "number" ? H : 800), gy = gY();
     ctx.save();
-    // warm smog bank hugging the ground
-    var g = ctx.createLinearGradient(0, gy - h * 0.5, 0, gy);
-    g.addColorStop(0, "rgba(214,160,100,0)"); g.addColorStop(1, "rgba(214,160,100,0.26)");
-    ctx.fillStyle = g; ctx.fillRect(0, gy - h * 0.5, w, h * 0.5);
+    // sooty smog tint high in the sky
+    var top = ctx.createLinearGradient(0, 0, 0, h * 0.5);
+    top.addColorStop(0, "rgba(58,44,40,0.30)"); top.addColorStop(1, "rgba(58,44,40,0)");
+    ctx.fillStyle = top; ctx.fillRect(0, 0, w, h * 0.5);
+    // mid-air smog band
+    var band = ctx.createLinearGradient(0, h * 0.28, 0, gy - h * 0.1);
+    band.addColorStop(0, "rgba(150,118,92,0)"); band.addColorStop(0.5, "rgba(150,118,92,0.20)"); band.addColorStop(1, "rgba(150,118,92,0)");
+    ctx.fillStyle = band; ctx.fillRect(0, h * 0.28, w, gy - h * 0.38);
+    // dark cloud layer drifting in front of the city
+    drawCloudArr(cloudsMid);
+    // chimney smoke plumes
+    for (var i = 0; i < smokes.length; i++) {
+      var p = smokes[i], t = p.age / p.life;
+      var a = p.a * Math.min(1, p.age * 2) * (1 - t) * (1 - t * 0.3);
+      var gcol = 52 + Math.floor(40 * t);
+      var rg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+      rg.addColorStop(0, "rgba(" + gcol + "," + (gcol - 4) + "," + (gcol - 8) + "," + a + ")");
+      rg.addColorStop(1, "rgba(" + gcol + "," + (gcol - 4) + "," + (gcol - 8) + ",0)");
+      ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    }
     // drifting soot wisps
     wisps.forEach(function (s) {
       var a = s.a * (0.75 + 0.25 * Math.sin(s.ph));
       var rg = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r);
-      rg.addColorStop(0, "rgba(120,104,92," + a + ")"); rg.addColorStop(1, "rgba(120,104,92,0)");
+      rg.addColorStop(0, "rgba(110,92,80," + a + ")"); rg.addColorStop(1, "rgba(110,92,80,0)");
       ctx.fillStyle = rg; ctx.beginPath(); ctx.ellipse(s.x, s.y, s.r * 1.5, s.r * 0.8, 0, 0, Math.PI * 2); ctx.fill();
     });
-    ctx.restore();
-  }
-  function drawAtmoFront() {
-    if (!embers.length) return;
-    ctx.save();
-    ctx.globalCompositeOperation = "lighter";
-    embers.forEach(function (e) {
-      var fl = 0.55 + 0.45 * Math.sin(e.ph * 2.3);
-      var gr = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.r * 4);
-      gr.addColorStop(0, "rgba(255,190,90," + (0.8 * fl * e.life) + ")"); gr.addColorStop(1, "rgba(255,90,20,0)");
-      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(e.x, e.y, e.r * 4, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "rgba(255,235,170," + (0.9 * fl) + ")";
-      ctx.beginPath(); ctx.arc(e.x, e.y, e.r * 0.7, 0, Math.PI * 2); ctx.fill();
-    });
+    // warm smog bank hugging the ground
+    var g = ctx.createLinearGradient(0, gy - h * 0.5, 0, gy);
+    g.addColorStop(0, "rgba(206,150,92,0)"); g.addColorStop(1, "rgba(206,150,92,0.42)");
+    ctx.fillStyle = g; ctx.fillRect(0, gy - h * 0.5, w, h * 0.5);
     ctx.restore();
   }
 
@@ -534,7 +601,6 @@
     }
     vents.forEach(function (v) { if (v.kind === "left") drawWallNozzle(v); });
     vents.forEach(drawSteam);
-    drawAtmoFront();
     ctx.restore();
   };
 

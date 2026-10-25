@@ -316,11 +316,18 @@
     while (l2CityTiles.length && l2CityTiles[0] + g.tileW < -10) l2CityTiles.shift();
     while (l2CityTiles[l2CityTiles.length - 1] < W + 50) l2CityTiles.push(l2CityTiles[l2CityTiles.length - 1] + g.tileW - 2);
   }
+  window.__airborneL2CityInfo = function () {
+    const img = (typeof images !== "undefined") ? images.l2_city_layer : null;
+    if (!img || !img.naturalWidth || !isLevel2Bg()) return null;
+    const g = l2CityGeom(img);
+    return { tiles: l2CityTiles, tileW: g.tileW, y: g.y };
+  };
   function drawL2City() {
     const img = (typeof images !== "undefined") ? images.l2_city_layer : null;
     if (!img || !img.naturalWidth) return;
     const g = l2CityGeom(img);
     if (!l2CityTiles.length) updateL2City(0);
+    try { if (typeof window.__airborneL2CloudsFar === "function") window.__airborneL2CloudsFar(); } catch (eCl) {}
     ctx.save();
     ctx.globalAlpha = 1;
     for (let i = 0; i < l2CityTiles.length; i++) {
