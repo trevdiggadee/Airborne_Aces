@@ -2095,13 +2095,23 @@
     }
     ctx.stroke();
   }
+  function l2SurfY(x, t, top) {
+    return top + Math.sin(x * 0.045 + t * 1.9) * 2.4 + Math.sin(x * 0.017 - t * 1.1) * 3.2 + Math.sin(x * 0.11 + t * 3.1) * 0.9;
+  }
+  function l2SurfPath(t, top) {
+    ctx.beginPath(); ctx.moveTo(-5, H + 2);
+    for (let x = -5; x <= W + 5; x += 5) ctx.lineTo(x, l2SurfY(x, t, top));
+    ctx.lineTo(W + 5, H + 2); ctx.closePath();
+  }
   function drawL2WaterBack() {
     const top = l2WaterTop(), h = H - top;
     // dark shadow beneath the deck covers the ground strip above the waterline
     const sy = l2DeckY() + H * 0.006;
     const sg = ctx.createLinearGradient(0, sy, 0, top);
     sg.addColorStop(0, "rgba(10,8,8,0.78)"); sg.addColorStop(1, "rgba(14,22,30,0.96)");
-    ctx.fillStyle = sg; ctx.fillRect(0, sy, W, top - sy);
+    ctx.fillStyle = sg; ctx.fillRect(0, sy, W, top - sy + 8);
+    const t = performance.now() / 1000;
+    ctx.save(); l2SurfPath(t, top); ctx.clip();
     const g = ctx.createLinearGradient(0, top, 0, H);
     g.addColorStop(0, "rgba(34,62,74,0.95)"); g.addColorStop(0.4, "rgba(16,36,50,0.97)"); g.addColorStop(1, "rgba(4,10,18,0.99)");
     ctx.fillStyle = g; ctx.fillRect(0, top, W, h);
@@ -2109,6 +2119,7 @@
     const rg = ctx.createLinearGradient(0, top, 0, top + h * 0.5);
     rg.addColorStop(0, "rgba(190,120,90,0.16)"); rg.addColorStop(1, "rgba(190,120,90,0)");
     ctx.fillStyle = rg; ctx.fillRect(0, top, W, h * 0.5);
+    ctx.restore();
   }
   // Layered swell rows: rows nearer the bottom (closer to the viewer) are wider, taller and faster;
   // each is a sum of two sines with a drifting phase, with brighter crest highlights.
@@ -2140,7 +2151,7 @@
   }
   function drawL2WaterFront() {
     const top = l2WaterTop(), h = H - top, t = performance.now() / 1000;
-    ctx.save(); ctx.beginPath(); ctx.rect(0, top, W, h); ctx.clip();
+    ctx.save(); l2SurfPath(t, top); ctx.clip();
     // submerged tint over the pillar feet
     const g = ctx.createLinearGradient(0, top, 0, H);
     g.addColorStop(0, "rgba(30,60,76,0.45)"); g.addColorStop(1, "rgba(4,10,18,0.7)");
@@ -2152,10 +2163,12 @@
     lg.addColorStop(0, "rgba(150,190,200,0)"); lg.addColorStop(0.5, "rgba(150,190,200,0.10)"); lg.addColorStop(1, "rgba(150,190,200,0)");
     ctx.fillStyle = lg; ctx.fillRect(0, top, W, h);
     ctx.lineCap = "round"; ctx.lineJoin = "round";
-    const n = 7;
+    const n = 4;
     for (let i = 0; i < n; i++) l2SwellRow(t, top, h, i, n);
     ctx.globalCompositeOperation = "source-over";
-    ctx.fillStyle = "rgba(190,215,222,0.45)"; ctx.fillRect(0, top, W, 1.5);
+    ctx.strokeStyle = "rgba(190,215,222,0.5)"; ctx.lineWidth = 1.6; ctx.beginPath();
+    for (let x = -5; x <= W + 5; x += 5) { const y = l2SurfY(x, t, top); if (x === -5) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+    ctx.stroke();
     ctx.restore();
   }
   function drawL2Dock() {
@@ -2163,7 +2176,7 @@
     if (!img || !img.naturalWidth) return false;
     const FEET = 470, BEAM_ROW = 296;           // rows in the strip (at natural size)
     const ratio = img.naturalHeight / 565;
-    const k = (H * 0.18) / FEET / ratio;         // half-size dock
+    const k = (H * 0.198) / FEET / ratio;        // dock +10%, deck row stays fixed
     const sw = img.naturalWidth * k, sh = img.naturalHeight * k;
     const deckY = l2DeckY();
     const y = deckY - BEAM_ROW * ratio * k;
