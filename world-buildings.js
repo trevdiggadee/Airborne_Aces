@@ -2061,6 +2061,7 @@
   function updateStreet(dtScale) {
     if (worldScrollFrozen()) return;
     const speed = 0.8 * dtScale * obstacleSpeedScale();
+    dockX += speed;
     if (!streetTiles.length) initStreetTiles();
     streetTiles.forEach(t => (t.x -= speed));
     while (streetTiles.length && streetTiles[0].x + streetTiles[0].w < -10) {
@@ -2076,8 +2077,29 @@
     }
   }
 
+  // Level 2 road dock: seamless looping strip (main dock -> connector -> gear-tower
+  // connector -> connector -> back to main dock), scrolls with the buildings.
+  let dockX = 0;
+  function l2DockOn() { return typeof window.__airborneL2On === "function" && window.__airborneL2On(); }
+  function drawL2Dock() {
+    const img = images.l2_dock;
+    if (!img || !img.naturalWidth) return false;
+    const FEET = 470, BEAM_ROW = 296;           // rows in the strip (at natural size)
+    const k = (H * 0.36) / FEET / (img.naturalHeight / 565);
+    const sw = img.naturalWidth * k, sh = img.naturalHeight * k;
+    const y = H - FEET * (img.naturalHeight / 565) * k;
+    let x0 = -(dockX % sw);
+    // soft dark haze behind the dock base so it sits in front of the city
+    const g = ctx.createLinearGradient(0, y + BEAM_ROW * k * 0.5, 0, H);
+    g.addColorStop(0, "rgba(10,6,4,0)"); g.addColorStop(1, "rgba(10,6,4,0.55)");
+    ctx.fillStyle = g; ctx.fillRect(0, y + BEAM_ROW * k * 0.5, W, H - (y + BEAM_ROW * k * 0.5));
+    for (let x = x0; x < W; x += sw) ctx.drawImage(img, Math.round(x), y, Math.ceil(sw) + 1, sh);
+    return true;
+  }
+
   function drawStreet() {
     if (typeof airfieldMode !== "undefined" && airfieldMode) return;
+    if (l2DockOn() && drawL2Dock()) return;
     const img = images.streetTexture;
     if (!img || !img.naturalWidth) return;
     streetTiles.forEach(t => {
@@ -2203,6 +2225,7 @@
 
   function drawStreetlamps() {
     if (typeof airfieldMode !== "undefined" && airfieldMode) return;
+    if (l2DockOn()) return;
     if (!isStreetlampLevel()) return;
     const img = images.streetlamp1;
     if (!img || !img.naturalWidth) return;
@@ -2258,6 +2281,7 @@
 
   function drawGroundVehicles() {
     if (typeof airfieldMode !== "undefined" && airfieldMode) return;
+    if (l2DockOn()) return;
     // anchored toward the bottom of the street band (where the road portion
     // of the texture is expected to be) rather than the top edge, which
     // sits right against the buildings/sidewalk
