@@ -2833,11 +2833,11 @@ window.__airborneRingDebug = false;
         if (typeof drawMotionBlur === "function") {
           drawMotionBlur(img, o.x + o.w / 2, drawY + o.h / 2, o.w, o.h, 0, speed, 0);
         }
-        if (o.type === "mini_blimp") drawMiniBlimpExhaust(o, drawY, speed);
         ctx.save();
         ctx.globalAlpha = 1;
         ctx.drawImage(img, o.x, drawY, o.w, o.h);
         ctx.restore();
+        if (o.type === "mini_blimp") drawMiniBlimpExhaust(o, drawY, speed);
       } catch (eD) {
         try { ctx.drawImage(img, o.x, drawY, o.w, o.h); } catch (e2) {}
       }
@@ -2845,54 +2845,75 @@ window.__airborneRingDebug = false;
   }
   window.drawObstacles = drawObstacles;
 
-  // Jet exhaust for the boss-2 mini blimps: flickering flame at the rear nozzle + a drifting smoke trail
+  // Exhaust for the boss-2 mini blimps — same look as the Storm Chaser: a layered additive flame ribbon
+  // streaming from the rear nozzle (orange -> yellow -> white-hot core) with soft smoke behind the tip.
   function drawMiniBlimpExhaust(o, drawY, speed) {
     var nowT = (typeof performance !== "undefined") ? performance.now() : Date.now();
     var dt = o._exT ? Math.min(0.05, (nowT - o._exT) / 1000) : 0.016;
     o._exT = nowT;
+    if (!o.jetNodes) o.jetNodes = [];
     if (!o.smokeParticles) o.smokeParticles = [];
-    var nx = o.x + o.w * 0.97, ny = drawY + o.h * 0.5;
-    var t = nowT / 1000;
-    // spawn smoke
-    o.smokeTimer = (o.smokeTimer || 0) - dt;
-    if (o.smokeTimer <= 0) {
-      o.smokeTimer = 0.05;
-      o.smokeParticles.push({ x: nx + o.w * 0.06, y: ny + (Math.random() - 0.5) * o.h * 0.08,
-        vy: -8 - Math.random() * 14, r: o.w * (0.035 + Math.random() * 0.02), age: 0, life: 0.9 + Math.random() * 0.5 });
+    var nx = o.x + o.w * 0.86, ny = drawY + o.h * 0.52;   // rear nozzle (blimp flies left, exhaust streams right)
+    var STREAM = 165 * (o.w / 140);                        // px/s the flame streams backwards (scaled to blimp size)
+    // emit a ribbon node at a fixed cadence (constant trail density, like the Storm Chaser)
+    o._jetTimer = (o._jetTimer || 0) + dt;
+    while (o._jetTimer > 0.03) {
+      o._jetTimer -= 0.03;
+      o.jetNodes.push({ along: 0, age: 0, life: 0.26, w: o.h * 0.19 });
+      if (o.jetNodes.length > 20) o.jetNodes.splice(0, o.jetNodes.length - 18);
+      if (Math.random() < 0.6) {
+        o.smokeParticles.push({ x: nx + 10 + Math.random() * 12 + STREAM * 0.1, y: ny + (Math.random() - 0.5) * 4,
+          vx: 20 + Math.random() * 30, vy: (Math.random() - 0.5) * 20 - 8,
+          size: 3 + Math.random() * 3, age: 0, life: 0.55 + Math.random() * 0.45, alpha: 0.28 + Math.random() * 0.2 });
+      }
     }
-    // smoke (behind the flame)
+    var i;
+    for (i = o.jetNodes.length - 1; i >= 0; i--) {
+      var nd = o.jetNodes[i];
+      nd.age += dt; nd.along += STREAM * dt; nd.w *= (1 - 0.9 * dt);
+      var shimmer = Math.sin(nd.age * 5 + (o.bobPhase || 0)) * 0.3;
+      nd.x = nx + nd.along;                   // backwards = +x for a left-flying blimp
+      nd.y = ny + shimmer;
+      if (nd.age >= nd.life || nd.w <= 1) o.jetNodes.splice(i, 1);
+    }
+    // smoke riding behind the flame
     ctx.save();
-    for (var i = o.smokeParticles.length - 1; i >= 0; i--) {
+    for (i = o.smokeParticles.length - 1; i >= 0; i--) {
       var s = o.smokeParticles[i];
       s.age += dt;
       if (s.age >= s.life) { o.smokeParticles.splice(i, 1); continue; }
-      s.x -= speed * dt * 0.35;     // lingers behind the blimp as the world scrolls past
-      s.y += s.vy * dt;
-      var k = s.age / s.life;
-      ctx.globalAlpha = 0.5 * (1 - k);
-      var g = 70 + Math.floor(70 * k);
-      ctx.fillStyle = "rgb(" + g + "," + g + "," + (g + 6) + ")";
-      ctx.beginPath(); ctx.arc(s.x, s.y, s.r * (1 + k * 2.2), 0, Math.PI * 2); ctx.fill();
+      s.x += (s.vx - speed * 0.55) * dt; s.y += s.vy * dt; s.size += 9 * dt;
+      var k = 1 - s.age / s.life;
+      ctx.globalAlpha = Math.max(0, s.alpha * k * k);
+      ctx.fillStyle = "rgb(110,108,105)";
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); ctx.fill();
     }
     ctx.restore();
-    // flame cone pointing backwards (right)
-    var flick = 0.85 + 0.25 * Math.sin(t * 38 + (o.bobPhase || 0)) + 0.1 * Math.sin(t * 61);
-    var len = o.w * 0.30 * flick, wid = o.h * 0.13;
+    // layered flame ribbon (additive)
+    var nodes = o.jetNodes, n = nodes.length;
+    if (n < 2) return;
+    function ribbon(halfScale, color) {
+      ctx.beginPath();
+      for (var a = 0; a < n; a++) {
+        var nd1 = nodes[a], t = Math.max(0, 1 - nd1.age / nd1.life);
+        var half = Math.max(0.8, nd1.w * t * halfScale * (0.55 + 0.45 * t));
+        if (a === 0) ctx.moveTo(nd1.x, nd1.y - half); else ctx.lineTo(nd1.x, nd1.y - half);
+      }
+      var tip = nodes[n - 1], tipT = Math.max(0, 1 - tip.age / tip.life);
+      ctx.lineTo(tip.x + Math.max(4, tip.w * tipT * 0.9), tip.y);
+      for (var b = n - 1; b >= 0; b--) {
+        var nd2 = nodes[b], t2 = Math.max(0, 1 - nd2.age / nd2.life);
+        var half2 = Math.max(0.8, nd2.w * t2 * halfScale * (0.55 + 0.45 * t2));
+        ctx.lineTo(nd2.x, nd2.y + half2);
+      }
+      ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+    }
     ctx.save();
-    ctx.translate(nx, ny);
     ctx.globalCompositeOperation = "lighter";
-    var glow = ctx.createRadialGradient(0, 0, 1, 0, 0, len * 0.9);
-    glow.addColorStop(0, "rgba(255,200,90,0.55)"); glow.addColorStop(1, "rgba(255,90,20,0)");
-    ctx.fillStyle = glow;
-    ctx.beginPath(); ctx.arc(len * 0.25, 0, len * 0.9, 0, Math.PI * 2); ctx.fill();
-    var fg = ctx.createLinearGradient(0, 0, len, 0);
-    fg.addColorStop(0, "rgba(255,250,210,0.95)"); fg.addColorStop(0.35, "rgba(255,170,40,0.9)"); fg.addColorStop(1, "rgba(255,60,10,0)");
-    ctx.fillStyle = fg;
-    ctx.beginPath(); ctx.moveTo(0, -wid); ctx.quadraticCurveTo(len * 0.55, -wid * 0.7, len, 0);
-    ctx.quadraticCurveTo(len * 0.55, wid * 0.7, 0, wid); ctx.closePath(); ctx.fill();
-    // hot core
-    ctx.fillStyle = "rgba(255,255,240,0.9)";
-    ctx.beginPath(); ctx.moveTo(0, -wid * 0.45); ctx.lineTo(len * 0.5, 0); ctx.lineTo(0, wid * 0.45); ctx.closePath(); ctx.fill();
+    ribbon(1.0, "rgba(255,80,10,0.30)");
+    ribbon(0.72, "rgba(255,120,25,0.40)");
+    ribbon(0.45, "rgba(255,180,50,0.50)");
+    ribbon(0.24, "rgba(255,240,160,0.58)");
     ctx.restore();
   }
 

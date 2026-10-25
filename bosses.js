@@ -435,9 +435,22 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
   };
 
 
+  // Weapons already fired keep flying (fully visible) until they leave the screen or hit something,
+  // even after the power-up itself has run out — so don't fade effects while any are still in flight.
+  function powerProjectilesFlying() {
+    var names = ["__airborneFireballs", "__airborneIvoryFireballs", "__airborneMeteors", "__airborneHeatseekers",
+                 "__airborneWarBullets", "__airborneSkyJets", "__airborneLatticeTorps", "__airborneForgeShots"];
+    for (var i = 0; i < names.length; i++) {
+      var a = window[names[i]];
+      if (a && a.length) return true;
+    }
+    return false;
+  }
+
   function updatePowerFade(untilMs) {
     var fadeMs = (typeof POWER_FADE_MS === "number") ? POWER_FADE_MS : 750;
     var now = performance.now();
+    if (powerProjectilesFlying() && !window.__airbornePowerFadeOutUntil) { window.__airbornePowerFade = 1; return 1; }
     // Post-end fade window — effects alpha → 0
     if (window.__airbornePowerFadeOutUntil) {
       var rem = window.__airbornePowerFadeOutUntil - now;
@@ -648,7 +661,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       stormMode = "fireball";
       stormTimer = FUR_SEC;
       stormCharge = 0;
-      window.__airborneFireballUntil = performance.now() + FUR_MS;
+      window.__airborneFireballUntil = performance.now() + FUR_MS; window.__airborneFireballSpawnT = 0;
       window.__airborneActivePowerVisual = "fireball";
       window.__airborneActivePowerUntil = performance.now() + FUR_MS;
       window.__airborneFireballs = [];
@@ -700,7 +713,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       stormMode = powerMode;
       stormTimer = POWER_DURATION_SEC;
       stormCharge = 0;
-      window.__airborneFireballUntil = performance.now() + POWER_DURATION_MS;
+      window.__airborneFireballUntil = performance.now() + POWER_DURATION_MS; window.__airborneFireballSpawnT = 0;
       window.__airborneActivePowerVisual = powerMode;
       window.__airborneActivePowerUntil = performance.now() + POWER_DURATION_MS;
       window.__airborneFireballs = [];
@@ -1780,6 +1793,7 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
       window.__airborneWarBullets = [];
       window.__airborneOrphanTrails = [];
       window.__airborneFireballs = [];
+      window.__airborneFireballSpawnT = 0;
       window.__airborneBombBlasts = [];
       try { if (typeof ruffAirship !== "undefined") ruffAirship = null; } catch (e) {}
       window.__airborneRuffAirship = null;
@@ -3965,13 +3979,25 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
     if (stormMode === "fireball" || stormMode === "bluefireball" || stormMode === "greenfireball") {
       var nowFb = performance.now();
       var untilFb = window.__airborneFireballUntil || 0;
-      if (!untilFb || nowFb >= untilFb) {
+      var fbDraining = false;
+      if (untilFb && nowFb >= untilFb && !window.__airborneFurnace &&
+          window.__airborneFireballs && window.__airborneFireballs.length) {
+        // Power ran out but fireballs are still in flight: stop firing, let them finish their path
+        fbDraining = true;
+        window.__airborneFireballSpawnT = 9999;
+        window.__airbornePlasmaOrbits = null;
+        window.__airborneActivePowerVisual = null;
+        window.__airborneActivePowerUntil = 0;
+        stormTimer = 0;
+      }
+      if (!fbDraining && (!untilFb || nowFb >= untilFb)) {
         stormActive = false;
         stormMode = "storm";
         stormTimer = 0;
         window.__airborneActivePowerVisual = null;
         window.__airborneActivePowerUntil = 0;
         window.__airborneFireballUntil = 0;
+        window.__airborneFireballSpawnT = 0;
         window.__airborneFireballs = [];
         window.__airborneFurnace = null;
         window.__airborneMoltenOrbs = null;
@@ -3984,8 +4010,10 @@ const stormIconDisplayEl = document.getElementById("stormIcon");
         window.__airbornePlasmaIgnite = null;
         return;
       }
-      window.__airborneActivePowerVisual = "fireball";
-      window.__airborneActivePowerUntil = untilFb;
+      if (!fbDraining) {
+        window.__airborneActivePowerVisual = "fireball";
+        window.__airborneActivePowerUntil = untilFb;
+      }
       if (!window.__airborneFireballs) window.__airborneFireballs = [];
       // Azure Barrage — engine flare + plasma orbit system
       if (stormMode === "bluefireball") {
