@@ -2081,19 +2081,69 @@
   // connector -> connector -> back to main dock), scrolls with the buildings.
   let dockX = 0;
   function l2DockOn() { return typeof window.__airborneL2On === "function" && window.__airborneL2On(); }
+  // Water under the dock — canvas port of the menu lake (translucent body, two scrolling
+  // sine-wave rows, sliding shimmer streaks, light path and a faint surface line).
+  function l2DeckY() { return groundLevelY() - H * 0.045 + H * 0.0433; }  // dock lowered 20% of its height
+  function l2WaterTop() { return l2DeckY() + H * 0.012; }
+  function l2WaveRow(t, top, period, amp, secs, dir, rgba, lw, yOff) {
+    const off = ((t / secs) % 1) * period * dir;
+    ctx.strokeStyle = rgba; ctx.lineWidth = lw; ctx.beginPath();
+    for (let x = -period * 2; x <= W + period * 2; x += 6) {
+      const px = x + off;
+      const y = top + yOff + Math.sin((px / period) * Math.PI * 2) * amp;
+      if (x === -period * 2) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  function drawL2WaterBack() {
+    const top = l2WaterTop(), h = H - top;
+    const g = ctx.createLinearGradient(0, top, 0, H);
+    g.addColorStop(0, "rgba(52,140,176,0.92)"); g.addColorStop(0.4, "rgba(22,84,120,0.95)"); g.addColorStop(1, "rgba(6,28,52,0.98)");
+    ctx.fillStyle = g; ctx.fillRect(0, top, W, h);
+    const rg = ctx.createRadialGradient(W / 2, top, 0, W / 2, top, W * 0.6);
+    rg.addColorStop(0, "rgba(255,214,160,0.22)"); rg.addColorStop(1, "rgba(255,214,160,0)");
+    ctx.save(); ctx.beginPath(); ctx.rect(0, top, W, h); ctx.clip();
+    ctx.fillStyle = rg; ctx.fillRect(0, top, W, h); ctx.restore();
+  }
+  function drawL2WaterFront() {
+    const top = l2WaterTop(), h = H - top, t = performance.now() / 1000;
+    ctx.save(); ctx.beginPath(); ctx.rect(0, top, W, h); ctx.clip();
+    // submerged tint over the pillar feet
+    const g = ctx.createLinearGradient(0, top, 0, H);
+    g.addColorStop(0, "rgba(60,150,190,0.38)"); g.addColorStop(1, "rgba(6,30,52,0.6)");
+    ctx.fillStyle = g; ctx.fillRect(0, top, W, h);
+    ctx.globalCompositeOperation = "screen";
+    // shimmer streaks (slanted, sliding)
+    const sh = Math.sin(t * (Math.PI * 2 / 4.2)) * 30;
+    ctx.strokeStyle = "rgba(90,220,255,0.16)"; ctx.lineWidth = 3;
+    for (let x = -60; x < W + 60; x += 48) { ctx.beginPath(); ctx.moveTo(x + sh, top); ctx.lineTo(x + sh - h * 0.35, H); ctx.stroke(); }
+    // sliding light path
+    const lp = ((Math.sin(t * (Math.PI * 2 / 7)) + 1) / 2) * W;
+    const lg = ctx.createLinearGradient(lp - W * 0.3, 0, lp + W * 0.3, 0);
+    lg.addColorStop(0, "rgba(100,230,255,0)"); lg.addColorStop(0.5, "rgba(100,230,255,0.16)"); lg.addColorStop(1, "rgba(100,230,255,0)");
+    ctx.fillStyle = lg; ctx.fillRect(0, top, W, h);
+    // wave rows
+    l2WaveRow(t, top, 120, 4, 3.2, -1, "rgba(140,240,255,0.7)", 2, h * 0.30);
+    l2WaveRow(t, top, 180, 5, 5.5, 1, "rgba(110,225,255,0.55)", 2, h * 0.62);
+    l2WaveRow(t, top, 90, 2.5, 2.4, -1, "rgba(200,250,255,0.5)", 1.5, h * 0.10);
+    // surface line
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = "rgba(200,245,255,0.7)"; ctx.fillRect(0, top, W, 2);
+    ctx.restore();
+  }
   function drawL2Dock() {
     const img = images.l2_dock;
     if (!img || !img.naturalWidth) return false;
     const FEET = 470, BEAM_ROW = 296;           // rows in the strip (at natural size)
-    const k = (H * 0.36) / FEET / (img.naturalHeight / 565);
+    const ratio = img.naturalHeight / 565;
+    const k = (H * 0.18) / FEET / ratio;         // half-size dock
     const sw = img.naturalWidth * k, sh = img.naturalHeight * k;
-    const y = H - FEET * (img.naturalHeight / 565) * k;
-    let x0 = -(dockX % sw);
-    // soft dark haze behind the dock base so it sits in front of the city
-    const g = ctx.createLinearGradient(0, y + BEAM_ROW * k * 0.5, 0, H);
-    g.addColorStop(0, "rgba(10,6,4,0)"); g.addColorStop(1, "rgba(10,6,4,0.55)");
-    ctx.fillStyle = g; ctx.fillRect(0, y + BEAM_ROW * k * 0.5, W, H - (y + BEAM_ROW * k * 0.5));
+    const deckY = l2DeckY();
+    const y = deckY - BEAM_ROW * ratio * k;
+    drawL2WaterBack();
+    const x0 = -(dockX % sw);
     for (let x = x0; x < W; x += sw) ctx.drawImage(img, Math.round(x), y, Math.ceil(sw) + 1, sh);
+    drawL2WaterFront();
     return true;
   }
 
