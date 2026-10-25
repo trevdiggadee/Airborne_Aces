@@ -2020,7 +2020,7 @@
           const g = c.getContext("2d");
           g.drawImage(img, 0, 0);
           g.globalCompositeOperation = "source-atop";
-          g.fillStyle = "rgba(14,8,5,0.72)";
+          g.fillStyle = "rgba(8,5,3,0.93)";
           g.fillRect(0, 0, c.width, c.height);
           drawPowerlines._dark = c; drawPowerlines._src = img;
         }
@@ -2030,6 +2030,78 @@
     ctx.save();
     powerlineTiles.forEach(t => {
       ctx.drawImage(src, t.x, groundY - t.h, t.w, t.h);
+    });
+    ctx.restore();
+    if (src !== img) { try { drawPowerlineSparks(img, groundY); } catch (eSp) {} }
+  }
+
+  // ---------- Level 2: sporadic electrical sparks on the power lines ----------
+  const plSpark = { pts: null, src: null, next: 1.2, last: 0, flashes: [], parts: [] };
+  function plSparkPoints(img) {
+    if (plSpark.src === img && plSpark.pts) return plSpark.pts;
+    plSpark.src = img; plSpark.pts = [];
+    try {
+      const c = document.createElement("canvas"); c.width = img.naturalWidth; c.height = img.naturalHeight;
+      const g = c.getContext("2d"); g.drawImage(img, 0, 0);
+      const d = g.getImageData(0, 0, c.width, c.height).data, w = c.width, h = c.height, st = Math.max(2, Math.round(w / 400));
+      const gap = Math.max(4, Math.round(w / 120));
+      const all = [];
+      for (let y = 2; y < h * 0.72; y += st) for (let x = gap; x < w - gap; x += st) {
+        if (d[(y * w + x) * 4 + 3] > 170 && d[(y * w + x - gap) * 4 + 3] > 120 && d[(y * w + x + gap) * 4 + 3] > 120) all.push([x / w, y / h]);
+      }
+      for (let i = 0; i < 700 && all.length; i++) plSpark.pts.push(all[(Math.random() * all.length) | 0]);
+    } catch (e) { plSpark.pts = []; }
+    return plSpark.pts;
+  }
+  function drawPowerlineSparks(img, groundY) {
+    const now = performance.now() / 1000;
+    const dt = Math.min(0.1, plSpark.last ? now - plSpark.last : 0.016); plSpark.last = now;
+    const pts = plSparkPoints(img);
+    const frozen = worldScrollFrozen();
+    const scroll = frozen ? 0 : 0.4 * 60 * obstacleSpeedScale(); // px/s, matches the line scroll
+    plSpark.next -= dt;
+    if (plSpark.next <= 0 && pts.length) {
+      plSpark.next = 0.9 + Math.random() * 2.8;
+      const vis = powerlineTiles.filter(t => t.x + t.w > 30 && t.x < W - 30);
+      const t = vis.length ? vis[(Math.random() * vis.length) | 0] : null;
+      if (t) {
+        for (let tries = 0; tries < 12; tries++) {
+          const p = pts[(Math.random() * pts.length) | 0];
+          const x = t.x + p[0] * t.w, y = groundY - t.h + p[1] * t.h;
+          if (x < 20 || x > W - 20) continue;
+          plSpark.flashes.push({ x, y, age: 0, life: 0.16 + Math.random() * 0.1, zig: [] });
+          const n = 6 + ((Math.random() * 8) | 0);
+          for (let i = 0; i < n; i++) {
+            const a = Math.random() * Math.PI * 2, sp = 30 + Math.random() * 110;
+            plSpark.parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 30, age: 0, life: 0.3 + Math.random() * 0.45 });
+          }
+          break;
+        }
+      }
+    }
+    ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.lineCap = "round";
+    plSpark.flashes = plSpark.flashes.filter(f => (f.age += dt) < f.life);
+    plSpark.flashes.forEach(f => {
+      f.x -= scroll * dt;
+      const k = 1 - f.age / f.life, r = 14 * (0.6 + 0.4 * k);
+      const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, r);
+      g.addColorStop(0, "rgba(255,250,225," + (0.95 * k) + ")"); g.addColorStop(0.35, "rgba(255,190,90," + (0.5 * k) + ")"); g.addColorStop(1, "rgba(255,120,40,0)");
+      ctx.fillStyle = g; ctx.fillRect(f.x - r, f.y - r, r * 2, r * 2);
+      // jagged crackle arcs
+      ctx.strokeStyle = "rgba(200,230,255," + (0.9 * k) + ")"; ctx.lineWidth = 1.2;
+      for (let a = 0; a < 2; a++) {
+        ctx.beginPath(); let px = f.x, py = f.y; ctx.moveTo(px, py);
+        const ang = Math.random() * Math.PI * 2;
+        for (let s2 = 1; s2 <= 3; s2++) { px += Math.cos(ang + (Math.random() - 0.5)) * 5; py += Math.sin(ang + (Math.random() - 0.5)) * 5; ctx.lineTo(px, py); }
+        ctx.stroke();
+      }
+    });
+    plSpark.parts = plSpark.parts.filter(p => (p.age += dt) < p.life);
+    plSpark.parts.forEach(p => {
+      p.vy += 280 * dt; p.x += (p.vx - scroll) * dt; p.y += p.vy * dt;
+      const k = 1 - p.age / p.life;
+      ctx.strokeStyle = "rgba(255," + (170 + 70 * k | 0) + "," + (80 + 100 * k | 0) + "," + k + ")"; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 0.03, p.y - p.vy * 0.03); ctx.stroke();
     });
     ctx.restore();
   }
@@ -2174,15 +2246,25 @@
   function drawL2Dock() {
     const img = images.l2_dock;
     if (!img || !img.naturalWidth) return false;
-    const FEET = 470, BEAM_ROW = 296;           // rows in the strip (at natural size)
+    const FEET = 470, BEAM_ROW = 296, SPLIT = 340;   // rows in the strip (at natural size)
     const ratio = img.naturalHeight / 565;
-    const k = (H * 0.198) / FEET / ratio;        // dock +10%, deck row stays fixed
-    const sw = img.naturalWidth * k, sh = img.naturalHeight * k;
+    const k = (H * 0.218) / FEET / ratio;             // dock +10% again; deck row stays fixed
+    const sw = img.naturalWidth * k;
     const deckY = l2DeckY();
     const y = deckY - BEAM_ROW * ratio * k;
+    const ySplit = y + SPLIT * ratio * k;             // just below the beam
+    const srcTop = SPLIT * ratio, srcBot = img.naturalHeight - srcTop;
+    // stretch the pillars downward so their feet run off the bottom of the screen
+    const natLower = srcBot * k;
+    const need = (H + 10 - ySplit) / (FEET - SPLIT) / ratio / k;   // factor so row FEET lands below H
+    const f = Math.max(1, need);
     drawL2WaterBack();
     const x0 = -(dockX % sw);
-    for (let x = x0; x < W; x += sw) ctx.drawImage(img, Math.round(x), y, Math.ceil(sw) + 1, sh);
+    for (let x = x0; x < W; x += sw) {
+      const dx = Math.round(x), dw = Math.ceil(sw) + 1;
+      ctx.drawImage(img, 0, 0, img.naturalWidth, srcTop, dx, y, dw, srcTop * k);
+      ctx.drawImage(img, 0, srcTop, img.naturalWidth, srcBot, dx, ySplit, dw, natLower * f);
+    }
     drawL2WaterFront();
     return true;
   }

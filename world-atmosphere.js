@@ -109,6 +109,7 @@
       return;
     }
     var speed = obstacleSpeedScale();
+    l3BgX += 0.03 * dtScale * speed * 6;
 
     // detect a level change and (re)start the crossfade toward the new background
     var layer0 = parallaxLayers[0];
@@ -193,6 +194,31 @@
     });
   }
 
+  // Level 3's far backdrop is a wide landscape painting: draw it at its own proportions (not stretched into the
+  // shared tile rects) and tile it mirrored so the repeat has no visible seam.
+  let l3BgX = 0;
+  function drawLayer0Img(img, key, alpha, items, groundY) {
+    ctx.globalAlpha = alpha;
+    if (key !== "skylineFarL3") {
+      items.forEach(function(item) { ctx.drawImage(img, item.x, groundY - item.h, item.w, item.h); });
+      return;
+    }
+    ctx.globalAlpha = Math.min(1, alpha * 1.55);   // painted scene: keep it readable (0.85)
+    var dispH = H * 0.95;
+    var tileW = dispH * (img.naturalWidth / Math.max(1, img.naturalHeight));
+    var y = groundY - dispH;
+    var pos = -(l3BgX % (tileW * 2));
+    for (var n = 0, x = pos; x < W && n < 6; n++, x += tileW) {
+      if (x + tileW < 0) continue;
+      if (n % 2 === 1) {
+        ctx.save(); ctx.translate(x + tileW, 0); ctx.scale(-1, 1);
+        ctx.drawImage(img, 0, y, tileW, dispH); ctx.restore();
+      } else {
+        ctx.drawImage(img, x, y, tileW, dispH);
+      }
+    }
+  }
+
   function drawParallaxLayers() {
     var groundY = groundLevelY();
     parallaxLayers.forEach(function(layer, li) {
@@ -208,24 +234,15 @@
           var rawT = bgTransition.t;
           var t = rawT * rawT * (3 - 2 * rawT); // smoothstep ease — gentler start/end than a linear fade
           if (fromImg && fromImg.naturalWidth) {
-            ctx.globalAlpha = 0.55 * bgKeyFade(bgTransition.from) * (1 - t);
-            layer.items.forEach(function(item) {
-              ctx.drawImage(fromImg, item.x, groundY - item.h, item.w, item.h);
-            });
+            drawLayer0Img(fromImg, bgTransition.from, 0.55 * bgKeyFade(bgTransition.from) * (1 - t), layer.items, groundY);
           }
           if (toImg && toImg.naturalWidth) {
-            ctx.globalAlpha = 0.55 * bgKeyFade(bgTransition.to) * t;
-            layer.items.forEach(function(item) {
-              ctx.drawImage(toImg, item.x, groundY - item.h, item.w, item.h);
-            });
+            drawLayer0Img(toImg, bgTransition.to, 0.55 * bgKeyFade(bgTransition.to) * t, layer.items, groundY);
           }
         } else {
           var img = images[layer.imgKey];
           if (img && img.naturalWidth) {
-            ctx.globalAlpha = 0.55 * bgKeyFade(layer.imgKey);
-            layer.items.forEach(function(item) {
-              ctx.drawImage(img, item.x, groundY - item.h, item.w, item.h);
-            });
+            drawLayer0Img(img, layer.imgKey, 0.55 * bgKeyFade(layer.imgKey), layer.items, groundY);
           }
         }
         ctx.restore();
@@ -298,7 +315,7 @@
   }
   let l2CityTiles = [];
   function l2CityGeom(img) {
-    const tileH = H * 0.62;
+    const tileH = H * 0.775;
     const tileW = tileH * (img.naturalWidth / Math.max(1, img.naturalHeight));
     return { tileH: tileH, tileW: tileW, y: groundLevelY() - tileH * 0.906 + H * 0.01 };
   }

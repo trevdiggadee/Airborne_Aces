@@ -1243,7 +1243,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
   // ---------- Level 3 storm-cloud ceiling ----------
   // Dark cloud banks (three kinds, overlapped) fill the top of the screen, just below the HUD. They stay put (gentle sway only,
   // never scroll off) and the whole bank lights up with lightning flashes. Replaces the old drifting decorative clouds.
-  const L3C = {"A": [[0, 0, 128, 99], [132, 0, 121, 101], [257, 0, 117, 103]], "B": [[378, 0, 129, 88], [511, 0, 134, 85], [649, 0, 133, 85]], "C": [[786, 0, 106, 102], [896, 0, 105, 102], [1005, 0, 104, 103]]};
+  const L3C = {"A": [[4, 0, 484, 397], [528, 3, 484, 397], [1020, 0, 484, 397]], "B": [[1504, 15, 533, 333], [2046, 0, 533, 333], [2596, 2, 533, 333]], "C": [[3154, 0, 404, 405], [3594, 4, 404, 405], [4022, 1, 404, 405]]};
   let l3cImg = null, l3cLit = null, l3cReady = false;
   let l3cList = [], l3cAlpha = 0, l3cT = 0, l3cFlash = null, l3cNextFlash = 2.5, l3cBolt = null, l3cThunderAt = 0, l3cSeedKey = "";
   (function () {
@@ -1260,7 +1260,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
       } catch (e) { l3cLit = null; }
       l3cReady = true;
     };
-    l3cImg.src = "level3_clouds.webp?v=ruff535";
+    l3cImg.src = "level3_clouds.webp?v=ruff541";
   })();
 
   function l3cSeed() {
