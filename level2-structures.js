@@ -551,15 +551,17 @@
   function drawAtmoBack() {
     if (!wisps.length) return;
     var w = (typeof W === "number" ? W : 412), h = (typeof H === "number" ? H : 800), gy = gY();
+    var cx = window.__airborneCamExt || { l: 0, r: 0, t: 0 };   // boss zoom-out: cover the whole pulled-back view
+    var ex0 = -cx.l - 4, ew = w + cx.l + cx.r + 8;
     ctx.save();
     // sooty smog tint high in the sky
-    var top = ctx.createLinearGradient(0, 0, 0, h * 0.5);
+    var top = ctx.createLinearGradient(0, -cx.t, 0, h * 0.5);
     top.addColorStop(0, "rgba(58,44,40,0.30)"); top.addColorStop(1, "rgba(58,44,40,0)");
-    ctx.fillStyle = top; ctx.fillRect(0, 0, w, h * 0.5);
+    ctx.fillStyle = top; ctx.fillRect(ex0, -cx.t, ew, h * 0.5 + cx.t);
     // mid-air smog band
     var band = ctx.createLinearGradient(0, h * 0.28, 0, gy - h * 0.1);
     band.addColorStop(0, "rgba(150,118,92,0)"); band.addColorStop(0.5, "rgba(150,118,92,0.20)"); band.addColorStop(1, "rgba(150,118,92,0)");
-    ctx.fillStyle = band; ctx.fillRect(0, h * 0.28, w, gy - h * 0.38);
+    ctx.fillStyle = band; ctx.fillRect(ex0, h * 0.28, ew, gy - h * 0.38);
     // dark cloud layer drifting in front of the city
     drawCloudArr(cloudsMid);
     // chimney smoke plumes
@@ -582,7 +584,7 @@
     // warm smog bank hugging the ground
     var g = ctx.createLinearGradient(0, gy - h * 0.5, 0, gy);
     g.addColorStop(0, "rgba(206,150,92,0)"); g.addColorStop(1, "rgba(206,150,92,0.42)");
-    ctx.fillStyle = g; ctx.fillRect(0, gy - h * 0.5, w, h * 0.5);
+    ctx.fillStyle = g; ctx.fillRect(ex0, gy - h * 0.5, ew, h * 0.5);
     ctx.restore();
   }
 
@@ -595,7 +597,8 @@
     var order = structs.slice().sort(function (a, b) { return (a.isStack ? 1 : 0) - (b.isStack ? 1 : 0); });
     for (var i = 0; i < order.length; i++) {
       var s = order[i];
-      if (s.x > W + 10 || s.x + s.w < -10) continue;
+      var cxx = window.__airborneCamExt || { l: 0, r: 0 };
+      if (s.x > W + cxx.r + 10 || s.x + s.w < -cxx.l - 10) continue;
       var r = ATLAS[s.name];
       ctx.drawImage(atlasImg, r[0] * AS, r[1] * AS, r[2] * AS, r[3] * AS, s.x, s.y, s.w, s.h);
     }

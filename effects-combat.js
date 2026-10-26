@@ -620,8 +620,9 @@
   }
   function fireShipCannon(b, which) {
     const f = Math.max(0, Math.min(1, (b.animF || 0) / 35));
-    const fx = which === 0 ? 0.21 + 0.01 * f : 0.12;
-    const fy = which === 0 ? 0.51 - 0.053 * f : 0.60 - 0.024 * f;
+    // aft turret barrels (the far end of the ship), rising with the barrels
+    const fx = which === 0 ? 0.95 + 0.03 * f : 0.93 + 0.03 * f;
+    const fy = which === 0 ? 0.66 - 0.045 * f : 0.70 - 0.045 * f;
     const sx = b.x + b.w * fx, sy = b.y + b.h * fy;
     const dx = player.x - sx, dy = player.y - sy;
     const dist = Math.max(1, Math.hypot(dx, dy));
@@ -652,7 +653,7 @@
     ctx.restore();
     // water in front of the hull (deferred from the dock layer), then foam, spray and fire on top
     if (l2WaterOn() && typeof window.__airborneL2WaterFront === "function") { try { window.__airborneL2WaterFront(); } catch (e) {} }
-    drawShipFoamLine(Math.max(0, boss.x - 12), Math.min(W, boss.x + boss.w + 12), boss.tilt || 0);
+    drawShipFoamLine(boss.x - 12, boss.x + boss.w + 12, boss.tilt || 0);
     drawShipBowWave(boss);
     fxDrawList(shipFx);
   }
@@ -1091,7 +1092,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     } else {
       ctx.fillStyle = "rgba(20,8,4," + veil + ")";
     }
-    ctx.fillRect(0, 0, W, H);
+    { const e = window.__airborneCamExt || { l: 0, r: 0, t: 0, b: 0 }; ctx.fillRect(-e.l - 2, -e.t - 2, W + e.l + e.r + 4, H + e.t + e.b + 4); }
 
     ctx.translate(s.x + s.w / 2, s.y + s.h / 2);
     ctx.rotate(s.tilt || 0);

@@ -3,6 +3,7 @@ window.__AIRBORNE_MAIN_BUILD = "ruff412";
 
   // ---------- Main loop ----------
   let lastTime = null;
+  let camOn = false;
 
   // ---------- Cinematic camera (boss intro zoom) ----------
   // Uses CSS scale on the game canvas so perspective runway/world math stays correct.
@@ -117,6 +118,10 @@ window.__AIRBORNE_MAIN_BUILD = "ruff412";
       var shipCam = false;
       try { shipCam = !!(window.__airborneShipZoom && window.__airborneShipZoom()); } catch (e) {}
       var target = shipCam ? 0.75 : 1;
+      if (!shipCam && cam.z >= 0.995) {
+        // not zoomed: keep the zoom anchor on the blimp so it stays exactly where it is when the camera pulls back
+        try { cam.ax = player.x; cam.ay = Math.max(H * 0.45, Math.min(H, player.y)); } catch (eA) {}
+      }
       var rate = shipCam ? 1.1 : 2.2;
       if (Math.abs(cam.z - target) > 0.002) {
         cam.z += (target - cam.z) * Math.min(1, dt * rate);
@@ -507,6 +512,23 @@ function loop(ts) {
 
     try { updateBossCam(dt); } catch (e) {}
 
+    // boss zoom-out: a real camera pull-back anchored at the bottom centre. The far backdrop (sky, skyline,
+    // parallax) is drawn at normal scale so it looks exactly as it always does; the near world (buildings,
+    // dock, water, ship, blimp...) is pulled back and drawn across the extra area (window.__airborneCamExt).
+    var camZ = (window.__airborneCam && window.__airborneCam.z) || 1;
+    var camA = window.__airborneCam || {};
+    var camAx = (camA.ax != null) ? camA.ax : W / 2, camAy = (camA.ay != null) ? camA.ay : H;
+    window.__airborneCamExt = camZ < 0.995
+      ? { l: camAx * (1 / camZ - 1), r: (W - camAx) * (1 / camZ - 1), t: camAy * (1 / camZ - 1), b: (H - camAy) * (1 / camZ - 1), z: camZ, ax: camAx, ay: camAy }
+      : { l: 0, r: 0, t: 0, b: 0, z: 1, ax: camAx, ay: camAy };
+    const CX = window.__airborneCamExt;
+    function camBegin() {
+      if (CX.z >= 0.995) return;
+      camOn = true;
+      var d0 = (typeof dpr !== "undefined" ? dpr : 1);
+      ctx.setTransform(d0 * CX.z, 0, 0, d0 * CX.z, d0 * CX.ax * (1 - CX.z), d0 * CX.ay * (1 - CX.z));
+    }
+
     // background — slowly cycles day → dusk → night → dawn as gameplayScore climbs
     const sky = getSkyColors(gameplayScore);
     const grad = ctx.createLinearGradient(0, 0, 0, H);
@@ -697,6 +719,7 @@ function loop(ts) {
     }
     // Campaign city ground only off airfield / training
     if (!(typeof isAirfieldMode === "function" && isAirfieldMode()) && !window.__airborneAirfield) {
+      camBegin();
       drawPowerlines();
       drawBuildings();
       drawBuildingSmoke();
@@ -705,7 +728,6 @@ function loop(ts) {
       drawGroundVehicles();
     }
     try { if (window.__airborneDrawL3Clouds) window.__airborneDrawL3Clouds(); } catch (eL3c) {}
-    try { camSnapBg(); } catch (eSnap) {}
     drawBossShadow();
     drawWindParticlesBack();
     // Training background balloons — behind blimps and clouds
@@ -789,9 +811,10 @@ try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePow
     try { if (window.drawFlightTrainingBanner) window.drawFlightTrainingBanner(); } catch (e) {}
     try { if (window.drawEndCelebration) window.drawEndCelebration(); } catch (e) {}
     try { if (window.updateBossDamageNums) window.updateBossDamageNums(dt); } catch (e) {}
-    try { camPostZoom(); } catch (ePz) {}
+    if (camOn) { ctx.setTransform((typeof dpr !== "undefined" ? dpr : 1), 0, 0, (typeof dpr !== "undefined" ? dpr : 1), 0, 0); camOn = false; }
     // Vignette + film grain removed — were causing uneven dimming and lag
     } catch (err) {
+      if (camOn) { try { ctx.setTransform((typeof dpr !== "undefined" ? dpr : 1), 0, 0, (typeof dpr !== "undefined" ? dpr : 1), 0, 0); } catch (eR) {} camOn = false; }
       if (!loopErrorShown) {
         loopErrorShown = true;
         showRuntimeError(err);

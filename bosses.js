@@ -6630,7 +6630,7 @@ if (window.__airbornePlasmaIgnite) {
       ctx.restore();
     }
 
-    if (!list || !list.length) return;
+    if (!list || !list.length) { ctx.restore(); return; }
     ctx.save();
     for (var i = 0; i < list.length; i++) {
       var p = list[i];

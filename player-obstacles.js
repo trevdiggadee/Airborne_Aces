@@ -208,8 +208,9 @@ window.__airborneRingDebug = false;
         takeHit();
       }
     }
-    if (player.y - player.h / 2 < 0) {
-      player.y = player.h / 2;
+    const topLimit = -((window.__airborneCamExt && window.__airborneCamExt.t) || 0);   // boss zoom-out: the whole visible screen is flyable
+    if (player.y - player.h / 2 < topLimit) {
+      player.y = topLimit + player.h / 2;
       player.vy = 0;
     }
 

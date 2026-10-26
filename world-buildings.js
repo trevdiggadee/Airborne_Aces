@@ -1992,7 +1992,7 @@
     if (worldScrollFrozen()) return;
     const speed = 0.4 * dtScale * obstacleSpeedScale();
     powerlineTiles.forEach(t => (t.x -= speed));
-    while (powerlineTiles.length && powerlineTiles[0].x + powerlineTiles[0].w < -10) {
+    while (powerlineTiles.length && powerlineTiles[0].x + powerlineTiles[0].w < -W * 0.3) {
       powerlineTiles.shift();
     }
     const last = powerlineTiles[powerlineTiles.length - 1];
@@ -2160,37 +2160,40 @@
   function l2WaveRow(t, top, period, amp, secs, dir, rgba, lw, yOff) {
     const off = ((t / secs) % 1) * period * dir;
     ctx.strokeStyle = rgba; ctx.lineWidth = lw; ctx.beginPath();
-    for (let x = -period * 2; x <= W + period * 2; x += 6) {
+    for (let x = -period * 2 - l2Ext().l; x <= W + period * 2 + l2Ext().r; x += 6) {
       const px = x + off;
       const y = top + yOff + Math.sin((px / period) * Math.PI * 2) * amp;
-      if (x === -period * 2) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      if (x <= -period * 2 - l2Ext().l + 0.01) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
     ctx.stroke();
   }
   function l2SurfY(x, t, top) {
     return top + Math.sin(x * 0.045 + t * 1.9) * 2.4 + Math.sin(x * 0.017 - t * 1.1) * 3.2 + Math.sin(x * 0.11 + t * 3.1) * 0.9;
   }
+  function l2Ext() { return window.__airborneCamExt || { l: 0, r: 0, t: 0 }; }
   function l2SurfPath(t, top) {
-    ctx.beginPath(); ctx.moveTo(-5, H + 2);
-    for (let x = -5; x <= W + 5; x += 5) ctx.lineTo(x, l2SurfY(x, t, top));
-    ctx.lineTo(W + 5, H + 2); ctx.closePath();
+    const e = l2Ext(), x0 = -e.l - 5, x1 = W + e.r + 5;
+    const yb = H + (e.b || 0) + 2;
+    ctx.beginPath(); ctx.moveTo(x0, yb);
+    for (let x = x0; x <= x1; x += 5) ctx.lineTo(x, l2SurfY(x, t, top));
+    ctx.lineTo(x1, yb); ctx.closePath();
   }
   function drawL2WaterBack() {
-    const top = l2WaterTop(), h = H - top;
+    const top = l2WaterTop(), h = H + (l2Ext().b || 0) - top;
     // dark shadow beneath the deck covers the ground strip above the waterline
     const sy = l2DeckY() + H * 0.006;
     const sg = ctx.createLinearGradient(0, sy, 0, top);
     sg.addColorStop(0, "rgba(10,8,8,0.78)"); sg.addColorStop(1, "rgba(14,22,30,0.96)");
-    ctx.fillStyle = sg; ctx.fillRect(0, sy, W, top - sy + 8);
+    { const e = l2Ext(); ctx.fillStyle = sg; ctx.fillRect(-e.l - 5, sy, W + e.l + e.r + 10, top - sy + 8); }
     const t = performance.now() / 1000;
     ctx.save(); l2SurfPath(t, top); ctx.clip();
-    const g = ctx.createLinearGradient(0, top, 0, H);
+    const g = ctx.createLinearGradient(0, top, 0, top + h);
     g.addColorStop(0, "rgba(24,46,58,0.97)"); g.addColorStop(0.4, "rgba(11,26,38,0.98)"); g.addColorStop(1, "rgba(3,8,14,0.99)");
-    ctx.fillStyle = g; ctx.fillRect(0, top, W, h);
+    { const e = l2Ext(); ctx.fillStyle = g; ctx.fillRect(-e.l - 5, top, W + e.l + e.r + 10, h); }
     // faint warm sky reflection near the surface
     const rg = ctx.createLinearGradient(0, top, 0, top + h * 0.5);
     rg.addColorStop(0, "rgba(190,120,90,0.16)"); rg.addColorStop(1, "rgba(190,120,90,0)");
-    ctx.fillStyle = rg; ctx.fillRect(0, top, W, h * 0.5);
+    { const e = l2Ext(); ctx.fillStyle = rg; ctx.fillRect(-e.l - 5, top, W + e.l + e.r + 10, h * 0.5); }
     ctx.restore();
   }
   // Layered swell rows: rows nearer the bottom (closer to the viewer) are wider, taller and faster;
@@ -2222,24 +2225,24 @@
     ctx.stroke();
   }
   function drawL2WaterFront() {
-    const top = l2WaterTop(), h = H - top, t = performance.now() / 1000;
+    const top = l2WaterTop(), h = H + (l2Ext().b || 0) - top, t = performance.now() / 1000;
     ctx.save(); l2SurfPath(t, top); ctx.clip();
     // submerged tint over the pillar feet
-    const g = ctx.createLinearGradient(0, top, 0, H);
+    const g = ctx.createLinearGradient(0, top, 0, top + h);
     g.addColorStop(0, "rgba(22,46,60,0.6)"); g.addColorStop(1, "rgba(3,8,14,0.82)");
-    ctx.fillStyle = g; ctx.fillRect(0, top, W, h);
+    ctx.fillStyle = g; { const e = l2Ext(); ctx.fillRect(-e.l - 5, top, W + e.l + e.r + 10, h); }
     // slow, soft light patches drifting across the surface
     ctx.globalCompositeOperation = "screen";
     const lp = ((Math.sin(t * 0.45) + 1) / 2) * W;
     const lg = ctx.createLinearGradient(lp - W * 0.35, 0, lp + W * 0.35, 0);
     lg.addColorStop(0, "rgba(150,190,200,0)"); lg.addColorStop(0.5, "rgba(150,190,200,0.10)"); lg.addColorStop(1, "rgba(150,190,200,0)");
-    ctx.fillStyle = lg; ctx.fillRect(0, top, W, h);
+    { const e = l2Ext(); ctx.fillStyle = lg; ctx.fillRect(-e.l - 5, top, W + e.l + e.r + 10, h); }
     ctx.lineCap = "round"; ctx.lineJoin = "round";
     const n = 4;
     for (let i = 0; i < n; i++) l2SwellRow(t, top, h, i, n);
     ctx.globalCompositeOperation = "source-over";
     ctx.strokeStyle = "rgba(190,215,222,0.5)"; ctx.lineWidth = 1.6; ctx.beginPath();
-    for (let x = -5; x <= W + 5; x += 5) { const y = l2SurfY(x, t, top); if (x === -5) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+    { const e = l2Ext(); for (let x = -e.l - 5; x <= W + e.r + 5; x += 5) { const y = l2SurfY(x, t, top); if (x === -e.l - 5) ctx.moveTo(x, y); else ctx.lineTo(x, y); } }
     ctx.stroke();
     ctx.restore();
   }
@@ -2259,11 +2262,13 @@
     const srcTop = SPLIT * ratio, srcBot = img.naturalHeight - srcTop;
     // stretch the pillars downward so their feet run off the bottom of the screen
     const natLower = srcBot * k;
-    const need = (H + 10 - ySplit) / (FEET - SPLIT) / ratio / k;   // factor so row FEET lands below H
+    const need = (H + (l2Ext().b || 0) + 10 - ySplit) / (FEET - SPLIT) / ratio / k;   // factor so row FEET lands below H
     const f = Math.max(1, need);
     drawL2WaterBack();
-    const x0 = -(dockX % sw);
-    for (let x = x0; x < W; x += sw) {
+    let x0 = -(dockX % sw);
+    const ex = l2Ext();
+    while (x0 > -ex.l - 2) x0 -= sw;
+    for (let x = x0; x < W + ex.r + 2; x += sw) {
       const dx = Math.round(x), dw = Math.ceil(sw) + 1;
       ctx.drawImage(img, 0, 0, img.naturalWidth, srcTop, dx, y, dw, srcTop * k);
       ctx.drawImage(img, 0, srcTop, img.naturalWidth, srcBot, dx, ySplit, dw, natLower * f);
