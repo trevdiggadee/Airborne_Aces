@@ -214,10 +214,10 @@ function triggerBoss(num) {
     // targetX negative so the boss parked mostly off-screen ("boss never appeared"). Cap to 72% of W.
     if (num === 2) {
       // battleship: wide hull, sized by width (capped by height), sitting on the water
-      dispW = Math.min(W * 0.80, (H * 0.30) / aspect);
+      dispW = Math.min(W * 1.00, (H * 0.375) / aspect);   // +25%
       dispH = dispW * aspect;
     }
-    const maxBossW = num === 2 ? W * 0.85 : W * 0.72;
+    const maxBossW = num === 2 ? W * 1.06 : W * 0.72;
     if (dispW > maxBossW) {
       dispH = dispH * (maxBossW / dispW);
       dispW = maxBossW;

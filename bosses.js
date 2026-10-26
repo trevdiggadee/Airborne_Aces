@@ -8996,7 +8996,6 @@ function drawFireballs() {
     levelEndPad.docked = true;
     window.__airborneWorldFrozen = true;
     player.vy = 0;
-    player.rotation = 0;
     // Snap solidly onto the deck — calm rest pose
     player.y = levelEndPad.surfaceY - player.h * 0.42;
     player.x = levelEndPad.x + levelEndPad.w * (levelEndPad.deckCenterFrac || 0.42);
@@ -9191,12 +9190,17 @@ function drawFireballs() {
 
       // Move the blimp forward toward the landing X (unlock from fixed x)
       // Player still controls altitude with flaps; we ease them horizontally onto the pad.
-      const targetPlayerX = deckCx - player.w * 0.1;
-      if (player.x < targetPlayerX - 2) {
-        // accelerate forward; faster once pad has mostly arrived
+      const targetPlayerX = deckCx;   // exactly where the docked blimp rests, so docking never nudges it sideways
+      const padDx = targetPlayerX - player.x;
+      if (padDx > 0.4) {
+        // glide forward and ease out as it reaches the X (no constant-speed stop)
         const speed = levelEndPhase === "landing" ? 95 : 55;
-        player.x = Math.min(targetPlayerX, player.x + speed * dt);
+        const v = Math.max(10, Math.min(speed, padDx * 1.7));
+        player.x += Math.min(padDx, v * dt);
+      } else if (padDx < -0.4) {
+        player.x += Math.max(padDx, -Math.max(10, Math.min(70, -padDx * 2)) * dt);   // slide back onto the X if the pad scrolled past
       }
+      if (levelEndPhase === "landing") player.rotation *= Math.max(0, 1 - dt * 6);   // level out for touchdown
 
       // Landing zone around the X on the deck
       const padLeft = deckCx - levelEndPad.w * 0.22;
@@ -9208,18 +9212,21 @@ function drawFireballs() {
                        && playerBottom < levelEndPad.surfaceY + player.h * 0.5;
       const descending = player.vy > -80;
 
-      if (levelEndPhase === "landing" && overPad && nearSurface && descending) {
-        completeLevelLanding();
-      }
-
-      // Soft floor on the deck — stand on it instead of falling through / dying
-      if (overPad && playerBottom > levelEndPad.surfaceY) {
-        player.y = levelEndPad.surfaceY - player.h * 0.42;
-        if (player.vy > 0) player.vy = 0;
-        // If they're resting on the pad, count it as landed
-        if (levelEndPhase === "landing" && Math.abs(player.vy) < 30) {
-          completeLevelLanding();
+      // Gentle touchdown: once over the X the blimp is eased down onto the deck (no snapping / sudden stop)
+      const restY = levelEndPad.surfaceY - player.h * 0.42;
+      if (levelEndPhase === "landing" && overPad) {
+        const gap = restY - player.y;
+        if (gap > 0 && (nearSurface || playerBottom > levelEndPad.surfaceY - player.h * 1.6)) {
+          player.vy = Math.min(player.vy, 40) * Math.max(0, 1 - dt * 5);
+          player.y += Math.min(gap, Math.max(14, Math.min(70, gap * 1.8)) * dt);   // soft settle
+          if (gap < 2) { player.y = restY; player.vy = 0; completeLevelLanding(); }
+        } else if (gap <= 0 && descending) {
+          player.y += Math.max(gap, -120 * dt); player.vy = 0;
+          if (gap > -3) { completeLevelLanding(); }
         }
+      } else if (overPad && playerBottom > levelEndPad.surfaceY) {
+        player.y += Math.max(restY - player.y, -160 * dt);
+        if (player.vy > 0) player.vy = 0;
       }
       return;
     }

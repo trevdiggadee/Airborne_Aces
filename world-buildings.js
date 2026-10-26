@@ -2178,6 +2178,68 @@
     for (let x = x0; x <= x1; x += 5) ctx.lineTo(x, l2SurfY(x, t, top));
     ctx.lineTo(x1, yb); ctx.closePath();
   }
+  // ---- little fish + the odd shark cruising under the dock (drawn inside the water clip) ----
+  const l2Fish = []; let l2Shark = null, l2SharkNext = 0, l2FishT = 0;
+  function l2FishTick(t, top, h) {
+    const dt = Math.min(0.05, Math.max(0, t - (l2FishT || t))); l2FishT = t;
+    const e = l2Ext(), x0 = -e.l - 40, x1 = W + e.r + 40;
+    if (!l2Fish.length) {
+      for (let s = 0; s < 4; s++) {                       // four small schools
+        const dir = Math.random() < 0.5 ? 1 : -1, cx = x0 + Math.random() * (x1 - x0), cy = 0.18 + Math.random() * 0.55;
+        const n = 3 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < n; i++) l2Fish.push({ x: cx + (Math.random() - 0.5) * 50, d: cy + (Math.random() - 0.5) * 0.08, dir: dir, sp: 16 + Math.random() * 10, sz: 3.2 + Math.random() * 2.6, ph: Math.random() * 6.28, sc: s });
+      }
+      l2SharkNext = t + 6 + Math.random() * 8;
+    }
+    for (const f of l2Fish) {
+      f.x += f.dir * f.sp * dt; f.ph += dt * 9;
+      if (f.dir > 0 && f.x > x1) { f.x = x0 - Math.random() * 60; f.d = 0.18 + Math.random() * 0.55; }
+      if (f.dir < 0 && f.x < x0) { f.x = x1 + Math.random() * 60; f.d = 0.18 + Math.random() * 0.55; }
+    }
+    if (!l2Shark && t > l2SharkNext) {
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      l2Shark = { x: dir > 0 ? x0 - 80 : x1 + 80, dir: dir, sp: 34 + Math.random() * 12, d: 0.12 + Math.random() * 0.1, len: Math.max(52, W * 0.17), ph: 0 };
+    }
+    if (l2Shark) {
+      l2Shark.x += l2Shark.dir * l2Shark.sp * dt; l2Shark.ph += dt * 3.2;
+      if ((l2Shark.dir > 0 && l2Shark.x > x1 + 120) || (l2Shark.dir < 0 && l2Shark.x < x0 - 120)) { l2Shark = null; l2SharkNext = t + 20 + Math.random() * 25; }
+    }
+  }
+  function l2DrawFish(t, top, h) {
+    l2FishTick(t, top, h);
+    ctx.save();
+    for (const f of l2Fish) {
+      const y = top + h * f.d + Math.sin(f.ph * 0.5) * 1.5, s = f.sz, wag = Math.sin(f.ph) * s * 0.35;
+      ctx.save(); ctx.translate(f.x, y); ctx.scale(f.dir, 1);
+      ctx.fillStyle = "rgba(120,170,175,0.42)";
+      ctx.beginPath(); ctx.ellipse(0, 0, s * 1.5, s * 0.7, 0, 0, 6.2832); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-s * 1.3, 0); ctx.lineTo(-s * 2.5, -s * 0.8 + wag); ctx.lineTo(-s * 2.5, s * 0.8 + wag); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "rgba(235,215,170,0.5)"; ctx.fillRect(s * 0.7, -s * 0.15, s * 0.28, s * 0.3);
+      ctx.restore();
+    }
+    const k = l2Shark;
+    if (k) {
+      const L = k.len, y = top + h * k.d + Math.sin(k.ph * 0.6) * 2, wag = Math.sin(k.ph) * L * 0.035;
+      ctx.save(); ctx.translate(k.x, y); ctx.scale(k.dir, 1);
+      ctx.fillStyle = "rgba(34,52,62,0.82)";
+      ctx.beginPath();
+      ctx.moveTo(L * 0.5, 0);
+      ctx.bezierCurveTo(L * 0.3, -L * 0.1, -L * 0.05, -L * 0.11, -L * 0.34, -L * 0.03 + wag * 0.4);
+      ctx.lineTo(-L * 0.5, -L * 0.15 + wag);                          // upper tail lobe
+      ctx.lineTo(-L * 0.43, wag * 0.6);
+      ctx.lineTo(-L * 0.52, L * 0.11 + wag);                          // lower tail lobe
+      ctx.lineTo(-L * 0.33, L * 0.02 + wag * 0.4);
+      ctx.bezierCurveTo(-L * 0.05, L * 0.1, L * 0.3, L * 0.09, L * 0.5, 0);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath();                                                // dorsal fin
+      ctx.moveTo(L * 0.06, -L * 0.1); ctx.lineTo(-L * 0.05, -L * 0.25); ctx.lineTo(-L * 0.12, -L * 0.09); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(L * 0.12, L * 0.07); ctx.lineTo(L * 0.0, L * 0.18); ctx.lineTo(-L * 0.04, L * 0.07); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "rgba(150,180,188,0.22)";
+      ctx.beginPath(); ctx.ellipse(L * 0.1, L * 0.03, L * 0.3, L * 0.03, 0, 0, 6.2832); ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
   function drawL2WaterBack() {
     const top = l2WaterTop(), h = H + (l2Ext().b || 0) - top;
     // dark shadow beneath the deck covers the ground strip above the waterline
@@ -2194,6 +2256,7 @@
     const rg = ctx.createLinearGradient(0, top, 0, top + h * 0.5);
     rg.addColorStop(0, "rgba(190,120,90,0.16)"); rg.addColorStop(1, "rgba(190,120,90,0)");
     { const e = l2Ext(); ctx.fillStyle = rg; ctx.fillRect(-e.l - 5, top, W + e.l + e.r + 10, h * 0.5); }
+    try { l2DrawFish(t, top, h); } catch (eF) {}
     ctx.restore();
   }
   // Layered swell rows: rows nearer the bottom (closer to the viewer) are wider, taller and faster;

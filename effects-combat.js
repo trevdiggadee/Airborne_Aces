@@ -621,7 +621,7 @@
   function fireShipCannon(b, which) {
     const f = Math.max(0, Math.min(1, (b.animF || 0) / 35));
     // aft turret barrels (the far end of the ship), rising with the barrels
-    const fx = which === 0 ? 0.95 + 0.03 * f : 0.93 + 0.03 * f;
+    const fx = which === 0 ? 0.76 + 0.02 * f : 0.72 + 0.02 * f;   // aft turret, kept on-screen (hull parks 20% past the edge)
     const fy = which === 0 ? 0.66 - 0.045 * f : 0.70 - 0.045 * f;
     const sx = b.x + b.w * fx, sy = b.y + b.h * fy;
     const dx = player.x - sx, dy = player.y - sy;

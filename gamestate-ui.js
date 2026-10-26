@@ -511,6 +511,7 @@
     // Clear freeze/pause leftover from prior run
     try {
       state = "playing";
+      try { window.__airborneClearPlayerCrash && window.__airborneClearPlayerCrash(); } catch (eCc) {}
       window.__airborneBossCamPause = false;
       window.__airborneAirfieldPaused = false;
       window.__airborneWorldFrozen = false;
@@ -761,9 +762,9 @@
     if (typeof stopWorldWindDown === "function") stopWorldWindDown();
     if (typeof resetHudFade === "function") resetHudFade();
     sfxCrash();
-    triggerScreenShake(10, 600);
-    triggerScreenFlash(0.4, 400);
+    triggerScreenShake(4, 400);
     stopMusic();
+    try { window.__airborneStartPlayerCrash(); } catch (eC) {}
     defeatDebris = [];
     shockwaves = [];
     groundVehicles = [];
@@ -777,7 +778,9 @@
     document.getElementById("bestScoreLine").textContent = "Best: " + best;
     const hideCk = checkpointReached <= 0 || window.__airborneAirfield || window.__airborneRuffActive;
     document.getElementById("checkpointBtn").classList.toggle("hidden", hideCk);
-    gameOverOverlay.classList.remove("hidden");
+    gameOverOverlay.classList.add("hidden");
+    clearTimeout(window.__airborneGoTimer);
+    window.__airborneGoTimer = setTimeout(function () { if (state === "over") gameOverOverlay.classList.remove("hidden"); }, 2600);   // let the crash animation play
   }
 
   document.getElementById("startBtn").addEventListener("click", () => { ensureAudio(); sfxClick(); startGame(); document.getElementById("startOverlay").classList.add("hidden"); });

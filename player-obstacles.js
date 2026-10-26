@@ -120,7 +120,8 @@ window.__airborneRingDebug = false;
     // Calm rest on the landing pad
     if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) {
       player.vy = 0;
-      player.rotation = 0;
+      player.rotation *= Math.max(0, 1 - dt * 10);
+      if (Math.abs(player.rotation) < 0.002) player.rotation = 0;
       player.y = levelEndPad.surfaceY - player.h * 0.42;
       player.x = levelEndPad.x + levelEndPad.w * (levelEndPad.deckCenterFrac || 0.42);
       if (typeof blimpPersonality !== "undefined" && blimpPersonality) {
@@ -266,8 +267,98 @@ window.__airborneRingDebug = false;
   }
   window.drawBlimpSurfaceShadow = drawBlimpSurfaceShadow;
 
+  // ---------- Player crash animation (death): spin, burn, then hit the water / ground ----------
+  let pCrash = null;
+  window.__airborneStartPlayerCrash = function () {
+    pCrash = { t: 0, x: player.x, y: player.y, vx: 70, vy: -90, rot: player.rotation || 0, vr: 0.5, fx: [], hit: 0, hitWater: false, fxT: 0, last: performance.now() };
+  };
+  window.__airborneClearPlayerCrash = function () { pCrash = null; };
+  window.__airbornePlayerCrashActive = function () { return !!pCrash; };
+  function pcPush(o) { pCrash.fx.push(o); }
+  function pcBurst(x, y, n, kind, spd, r, life) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, v = spd * (0.3 + Math.random() * 0.9);
+      pcPush({ k: kind, x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - spd * 0.3, age: 0, life: life * (0.6 + Math.random() * 0.7), r: r * (0.6 + Math.random() * 0.8) });
+    }
+  }
+  function drawPlayerCrash(img) {
+    const c = pCrash, now = performance.now(), dt = Math.min(0.05, Math.max(0, (now - c.last) / 1000)); c.last = now; c.t += dt;
+    let water = false, surf = 0;
+    try { water = (typeof l2WaterOn === "function") && l2WaterOn(); } catch (e) {}
+    if (water) { try { surf = window.__airborneL2SurfY(c.x); } catch (e) { water = false; } }
+    const floorY = water ? surf : groundLevelY();
+    const ph = player.h * 0.32;
+    if (!c.hit) {
+      c.vy += 520 * dt; c.vx *= (1 - dt * 0.4);
+      c.x += c.vx * dt; c.y += c.vy * dt;
+      c.rot += c.vr * dt; c.vr = Math.min(3.2, c.vr + dt * 2.4);
+      if (c.rot > 1.25 && c.vr > 0) { c.rot = Math.min(c.rot, 1.6); c.vr *= 0.5; }
+      c.fxT -= dt;
+      if (c.fxT <= 0) {
+        c.fxT = 0.028;
+        const ca = Math.cos(c.rot), sa = Math.sin(c.rot), tx = c.x - ca * player.w * 0.35, ty = c.y - sa * player.w * 0.35;
+        pcPush({ k: "smoke", x: tx, y: ty, vx: -40 + Math.random() * 20, vy: -18 - Math.random() * 20, age: 0, life: 1.1 + Math.random() * 0.7, r: 6 + Math.random() * 7 });
+        pcPush({ k: "fire", x: c.x + (Math.random() - 0.5) * player.w * 0.5, y: c.y + (Math.random() - 0.3) * player.h * 0.4, vx: -30 + Math.random() * 30, vy: -28 - Math.random() * 30, age: 0, life: 0.35 + Math.random() * 0.25, r: 4 + Math.random() * 5 });
+        if (Math.random() < 0.35) pcPush({ k: "spark", x: c.x, y: c.y, vx: (Math.random() - 0.5) * 160, vy: -60 - Math.random() * 90, age: 0, life: 0.5 + Math.random() * 0.4, r: 1.6 });
+      }
+      if (c.y + ph >= floorY) {
+        c.hit = c.t; c.hitWater = water; c.y = floorY - ph;
+        try { triggerScreenShake(water ? 6 : 9, 500); } catch (e) {}
+        if (water) {
+          pcBurst(c.x, floorY, 26, "drop", 190, 2.2, 0.9);
+          pcPush({ k: "ring", x: c.x, y: floorY, vx: 0, vy: 0, age: 0, life: 1.1, r: 8 });
+          pcPush({ k: "ring", x: c.x, y: floorY, vx: 0, vy: 0, age: -0.15, life: 1.1, r: 4 });
+          pcBurst(c.x, floorY - 4, 8, "smoke", 60, 8, 1.3);
+          try { sfxSplash && sfxSplash(); } catch (e) {}
+        } else {
+          pcBurst(c.x, c.y, 34, "fire", 210, 8, 0.7);
+          pcBurst(c.x, c.y, 18, "smoke", 90, 12, 1.8);
+          pcBurst(c.x, c.y, 16, "spark", 260, 1.6, 0.8);
+          pcPush({ k: "flash", x: c.x, y: c.y, vx: 0, vy: 0, age: 0, life: 0.22, r: 60 });
+          try { triggerScreenFlash(0.35, 220); } catch (e) {}
+        }
+        try { sfxExplosion(0.7); } catch (e) {}
+      }
+    } else {
+      const ht = c.t - c.hit;
+      if (c.hitWater) { c.y += 26 * dt * (1 + ht); c.rot += dt * 0.25; }
+      if (Math.random() < dt * 14) pcPush({ k: c.hitWater ? "bubble" : "smoke", x: c.x + (Math.random() - 0.5) * player.w * 0.6, y: c.y + (c.hitWater ? 4 : -4), vx: (Math.random() - 0.5) * 12, vy: -22 - Math.random() * 20, age: 0, life: 1.2, r: c.hitWater ? 2 + Math.random() * 2.5 : 6 + Math.random() * 7 });
+      if (!c.hitWater && Math.random() < dt * 20) pcPush({ k: "fire", x: c.x + (Math.random() - 0.5) * player.w * 0.7, y: c.y, vx: (Math.random() - 0.5) * 20, vy: -30 - Math.random() * 25, age: 0, life: 0.45, r: 4 + Math.random() * 4 });
+    }
+    // body
+    const ht2 = c.hit ? c.t - c.hit : 0;
+    ctx.save();
+    if (c.hitWater) { ctx.beginPath(); ctx.rect(-4000, -4000, 8000, 4000 + floorY - 1); ctx.clip(); }
+    ctx.translate(c.x, c.y); ctx.rotate(c.rot);
+    ctx.globalAlpha = c.hitWater ? Math.max(0, 1 - ht2 / 1.8) : Math.max(0, 1 - Math.max(0, ht2 - 1.6) / 0.8);
+    ctx.drawImage(img, -player.w / 2, -player.h / 2, player.w, player.h);
+    // charred / burning tint over the hull
+    ctx.globalCompositeOperation = "source-atop"; ctx.fillStyle = "rgba(30,14,6," + Math.min(0.62, 0.2 + c.t * 0.25).toFixed(2) + ")";
+    ctx.fillRect(-player.w / 2, -player.h / 2, player.w, player.h);
+    ctx.restore();
+    // particles
+    for (let i = c.fx.length - 1; i >= 0; i--) {
+      const f = c.fx[i]; f.age += dt;
+      if (f.age >= f.life) { c.fx.splice(i, 1); continue; }
+      if (f.age < 0) continue;
+      const u = f.age / f.life;
+      if (f.k !== "ring" && f.k !== "flash") { f.x += f.vx * dt; f.y += f.vy * dt; }
+      if (f.k === "drop" || f.k === "spark") f.vy += 520 * dt;
+      ctx.save();
+      if (f.k === "smoke") { ctx.fillStyle = "rgba(" + (60 + u * 40 | 0) + "," + (54 + u * 36 | 0) + "," + (50 + u * 34 | 0) + "," + (0.5 * (1 - u)).toFixed(3) + ")"; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (1 + u * 1.6), 0, 6.2832); ctx.fill(); }
+      else if (f.k === "fire") { ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = "rgba(255," + (170 - u * 110 | 0) + ",40," + (0.8 * (1 - u)).toFixed(3) + ")"; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (1 - u * 0.5), 0, 6.2832); ctx.fill(); }
+      else if (f.k === "spark") { ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = "rgba(255,210,120," + (1 - u).toFixed(2) + ")"; ctx.fillRect(f.x, f.y, f.r, f.r); }
+      else if (f.k === "drop") { ctx.fillStyle = "rgba(200,225,235," + (0.8 * (1 - u)).toFixed(2) + ")"; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 6.2832); ctx.fill(); }
+      else if (f.k === "bubble") { ctx.strokeStyle = "rgba(190,225,235," + (0.7 * (1 - u)).toFixed(2) + ")"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 6.2832); ctx.stroke(); }
+      else if (f.k === "ring") { ctx.strokeStyle = "rgba(210,235,240," + (0.6 * (1 - u)).toFixed(2) + ")"; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(f.x, f.y, f.r + u * 70, (f.r + u * 70) * 0.22, 0, 0, 6.2832); ctx.stroke(); }
+      else if (f.k === "flash") { ctx.globalCompositeOperation = "lighter"; const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r * (1 + u)); g.addColorStop(0, "rgba(255,230,160," + (0.9 * (1 - u)).toFixed(2) + ")"); g.addColorStop(1, "rgba(255,120,30,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (1 + u), 0, 6.2832); ctx.fill(); }
+      ctx.restore();
+    }
+  }
+
   function drawPlayer() {
     try {
+    if (pCrash && state === "over") { const ci = currentPlayerImage(); if (ci && ci.naturalWidth) { drawPlayerCrash(ci); return; } }
     // Hide blimp during the end-of-level black fade (overlay draws after player)
     // Keep blimp visible during training landing/score
     if (typeof levelEndPhase === "string" && levelEndPhase === "fadeOut" &&
