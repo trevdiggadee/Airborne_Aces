@@ -2185,7 +2185,7 @@
     const t = performance.now() / 1000;
     ctx.save(); l2SurfPath(t, top); ctx.clip();
     const g = ctx.createLinearGradient(0, top, 0, H);
-    g.addColorStop(0, "rgba(34,62,74,0.95)"); g.addColorStop(0.4, "rgba(16,36,50,0.97)"); g.addColorStop(1, "rgba(4,10,18,0.99)");
+    g.addColorStop(0, "rgba(24,46,58,0.97)"); g.addColorStop(0.4, "rgba(11,26,38,0.98)"); g.addColorStop(1, "rgba(3,8,14,0.99)");
     ctx.fillStyle = g; ctx.fillRect(0, top, W, h);
     // faint warm sky reflection near the surface
     const rg = ctx.createLinearGradient(0, top, 0, top + h * 0.5);
@@ -2226,7 +2226,7 @@
     ctx.save(); l2SurfPath(t, top); ctx.clip();
     // submerged tint over the pillar feet
     const g = ctx.createLinearGradient(0, top, 0, H);
-    g.addColorStop(0, "rgba(30,60,76,0.45)"); g.addColorStop(1, "rgba(4,10,18,0.7)");
+    g.addColorStop(0, "rgba(22,46,60,0.6)"); g.addColorStop(1, "rgba(3,8,14,0.82)");
     ctx.fillStyle = g; ctx.fillRect(0, top, W, h);
     // slow, soft light patches drifting across the surface
     ctx.globalCompositeOperation = "screen";

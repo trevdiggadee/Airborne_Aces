@@ -237,7 +237,7 @@ function triggerBoss(num) {
       targetX: (function () {
         const edgeMargin = W * 0.02;
         const paddedTarget = W - dispW * 0.55;
-        if (num === 2) return W - dispW - W * 0.02; // battleship: whole hull in view, tucked toward the back (right)
+        if (num === 2) return W - dispW * 0.8; // battleship: parked toward the back, last 20% of the hull runs past the edge
         // Boss 3 (tank) sits ~25% further back (toward the right edge)
         if (num === 3 || cfg.kind === "tank") {
           const back = W - dispW * 0.22;

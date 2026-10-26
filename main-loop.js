@@ -15,23 +15,56 @@ window.__AIRBORNE_MAIN_BUILD = "ruff412";
       : document.getElementById("gameCanvas") || document.querySelector("canvas");
   }
   function applyCamCss(z) {
+    // zoom is applied inside the canvas now (camPostZoom) so the margins show real level layers
     var c = camCanvas();
     if (!c) return;
-    var zz = (z != null) ? z : 1;
-    c.style.transformOrigin = "50% 100%";
-    c.style.transition = "none";
-    c.style.transform = (Math.abs(zz - 1) < 0.002) ? "none" : ("scale(" + zz.toFixed(4) + ")");
-    // dark backdrop behind the pulled-back canvas so nothing from the page shows around it
+    c.style.transformOrigin = "50% 50%";
+    try { var bd = document.getElementById("camBackdrop"); if (bd) bd.style.display = "none"; } catch (e) {}
+  }
+  // ---- in-canvas zoom-out: scene is shrunk toward the bottom-centre; margins are filled with mirrored
+  // level background (a snapshot taken before blimps/boss/etc. are drawn) so no dark border ever shows ----
+  var camTmp = null, camBg = null, camBgHas = false;
+  function camSized(c, ref) { if (c.width !== ref.width || c.height !== ref.height) { c.width = ref.width; c.height = ref.height; } }
+  function camSnapBg() {
+    var cam = window.__airborneCam; camBgHas = false;
+    if (!cam || cam.z >= 0.995) return;
+    if (!camBg) camBg = document.createElement("canvas");
+    camSized(camBg, canvas);
+    var g = camBg.getContext("2d"); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, camBg.width, camBg.height); g.drawImage(canvas, 0, 0);
+    camBgHas = true;
+  }
+  function camPostZoom() {
+    var cam = window.__airborneCam;
+    if (!cam || cam.z >= 0.995) return;
+    var z = cam.z, cw = canvas.width, ch = canvas.height;
+    if (!camTmp) camTmp = document.createElement("canvas");
+    camSized(camTmp, canvas);
+    var tg = camTmp.getContext("2d"); tg.setTransform(1, 0, 0, 1, 0, 0); tg.clearRect(0, 0, cw, ch); tg.drawImage(canvas, 0, 0);
+    var bg = camBgHas ? camBg : camTmp;
+    var dw = cw * z, dh = ch * z, dx = (cw - dw) / 2, dy = ch - dh;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
+    ctx.clearRect(0, 0, cw, ch);
+    function tile(src, i, j, clipY0, clipY1) {
+      var x0 = dx + i * dw, y0 = dy + j * dh;
+      ctx.save();
+      if (clipY0 != null) { ctx.beginPath(); ctx.rect(0, clipY0, cw, clipY1 - clipY0); ctx.clip(); }
+      ctx.translate(i !== 0 ? x0 + dw : x0, j !== 0 ? y0 + dh : y0);
+      ctx.scale(i !== 0 ? -1 : 1, j !== 0 ? -1 : 1);
+      ctx.drawImage(src, 0, 0, cw, ch, 0, 0, dw, dh);
+      ctx.restore();
+    }
+    for (var j = -1; j <= 0; j++) for (var i = -1; i <= 1; i++) { if (i === 0 && j === 0) continue; tile(bg, i, j); }
+    // the ship's far end can run past the canvas edge: continue it into the right margin (mirrored) on its own rows only
     try {
-      var bd = document.getElementById("camBackdrop");
-      if (!bd) {
-        bd = document.createElement("div");
-        bd.id = "camBackdrop";
-        bd.style.cssText = "position:fixed;left:0;top:0;width:100%;height:100%;z-index:0;pointer-events:none;display:none;background:linear-gradient(180deg,#1a1009 0%,#2a1a10 60%,#0d1a24 100%)";
-        c.parentNode.insertBefore(bd, c);
+      if (typeof boss !== "undefined" && boss && boss.variant === 2 && boss.x + boss.w > W - 2) {
+        var d = (typeof dpr !== "undefined" ? dpr : 1);
+        tile(camTmp, 1, 0, dy + (boss.y - 24) * d * z, dy + (boss.y + boss.h + 8) * d * z);
       }
-      bd.style.display = zz < 0.995 ? "block" : "none";
-    } catch (eBd) {}
+    } catch (e) {}
+    ctx.drawImage(camTmp, 0, 0, cw, ch, dx, dy, dw, dh);
+    ctx.restore();
   }
   function startBossCamCinematic() {
     // Boss zoom disabled — never pause the game
@@ -82,7 +115,7 @@ window.__AIRBORNE_MAIN_BUILD = "ruff412";
     if (cam.phase === "idle") {
       // Battleship fight: pull the camera back 25% so the whole ship is in view (CSS scale on the canvas).
       var shipCam = false;
-      try { shipCam = !!(window.__airborneShipDefer && window.__airborneShipDefer()); } catch (e) {}
+      try { shipCam = !!(window.__airborneShipZoom && window.__airborneShipZoom()); } catch (e) {}
       var target = shipCam ? 0.75 : 1;
       var rate = shipCam ? 1.1 : 2.2;
       if (Math.abs(cam.z - target) > 0.002) {
@@ -672,6 +705,7 @@ function loop(ts) {
       drawGroundVehicles();
     }
     try { if (window.__airborneDrawL3Clouds) window.__airborneDrawL3Clouds(); } catch (eL3c) {}
+    try { camSnapBg(); } catch (eSnap) {}
     drawBossShadow();
     drawWindParticlesBack();
     // Training background balloons — behind blimps and clouds
@@ -755,6 +789,7 @@ try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePow
     try { if (window.drawFlightTrainingBanner) window.drawFlightTrainingBanner(); } catch (e) {}
     try { if (window.drawEndCelebration) window.drawEndCelebration(); } catch (e) {}
     try { if (window.updateBossDamageNums) window.updateBossDamageNums(dt); } catch (e) {}
+    try { camPostZoom(); } catch (ePz) {}
     // Vignette + film grain removed — were causing uneven dimming and lag
     } catch (err) {
       if (!loopErrorShown) {

@@ -1295,7 +1295,7 @@
 
   function camZoomCss() {
     var z = (window.__airborneCam && window.__airborneCam.z) || 1;
-    return Math.abs(z - 1) < 0.002 ? '' : ' scale(' + z.toFixed(4) + ')';
+    return ''; // zoom is applied inside the canvas (see camPostZoom in main-loop)
   }
 
   function triggerScreenShake(intensity, durationMs) {

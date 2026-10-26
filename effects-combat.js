@@ -75,14 +75,19 @@
     if (hasArcBomb && bossActive && boss && (boss.kind === "tank" || boss.variant === 2) && state === "playing") {
       arcBombTimer -= dt;
       if (arcBombTimer <= 0) {
-        arcBombTimer = boss.variant === 2 ? ARC_BOMB_INTERVAL / 3 : ARC_BOMB_INTERVAL;
+        arcBombTimer = boss.variant === 2 ? 0.38 : ARC_BOMB_INTERVAL;
         const startX = player.x + player.w * 0.25;
         const startY = player.y + player.h * 0.3;
         const targetX = boss.x + boss.w * 0.5;
         const targetY = boss.y + boss.h * 0.25;
         if (boss.variant === 2) {
           const tx = boss.x + boss.w * (0.25 + Math.random() * 0.5), ty = boss.y + boss.h * 0.35;
-          spawnArcBomb(playerBombs, startX, startY, tx, ty, 520, 0.6, 0.75, "ship_missile");
+          // high lobbed arc: rise ~16% of the screen height before dropping onto the hull
+          const g = 950, rise = Math.max(60, H * 0.16);
+          const vy0 = -Math.sqrt(2 * g * rise);
+          const T = (-vy0 + Math.sqrt(vy0 * vy0 + 2 * g * (ty - startY))) / g;
+          playerBombs.push({ x: startX, y: startY, vx: (tx - startX) / T, vy: vy0, gravity: g, r: Math.min(20, W * 0.05),
+            rotation: 0, rotSpeed: 0, orientToVelocity: false, spriteKey: "ship_missile", trailTimer: 0 });
           if (typeof sfxShoot === "function") sfxShoot();
         } else spawnArcBomb(playerBombs, startX, startY, targetX, targetY, 480, 0.7, 0.85);
       }
@@ -365,6 +370,13 @@
     } catch (e) {}
     return false;
   };
+  window.__airborneShipZoom = function () {
+    try {
+      if (bossSinking && bossSinking.mode === "ship_sink") return true;
+      if (bossActive && boss && boss.variant === 2 && boss.kind === "rocket") return boss.entryP == null || boss.entryP > 0.55;
+    } catch (e) {}
+    return false;
+  };
   function l2WaterOn() { try { return !!(window.__airborneL2On && window.__airborneL2On() && window.__airborneL2WaterTop); } catch (e) { return false; } }
   function shipWaterSurfY() {
     if (l2WaterOn()) { try { return window.__airborneL2WaterTop(); } catch (e) {} }
@@ -544,12 +556,12 @@
     // dramatic entrance: the ship sails in slowly from the right under a pulled-back camera
     if (!b.arrived) {
       if (b.entryT == null) {
-        b.entryT = 0; b.entryFromX = W + b.w * 0.12; b.x = b.entryFromX; b.hornDone = false; b.rumbleT = 0; b.entrySmokeT = 0;
+        b.entryT = 0; b.entryFromX = W + b.w * 0.6; b.x = b.entryFromX; b.hornDone = false; b.rumbleT = 0; b.entrySmokeT = 0;
         try { sfxThunder(); } catch (e) {}
         try { triggerScreenFlash(0.14, 260); } catch (e) {}
       }
       b.entryT += dt;
-      const D = 4.6, p = Math.min(1, b.entryT / D), e = 1 - Math.pow(1 - p, 3);
+      const D = 8.5, p = Math.min(1, b.entryT / D), e = 1 - Math.pow(1 - p, 3);
       const prevX = b.x;
       b.x = b.entryFromX + (b.targetX - b.entryFromX) * e;
       b._speed = dt > 0 ? Math.abs(b.x - prevX) / dt : 0;
