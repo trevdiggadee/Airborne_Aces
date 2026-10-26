@@ -75,12 +75,16 @@
     if (hasArcBomb && bossActive && boss && (boss.kind === "tank" || boss.variant === 2) && state === "playing") {
       arcBombTimer -= dt;
       if (arcBombTimer <= 0) {
-        arcBombTimer = ARC_BOMB_INTERVAL;
+        arcBombTimer = boss.variant === 2 ? ARC_BOMB_INTERVAL / 3 : ARC_BOMB_INTERVAL;
         const startX = player.x + player.w * 0.25;
         const startY = player.y + player.h * 0.3;
         const targetX = boss.x + boss.w * 0.5;
         const targetY = boss.y + boss.h * 0.25;
-        spawnArcBomb(playerBombs, startX, startY, targetX, targetY, 480, 0.7, 0.85);
+        if (boss.variant === 2) {
+          const tx = boss.x + boss.w * (0.25 + Math.random() * 0.5), ty = boss.y + boss.h * 0.35;
+          spawnArcBomb(playerBombs, startX, startY, tx, ty, 520, 0.6, 0.75, "ship_missile");
+          if (typeof sfxShoot === "function") sfxShoot();
+        } else spawnArcBomb(playerBombs, startX, startY, targetX, targetY, 480, 0.7, 0.85);
       }
     }
 
@@ -95,7 +99,31 @@
         b.trailTimer = 0.03;
         spawnPlayerBombTrailParticle(b.x, b.y, b.vx, b.vy);
       }
+      if (b.spriteKey === "ship_missile") {
+        // falling missile: flame + smoke streak behind it, with a few sparks
+        try { spawnRocketTrail({ x: b.x, y: b.y, vx: b.vx, vy: b.vy, r: b.r * 1.4 }); } catch (e) {}
+        b.sparkT = (b.sparkT || 0) - dt;
+        if (b.sparkT <= 0) {
+          b.sparkT = 0.045;
+          const sp = Math.hypot(b.vx, b.vy) || 1;
+          playerBombTrailParticles.push({ x: b.x - (b.vx / sp) * b.r * 1.6, y: b.y - (b.vy / sp) * b.r * 1.6, vx: -(b.vx / sp) * 20 + (Math.random() - 0.5) * 60, vy: -(b.vy / sp) * 20 + (Math.random() - 0.5) * 60,
+            curl: (Math.random() - 0.5) * 6, angle: Math.random() * 6.28, life: 0.25 + Math.random() * 0.2, age: 0, size: 2 + Math.random() * 1.6, isSparkle: true });
+        }
+      }
     });
+    // missiles that miss the ship drop into the sea with a splash
+    if (typeof shipFx !== "undefined") {
+      playerBombs = playerBombs.filter(b => {
+        if (b.spriteKey !== "ship_missile" || !boss || boss.variant !== 2) return true;
+        const sy = shipSurfAt(b.x);
+        if (b.y > sy && b.vy > 0) {
+          for (let i = 0; i < 9; i++) shipFx.push({ kind: "drop", x: b.x, y: sy, vx: (Math.random() - 0.5) * 140, vy: -90 - Math.random() * 150, life: 0.5 + Math.random() * 0.4, age: 0, r: 1.3 + Math.random() * 2 });
+          shipFx.push({ kind: "foam", x: b.x, y: sy + 1, vx: 0, vy: 0, life: 0.9, age: 0, r: 7 });
+          return false;
+        }
+        return true;
+      });
+    }
     updatePlayerBombTrailParticles(dt);
     playerBombs = playerBombs.filter(b => b.y < H + 30 && b.x > -30 && b.x < W + 30);
 
@@ -132,7 +160,27 @@
   function drawPlayerBombs() {
     drawPlayerBombTrailParticles();
     const img = currentPlayerBombImage();
+    const msl = images.ship_missile;
     playerBombs.forEach(b => {
+      if (b.spriteKey === "ship_missile") {
+        const w = b.r * 2.9, h = (msl && msl.naturalWidth) ? w * msl.naturalHeight / msl.naturalWidth : w * 0.48;
+        const sp = Math.hypot(b.vx, b.vy) || 1, ux = b.vx / sp, uy = b.vy / sp, pul = 0.75 + 0.25 * Math.sin(performance.now() / 55 + b.x);
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        // exhaust glow + hot streak trailing behind the nose
+        const gx = b.x - ux * w * 0.55, gy = b.y - uy * w * 0.55;
+        const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, w * 0.85);
+        g.addColorStop(0, "rgba(255,230,160," + (0.9 * pul) + ")"); g.addColorStop(0.4, "rgba(255,120,30," + (0.55 * pul) + ")"); g.addColorStop(1, "rgba(255,60,10,0)");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(gx, gy, w * 0.85, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "rgba(255,170,70," + (0.55 * pul) + ")"; ctx.lineWidth = 3; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(b.x - ux * w * 0.45, b.y - uy * w * 0.45); ctx.lineTo(b.x - ux * w * 1.9, b.y - uy * w * 1.9); ctx.stroke();
+        ctx.restore();
+        ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.rotation || 0);
+        if (msl && msl.naturalWidth) ctx.drawImage(msl, -w / 2, -h / 2, w, h);
+        else { ctx.fillStyle = "#7a8a52"; ctx.fillRect(-w / 2, -h / 2, w, h); }
+        ctx.restore();
+        return;
+      }
       if (!img || !img.naturalWidth) return;
       let aspect = imgAspect(img);
       const w = b.r * 2.1 * 1.25; // 2x the previous size
@@ -428,11 +476,18 @@
   function shipWaterFx(b, dt, sinking) {
     b._fxW = (b._fxW || 0) - dt;
     if (b._fxW > 0) return;
-    b._fxW = sinking ? 0.03 : 0.055;
+    const sp = Math.min(1, (b._speed || 0) / 180);   // 0 when parked, up to 1 while sailing in
+    b._fxW = sinking ? 0.03 : 0.055 - sp * 0.035;
     const bowX = b.x + b.w * 0.045;
     const sy = shipSurfAt(bowX);
-    if (Math.random() < 0.75) {
-      shipFx.push({ kind: "drop", x: bowX + Math.random() * 6, y: sy, vx: -30 - Math.random() * 70, vy: -70 - Math.random() * 90, life: 0.5 + Math.random() * 0.35, age: 0, r: 1.2 + Math.random() * 1.8 });
+    const nd = 1 + Math.floor(sp * 4);
+    for (let q = 0; q < nd; q++) {
+      if (Math.random() < 0.75) shipFx.push({ kind: "drop", x: bowX + Math.random() * 6, y: sy, vx: -30 - Math.random() * (70 + sp * 90), vy: -70 - Math.random() * (90 + sp * 130), life: 0.5 + Math.random() * 0.4, age: 0, r: 1.2 + Math.random() * (1.8 + sp * 1.5) });
+    }
+    if (sp > 0.05) {
+      // wake churned up behind the stern
+      const wx = b.x + b.w * (0.9 + Math.random() * 0.1);
+      shipFx.push({ kind: "foam", x: wx, y: shipSurfAt(wx) + 1, vx: 24 + Math.random() * 30, vy: 0, life: 1.1, age: 0, r: 3 + Math.random() * 5 * sp });
     }
     const fx = b.x + b.w * (0.03 + Math.random() * 0.94);
     shipFx.push({ kind: "foam", x: fx, y: shipSurfAt(fx) + 1, vx: -10 - Math.random() * 14, vy: 0, life: 0.7 + Math.random() * 0.5, age: 0, r: 2 + Math.random() * 3 });
@@ -486,6 +541,37 @@
     b.y = keel - b.h + bob + dmg * b.h * 0.1;
     b.tilt = Math.sin(b.t * 0.9) * 0.012 + Math.sin(b.t * 1.7) * 0.005 - dmg * 0.05;
 
+    // dramatic entrance: the ship sails in slowly from the right under a pulled-back camera
+    if (!b.arrived) {
+      if (b.entryT == null) {
+        b.entryT = 0; b.entryFromX = W + b.w * 0.12; b.x = b.entryFromX; b.hornDone = false; b.rumbleT = 0; b.entrySmokeT = 0;
+        try { sfxThunder(); } catch (e) {}
+        try { triggerScreenFlash(0.14, 260); } catch (e) {}
+      }
+      b.entryT += dt;
+      const D = 4.6, p = Math.min(1, b.entryT / D), e = 1 - Math.pow(1 - p, 3);
+      const prevX = b.x;
+      b.x = b.entryFromX + (b.targetX - b.entryFromX) * e;
+      b._speed = dt > 0 ? Math.abs(b.x - prevX) / dt : 0;
+      b.entryP = p;
+      b.rumbleT -= dt;
+      if (b.rumbleT <= 0) { b.rumbleT = 0.13; try { triggerScreenShake(1.6 + 2.2 * (1 - p), 140); } catch (e2) {} }
+      b.entrySmokeT -= dt;
+      if (b.entrySmokeT <= 0) {
+        b.entrySmokeT = 0.07;
+        shipFx.push({ kind: "bsmoke", x: b.x + b.w * 0.55, y: b.y + b.h * 0.2, vx: 55 + Math.random() * 40, vy: -30 - Math.random() * 25, life: 1.5 + Math.random() * 0.8, age: 0, r: 12 + Math.random() * 10 });
+      }
+      if (!b.hornDone && p > 0.3) {
+        b.hornDone = true;
+        try { playTone({ freq: 74, duration: 1.4, type: "sawtooth", vol: 0.16, sweep: -6, attack: 0.1, reverbSend: 0.35 }); playTone({ freq: 111, duration: 1.3, type: "square", vol: 0.07, sweep: -8, attack: 0.12, reverbSend: 0.3 }); } catch (e3) {}
+        try { triggerScreenShake(5, 500); } catch (e4) {}
+      }
+      if (p >= 1) {
+        b.arrived = true; b._speed = 0; b.entryP = 1;
+        b.fireState = "rise"; b.animF = 0; b.attackTimer = 1.2;   // salute: cannons come up and open fire
+        try { triggerScreenShake(7, 600); sfxExplosion(0.5); } catch (e5) {}
+      }
+    }
     // cannon lift cycle: raise barrels (video frames 0 -> 35), volley, lower again
     if (b.arrived) {
       const fps = pct < 0.35 ? 40 : 30;
@@ -541,10 +627,16 @@
     try { if (typeof sfxShoot === "function") sfxShoot(); } catch (e) {}
   }
   function drawShipBoss(img, shakeX) {
+    if (boss.entryP != null && boss.entryP < 1) {
+      ctx.save(); ctx.fillStyle = "rgba(8,5,3," + (0.32 * (1 - boss.entryP)).toFixed(3) + ")"; ctx.fillRect(0, 0, W, H); ctx.restore();
+    }
     const pivX = boss.x + boss.w / 2 + shakeX, pivY = boss.y + boss.h;
     ctx.save();
     ctx.translate(pivX, pivY); ctx.rotate(boss.tilt || 0);
+    // soft warm rim light so the dark hull reads against the city
+    ctx.shadowColor = "rgba(255,196,120,0.65)"; ctx.shadowBlur = 9;
     ctx.drawImage(img, -boss.w / 2, -boss.h, boss.w, boss.h);
+    ctx.shadowBlur = 0; ctx.shadowColor = "transparent";
     ctx.restore();
     // water in front of the hull (deferred from the dock layer), then foam, spray and fire on top
     if (l2WaterOn() && typeof window.__airborneL2WaterFront === "function") { try { window.__airborneL2WaterFront(); } catch (e) {} }

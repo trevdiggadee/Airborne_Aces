@@ -1293,6 +1293,11 @@
   let screenShakeOffsetX = 0;
   let screenShakeOffsetY = 0;
 
+  function camZoomCss() {
+    var z = (window.__airborneCam && window.__airborneCam.z) || 1;
+    return Math.abs(z - 1) < 0.002 ? '' : ' scale(' + z.toFixed(4) + ')';
+  }
+
   function triggerScreenShake(intensity, durationMs) {
     screenShakeIntensity = intensity;
     screenShakeDecay = intensity / (durationMs / 1000);
@@ -1313,9 +1318,9 @@
       if (screenShakeIntensity < 0) screenShakeIntensity = 0;
       screenShakeOffsetX = (Math.random() - 0.5) * screenShakeIntensity * 2;
       screenShakeOffsetY = (Math.random() - 0.5) * screenShakeIntensity * 2;
-      canvas.style.transform = 'translate(' + screenShakeOffsetX.toFixed(1) + 'px,' + screenShakeOffsetY.toFixed(1) + 'px)';
+      canvas.style.transform = 'translate(' + screenShakeOffsetX.toFixed(1) + 'px,' + screenShakeOffsetY.toFixed(1) + 'px)' + camZoomCss();
     } else {
-      canvas.style.transform = '';
+      canvas.style.transform = camZoomCss().trim();
     }
   }
 

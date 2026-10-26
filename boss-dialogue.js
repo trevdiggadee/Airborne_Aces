@@ -214,10 +214,10 @@ function triggerBoss(num) {
     // targetX negative so the boss parked mostly off-screen ("boss never appeared"). Cap to 72% of W.
     if (num === 2) {
       // battleship: wide hull, sized by width (capped by height), sitting on the water
-      dispW = Math.min(W * 1.15, (H * 0.30) / aspect);
+      dispW = Math.min(W * 0.80, (H * 0.30) / aspect);
       dispH = dispW * aspect;
     }
-    const maxBossW = num === 2 ? W * 1.2 : W * 0.72;
+    const maxBossW = num === 2 ? W * 0.85 : W * 0.72;
     if (dispW > maxBossW) {
       dispH = dispH * (maxBossW / dispW);
       dispW = maxBossW;
@@ -237,7 +237,7 @@ function triggerBoss(num) {
       targetX: (function () {
         const edgeMargin = W * 0.02;
         const paddedTarget = W - dispW * 0.55;
-        if (num === 2) return W - dispW * 0.75; // battleship: 75% of the hull on screen
+        if (num === 2) return W - dispW - W * 0.02; // battleship: whole hull in view, tucked toward the back (right)
         // Boss 3 (tank) sits ~25% further back (toward the right edge)
         if (num === 3 || cfg.kind === "tank") {
           const back = W - dispW * 0.22;
@@ -284,7 +284,7 @@ function triggerBoss(num) {
     if (window.__airborneTrainingBoss) dt *= (1 / 3);
     if (boss.variant === 2 && boss.kind === "rocket") { try { updateShipBoss(dt); } catch (eShip) { console.warn("updateShipBoss", eShip); } }
 
-    if (!boss.arrived) {
+    if (!boss.arrived && !(boss.variant === 2 && boss.kind === "rocket")) {
       const arriveSpeed = boss.kind === "tank" ? 1.2 : 1.8; // the tank rolls in, everyone else flies in
       boss.x += (boss.targetX - boss.x) * Math.min(1, dt * arriveSpeed);
       if (Math.abs(boss.x - boss.targetX) < 2) boss.arrived = true;

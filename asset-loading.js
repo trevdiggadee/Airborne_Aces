@@ -169,6 +169,7 @@
     streetlamp1:     "IMG_0734.png",
     boss:            "boss_throw_01.webp?cb=2",
     boss2:           "boss2.webp?cb=2",
+    ship_missile:    "bomb_ship_missile.webp",
     boss2_01: "boss2_01.webp?v=bs1",
     boss2_02: "boss2_02.webp?v=bs1",
     boss2_03: "boss2_03.webp?v=bs1",

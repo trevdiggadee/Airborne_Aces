@@ -18,9 +18,20 @@ window.__AIRBORNE_MAIN_BUILD = "ruff412";
     var c = camCanvas();
     if (!c) return;
     var zz = (z != null) ? z : 1;
-    c.style.transformOrigin = "center center";
+    c.style.transformOrigin = "50% 100%";
     c.style.transition = "none";
     c.style.transform = (Math.abs(zz - 1) < 0.002) ? "none" : ("scale(" + zz.toFixed(4) + ")");
+    // dark backdrop behind the pulled-back canvas so nothing from the page shows around it
+    try {
+      var bd = document.getElementById("camBackdrop");
+      if (!bd) {
+        bd = document.createElement("div");
+        bd.id = "camBackdrop";
+        bd.style.cssText = "position:fixed;left:0;top:0;width:100%;height:100%;z-index:0;pointer-events:none;display:none;background:linear-gradient(180deg,#1a1009 0%,#2a1a10 60%,#0d1a24 100%)";
+        c.parentNode.insertBefore(bd, c);
+      }
+      bd.style.display = zz < 0.995 ? "block" : "none";
+    } catch (eBd) {}
   }
   function startBossCamCinematic() {
     // Boss zoom disabled — never pause the game
@@ -69,12 +80,17 @@ window.__AIRBORNE_MAIN_BUILD = "ruff412";
       return;
     }
     if (cam.phase === "idle") {
-      if (Math.abs(cam.z - 1) > 0.002) {
-        cam.z += (1 - cam.z) * Math.min(1, dt * 5);
+      // Battleship fight: pull the camera back 25% so the whole ship is in view (CSS scale on the canvas).
+      var shipCam = false;
+      try { shipCam = !!(window.__airborneShipDefer && window.__airborneShipDefer()); } catch (e) {}
+      var target = shipCam ? 0.75 : 1;
+      var rate = shipCam ? 1.1 : 2.2;
+      if (Math.abs(cam.z - target) > 0.002) {
+        cam.z += (target - cam.z) * Math.min(1, dt * rate);
         applyCamCss(cam.z);
-      } else if (cam.z !== 1) {
-        cam.z = 1;
-        applyCamCss(1);
+      } else if (cam.z !== target) {
+        cam.z = target;
+        applyCamCss(target);
       }
       return;
     }
