@@ -20,6 +20,15 @@
 
   var ATLAS = {"truss3": [0, 0, 36, 227], "truss2": [38, 0, 59, 221], "truss1": [99, 0, 41, 213], "clock_mansion": [142, 0, 127, 193], "mega_factory": [271, 0, 197, 183], "factory3": [470, 0, 113, 171], "fac_tower": [585, 0, 169, 157], "apartment": [756, 0, 70, 150], "steam_co": [828, 0, 168, 128], "gable_house": [0, 229, 70, 120], "silo_a": [72, 229, 41, 116], "long_hall": [115, 229, 164, 114], "green_dome": [281, 229, 70, 110], "stack_a": [353, 229, 12, 110], "tall_tower": [367, 229, 40, 107], "silo_b": [409, 229, 36, 104], "arch_complex": [447, 229, 202, 102], "chimney_dome": [651, 229, 70, 102], "mansard": [723, 229, 78, 101], "gothic": [803, 229, 56, 101], "warehouse": [0, 351, 171, 100], "arch_hall": [173, 351, 126, 100], "clock_small": [301, 351, 48, 99], "stack_c": [351, 351, 11, 95], "awning_house": [364, 351, 65, 91], "stack_b": [431, 351, 6, 86], "barn_arch": [439, 351, 118, 85], "tower_house": [559, 351, 64, 80], "small_house": [625, 351, 62, 80], "long_low": [689, 351, 92, 78], "small_green": [783, 351, 64, 63]};
 
+  // rooftop industrial props (pipes, tanks, water tower, crane) from level2_props.webp — rects in 1x units
+  var PROPS = {"p_plant": [0, 0, 138, 169], "p_tank_b": [142, 0, 50, 159], "p_valve_tank": [196, 0, 39, 145], "p_pipe_red": [239, 0, 25, 145], "p_tank_a": [268, 0, 61, 136], "p_water_tower": [333, 0, 59, 128], "p_valve_post": [396, 0, 24, 81], "p_tank_h": [424, 0, 124, 78], "p_crane": [552, 0, 97, 78], "p_gauge_post": [653, 0, 19, 77], "p_boiler": [676, 0, 41, 70], "p_hut": [721, 0, 43, 63]};
+  // second prop sheet (steam pipes / industrial systems / lattice towers) — rects in 1x units, image is 2x
+  var PROPS2 = {"p2_tank_dome": [0, 0, 61, 138], "p2_valve_tank": [63, 0, 40, 152], "p2_red_valve": [105, 0, 27, 149], "p2_tank_big": [134, 0, 52, 165], "p2_plant2": [188, 0, 136, 169], "p2_tank_h2": [326, 0, 123, 80], "p2_gauge": [451, 0, 20, 79], "p2_wheel_post": [473, 0, 27, 83], "p2_boiler2": [0, 171, 42, 73], "p2_drum_a": [44, 171, 26, 38], "p2_drum_b": [72, 171, 31, 49], "p2_truss_a": [105, 171, 43, 215], "p2_truss_b": [150, 171, 62, 223], "p2_truss_c": [214, 171, 38, 230], "p2_gantry": [254, 171, 94, 67], "p2_box": [166, 403, 45, 55], "p2_hut2": [213, 403, 44, 44]};
+  var PROP_KEYS = Object.keys(PROPS).concat(Object.keys(PROPS2));
+  var propsImg = null, propsReady = false, PS = 2;
+  var props2Img = null, props2Ready = false, PS2 = 2;
+  function propRect(k) { return PROPS[k] || PROPS2[k]; }
+
   var CLASSES = {
     tall: ["mega_factory", "fac_tower", "factory3", "clock_mansion", "steam_co", "apartment", "truss1", "truss2", "truss3"],
     mid:  ["long_hall", "tower_house", "gable_house", "green_dome", "tall_tower", "chimney_dome", "mansard", "gothic",
@@ -90,6 +99,61 @@
     atlasImg.src = "level2_structures.webp?v=ruff528";
   }
   loadAtlas();
+  (function loadProps() {
+    propsImg = new Image();
+    propsImg.onload = function () {
+      try {
+        PS = Math.max(1, Math.round(propsImg.naturalWidth / 1024));
+        var c = document.createElement("canvas");
+        c.width = propsImg.naturalWidth; c.height = propsImg.naturalHeight;
+        var g = c.getContext("2d", { willReadFrequently: true });
+        g.drawImage(propsImg, 0, 0);
+        Object.keys(PROPS).forEach(function (k) {
+          var r = PROPS[k];
+          var d = g.getImageData(r[0] * PS, r[1] * PS, r[2] * PS, r[3] * PS).data;
+          var rowPx = r[2] * PS, half = Math.floor(PS / 2);
+          var t = new Int16Array(r[2]);
+          for (var x = 0; x < r[2]; x++) {
+            t[x] = r[3];
+            for (var y = 0; y < r[3]; y++) {
+              if (d[((y * PS + half) * rowPx + x * PS + half) * 4 + 3] > 70) { t[x] = y; break; }
+            }
+          }
+          tops[k] = t;
+        });
+        propsReady = true;
+      } catch (e) { propsReady = false; }
+    };
+    propsImg.onerror = function () { propsReady = false; };
+    propsImg.src = "level2_props.webp?v=ruff547";
+    props2Img = new Image();
+    props2Img.onload = function () {
+      try {
+        PS2 = Math.max(1, Math.round(props2Img.naturalWidth / 512));
+        var c2 = document.createElement("canvas");
+        c2.width = props2Img.naturalWidth; c2.height = props2Img.naturalHeight;
+        var g2 = c2.getContext("2d", { willReadFrequently: true });
+        g2.drawImage(props2Img, 0, 0);
+        Object.keys(PROPS2).forEach(function (k) {
+          var r = PROPS2[k];
+          var d = g2.getImageData(r[0] * PS2, r[1] * PS2, r[2] * PS2, r[3] * PS2).data;
+          var rowPx = r[2] * PS2, half = Math.floor(PS2 / 2);
+          var t = new Int16Array(r[2]);
+          for (var x = 0; x < r[2]; x++) {
+            t[x] = r[3];
+            for (var y = 0; y < r[3]; y++) {
+              if (d[((y * PS2 + half) * rowPx + x * PS2 + half) * 4 + 3] > 70) { t[x] = y; break; }
+            }
+          }
+          tops[k] = t;
+        });
+        props2Ready = true;
+      } catch (e) { props2Ready = false; }
+    };
+    props2Img.onerror = function () { props2Ready = false; };
+    props2Img.src = "level2_props2.webp?v=ruff548";
+  })();
+  function rectOf(name) { return ATLAS[name] || PROPS[name] || PROPS2[name]; }
 
   // ------------------------------------------------------------------
   // When is the Level 2 skyline wanted?
@@ -140,7 +204,7 @@
     var f = (worldX - st.x) / st.w;
     if (f < 0 || f >= 1) return 1e9;
     var col = Math.min(t.length - 1, Math.floor(f * t.length));
-    return t[col] >= ATLAS[st.name][3] ? 1e9 : st.y + t[col] * st.s;
+    return t[col] >= rectOf(st.name)[3] ? 1e9 : st.y + t[col] * st.s;
   }
 
   function addCoinRef(ref, ox, oy) {
@@ -180,6 +244,35 @@
         var len = Math.max(H * 0.10, Math.min(H * 0.20, stackSt.y - H * 0.22));
         addVent(stackSt, "up", sw / 2, 0, len);
         st.hasVent = true;
+      }
+    }
+    // ---- rooftop industrial prop (tank / water tower / pipework / crane) — solid, rides the roof ----
+    for (var pn = 0; pn < (st.w > 120 * u ? 2 : 1); pn++)
+    if (propsReady && !st.isStack && st.w > 56 * u && st.h < H * 0.34 && Math.random() < (pn ? 0.4 : 0.7)) {
+      var pk = pick(props2Ready ? PROP_KEYS : Object.keys(PROPS)), pr = propRect(pk);
+      var targetH = H * rnd(0.085, 0.15);
+      if (pk.indexOf("p2_truss") === 0) targetH = H * rnd(0.15, 0.22);
+      else if (pk === "p2_gantry" || pk === "p2_tank_h2") targetH = H * rnd(0.07, 0.10);
+      var ps = Math.min(targetH / pr[3], (st.w * 0.7) / pr[2]);
+      ps = Math.min(ps, (roofY - H * 0.27) / pr[3]);
+      if (ps > 0.45 * u) {
+        var pw = pr[2] * ps, ph2 = pr[3] * ps, tries = 0, okx = null;
+        while (tries++ < 10 && okx === null) {
+          var cxf = rnd(0.18, 0.82), cxx = st.x + st.w * cxf;
+          var clash = false;
+          structs.forEach(function (o) { if (o.isStack && o.host === st && Math.abs((o.x + o.w / 2) - cxx) < (o.w + pw) / 2 + 8 * u) clash = true; });
+          if (!clash && cxx - pw / 2 > st.x + 2 && cxx + pw / 2 < st.x + st.w - 2) {
+            var tmin = 1e9, tmax = -1e9;     // only sit on a flat stretch of roof (no perching on domes / gables)
+            for (var qq = 0; qq <= 6; qq++) { var tv = topAt(st, cxx - pw / 2 + pw * qq / 6); if (tv > 1e8) { tmax = 1e9; break; } if (tv < tmin) tmin = tv; if (tv > tmax) tmax = tv; }
+            if (tmax - tmin <= 4 * u) okx = cxx;
+          }
+        }
+        if (okx !== null) {
+          var pbase = 1e9;
+          for (var q = 0; q <= 6; q++) { var tq = topAt(st, okx - pw / 2 + pw * q / 6); if (tq < pbase) pbase = tq; }
+          if (pbase > 1e8) pbase = roofY;
+          structs.push({ name: pk, isProp: true, x: okx - pw / 2, y: pbase - ph2 + 3 * u, w: pw, h: ph2, s: ps, isStack: true, host: st, hostOx: okx - pw / 2 - st.x, hostBase: pbase - st.y });
+        }
       }
     }
     // (no sideways jets — steam only blasts straight up from stacks)
@@ -599,6 +692,18 @@
       var s = order[i];
       var cxx = window.__airborneCamExt || { l: 0, r: 0 };
       if (s.x > W + cxx.r + 10 || s.x + s.w < -cxx.l - 10) continue;
+      if (s.isProp) {
+        if (!propsReady) continue;
+        if (PROPS2[s.name]) {
+          if (!props2Ready) continue;
+          var pr2 = PROPS2[s.name];
+          ctx.drawImage(props2Img, pr2[0] * PS2, pr2[1] * PS2, pr2[2] * PS2, pr2[3] * PS2, s.x, s.y, s.w, s.h);
+          continue;
+        }
+        var pr = PROPS[s.name];
+        ctx.drawImage(propsImg, pr[0] * PS, pr[1] * PS, pr[2] * PS, pr[3] * PS, s.x, s.y, s.w, s.h);
+        continue;
+      }
       var r = ATLAS[s.name];
       ctx.drawImage(atlasImg, r[0] * AS, r[1] * AS, r[2] * AS, r[3] * AS, s.x, s.y, s.w, s.h);
     }
