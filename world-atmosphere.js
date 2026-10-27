@@ -458,7 +458,9 @@
 
   let damageSmoke = [];
   const JET_TRAIL_MAX = 18;
-  const DAMAGE_SMOKE_MAX = 28;
+  const DAMAGE_SMOKE_MAX = 80;
+  let damageFlames = [];
+  const DAMAGE_FLAME_MAX = 60;
 
   function exhaustStyleFor(effect) {
     // Roster-tuned exhaust look
@@ -703,11 +705,11 @@
     if (hpFrac < 0.5 && maxHp > 0) {
       // 0 at 50% health → full intensity near 0 health
       var dmgIntensity = Math.min(1, (0.5 - hpFrac) / 0.5);
-      var dmgRate = 0.22 - dmgIntensity * 0.16; // faster emit when more damaged
+      var dmgRate = 0.13 - dmgIntensity * 0.09; // faster emit when more damaged
       blimpPersonality._dmgTimer = (blimpPersonality._dmgTimer || 0) + dt;
       while (blimpPersonality._dmgTimer > dmgRate) {
         blimpPersonality._dmgTimer -= dmgRate;
-        var count = 1 + Math.floor(dmgIntensity * 2.5);
+        var count = 2 + Math.floor(dmgIntensity * 3.5);
         for (var di = 0; di < count; di++) {
           // Flame/soot smoke — warm grey and orange-brown, rising
           var ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.2;
@@ -723,9 +725,9 @@
             y: player.y + (Math.random() - 0.15) * player.h * 0.4,
             vx: Math.cos(ang) * spd * 0.3 - 10,
             vy: Math.sin(ang) * spd,
-            size: 7 + Math.random() * 7 + dmgIntensity * 6,
-            alpha: 0.28 + dmgIntensity * 0.32 + Math.random() * 0.12,
-            life: 0.7 + Math.random() * 0.5 + dmgIntensity * 0.35,
+            size: 10 + Math.random() * 9 + dmgIntensity * 10,
+            alpha: 0.4 + dmgIntensity * 0.32 + Math.random() * 0.12,
+            life: 1.0 + Math.random() * 0.7 + dmgIntensity * 0.6,
             age: 0,
             growth: 1.6 + Math.random() * 0.9,
             color: col
@@ -734,6 +736,24 @@
         if (damageSmoke.length > DAMAGE_SMOKE_MAX) {
           damageSmoke.splice(0, damageSmoke.length - DAMAGE_SMOKE_MAX);
         }
+      }
+      // Flames licking up from the hull: a few tongues at first, a proper blaze near zero health
+      blimpPersonality._flTimer = (blimpPersonality._flTimer || 0) + dt;
+      var flRate = 0.06 - dmgIntensity * 0.035;
+      while (blimpPersonality._flTimer > flRate) {
+        blimpPersonality._flTimer -= flRate;
+        var nf = 1 + Math.floor(dmgIntensity * 2.5);
+        for (var fi = 0; fi < nf; fi++) {
+          var hot = Math.random() < 0.5 ? -0.16 : 0.12;   // two hot spots on the hull (aft + midship)
+          damageFlames.push({
+            x: player.x + (hot + (Math.random() - 0.5) * 0.14) * player.w,
+            y: player.y - player.h * (0.08 + Math.random() * 0.14),
+            vx: -18 - Math.random() * 20, vy: -34 - Math.random() * 40 - dmgIntensity * 25,
+            size: 5 + Math.random() * 5 + dmgIntensity * 6,
+            life: 0.32 + Math.random() * 0.25 + dmgIntensity * 0.15, age: 0
+          });
+        }
+        if (damageFlames.length > DAMAGE_FLAME_MAX) damageFlames.splice(0, damageFlames.length - DAMAGE_FLAME_MAX);
       }
     } else {
       blimpPersonality._dmgTimer = 0;
@@ -801,6 +821,8 @@
       s.vy -= 22 * dt; // keep rising
     });
     damageSmoke = damageSmoke.filter(function(s) { return s.age < s.life; });
+    damageFlames.forEach(function(f) { f.age += dt; f.x += f.vx * dt; f.y += f.vy * dt; f.vx *= (1 - 1.2 * dt); f.size *= (1 - 0.9 * dt); });
+    damageFlames = damageFlames.filter(function(f) { return f.age < f.life; });
   }
 
   function drawPlayerShadow() {
@@ -977,6 +999,23 @@
       ctx.fillStyle = g;
       ctx.fill();
     });
+    // Hull flames — additive teardrops: white-hot core, orange body, red tip
+    if (damageFlames.length) {
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      damageFlames.forEach(function(f) {
+        var u = f.age / f.life, a = Math.max(0, 1 - u), r = f.size;
+        var g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y - r * 0.5, r * 1.6);
+        g.addColorStop(0, "rgba(255,240,170," + (0.85 * a).toFixed(3) + ")");
+        g.addColorStop(0.4, "rgba(255,150,40," + (0.6 * a).toFixed(3) + ")");
+        g.addColorStop(1, "rgba(200,40,10,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.ellipse(f.x, f.y - r * 0.4, r * 0.8, r * 1.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
   }
 
   function drawBlimpPropBlur() {

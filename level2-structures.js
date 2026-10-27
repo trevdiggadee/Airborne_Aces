@@ -461,14 +461,14 @@
   // and glowing furnace embers floating past (in front of them)
   // ------------------------------------------------------------------
   var wisps = [], smokes = [], smokeT = {}, cloudsFar = [], cloudsMid = [];
-  var CLOUDS = {"c0": [19, 24, 130, 72], "c1": [179, 29, 122, 68], "c2": [336, 40, 119, 50], "c3": [492, 37, 106, 57], "c4": [644, 31, 100, 65], "c5": [16, 127, 133, 70], "c6": [223, 136, 70, 46], "c7": [348, 146, 108, 35], "c8": [489, 136, 118, 52], "c9": [645, 129, 97, 63], "c10": [16, 237, 133, 52], "c11": [186, 244, 113, 44], "c12": [335, 244, 115, 49], "c13": [492, 237, 107, 59], "c14": [648, 237, 86, 67], "c15": [16, 354, 133, 27], "c16": [186, 354, 113, 25], "c17": [325, 354, 131, 29], "c18": [520, 354, 82, 28], "c19": [649, 354, 114, 38]};
+  var CLOUDS = {"c0": [10, 18, 374, 188], "c1": [369, 66, 393, 130], "c2": [31, 223, 281, 121], "c3": [349, 231, 401, 112], "c4": [17, 367, 428, 123], "c5": [472, 371, 278, 124]};
   var CLOUD_KEYS = Object.keys(CLOUDS);
   var cloudImg = null, cloudReady = false;
   (function () {
     cloudImg = new Image();
     cloudImg.onload = function () { cloudReady = true; };
     cloudImg.onerror = function () { cloudReady = false; };
-    cloudImg.src = "level2_clouds.webp?v=ruff531";
+    cloudImg.src = "level2_clouds2.webp?v=ruff547";
   })();
   // chimney tops on level2_city_layer.webp (x, y in the 2172x724 image)
   var CITY_CHIMNEYS = [[85,145],[140,153],[320,321],[629,117],[1002,246],[1359,332],[1435,229],[1465,226],[1746,227],[1992,281],[2050,294]];
@@ -477,7 +477,7 @@
     var w = (typeof W === "number" ? W : 412), h = (typeof H === "number" ? H : 800), u = U();
     var k = pick(CLOUD_KEYS), r = CLOUDS[k];
     var far = layer === "far";
-    var dw = (far ? rnd(100, 170) : rnd(130, 230)) * u;
+    var dw = (far ? rnd(150, 240) : rnd(190, 320)) * u;
     return { k: k, w: dw, h: dw * r[3] / r[2],
              x: anywhere ? rnd(-dw, w) : w + rnd(10, 160),
              y: far ? rnd(h * 0.12, h * 0.40) : rnd(h * 0.20, h * 0.52),
