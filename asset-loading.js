@@ -21,6 +21,7 @@
     skylineFarL3: "skylineFarL3.webp",
     l2_city_layer: "level2_city_layer.webp",
     l2_dock: "level2_dock.webp",
+    l2_boats: "level2_boats.webp",
     powerlines: "powerlines.webp",
     sketchSkyline: "sketchSkyline.webp",
     streetTexture: "street_texture.webp",

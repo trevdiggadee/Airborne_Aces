@@ -2290,8 +2290,100 @@
     }
     ctx.stroke();
   }
+  // ---- harbour traffic + dockside props (level2_boats.webp atlas) ----
+  const BOATS = {"tug0":[0,0,176,102],"tug1":[178,0,173,101],"tug2":[353,0,181,103],"tug3":[536,0,186,100],"barge0":[724,0,256,69],"barge1":[982,0,254,64],"barge2":[0,105,244,63],"ferry0":[246,105,183,86],"ferry1":[431,105,184,86],"ferry2":[617,105,180,85],"ferry3":[799,105,186,85],"cargo0":[987,105,190,97],"cargo1":[1179,105,184,98],"cargo2":[0,205,181,96],"cargo3":[183,205,178,97],"row0":[363,205,174,42],"row1":[539,205,170,39],"row2":[711,205,176,38],"row3":[889,205,174,38],"speed0":[1065,205,203,54],"speed1":[0,304,184,48],"speed2":[186,304,184,49],"speed3":[372,304,172,48],"fence":[546,304,229,81],"post":[777,304,41,101],"lamp":[820,304,57,123],"buoy":[879,304,48,102],"crates":[929,304,156,84]};
+  // kind: [names, speed (px/s relative to water), smoke x-fraction (or 0), weight]
+  const BOAT_KINDS = [
+    { n: ["tug0","tug1","tug2","tug3"], v: 26, sm: 0.46, w: 3 },
+    { n: ["barge0","barge1","barge2"], v: 14, sm: 0, w: 2 },
+    { n: ["ferry0","ferry1","ferry2","ferry3"], v: 22, sm: 0.46, w: 3 },
+    { n: ["cargo0","cargo1","cargo2","cargo3"], v: 18, sm: 0.62, w: 2 },
+    { n: ["row0","row1","row2","row3"], v: 7, sm: 0, w: 2 },
+    { n: ["speed0","speed1","speed2","speed3"], v: 70, sm: 0, w: 2 }
+  ];
+  const l2Boats = [], l2Puffs = []; let l2BoatT = 0, l2BoatDock = null, l2BoatNext = 0;
+  function l2BoatScale() { return H * 0.0013; }
+  function l2PickBoat() {
+    let tot = 0; for (const k of BOAT_KINDS) tot += k.w;
+    let r = Math.random() * tot, kind = BOAT_KINDS[0];
+    for (const k of BOAT_KINDS) { if ((r -= k.w) < 0) { kind = k; break; } }
+    return { kind: kind, name: kind.n[Math.floor(Math.random() * kind.n.length)] };
+  }
+  function l2BoatTick(t, top) {
+    const dt = Math.min(0.05, Math.max(0, t - (l2BoatT || t))); l2BoatT = t;
+    const e = l2Ext(), x0 = -e.l, x1 = W + e.r;
+    let scroll = 0;
+    if (l2BoatDock !== null) { scroll = dockX - l2BoatDock; if (scroll < -50 || scroll > 200) scroll = 0; }
+    l2BoatDock = dockX;
+    const sc = l2BoatScale();
+    if (l2Boats.length < 3 && t > l2BoatNext) {
+      const pb = l2PickBoat(), r = BOATS[pb.name], w = r[2] * sc;
+      const dir = Math.random() < 0.55 ? 1 : -1;      // 1: sails with the bow right
+      const x = dir > 0 ? x0 - w * 0.6 : x1 + w * 0.6;
+      let ok = true;
+      for (const b of l2Boats) { if (Math.abs(b.x - x) < (b.w + w) * 0.9) ok = false; }
+      if (ok) {
+        l2Boats.push({ name: pb.name, kind: pb.kind, x: x, dir: dir, w: w, h: r[3] * sc, v: pb.kind.v * (0.8 + Math.random() * 0.4), ph: Math.random() * 6.28, sm: 0 });
+        l2BoatNext = t + 4 + Math.random() * 6;
+      } else l2BoatNext = t + 1;
+    }
+    for (let i = l2Boats.length - 1; i >= 0; i--) {
+      const b = l2Boats[i];
+      b.x += b.dir * b.v * dt - scroll;   // own motion + world scroll
+      b.ph += dt;
+      if (b.kind.sm) {
+        b.sm -= dt;
+        if (b.sm <= 0) {
+          b.sm = 0.28 + Math.random() * 0.2;
+          const fx = b.dir > 0 ? b.kind.sm : 1 - b.kind.sm;
+          l2Puffs.push({ x: b.x - b.w / 2 + b.w * fx, y: 0, bo: b, dy: 0, r: 3 + Math.random() * 2, a: 0.5, vx: -b.dir * (8 + Math.random() * 6) - 6 });
+        }
+      }
+      if (b.x < x0 - b.w - 80 || b.x > x1 + b.w + 80) l2Boats.splice(i, 1);
+    }
+    for (let i = l2Puffs.length - 1; i >= 0; i--) {
+      const p = l2Puffs[i]; p.x += (p.vx) * dt - scroll; p.dy -= (14 + p.r) * dt; p.r += dt * 6; p.a -= dt * 0.22;
+      if (p.a <= 0) l2Puffs.splice(i, 1);
+    }
+  }
+  function l2DrawBoats(t, top) {
+    const img = images.l2_boats;
+    if (!img || !img.naturalWidth) return;
+    l2BoatTick(t, top);
+    const sc = l2BoatScale(), ratio = img.naturalWidth / 1400;
+    for (const b of l2Boats) {
+      const r = BOATS[b.name], sy = l2SurfY(b.x, t, top);
+      const sl = (l2SurfY(b.x + 14, t, top) - l2SurfY(b.x - 14, t, top)) / 28;
+      b.cy = sy + Math.sin(b.ph * 1.4) * 0.8 - b.h * 0.1;   // hull sits slightly in the water
+      ctx.save(); ctx.translate(b.x, b.cy); ctx.rotate(Math.atan(sl) * 0.8 + Math.sin(b.ph * 0.9) * 0.012);
+      ctx.scale(b.dir, 1);
+      ctx.drawImage(img, r[0] * ratio, r[1] * ratio, r[2] * ratio, r[3] * ratio, -b.w / 2, -b.h, b.w, b.h);
+      ctx.restore();
+    }
+    for (const p of l2Puffs) {
+      const b = p.bo; if (!b || b.cy === undefined) continue;
+      const by = b.cy - b.h * 0.9 + p.dy;
+      const g = ctx.createRadialGradient(p.x, by, 0, p.x, by, p.r);
+      g.addColorStop(0, "rgba(150,150,152," + (p.a * 0.8).toFixed(3) + ")"); g.addColorStop(1, "rgba(150,150,152,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, by, p.r, 0, 6.2832); ctx.fill();
+    }
+  }
+  const DOCK_PROPS = [[0.06, "lamp"], [0.17, "crates"], [0.31, "post"], [0.43, "fence"], [0.58, "buoy"], [0.69, "lamp"], [0.8, "post"], [0.91, "crates"]];
+  function l2DrawDockProps(sw, deckY, x0) {
+    const img = images.l2_boats;
+    if (!img || !img.naturalWidth) return;
+    const sc = H * 0.00078, ratio = img.naturalWidth / 1400, e = l2Ext();
+    for (let x = x0; x < W + e.r + 2; x += sw) {
+      for (const dp of DOCK_PROPS) {
+        const r = BOATS[dp[1]], w = r[2] * sc, h = r[3] * sc, px = x + dp[0] * sw;
+        if (px + w < -e.l || px - w > W + e.r) continue;
+        ctx.drawImage(img, r[0] * ratio, r[1] * ratio, r[2] * ratio, r[3] * ratio, Math.round(px - w / 2), Math.round(deckY - h + H * 0.004), w, h);
+      }
+    }
+  }
   function drawL2WaterFront() {
     const top = l2WaterTop(), h = H + (l2Ext().b || 0) - top, t = performance.now() / 1000;
+    try { l2DrawBoats(t, top); } catch (eB) {}
     ctx.save(); l2SurfPath(t, top); ctx.clip();
     // submerged tint over the pillar feet
     const g = ctx.createLinearGradient(0, top, 0, top + h);
@@ -2339,6 +2431,7 @@
       ctx.drawImage(img, 0, 0, img.naturalWidth, srcTop, dx, y, dw, srcTop * k);
       ctx.drawImage(img, 0, srcTop, img.naturalWidth, srcBot, dx, ySplit, dw, natLower * f);
     }
+    try { l2DrawDockProps(sw, deckY, x0); } catch (eP) {}
     if (!(window.__airborneShipDefer && window.__airborneShipDefer())) drawL2WaterFront();
     return true;
   }
