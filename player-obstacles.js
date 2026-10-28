@@ -269,6 +269,7 @@ window.__airborneRingDebug = false;
 
   // ---------- Player crash animation (death): spin, burn, then hit the water / ground ----------
   let pCrash = null;
+  window.__airborneDrawCheckeredRing = function (o, cx, cy) { try { drawCheckeredRing(o, cx, cy, "full"); } catch (e) {} };
   window.__airborneStartPlayerCrash = function () {
     pCrash = { t: 0, x: player.x, y: player.y, vx: 70, vy: -90, rot: player.rotation || 0, vr: 0.5, fx: [], hit: 0, hitWater: false, fxT: 0, last: performance.now() };
   };
@@ -940,7 +941,7 @@ window.__airborneRingDebug = false;
 
   // Spend 5 collected coins on hit — they burst out, arc, and fall off-screen
   if (!window.__airborneHitCoins) window.__airborneHitCoins = [];
-  const HIT_COIN_COST = 5;
+  const HIT_COIN_COST = 3;
 
   function refreshCoinCounter() {
     try {

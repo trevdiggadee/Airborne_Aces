@@ -143,10 +143,14 @@
           bossHitFlashUntil = performance.now() + 220;
           bossShakeUntil = performance.now() + 420;
           try { spawnBossDamageNum(1, b.x, b.y); } catch (e) {}
-          spawnHitParticles(b.x, b.y);
-          triggerBigExplosion(b.x, b.y, 42, 42);
-          try { if (typeof triggerShockwave === "function") triggerShockwave(b.x, b.y, 55, "255,170,50"); } catch (e) {}
-          try { if (typeof spawnPirateBlast === "function") spawnPirateBlast(b.x, b.y, 0.45); } catch (e) {}
+          if (ship) {
+            try { shipHitFire(boss, b.x, b.y); } catch (eH) {}
+          } else {
+            spawnHitParticles(b.x, b.y);
+            triggerBigExplosion(b.x, b.y, 42, 42);
+            try { if (typeof triggerShockwave === "function") triggerShockwave(b.x, b.y, 55, "255,170,50"); } catch (e) {}
+            try { if (typeof spawnPirateBlast === "function") spawnPirateBlast(b.x, b.y, 0.45); } catch (e) {}
+          }
           try { if (typeof triggerScreenShake === "function") triggerScreenShake(4, 140); } catch (e) {}
           if (boss.health <= 0) defeatBoss();
           return false;
@@ -465,26 +469,60 @@
   const SHIP_HOT = [[0.55, 0.22], [0.40, 0.14], [0.30, 0.44], [0.78, 0.50], [0.83, 0.42], [0.50, 0.58], [0.14, 0.56], [0.66, 0.36]];
   function shipDamageFx(b, dmg, dt) {
     b._fxS = (b._fxS || 0) - dt; b._fxF = (b._fxF || 0) - dt; b._fxE = (b._fxE || 0) - dt;
-    const n = Math.min(SHIP_HOT.length, 1 + Math.floor(dmg * 8));
+    // smoke from 75% health, flames from ~60%, building to a blaze at 25% and burning until she goes down
+    const pct = 1 - dmg;
+    const q = Math.max(0, Math.min(1, (0.75 - pct) / 0.5));
+    const n = Math.min(SHIP_HOT.length, 1 + Math.floor(q * 8));
     const pos = function () { const h = SHIP_HOT[(Math.random() * n) | 0]; return [b.x + b.w * h[0] + (Math.random() - 0.5) * 8, b.y + b.h * h[1] + (Math.random() - 0.5) * 6]; };
-    if (dmg > 0.12 && b._fxS <= 0) {
-      b._fxS = Math.max(0.07, 0.42 - dmg * 0.34);
-      const q = pos();
-      shipFx.push({ kind: dmg > 0.45 && Math.random() < 0.6 ? "bsmoke" : "smoke", x: q[0], y: q[1], vx: -8 - Math.random() * 14, vy: -26 - Math.random() * 30, life: 1.6 + Math.random() * 1.2, age: 0, r: 8 + Math.random() * 10 + dmg * 10 });
+    if (pct < 0.75 && b._fxS <= 0) {
+      b._fxS = Math.max(0.07, 0.4 - q * 0.33);
+      const q2 = pos();
+      shipFx.push({ kind: q > 0.4 && Math.random() < 0.6 ? "bsmoke" : "smoke", x: q2[0], y: q2[1], vx: -8 - Math.random() * 14, vy: -26 - Math.random() * 30, life: 1.6 + Math.random() * 1.2, age: 0, r: 8 + Math.random() * 10 + q * 12 });
     }
-    if (dmg > 0.4 && b._fxF <= 0) {
-      b._fxF = Math.max(0.05, 0.3 - (dmg - 0.4) * 0.32);
-      const q = pos();
-      shipFx.push({ kind: "fire", x: q[0], y: q[1], vx: (Math.random() - 0.5) * 30, vy: -30 - Math.random() * 50, life: 0.35 + Math.random() * 0.4, age: 0, r: 5 + Math.random() * 9 });
-      if (Math.random() < 0.4) shipFx.push({ kind: "ember", x: q[0], y: q[1], vx: (Math.random() - 0.5) * 70, vy: -30 - Math.random() * 60, life: 0.6, age: 0, r: 2 + Math.random() * 2 });
+    if (pct < 0.6 && b._fxF <= 0) {
+      const qf = Math.max(0, Math.min(1, (0.6 - pct) / 0.35));
+      b._fxF = Math.max(0.05, 0.3 - qf * 0.25);
+      const q2 = pos();
+      shipFx.push({ kind: "fire", x: q2[0], y: q2[1], vx: (Math.random() - 0.5) * 30, vy: -30 - Math.random() * 50, life: 0.35 + Math.random() * 0.4, age: 0, r: 5 + Math.random() * 9 + qf * 4 });
+      if (Math.random() < 0.4) shipFx.push({ kind: "ember", x: q2[0], y: q2[1], vx: (Math.random() - 0.5) * 70, vy: -30 - Math.random() * 60, life: 0.6, age: 0, r: 2 + Math.random() * 2 });
     }
-    if (dmg > 0.68 && b._fxE <= 0) {
+    if (pct < 0.4 && b._fxE <= 0) {
       b._fxE = 0.8 + Math.random() * 0.9;
-      const q = pos();
-      shipFx.push({ kind: "flash", x: q[0], y: q[1], vx: 0, vy: 0, life: 0.28, age: 0, r: 16 });
-      for (let i = 0; i < 9; i++) { const a = Math.random() * Math.PI * 2, sp = 50 + Math.random() * 150; shipFx.push({ kind: Math.random() < 0.5 ? "fire" : "spark", x: q[0], y: q[1], vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40, life: 0.4 + Math.random() * 0.4, age: 0, r: 3 + Math.random() * 6 }); }
+      const q2 = pos();
+      shipFx.push({ kind: "flash", x: q2[0], y: q2[1], vx: 0, vy: 0, life: 0.28, age: 0, r: 16 });
+      for (let i = 0; i < 9; i++) { const a = Math.random() * Math.PI * 2, sp = 50 + Math.random() * 150; shipFx.push({ kind: Math.random() < 0.5 ? "fire" : "spark", x: q2[0], y: q2[1], vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40, life: 0.4 + Math.random() * 0.4, age: 0, r: 3 + Math.random() * 6 }); }
       try { triggerScreenShake(3, 120); } catch (e) {}
     }
+    // hull fires left burning where bombs landed
+    if (b.burns && b.burns.length) {
+      for (let i = b.burns.length - 1; i >= 0; i--) {
+        const f = b.burns[i]; f.t -= dt; f.e -= dt;
+        if (f.t <= 0) { b.burns.splice(i, 1); continue; }
+        if (f.e <= 0) {
+          f.e = 0.05 + Math.random() * 0.04;
+          const x = b.x + b.w * f.fx + (Math.random() - 0.5) * 8, y = b.y + b.h * f.fy;
+          const k = Math.min(1, f.t / 0.8);
+          shipFx.push({ kind: "fire", x: x, y: y, vx: (Math.random() - 0.5) * 24, vy: -40 - Math.random() * 55, life: 0.3 + Math.random() * 0.35, age: 0, r: (4 + Math.random() * 7) * (0.5 + 0.5 * k) });
+          if (Math.random() < 0.5) shipFx.push({ kind: Math.random() < 0.5 ? "bsmoke" : "smoke", x: x, y: y - 4, vx: -10 - Math.random() * 12, vy: -30 - Math.random() * 25, life: 1.0 + Math.random() * 0.8, age: 0, r: 6 + Math.random() * 7 });
+        }
+      }
+    }
+  }
+  // a player bomb landing on the hull: fireball + flying embers + black smoke, and a fire that keeps burning on the spot
+  function shipHitFire(b, x, y) {
+    shipFx.push({ kind: "flash", x: x, y: y, vx: 0, vy: 0, life: 0.3, age: 0, r: 30 });
+    for (let i = 0; i < 12; i++) {
+      const a = Math.random() * Math.PI * 2, sp = 40 + Math.random() * 130;
+      shipFx.push({ kind: "fire", x: x + (Math.random() - 0.5) * 10, y: y + (Math.random() - 0.5) * 8, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.8 - 70, life: 0.4 + Math.random() * 0.45, age: 0, r: 7 + Math.random() * 11 });
+    }
+    for (let i = 0; i < 14; i++) {
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4, sp = 110 + Math.random() * 230;
+      shipFx.push({ kind: i % 3 === 0 ? "ember" : "spark", x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.5 + Math.random() * 0.5, age: 0, r: 2 + Math.random() * 2 });
+    }
+    for (let i = 0; i < 5; i++) shipFx.push({ kind: "bsmoke", x: x + (Math.random() - 0.5) * 14, y: y - 4, vx: -12 - Math.random() * 20, vy: -34 - Math.random() * 38, life: 1.3 + Math.random() * 1.0, age: 0, r: 10 + Math.random() * 12 });
+    if (!b.burns) b.burns = [];
+    if (b.burns.length < 6) b.burns.push({ fx: Math.max(0, Math.min(1, (x - b.x) / b.w)), fy: Math.max(0, Math.min(1, (y - b.y) / b.h)), t: 2.2 + Math.random() * 1.2, e: 0 });
+    try { sfxExplosion(0.4); } catch (e) {}
   }
   // bow spray + foam along the waterline (boat wave motion)
   function shipWaterFx(b, dt, sinking) {

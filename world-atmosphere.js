@@ -705,11 +705,11 @@
     if (hpFrac < 0.5 && maxHp > 0) {
       // 0 at 50% health → full intensity near 0 health
       var dmgIntensity = Math.min(1, (0.5 - hpFrac) / 0.5);
-      var dmgRate = 0.13 - dmgIntensity * 0.09; // faster emit when more damaged
+      var dmgRate = 0.26 - dmgIntensity * 0.18; // faster emit when more damaged
       blimpPersonality._dmgTimer = (blimpPersonality._dmgTimer || 0) + dt;
       while (blimpPersonality._dmgTimer > dmgRate) {
         blimpPersonality._dmgTimer -= dmgRate;
-        var count = 2 + Math.floor(dmgIntensity * 3.5);
+        var count = 1 + Math.floor(dmgIntensity * 1.5);
         for (var di = 0; di < count; di++) {
           // Flame/soot smoke — warm grey and orange-brown, rising
           var ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.2;
@@ -725,8 +725,8 @@
             y: player.y + (Math.random() - 0.15) * player.h * 0.4,
             vx: Math.cos(ang) * spd * 0.3 - 10,
             vy: Math.sin(ang) * spd,
-            size: 10 + Math.random() * 9 + dmgIntensity * 10,
-            alpha: 0.4 + dmgIntensity * 0.32 + Math.random() * 0.12,
+            size: 8 + Math.random() * 7 + dmgIntensity * 7,
+            alpha: 0.32 + dmgIntensity * 0.26 + Math.random() * 0.1,
             life: 1.0 + Math.random() * 0.7 + dmgIntensity * 0.6,
             age: 0,
             growth: 1.6 + Math.random() * 0.9,
@@ -739,17 +739,17 @@
       }
       // Flames licking up from the hull: a few tongues at first, a proper blaze near zero health
       blimpPersonality._flTimer = (blimpPersonality._flTimer || 0) + dt;
-      var flRate = 0.06 - dmgIntensity * 0.035;
+      var flRate = 0.13 - dmgIntensity * 0.07;
       while (blimpPersonality._flTimer > flRate) {
         blimpPersonality._flTimer -= flRate;
-        var nf = 1 + Math.floor(dmgIntensity * 2.5);
+        var nf = 1 + Math.floor(dmgIntensity * 1.2);
         for (var fi = 0; fi < nf; fi++) {
           var hot = Math.random() < 0.5 ? -0.16 : 0.12;   // two hot spots on the hull (aft + midship)
           damageFlames.push({
             x: player.x + (hot + (Math.random() - 0.5) * 0.14) * player.w,
             y: player.y - player.h * (0.08 + Math.random() * 0.14),
             vx: -18 - Math.random() * 20, vy: -34 - Math.random() * 40 - dmgIntensity * 25,
-            size: 5 + Math.random() * 5 + dmgIntensity * 6,
+            size: 3.5 + Math.random() * 3.5 + dmgIntensity * 4,
             life: 0.32 + Math.random() * 0.25 + dmgIntensity * 0.15, age: 0
           });
         }

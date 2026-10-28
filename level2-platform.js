@@ -126,9 +126,10 @@
   // ------------------------------------------------------------------
   var fx = [], fxLast = 0, fxAcc = 0;
   function fpush(o) { if (fx.length > 260) fx.shift(); fx.push(o); }
-  function emitFx(dt, holding) {
-    var spdF = Math.max(0, Math.min(1, (P.speed - MIN_SPEED) / (MAX_SPEED - MIN_SPEED)));
-    var ph = P.phase, dy = deckY();
+  function emitFx(dt, holding, o) {
+    o = o || {};
+    var spdF = (o.spdF != null) ? o.spdF : Math.max(0, Math.min(1, (P.speed - MIN_SPEED) / (MAX_SPEED - MIN_SPEED)));
+    var ph = o.phase || P.phase, dy = (o.deckY != null) ? o.deckY : deckY(), speedPx = (o.speed != null) ? o.speed : (P ? P.speed : 200);
     var rear = player.x - player.w * 0.47, ry = player.y + player.h * 0.06;
     fxAcc += dt;
     var step = ph === "accel" && holding ? 0.025 : (ph === "climb" ? 0.03 : 0.12);
@@ -139,8 +140,8 @@
       if (ph !== "ready" && Math.random() < 0.8) fpush({ k: "flame", x: rear, y: ry, vx: -90 - spdF * 160, vy: (Math.random() - 0.5) * 18, age: 0, life: 0.16 + Math.random() * 0.1, r: 3 + Math.random() * 3 + spdF * 2 });
       if (ph === "accel" && holding) {
         // dust + steam kicked up off the deck as it rushes past
-        fpush({ k: "puff", x: player.x + (Math.random() - 0.3) * player.w * 0.8, y: dy - 2, vx: -(P.speed * 0.8 + Math.random() * 60), vy: -8 - Math.random() * 28, age: 0, life: 0.6 + Math.random() * 0.4, r: 3 + Math.random() * 4, g: 14, c: 1 });
-        if (spdF > 0.15 && Math.random() < 0.55) fpush({ k: "spark", x: player.x + (Math.random() - 0.5) * player.w * 0.7, y: dy - 1, vx: -(P.speed * 0.6 + Math.random() * 120), vy: -50 - Math.random() * 110, age: 0, life: 0.35 + Math.random() * 0.3 });
+        fpush({ k: "puff", x: player.x + (Math.random() - 0.3) * player.w * 0.8, y: dy - 2, vx: -(speedPx * 0.8 + Math.random() * 60), vy: -8 - Math.random() * 28, age: 0, life: 0.6 + Math.random() * 0.4, r: 3 + Math.random() * 4, g: 14, c: 1 });
+        if (spdF > 0.15 && Math.random() < 0.55) fpush({ k: "spark", x: player.x + (Math.random() - 0.5) * player.w * 0.7, y: dy - 1, vx: -(speedPx * 0.6 + Math.random() * 120), vy: -50 - Math.random() * 110, age: 0, life: 0.35 + Math.random() * 0.3 });
         if (spdF > 0.3 && Math.random() < 0.5) fpush({ k: "streak", x: W + 20, y: H * (0.22 + Math.random() * 0.4), vx: -(700 + spdF * 600 + Math.random() * 300), vy: 0, age: 0, life: 0.28 + Math.random() * 0.15, len: 40 + Math.random() * 70 });
       }
       if (ph === "climb") {
@@ -149,8 +150,8 @@
       }
     }
   }
-  function liftoffBurst() {
-    var dy = deckY(), x = player.x;
+  function liftoffBurst(dyIn) {
+    var dy = (dyIn != null) ? dyIn : deckY(), x = player.x;
     for (var i = 0; i < 26; i++) {
       var a = Math.PI + (Math.random() - 0.5) * 2.2 + (i % 2 ? Math.PI * 0.0 : 0);
       var sp = 60 + Math.random() * 190;
@@ -196,12 +197,41 @@
       ctx.restore();
     }
   }
+
+  // shared with the other take-offs (level 1 runway, later-level launches)
+  var launchT = 0;
+  window.__airborneTakeoffFx = {
+    emit: function (dt, holding, o) { try { emitFx(dt, holding, o); } catch (e) {} },
+    burst: function (dy) { try { liftoffBurst(dy); } catch (e) {} },
+    draw: function () { try { drawFx(); } catch (e) {} },
+    // levels 3+: the blimp kicks on its boosters and launches into the level with a steam burst
+    launch: function () {
+      launchT = 2.2;
+      try {
+        var dy = player.y + player.h * 0.5;
+        for (var i = 0; i < 22; i++) {
+          var a = Math.random() * Math.PI * 2, sp = 50 + Math.random() * 170;
+          fpush({ k: "puff", x: player.x - player.w * 0.3 + (Math.random() - 0.5) * player.w * 0.5, y: player.y + (Math.random() - 0.5) * player.h * 0.5, vx: Math.cos(a) * sp - 60, vy: Math.sin(a) * sp * 0.7, age: 0, life: 0.8 + Math.random() * 0.6, r: 5 + Math.random() * 7, g: 24, c: 2 });
+        }
+        for (var j = 0; j < 20; j++) fpush({ k: "spark", x: player.x - player.w * 0.45, y: player.y + player.h * 0.06, vx: -120 - Math.random() * 260, vy: (Math.random() - 0.5) * 160, age: 0, life: 0.4 + Math.random() * 0.4 });
+        fpush({ k: "ring", x: player.x - player.w * 0.4, y: player.y, vx: 0, vy: 0, age: 0, life: 0.6, r: 8 });
+        triggerScreenShake(3, 300);
+      } catch (e) {}
+    }
+  };
+  function launchTick(dt) {
+    if (launchT <= 0 || !player) return;
+    launchT -= dt;
+    emitFx(dt, true, { phase: "climb", spdF: 0.7, deckY: H, speed: 260 });
+  }
+
   // ------------------------------------------------------------------
   // Update — called every playing frame, before updatePlayer()
   // ------------------------------------------------------------------
   window.__airborneUpdatePlatformTakeoff = function (dt) {
-    if (!P) return;
     if (!(dt > 0) || !isFinite(dt)) dt = 0.016;
+    try { launchTick(dt); } catch (eLt) {}
+    if (!P) return;
     P.t += dt;
     P.pulse += dt;
     var g = geom();
@@ -302,7 +332,6 @@
   // layer "world": the platform itself (behind obstacles and the blimp)
   // layer "hud":   the on-screen tip
   window.__airborneDrawPlatformTakeoff = function (layer) {
-    if (layer === "hud") { try { drawFx(); } catch (eD) {} }
     if (!P) return;
     try {
       if (layer === "hud") {

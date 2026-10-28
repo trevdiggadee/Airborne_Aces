@@ -962,6 +962,7 @@
         }
 
         airfieldTip = holding ? "Accelerating…" : "HOLD or TAP to accelerate!";
+        try { if (window.__airborneTakeoffFx) window.__airborneTakeoffFx.emit(dt, holding, { phase: "accel", spdF: Math.max(0, Math.min(1, (airfieldTakeoffSpeed - 50) / 290)), deckY: groundLevelY() - (player.h > 0 ? player.h : 40) * 0.0, speed: airfieldTakeoffSpeed }); } catch (eTf) {}
         if (airfieldPhase === "taxi") {
           airfieldPhase = "accel";
         }
@@ -972,6 +973,7 @@
           airfieldPhaseT = 0;
           if (typeof player !== "undefined" && player) airfieldClimbStartY = player.y;
           try { if (typeof sfxAirfieldTakeoff === "function") sfxAirfieldTakeoff(); } catch (e) {}
+          try { if (window.__airborneTakeoffFx) window.__airborneTakeoffFx.burst(groundLevelY()); } catch (eTf2) {}
           console.log("[Airborne] LIFTOFF", Math.round(airfieldTakeoffSpeed));
           syncAirfieldGlobals();
         }
@@ -1001,6 +1003,7 @@
       airfieldTakeoffSpeed = Math.max(180, 160 + e * 60);
       if (typeof obstacleSpeed !== "undefined") obstacleSpeed = airfieldTakeoffSpeed;
       airfieldTip = "Liftoff!";
+      try { if (tClimb < 0.8 && window.__airborneTakeoffFx) window.__airborneTakeoffFx.emit(dt, true, { phase: "climb", spdF: 0.8, deckY: gy, speed: airfieldTakeoffSpeed }); } catch (eTf3) {}
 
       if (tClimb >= 1) {
         airfieldPhase = "lesson";
@@ -1979,7 +1982,7 @@
     powerlineTiles = [];
     const img = images.powerlines;
     const aspect = (img && img.naturalWidth) ? img.naturalWidth / img.naturalHeight : 3;
-    const h = H * 0.2904; // was 0.242, +20%
+    const h = H * 0.2468; // was 0.242, +20%
     const w = h * aspect;
     let x = 0;
     while (x < W + w) {
@@ -1998,7 +2001,7 @@
     const last = powerlineTiles[powerlineTiles.length - 1];
     if (!last || last.x + last.w < W + 200) {
       const startX = last ? last.x + last.w - 1 : 0;
-      const h = last ? last.h : H * 0.2904;
+      const h = last ? last.h : H * 0.2468;
       const img = images.powerlines;
       const aspect = (img && img.naturalWidth) ? img.naturalWidth / img.naturalHeight : 4;
       powerlineTiles.push({ x: startX, w: h * aspect, h: h });

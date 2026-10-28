@@ -802,6 +802,7 @@ try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePow
     if (typeof drawAirfieldRollSmoke === "function") drawAirfieldRollSmoke();
     if (typeof drawAirfieldTip === "function") drawAirfieldTip();
     try { if (window.__airborneDrawPlatformTakeoff) window.__airborneDrawPlatformTakeoff("hud"); } catch (e) {}
+    try { if (window.__airborneTakeoffFx) window.__airborneTakeoffFx.draw(); } catch (eTf) {}
     drawDefeatDebris();
     drawShockwaves();
     drawBonusHUD();

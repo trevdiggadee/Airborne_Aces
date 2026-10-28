@@ -751,6 +751,9 @@
     if (lvl === 2) {
       try { if (window.__airborneBeginPlatformTakeoff) window.__airborneBeginPlatformTakeoff(); } catch (ePl) { console.warn("[Airborne] platform takeoff", ePl); }
     }
+    else if (lvl >= 3) {
+      try { if (window.__airborneTakeoffFx) window.__airborneTakeoffFx.launch(); } catch (eLf) {}
+    }
   }
   window.__airborneApplyMapLevel = applyMapLevelProgress;
 

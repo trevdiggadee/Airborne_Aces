@@ -9616,7 +9616,7 @@ function drawFireballs() {
         y: topMargin + (bottomMargin - topMargin) * (0.5 + 0.42 * Math.sin(t * Math.PI * 2.4)),
         w: dispW,
         h: dispH,
-        vx: 130,
+        vx: 130, tint: i % 5,
         bobPhase: Math.random() * Math.PI * 2,
         bobSpeed: 1.6 + Math.random() * 0.8,
         bobAmount: 8 + Math.random() * 6,
@@ -9626,21 +9626,58 @@ function drawFireballs() {
     bonusTotal = count;
   }
 
+  // ---- coin asset (coin_star_sheet.png) re-coloured with a hue tint for the bonus rounds ----
+  const COIN_TINTS = [null, "#30c4ff", "#ff4fae", "#5dff6e", "#ff8a1e"];
+  const COIN_GLOWS = ["255,200,60", "60,190,255", "255,90,180", "100,255,120", "255,140,30"];
+  const _coinTinted = {};
+  function coinSheetFor(tintIdx) {
+    const sh = window.__airborneCoinSheet;
+    if (!sh || !sh.complete || !sh.naturalWidth) return null;
+    const css = COIN_TINTS[tintIdx % COIN_TINTS.length];
+    if (!css) return sh;
+    if (_coinTinted[tintIdx]) return _coinTinted[tintIdx];
+    try {
+      const c = document.createElement("canvas"); c.width = sh.naturalWidth; c.height = sh.naturalHeight;
+      const g = c.getContext("2d");
+      g.drawImage(sh, 0, 0);
+      g.globalCompositeOperation = "hue"; g.fillStyle = css; g.fillRect(0, 0, c.width, c.height);   // recolour
+      g.globalCompositeOperation = "destination-in"; g.drawImage(sh, 0, 0);                            // keep the coin's own silhouette
+      _coinTinted[tintIdx] = c;
+      return c;
+    } catch (e) { return sh; }
+  }
+  function drawCoinAsset(cx, cy, size, tintIdx, phase) {
+    const sh = coinSheetFor(tintIdx);
+    if (!sh) return false;
+    const fw = sh.height || 128, nF = Math.max(1, Math.round(sh.width / fw));
+    const fr = Math.floor((performance.now() / 1000 * 18 + (phase || 0) * 6)) % nF;
+    const gl = COIN_GLOWS[tintIdx % COIN_GLOWS.length];
+    ctx.save(); ctx.translate(cx, cy);
+    ctx.globalCompositeOperation = "lighter";
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 0.95);
+    g.addColorStop(0, "rgba(" + gl + ",0.5)"); g.addColorStop(1, "rgba(" + gl + ",0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, size * 0.95, 0, 6.2832); ctx.fill();
+    ctx.globalCompositeOperation = "source-over";
+    ctx.drawImage(sh, fr * fw, 0, fw, fw, -size / 2, -size / 2, size, size);
+    ctx.restore();
+    return true;
+  }
+
   // ---- TREASURE RUN (boss 2 bonus): ribbons of coins, crates, a magnet and a clock, with a combo multiplier ----
   function spawnTreasureWave() {
     bonusItems = [];
     const SPEED = 210, dur = 12.5;
     const lo = H * 0.15, hi = H * 0.58, mid = (lo + hi) / 2, amp = (hi - lo) * 0.42;
     const cw = Math.min(34, W * 0.085), crate = Math.min(54, W * 0.13);
-    let cx = W + 90, total = 0, n = 0, magnetsLeft = 2, clockLeft = 1;
+    let cx = W + 90, total = 0, n = 0, magnetsLeft = 2, clockLeft = 1, curTint = 0;
     function item(kind, x, y) {
       const w = kind === "crate" ? crate : (kind === "coin" ? cw : cw * 1.25);
-      bonusItems.push({ kind: kind, x: x - w / 2, y: y - w / 2, w: w, h: w, vx: SPEED, bobPhase: Math.random() * 6.28, bobSpeed: 1.8 + Math.random() * 0.8, bobAmount: kind === "coin" ? 2 : 5, spin: Math.random() * 6.28, popped: false });
+      bonusItems.push({ kind: kind, x: x - w / 2, y: y - w / 2, w: w, h: w, vx: SPEED, bobPhase: Math.random() * 6.28, bobSpeed: 1.8 + Math.random() * 0.8, bobAmount: kind === "coin" ? 2 : 5, spin: Math.random() * 6.28, tint: curTint, popped: false });
       if (kind === "coin" || kind === "crate") total++;
     }
     const clampY = y => Math.max(lo, Math.min(hi, y));
     while (cx < W + SPEED * (dur - 1.5)) {
-      const pat = n++ % 6;
+      const pat = n % 6; curTint = n % COIN_TINTS.length; n++;
       if (pat === 0) {                    // sine ribbon
         for (let i = 0; i < 10; i++) item("coin", cx + i * 42, mid + Math.sin(i * 0.6) * amp);
         cx += 10 * 42 + 150;
@@ -9813,7 +9850,9 @@ function drawFireballs() {
   function drawTreasureItem(b) {
     const t = performance.now() * 0.001, cx = b.x + b.w / 2, cy = b.y + Math.sin(b.bobPhase) * b.bobAmount + b.h / 2, r = b.w / 2;
     ctx.save(); ctx.translate(cx, cy);
-    if (b.kind === "coin") {
+    if (b.kind === "coin" && drawCoinAsset(0, 0, b.w * 1.35, b.tint || 0, b.spin)) {
+      // coin asset drawn (tinted per formation)
+    } else if (b.kind === "coin") {
       const sx = Math.max(0.12, Math.abs(Math.cos(t * 4 + b.spin)));
       ctx.globalCompositeOperation = "lighter";
       const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 1.9); g.addColorStop(0, "rgba(255,220,110,0.55)"); g.addColorStop(1, "rgba(255,160,40,0)");
@@ -9888,6 +9927,7 @@ function drawFireballs() {
         const frames = OBSTACLE_ANIM_SETS.balloon_anim;
         img = images[frames[b.animFrame]];
       } else {
+        if (drawCoinAsset(b.x + b.w / 2, drawY + b.h / 2, b.w * 1.3, (b.tint || 0), b.bobPhase)) return;
         img = images.heartPickup;
       }
       if (!img || !img.naturalWidth) return;
@@ -9985,13 +10025,14 @@ function drawFireballs() {
   // ---------- Checkpoint pickup functions — collectible glowing orb ----------
   function spawnCheckpointPickup(targetBossNum) {
     checkpointPickup = {
-      x: W + 80,
-      y: H * 0.15 + Math.random() * H * 0.25,
-      r: Math.min(32, W * 0.075),
+      x: W + 120,
+      y: H * (0.3 + Math.random() * 0.25),
+      r: Math.min(H * 0.17, 90),
+      kind: "ring",
       bobPhase: Math.random() * Math.PI * 2,
       targetNum: targetBossNum,
       collected: false,
-      vx: 110,
+      vx: Math.max(150, (typeof obstacleSpeed !== "undefined" ? obstacleSpeed : 199) * 0.9),
       glowPhase: Math.random() * Math.PI * 2,
       ringPhase: 0
     };
@@ -10133,18 +10174,24 @@ function drawFireballs() {
     ctx.fillStyle = veil;
     ctx.beginPath(); ctx.ellipse(0, 0, Rx * pulse, R * pulse, 0, 0, Math.PI * 2); ctx.fill();
 
+    if (window.__airborneDrawCheckeredRing && window.__ringCheckeredImg && window.__ringCheckeredImg.naturalWidth > 0) {
+      // the checkered flight ring from the training level
+      window.__airborneDrawCheckeredRing({ r: R / 1.59, pulseT: cp.glowPhase, spinT: cp.ringPhase * 0.5 }, 0, 0);
+    } else {
     // brass ring body
-    ctx.shadowColor = "rgba(255,190,60,0.9)";
-    ctx.shadowBlur = 16;
-    ctx.strokeStyle = "#3a2410";
-    ctx.lineWidth = 11;
-    ctx.beginPath(); ctx.ellipse(0, 0, Rx * pulse, R * pulse, 0, 0, Math.PI * 2); ctx.stroke();
-    const brass = ctx.createLinearGradient(-Rx, -R, Rx, R);
-    brass.addColorStop(0, "#fff0b0"); brass.addColorStop(0.5, "#f5c542"); brass.addColorStop(1, "#b9791a");
-    ctx.strokeStyle = brass;
-    ctx.lineWidth = 7;
-    ctx.beginPath(); ctx.ellipse(0, 0, Rx * pulse, R * pulse, 0, 0, Math.PI * 2); ctx.stroke();
-    ctx.shadowColor = "transparent";
+      ctx.shadowColor = "rgba(255,190,60,0.9)";
+      ctx.shadowBlur = 16;
+      ctx.strokeStyle = "#3a2410";
+      ctx.lineWidth = 11;
+      ctx.beginPath(); ctx.ellipse(0, 0, Rx * pulse, R * pulse, 0, 0, Math.PI * 2); ctx.stroke();
+      const brass = ctx.createLinearGradient(-Rx, -R, Rx, R);
+      brass.addColorStop(0, "#fff0b0"); brass.addColorStop(0.5, "#f5c542"); brass.addColorStop(1, "#b9791a");
+      ctx.strokeStyle = brass;
+      ctx.lineWidth = 7;
+      ctx.beginPath(); ctx.ellipse(0, 0, Rx * pulse, R * pulse, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.shadowColor = "transparent";
+
+    }
 
     // rotating dashed outer ring
     ctx.strokeStyle = "rgba(255,226,140,0.55)";
