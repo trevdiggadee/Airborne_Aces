@@ -2291,18 +2291,18 @@
     ctx.stroke();
   }
   // ---- harbour traffic + dockside props (level2_boats.webp atlas) ----
-  const BOATS = {"tug0":[0,0,176,102],"tug1":[178,0,173,101],"tug2":[353,0,181,103],"tug3":[536,0,186,100],"barge0":[724,0,256,69],"barge1":[982,0,254,64],"barge2":[0,105,244,63],"ferry0":[246,105,183,86],"ferry1":[431,105,184,86],"ferry2":[617,105,180,85],"ferry3":[799,105,186,85],"cargo0":[987,105,190,97],"cargo1":[1179,105,184,98],"cargo2":[0,205,181,96],"cargo3":[183,205,178,97],"row0":[363,205,174,42],"row1":[539,205,170,39],"row2":[711,205,176,38],"row3":[889,205,174,38],"speed0":[1065,205,203,54],"speed1":[0,304,184,48],"speed2":[186,304,184,49],"speed3":[372,304,172,48],"fence":[546,304,229,81],"post":[777,304,41,101],"lamp":[820,304,57,123],"buoy":[879,304,48,102],"crates":[929,304,156,84]};
+  const BOATS = {"tug0":[0,0,241,174],"tug1":[243,0,240,172],"tug2":[485,0,238,171],"tug3":[725,0,242,170],"barge0":[969,0,333,95],"barge1":[0,176,341,102],"barge2":[343,176,322,98],"ferry0":[667,176,247,143],"ferry1":[916,176,240,145],"ferry2":[1158,176,239,145],"ferry3":[0,323,248,144],"cargo0":[250,323,239,167],"cargo1":[491,323,235,165],"cargo2":[728,323,235,164],"cargo3":[965,323,236,167],"row0":[1203,323,228,63],"row1":[0,492,222,64],"row2":[224,492,224,63],"row3":[450,492,232,63],"speed0":[684,492,256,91],"speed1":[942,492,251,91],"speed2":[1195,492,245,89],"speed3":[0,585,233,88],"lamp":[235,585,94,186],"post":[331,585,58,159],"fence":[391,585,342,143],"buoy":[735,585,79,155],"crates":[816,585,131,129]};
   // kind: [names, speed (px/s relative to water), smoke x-fraction (or 0), weight]
   const BOAT_KINDS = [
-    { n: ["tug0","tug1","tug2","tug3"], v: 26, sm: 0.46, w: 3 },
+    { n: ["tug0","tug1","tug2","tug3"], v: 26, sm: 0.5, w: 3 },
     { n: ["barge0","barge1","barge2"], v: 14, sm: 0, w: 2 },
-    { n: ["ferry0","ferry1","ferry2","ferry3"], v: 22, sm: 0.46, w: 3 },
-    { n: ["cargo0","cargo1","cargo2","cargo3"], v: 18, sm: 0.62, w: 2 },
+    { n: ["ferry0","ferry1","ferry2","ferry3"], v: 22, sm: 0.5, w: 3 },
+    { n: ["cargo0","cargo1","cargo2","cargo3"], v: 18, sm: 0.6, w: 2 },
     { n: ["row0","row1","row2","row3"], v: 7, sm: 0, w: 2 },
     { n: ["speed0","speed1","speed2","speed3"], v: 70, sm: 0, w: 2 }
   ];
   const l2Boats = [], l2Puffs = []; let l2BoatT = 0, l2BoatDock = null, l2BoatNext = 0;
-  function l2BoatScale() { return H * 0.0013; }
+  function l2BoatScale() { return H * 0.0007; }
   function l2PickBoat() {
     let tot = 0; for (const k of BOAT_KINDS) tot += k.w;
     let r = Math.random() * tot, kind = BOAT_KINDS[0];
@@ -2316,7 +2316,7 @@
     if (l2BoatDock !== null) { scroll = dockX - l2BoatDock; if (scroll < -50 || scroll > 200) scroll = 0; }
     l2BoatDock = dockX;
     const sc = l2BoatScale();
-    if (l2Boats.length < 3 && t > l2BoatNext) {
+    if (l2Boats.length < 2 && t > l2BoatNext) {
       const pb = l2PickBoat(), r = BOATS[pb.name], w = r[2] * sc;
       const dir = Math.random() < 0.55 ? 1 : -1;      // 1: sails with the bow right
       const x = dir > 0 ? x0 - w * 0.6 : x1 + w * 0.6;
@@ -2324,7 +2324,7 @@
       for (const b of l2Boats) { if (Math.abs(b.x - x) < (b.w + w) * 0.9) ok = false; }
       if (ok) {
         l2Boats.push({ name: pb.name, kind: pb.kind, x: x, dir: dir, w: w, h: r[3] * sc, v: pb.kind.v * (0.8 + Math.random() * 0.4), ph: Math.random() * 6.28, sm: 0 });
-        l2BoatNext = t + 4 + Math.random() * 6;
+        l2BoatNext = t + 10 + Math.random() * 8;
       } else l2BoatNext = t + 1;
     }
     for (let i = l2Boats.length - 1; i >= 0; i--) {
@@ -2350,11 +2350,12 @@
     const img = images.l2_boats;
     if (!img || !img.naturalWidth) return;
     l2BoatTick(t, top);
-    const sc = l2BoatScale(), ratio = img.naturalWidth / 1400;
+    const sc = l2BoatScale(), ratio = img.naturalWidth / 1500;
     for (const b of l2Boats) {
       const r = BOATS[b.name], sy = l2SurfY(b.x, t, top);
       const sl = (l2SurfY(b.x + 14, t, top) - l2SurfY(b.x - 14, t, top)) / 28;
-      b.cy = sy + Math.sin(b.ph * 1.4) * 0.8 - b.h * 0.1;   // hull sits slightly in the water
+      b.cy = sy + Math.sin(b.ph * 1.4) * 0.8 + b.h * (b.name.indexOf('row') === 0 ? 0.3 : 0.2);   // hull sits down in the water; the water tint drawn after covers the submerged part
+      b.sy = sy;
       ctx.save(); ctx.translate(b.x, b.cy); ctx.rotate(Math.atan(sl) * 0.8 + Math.sin(b.ph * 0.9) * 0.012);
       ctx.scale(b.dir, 1);
       ctx.drawImage(img, r[0] * ratio, r[1] * ratio, r[2] * ratio, r[3] * ratio, -b.w / 2, -b.h, b.w, b.h);
@@ -2362,17 +2363,17 @@
     }
     for (const p of l2Puffs) {
       const b = p.bo; if (!b || b.cy === undefined) continue;
-      const by = b.cy - b.h * 0.9 + p.dy;
+      const by = b.cy - b.h * 0.98 + p.dy;
       const g = ctx.createRadialGradient(p.x, by, 0, p.x, by, p.r);
       g.addColorStop(0, "rgba(150,150,152," + (p.a * 0.8).toFixed(3) + ")"); g.addColorStop(1, "rgba(150,150,152,0)");
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, by, p.r, 0, 6.2832); ctx.fill();
     }
   }
-  const DOCK_PROPS = [[0.06, "lamp"], [0.17, "crates"], [0.31, "post"], [0.43, "fence"], [0.58, "buoy"], [0.69, "lamp"], [0.8, "post"], [0.91, "crates"]];
+  const DOCK_PROPS = [[0.06, "lamp"], [0.19, "crates"], [0.33, "post"], [0.46, "fence"], [0.6, "buoy"], [0.72, "lamp"], [0.83, "post"], [0.93, "crates"]];
   function l2DrawDockProps(sw, deckY, x0) {
     const img = images.l2_boats;
     if (!img || !img.naturalWidth) return;
-    const sc = H * 0.00078, ratio = img.naturalWidth / 1400, e = l2Ext();
+    const sc = H * 0.0005, ratio = img.naturalWidth / 1500, e = l2Ext();
     for (let x = x0; x < W + e.r + 2; x += sw) {
       for (const dp of DOCK_PROPS) {
         const r = BOATS[dp[1]], w = r[2] * sc, h = r[3] * sc, px = x + dp[0] * sw;
@@ -2402,6 +2403,15 @@
     ctx.strokeStyle = "rgba(190,215,222,0.5)"; ctx.lineWidth = 1.6; ctx.beginPath();
     { const e = l2Ext(); for (let x = -e.l - 5; x <= W + e.r + 5; x += 5) { const y = l2SurfY(x, t, top); if (x === -e.l - 5) ctx.moveTo(x, y); else ctx.lineTo(x, y); } }
     ctx.stroke();
+    ctx.restore();
+    // foam where each hull meets the water
+    ctx.save(); ctx.lineCap = "round"; ctx.strokeStyle = "rgba(225,242,246,0.6)"; ctx.lineWidth = 1.8;
+    for (const b of l2Boats) {
+      if (b.sy === undefined) continue;
+      ctx.beginPath();
+      for (let k = -0.5; k <= 0.5001; k += 0.04) { const x = b.x + k * b.w * 0.98, y = l2SurfY(x, t, top) + Math.sin(x * 0.2 + t * 4) * 0.7 + 1; if (k === -0.5) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+      ctx.stroke();
+    }
     ctx.restore();
   }
   window.__airborneL2WaterTop = function () { return l2WaterTop(); };

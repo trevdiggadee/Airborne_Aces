@@ -9695,11 +9695,11 @@ function drawFireballs() {
       return c;
     } catch (e) { return sh; }
   }
-  function drawCoinAsset(cx, cy, size, tintIdx, phase) {
+  function drawCoinAsset(cx, cy, size, tintIdx, phase, fixedFrame) {
     const sh = coinSheetFor(tintIdx);
     if (!sh) return false;
     const fw = sh.height || 128, nF = Math.max(1, Math.round(sh.width / fw));
-    const fr = Math.floor((performance.now() / 1000 * 18 + (phase || 0) * 6)) % nF;
+    const fr = (fixedFrame !== undefined) ? fixedFrame : Math.floor((performance.now() / 1000 * 18 + (phase || 0) * 6)) % nF;
     const gl = COIN_GLOWS[tintIdx % COIN_GLOWS.length];
     ctx.save(); ctx.translate(cx, cy);
     ctx.globalCompositeOperation = "lighter";
@@ -9766,15 +9766,14 @@ function drawFireballs() {
       ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (1 - 0.5 * f.age / f.life), 0, 6.2832); ctx.fill(); ctx.restore();
     }
     if (luckyCoin) {
-      const c = luckyCoin, cy = c.y + Math.sin(c.t * 2.4) * 8, size = c.r * 3.0, pul = 0.75 + 0.25 * Math.sin(c.t * 6);
+      const c = luckyCoin, cy = c.y + Math.sin(c.t * 2.4) * 8, size = c.r * 2.5, pul = 0.75 + 0.25 * Math.sin(c.t * 6);
       ctx.save(); ctx.globalCompositeOperation = "lighter";
       const g = ctx.createRadialGradient(c.x, cy, 0, c.x, cy, size * 1.5);
       g.addColorStop(0, "rgba(120,220,255," + (0.55 * pul).toFixed(3) + ")"); g.addColorStop(1, "rgba(48,196,255,0)");
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c.x, cy, size * 1.5, 0, 6.2832); ctx.fill();
       ctx.restore();
-      if (!drawCoinAsset(c.x, cy, size, 1, c.phase)) {
-        ctx.save(); ctx.translate(c.x, cy); ctx.scale(Math.max(0.15, Math.abs(Math.cos(c.t * 4))), 1);
-        ctx.fillStyle = "#1f8fc4"; ctx.beginPath(); ctx.arc(0, 0, c.r * 1.3, 0, 6.2832); ctx.fill();
+      if (!drawCoinAsset(c.x, cy, size, 1, c.phase, 0)) {   // single static frame, same as the normal coins
+        ctx.save(); ctx.translate(c.x, cy); ctx.fillStyle = "#1f8fc4"; ctx.beginPath(); ctx.arc(0, 0, c.r * 1.3, 0, 6.2832); ctx.fill();
         ctx.fillStyle = "#7fe0ff"; ctx.beginPath(); ctx.arc(0, 0, c.r * 1.05, 0, 6.2832); ctx.fill(); ctx.restore();
       }
       ctx.save(); ctx.textAlign = "center"; ctx.font = "bold " + Math.max(11, Math.floor(c.r * 0.9)) + "px Rockwell, Georgia, serif";
