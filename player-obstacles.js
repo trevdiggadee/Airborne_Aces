@@ -281,6 +281,117 @@ window.__airborneRingDebug = false;
       pcPush({ k: kind, x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - spd * 0.3, age: 0, life: life * (0.6 + Math.random() * 0.7), r: r * (0.6 + Math.random() * 0.8) });
     }
   }
+  // ---------- Charred sprite helper (tint only the sprite's own pixels, never the background) ----------
+  let _charCv = null;
+  function charredSprite(img, w, h, amt) {
+    if (!_charCv) _charCv = document.createElement("canvas");
+    const cw = Math.max(1, Math.ceil(w)), ch = Math.max(1, Math.ceil(h));
+    if (_charCv.width !== cw || _charCv.height !== ch) { _charCv.width = cw; _charCv.height = ch; }
+    const g = _charCv.getContext("2d");
+    g.clearRect(0, 0, cw, ch); g.globalCompositeOperation = "source-over";
+    g.drawImage(img, 0, 0, cw, ch);
+    g.globalCompositeOperation = "source-atop"; g.fillStyle = "rgba(30,14,6," + amt.toFixed(2) + ")"; g.fillRect(0, 0, cw, ch);
+    g.globalCompositeOperation = "source-over";
+    return _charCv;
+  }
+
+  // ---------- Boss-2 mini blimp destruction: blast, nose-down tumble trailing fire + smoke, splash / ground burst ----------
+  let miniFx = [], miniFxLast = 0;
+  function mfx(o) { miniFx.push(o); }
+  function mfxBurst(x, y, n, kind, spd, r, life) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, v = spd * (0.3 + Math.random() * 0.9);
+      mfx({ k: kind, x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - spd * 0.3, age: 0, life: life * (0.6 + Math.random() * 0.7), r: r * (0.6 + Math.random() * 0.8) });
+    }
+  }
+  function miniFloorY(x) {
+    try { if (typeof l2WaterOn === "function" && l2WaterOn()) return { y: window.__airborneL2SurfY(x), water: true }; } catch (e) {}
+    return { y: groundLevelY(), water: false };
+  }
+  function miniCrashStep(o, dt) {
+    if (!o._mc) {
+      o._mc = { vx: -Math.max(50, obstacleSpeed * 0.3) * 0.9, vy: -70, vr: 0.5, t: 0, fxT: 0, hit: 0, water: false, floor: 0 };
+      o.rot = o.rot || 0;
+      const cx = o.x + o.w * 0.5, cy = o.y + o.h * 0.5;
+      mfx({ k: "flash", x: cx, y: cy, vx: 0, vy: 0, age: 0, life: 0.22, r: o.w * 0.5 });
+      mfx({ k: "ring", x: cx, y: cy, vx: 0, vy: 0, age: 0, life: 0.35, r: o.w * 0.2, air: true });
+      mfxBurst(cx, cy, 12, "fire", 190, o.h * 0.13, 0.5);
+      mfxBurst(cx, cy, 8, "smoke", 80, o.h * 0.16, 1.0);
+      mfxBurst(cx, cy, 10, "spark", 250, 1.6, 0.7);
+      try { sfxExplosion(0.35); } catch (e) {}
+      try { triggerScreenShake(2.5, 160); } catch (e) {}
+    }
+    const m = o._mc; m.t += dt;
+    if (!m.hit) {
+      m.vy = Math.min(600, m.vy + 520 * dt);
+      o.x += m.vx * dt; o.y += m.vy * dt;
+      m.vr = Math.min(3.0, m.vr + dt * 2.2);
+      o.rot -= m.vr * dt;                                   // nose-down (these blimps fly to the left)
+      if (o.rot < -1.3) { o.rot = Math.max(o.rot, -1.55); m.vr *= 0.5; }
+      m.fxT -= dt;
+      if (m.fxT <= 0) {
+        m.fxT = 0.03;
+        const tx = o.x + o.w * 0.72, ty = o.y + o.h * 0.5;
+        mfx({ k: "smoke", x: tx, y: ty, vx: 40 + Math.random() * 30, vy: -14 - Math.random() * 18, age: 0, life: 0.9 + Math.random() * 0.6, r: o.h * (0.12 + Math.random() * 0.12) });
+        mfx({ k: "fire", x: o.x + o.w * (0.3 + Math.random() * 0.45), y: o.y + o.h * (0.2 + Math.random() * 0.4), vx: 25 + Math.random() * 30, vy: -22 - Math.random() * 25, age: 0, life: 0.3 + Math.random() * 0.22, r: o.h * (0.08 + Math.random() * 0.09) });
+        if (Math.random() < 0.3) mfx({ k: "spark", x: o.x + o.w * 0.5, y: o.y + o.h * 0.5, vx: (Math.random() - 0.5) * 150, vy: -50 - Math.random() * 80, age: 0, life: 0.5, r: 1.5 });
+      }
+      const cx = o.x + o.w * 0.5, fl = miniFloorY(cx);
+      if (o.y + o.h * 0.55 >= fl.y) {
+        m.hit = m.t; m.water = fl.water; m.floor = fl.y;
+        if (fl.water) {
+          mfxBurst(cx, fl.y, 22, "drop", 190, 2.2, 0.9);
+          mfx({ k: "ring", x: cx, y: fl.y, vx: 0, vy: 0, age: 0, life: 1.0, r: 8 });
+          mfx({ k: "ring", x: cx, y: fl.y, vx: 0, vy: 0, age: -0.15, life: 1.0, r: 4 });
+          mfxBurst(cx, fl.y - 4, 7, "smoke", 60, 9, 1.2);
+          try { if (typeof sfxSplash === "function") sfxSplash(); } catch (e) {}
+        } else {
+          mfxBurst(cx, fl.y - o.h * 0.3, 26, "fire", 220, o.h * 0.14, 0.7);
+          mfxBurst(cx, fl.y - o.h * 0.3, 14, "smoke", 90, o.h * 0.2, 1.6);
+          mfxBurst(cx, fl.y - o.h * 0.3, 14, "spark", 260, 1.6, 0.8);
+          mfx({ k: "flash", x: cx, y: fl.y - o.h * 0.3, vx: 0, vy: 0, age: 0, life: 0.22, r: o.w * 0.7 });
+          try { sfxExplosion(0.45); triggerScreenShake(3.5, 220); } catch (e) {}
+        }
+      }
+    } else {
+      const ht = m.t - m.hit;
+      if (m.water) o.y += 28 * dt * (1 + ht * 1.2);
+      o.x += m.vx * 0.35 * dt;
+      if (Math.random() < dt * 12) mfx({ k: m.water ? "bubble" : "smoke", x: o.x + o.w * (0.2 + Math.random() * 0.6), y: m.floor - (m.water ? -3 : o.h * 0.3), vx: (Math.random() - 0.5) * 12, vy: -22 - Math.random() * 18, age: 0, life: 1.1, r: m.water ? 2 + Math.random() * 2 : o.h * (0.1 + Math.random() * 0.1) });
+      if (ht > (m.water ? 1.6 : 1.3)) { o._mcGone = true; o.y = (typeof H === "number" ? H : 800) + 400; }   // dropped by the prune pass
+    }
+  }
+  function drawMiniCrashed(o, img) {
+    const m = o._mc, ht = m.hit ? m.t - m.hit : 0;
+    ctx.save();
+    if (m.hit && m.water) { ctx.beginPath(); ctx.rect(-5000, -5000, 10000, 5000 + m.floor - 1); ctx.clip(); }
+    ctx.translate(o.x + o.w / 2, o.y + o.h / 2); ctx.rotate(o.rot || 0);
+    ctx.globalAlpha = m.hit ? (m.water ? Math.max(0, 1 - ht / 1.5) : Math.max(0, 1 - Math.max(0, ht - 0.9) / 0.4)) : 1;
+    const cv = charredSprite(img, o.w, o.h, Math.min(0.62, 0.22 + m.t * 0.3));
+    ctx.drawImage(cv, -o.w / 2, -o.h / 2, o.w, o.h);
+    ctx.restore();
+  }
+  function drawMiniFx() {
+    const now = performance.now(), dt = Math.min(0.05, Math.max(0, (now - (miniFxLast || now)) / 1000)); miniFxLast = now;
+    for (let i = miniFx.length - 1; i >= 0; i--) {
+      const f = miniFx[i]; f.age += dt;
+      if (f.age >= f.life) { miniFx.splice(i, 1); continue; }
+      if (f.age < 0) continue;
+      const u = f.age / f.life;
+      if (f.k !== "ring" && f.k !== "flash") { f.x += f.vx * dt; f.y += f.vy * dt; }
+      if (f.k === "drop" || f.k === "spark") f.vy += 520 * dt;
+      ctx.save();
+      if (f.k === "smoke") { ctx.fillStyle = "rgba(" + (60 + u * 40 | 0) + "," + (54 + u * 36 | 0) + "," + (50 + u * 34 | 0) + "," + (0.5 * (1 - u)).toFixed(3) + ")"; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (1 + u * 1.6), 0, 6.2832); ctx.fill(); }
+      else if (f.k === "fire") { ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = "rgba(255," + (170 - u * 110 | 0) + ",40," + (0.8 * (1 - u)).toFixed(3) + ")"; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (1 - u * 0.5), 0, 6.2832); ctx.fill(); }
+      else if (f.k === "spark") { ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = "rgba(255,210,120," + (1 - u).toFixed(2) + ")"; ctx.fillRect(f.x, f.y, f.r, f.r); }
+      else if (f.k === "drop") { ctx.fillStyle = "rgba(200,225,235," + (0.8 * (1 - u)).toFixed(2) + ")"; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 6.2832); ctx.fill(); }
+      else if (f.k === "bubble") { ctx.strokeStyle = "rgba(190,225,235," + (0.7 * (1 - u)).toFixed(2) + ")"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 6.2832); ctx.stroke(); }
+      else if (f.k === "ring") { ctx.strokeStyle = "rgba(210,235,240," + (0.6 * (1 - u)).toFixed(2) + ")"; ctx.lineWidth = 2; ctx.beginPath(); if (f.air) ctx.arc(f.x, f.y, f.r + u * 46, 0, 6.2832); else ctx.ellipse(f.x, f.y, f.r + u * 70, (f.r + u * 70) * 0.22, 0, 0, 6.2832); ctx.stroke(); }
+      else if (f.k === "flash") { ctx.globalCompositeOperation = "lighter"; const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r * (1 + u)); g.addColorStop(0, "rgba(255,230,160," + (0.9 * (1 - u)).toFixed(2) + ")"); g.addColorStop(1, "rgba(255,120,30,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (1 + u), 0, 6.2832); ctx.fill(); }
+      ctx.restore();
+    }
+  }
+
   function drawPlayerCrash(img) {
     const c = pCrash, now = performance.now(), dt = Math.min(0.05, Math.max(0, (now - c.last) / 1000)); c.last = now; c.t += dt;
     let water = false, surf = 0;
@@ -331,10 +442,8 @@ window.__airborneRingDebug = false;
     if (c.hitWater) { ctx.beginPath(); ctx.rect(-4000, -4000, 8000, 4000 + floorY - 1); ctx.clip(); }
     ctx.translate(c.x, c.y); ctx.rotate(c.rot);
     ctx.globalAlpha = c.hitWater ? Math.max(0, 1 - ht2 / 1.8) : Math.max(0, 1 - Math.max(0, ht2 - 1.6) / 0.8);
-    ctx.drawImage(img, -player.w / 2, -player.h / 2, player.w, player.h);
-    // charred / burning tint over the hull
-    ctx.globalCompositeOperation = "source-atop"; ctx.fillStyle = "rgba(30,14,6," + Math.min(0.62, 0.2 + c.t * 0.25).toFixed(2) + ")";
-    ctx.fillRect(-player.w / 2, -player.h / 2, player.w, player.h);
+    // charred / burning tint over the hull (applied to a copy of the sprite so the background is never darkened)
+    ctx.drawImage(charredSprite(img, player.w, player.h, Math.min(0.62, 0.2 + c.t * 0.25)), -player.w / 2, -player.h / 2, player.w, player.h);
     ctx.restore();
     // particles
     for (let i = c.fx.length - 1; i >= 0; i--) {
@@ -2040,6 +2149,8 @@ window.__airborneRingDebug = false;
     obstacles.forEach(o => {
       if (o.shockFall) {
         // handled in bosses.js sonic fall update — skip normal scroll
+      } else if ((o.onFire || o.powerAffected) && o.type === "mini_blimp") {
+        miniCrashStep(o, dt);
       } else if (o.onFire || o.powerAffected) {
         o.vy = (typeof o.vy === "number" ? o.vy : 60) + 480 * dt;
         if (o.vy > 560) o.vy = 560;
@@ -2852,6 +2963,7 @@ window.__airborneRingDebug = false;
   function drawObstacles() {
     try { drawFirePower(); } catch (e) {}
     try { drawHitCoins(); } catch (e) {}
+    try { if (miniFx.length) drawMiniFx(); } catch (eMf) {}
     if (typeof obstacles === "undefined" || !obstacles) return;
     obstacles.forEach(function (o) {
       if (!o) return;
@@ -2918,6 +3030,7 @@ window.__airborneRingDebug = false;
         img = images[o.type];
       }
       if (!img || !img.naturalWidth) return;
+      if (o._mc && !o._mcGone) { drawMiniCrashed(o, img); return; }
       var speed = obstacleSpeed * (o.speedMult || 1);
       try {
         // drawMotionBlur only paints faint ghost trails — the solid sprite must be drawn too,

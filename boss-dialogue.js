@@ -214,10 +214,10 @@ function triggerBoss(num) {
     // targetX negative so the boss parked mostly off-screen ("boss never appeared"). Cap to 72% of W.
     if (num === 2) {
       // battleship: wide hull, sized by width (capped by height), sitting on the water
-      dispW = Math.min(W * 1.00, (H * 0.375) / aspect);   // +25%
+      dispW = Math.min(W * 1.25, (H * 0.47) / aspect);   // +25% more
       dispH = dispW * aspect;
     }
-    const maxBossW = num === 2 ? W * 1.06 : W * 0.72;
+    const maxBossW = num === 2 ? W * 1.33 : W * 0.72;
     if (dispW > maxBossW) {
       dispH = dispH * (maxBossW / dispW);
       dispW = maxBossW;
@@ -237,7 +237,7 @@ function triggerBoss(num) {
       targetX: (function () {
         const edgeMargin = W * 0.02;
         const paddedTarget = W - dispW * 0.55;
-        if (num === 2) return W - dispW * 0.8; // battleship: parked toward the back, last 20% of the hull runs past the edge
+        if (num === 2) return W - dispW * 0.8 + W * 0.15; // (15% further back) // battleship: parked toward the back, last 20% of the hull runs past the edge
         // Boss 3 (tank) sits ~25% further back (toward the right edge)
         if (num === 3 || cfg.kind === "tank") {
           const back = W - dispW * 0.22;
@@ -272,7 +272,7 @@ function triggerBoss(num) {
     powerup = null;
     hasFirepower = false;
     hasDualFire = false;
-    hasArcBomb = (num === 2); // battleship fight: the player lobs arcing bomb-missiles at the ship
+    hasArcBomb = false; // battleship fight: the arcing bomb-missiles are unlocked by the floating power-up (spawns once the ship has arrived)
     arcBombTimer = 0.6;
     try { if (window.__airborneResetShipFx) window.__airborneResetShipFx(); } catch (e) {}
     powerupRespawnTimer = 1.2;

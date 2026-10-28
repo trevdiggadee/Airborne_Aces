@@ -512,23 +512,33 @@
     if (x === undefined || x < -120 || x > W + 120) return;
     var u = U();
     var t = clockT;
-    var N = ph.p === "blast" ? 22 : (ph.p === "warn" ? 12 : (ph.p === "cool" ? 8 : 5));
-    var len = v.len * (ph.p === "blast" ? (0.55 + 0.45 * Math.min(1, ph.f * 3)) : (ph.p === "warn" ? 0.28 : 0.2));
+    // everything eases toward the phase's target, so the jet fades and shortens instead of snapping off
+    var blast = ph.p === "blast", warn = ph.p === "warn", cool = ph.p === "cool";
+    var tLen = blast ? (0.55 + 0.45 * Math.min(1, ph.f * 3)) : (warn ? 0.28 : 0.2);
+    var tSp = blast ? 1.8 : 0.7, tK = cool ? 0.28 : ph.k, tCnt = blast ? 1 : (warn ? 0.55 : 0.23), tRm = blast ? 1.25 : 0.9, tAm = blast ? 0.7 : 0.5;
+    var dtv = Math.min(0.05, Math.max(0, t - (v._st === undefined ? t : v._st))); v._st = t;
+    if (v._len === undefined) { v._len = tLen; v._sp = tSp; v._k = tK; v._cnt = tCnt; v._rm = tRm; v._am = tAm; v._acc = 0; }
+    var e = Math.min(1, dtv * (blast ? 9 : 2.6));   // rises quickly into the blast, relaxes slowly afterwards
+    v._len += (tLen - v._len) * e; v._sp += (tSp - v._sp) * e; v._k += (tK - v._k) * e;
+    v._cnt += (tCnt - v._cnt) * e; v._rm += (tRm - v._rm) * e; v._am += (tAm - v._am) * e;
+    v._acc += dtv * v._sp;
+    var NN = 22, len = v.len * v._len;
     ctx.save();
     // pressure glow on the nozzle while warning
-    if (ph.p === "warn") {
+    if (warn) {
       var pulse = 0.5 + 0.5 * Math.sin(t * 24);
       ctx.globalAlpha = 0.35 + 0.4 * pulse * ph.f;
       ctx.fillStyle = "#ff8a3c";
       ctx.beginPath(); ctx.arc(x, y, 7 * u + 3 * pulse * u, 0, Math.PI * 2); ctx.fill();
     }
-    for (var i = 0; i < N; i++) {
-      var sp = (ph.p === "blast") ? 1.8 : 0.7;
-      var u1 = ((t * sp + i / N + v.seed) % 1);
+    for (var i = 0; i < NN; i++) {
+      var vis = Math.max(0, Math.min(1, v._cnt * NN - i));   // particles fade out one by one as the jet dies down
+      if (vis <= 0) continue;
+      var u1 = ((v._acc + i / NN + v.seed) % 1);
       var dist = u1 * len;
       var wob = Math.sin(i * 7.3 + t * 3 + v.seed) * (3 + 10 * u1) * u;
-      var r = (4 + 16 * u1) * u * (ph.p === "blast" ? 1.25 : 0.9);
-      var a = ph.k * (1 - u1) * (ph.p === "blast" ? 0.7 : 0.5);
+      var r = (4 + 16 * u1) * u * v._rm;
+      var a = v._k * (1 - u1) * v._am * vis;
       ctx.globalAlpha = Math.max(0, a);
       ctx.fillStyle = (i % 3 === 0) ? "#f4f6f7" : "#dfe5e8";
       ctx.beginPath();

@@ -81,12 +81,12 @@
         const targetX = boss.x + boss.w * 0.5;
         const targetY = boss.y + boss.h * 0.25;
         if (boss.variant === 2) {
-          const tx = boss.x + boss.w * (0.25 + Math.random() * 0.5), ty = boss.y + boss.h * 0.35;
+          const tx = Math.min(boss.x + boss.w * (0.25 + Math.random() * 0.5), W * 0.95), ty = boss.y + boss.h * 0.35;
           // high lobbed arc: rise ~16% of the screen height before dropping onto the hull
           const g = 950, rise = Math.max(60, H * 0.16);
           const vy0 = -Math.sqrt(2 * g * rise);
           const T = (-vy0 + Math.sqrt(vy0 * vy0 + 2 * g * (ty - startY))) / g;
-          playerBombs.push({ x: startX, y: startY, vx: (tx - startX) / T, vy: vy0, gravity: g, r: Math.min(20, W * 0.05),
+          playerBombs.push({ x: startX, y: startY, vx: (tx - startX) / T, vy: vy0, gravity: g, r: Math.min(20, W * 0.05) * 0.85,
             rotation: 0, rotSpeed: 0, orientToVelocity: false, spriteKey: "ship_missile", trailTimer: 0 });
           if (typeof sfxShoot === "function") sfxShoot();
         } else spawnArcBomb(playerBombs, startX, startY, targetX, targetY, 480, 0.7, 0.85);
@@ -287,7 +287,9 @@
       }
     });
     updateRocketTrail(dt);
-    rockets = rockets.filter(r => r.x > -40 && r.x < W + 40 && r.y > -40 && r.y < H + 40);
+    { const ex = window.__airborneCamExt || { r: 0, l: 0, t: 0, b: 0 };
+      rockets.forEach(r => { r.born = (r.born || 0) + dt; });
+      rockets = rockets.filter(r => (r.ship && r.born < 1.5) || (r.x > -40 - ex.l && r.x < W + 40 + ex.r && r.y > -40 - ex.t && r.y < H + 40 + (ex.b || 0))); }
 
     rockets = rockets.filter(r => {
       const dx = Math.abs(player.x - r.x);
@@ -621,7 +623,7 @@
   function fireShipCannon(b, which) {
     const f = Math.max(0, Math.min(1, (b.animF || 0) / 35));
     // aft turret barrels (the far end of the ship), rising with the barrels
-    const fx = which === 0 ? 0.76 + 0.02 * f : 0.72 + 0.02 * f;   // aft turret, kept on-screen (hull parks 20% past the edge)
+    const fx = which === 0 ? 0.92 + 0.02 * f : 0.88 + 0.02 * f;   // aft turret (may sit past the screen edge — rockets fly in from there)
     const fy = which === 0 ? 0.66 - 0.045 * f : 0.70 - 0.045 * f;
     const sx = b.x + b.w * fx, sy = b.y + b.h * fy;
     const dx = player.x - sx, dy = player.y - sy;
@@ -631,7 +633,7 @@
       x: sx, y: sy, vx: (dx / dist) * spd, vy: (dy / dist) * spd,
       r: Math.min(18, W * 0.045), health: Math.random() < 0.5 ? 2 : 3, maxHealth: 3,
       angle: Math.atan2(dy, dx), animFrame: 0, animTimer: Math.random() * (1 / ROCKET_ANIM_FPS),
-      frameKeys: ROCKET_FLIGHT_KEYS
+      frameKeys: ROCKET_FLIGHT_KEYS, ship: true, born: 0
     });
     // muzzle flash + smoke
     shipFx.push({ kind: "flash", x: sx, y: sy, vx: 0, vy: 0, life: 0.18, age: 0, r: 14 });
@@ -1237,6 +1239,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     const alreadyHasThisBoss = cfg && cfg.powerupKind === "blue" ? hasDualFire
       : cfg && cfg.powerupKind === "arcbomb" ? hasArcBomb
       : hasFirepower;
+    if (boss && boss.variant === 2 && !boss.arrived) return;   // battleship: the weapon pick-up floats in once the ship has arrived
     if (!powerup && !alreadyHasThisBoss) {
       powerupRespawnTimer -= dt;
       if (powerupRespawnTimer <= 0) {
