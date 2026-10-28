@@ -584,7 +584,7 @@
     return { k: k, w: dw, h: dw * r[3] / r[2],
              x: anywhere ? rnd(-dw, w) : w + rnd(10, 160),
              y: far ? rnd(h * 0.12, h * 0.40) : rnd(h * 0.20, h * 0.52),
-             a: far ? rnd(0.55, 0.75) : rnd(0.7, 0.9), v: far ? rnd(0.10, 0.18) : rnd(0.30, 0.5) };
+             a: far ? rnd(0.28, 0.40) : rnd(0.36, 0.50), v: far ? rnd(0.05, 0.09) : rnd(0.15, 0.25) };
   }
   function seedAtmo() {
     var w = (typeof W === "number" ? W : 412), h = (typeof H === "number" ? H : 800), u = U();
@@ -605,7 +605,7 @@
     [[cloudsFar, "far"], [cloudsMid, "mid"]].forEach(function (pr) {
       var arr = pr[0];
       arr.forEach(function (c, i) {
-        c.x -= 48 * move * c.v * dt + 3 * dt;
+        c.x -= 48 * move * c.v * dt + 1.5 * dt;
         if (c.x + c.w < -10) arr[i] = newCloud(pr[1], false);
       });
     });

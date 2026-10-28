@@ -22,7 +22,7 @@
         "Better duck, old man!"
       ] },
     { num: 2, threshold: 160, maxHealth: 128,  kind: "rocket",  miniType: "mini_blimp",
-      label: "SECOND BOSS INCOMING!",  defeatLabel: "SECOND BOSS DEFEATED!",  powerupKind: "arcbomb", defeatBonus: 60,  bonusRound: "coin",
+      label: "SECOND BOSS INCOMING!",  defeatLabel: "SECOND BOSS DEFEATED!",  powerupKind: "arcbomb", defeatBonus: 60,  bonusRound: "treasure",
       name: "Marshal Cinderfuse",
       taunts: [
         "You call that flying? Pathetic!",
@@ -8810,7 +8810,8 @@ function drawFireballs() {
 
   // ---------- Bonus rounds: "Balloon Pop Frenzy" (after boss 1), "Coin Rain" (after boss 2) ----------
   let bonusActive = false;
-  let bonusType = null;          // 'balloon' | 'coin'
+  let bonusType = null;          // 'balloon' | 'coin' | 'treasure'
+  let bonusCombo = 0, bonusComboT = 0, bonusMagnetUntil = 0, bonusPops = [], bonusPopsLast = 0;
   let bonusPending = false;      // true while waiting out the "BOSS DEFEATED!" banner
   let bonusPendingAt = 0;
   let bonusPendingType = null;
@@ -9625,6 +9626,50 @@ function drawFireballs() {
     bonusTotal = count;
   }
 
+  // ---- TREASURE RUN (boss 2 bonus): ribbons of coins, crates, a magnet and a clock, with a combo multiplier ----
+  function spawnTreasureWave() {
+    bonusItems = [];
+    const SPEED = 210, dur = 12.5;
+    const lo = H * 0.15, hi = H * 0.58, mid = (lo + hi) / 2, amp = (hi - lo) * 0.42;
+    const cw = Math.min(34, W * 0.085), crate = Math.min(54, W * 0.13);
+    let cx = W + 90, total = 0, n = 0, magnetsLeft = 2, clockLeft = 1;
+    function item(kind, x, y) {
+      const w = kind === "crate" ? crate : (kind === "coin" ? cw : cw * 1.25);
+      bonusItems.push({ kind: kind, x: x - w / 2, y: y - w / 2, w: w, h: w, vx: SPEED, bobPhase: Math.random() * 6.28, bobSpeed: 1.8 + Math.random() * 0.8, bobAmount: kind === "coin" ? 2 : 5, spin: Math.random() * 6.28, popped: false });
+      if (kind === "coin" || kind === "crate") total++;
+    }
+    const clampY = y => Math.max(lo, Math.min(hi, y));
+    while (cx < W + SPEED * (dur - 1.5)) {
+      const pat = n++ % 6;
+      if (pat === 0) {                    // sine ribbon
+        for (let i = 0; i < 10; i++) item("coin", cx + i * 42, mid + Math.sin(i * 0.6) * amp);
+        cx += 10 * 42 + 150;
+      } else if (pat === 1) {             // big arc ending low
+        for (let i = 0; i < 9; i++) { const t = i / 8; item("coin", cx + i * 40, clampY(hi - Math.sin(t * Math.PI) * amp * 1.9)); }
+        cx += 9 * 40 + 150;
+      } else if (pat === 2) {             // crate wrapped in a coin ring
+        const y = mid + (Math.random() - 0.5) * amp, R = 58;
+        item("crate", cx, y);
+        for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; item("coin", cx + Math.cos(a) * R, clampY(y + Math.sin(a) * R)); }
+        cx += 2 * R + 180;
+        if (magnetsLeft > 0 && Math.random() < 0.8) { item("magnet", cx, mid + (Math.random() - 0.5) * amp); magnetsLeft--; cx += 140; }
+      } else if (pat === 3) {             // staircase up then down
+        for (let i = 0; i < 6; i++) item("coin", cx + i * 44, clampY(hi - i * amp * 0.34));
+        for (let i = 1; i < 6; i++) item("coin", cx + (5 + i) * 44, clampY(hi - (5 - i) * amp * 0.34));
+        cx += 11 * 44 + 150;
+        if (clockLeft > 0) { item("clock", cx, mid); clockLeft--; cx += 140; }
+      } else if (pat === 4) {             // three vertical columns
+        for (let c = 0; c < 3; c++) for (let r = 0; r < 4; r++) item("coin", cx + c * 90, clampY(lo + 30 + (c % 2 ? r : 3 - r) * (hi - lo) / 4));
+        cx += 3 * 90 + 120;
+      } else {                            // pair of crates high and low
+        item("crate", cx, lo + 20); item("crate", cx + 110, hi - 10);
+        for (let i = 0; i < 6; i++) item("coin", cx + 30 + i * 36, mid + Math.sin(i) * 20);
+        cx += 6 * 36 + 220;
+      }
+    }
+    bonusTotal = total;
+  }
+
   function startBonusRound(type) {
     bonusActive = true;
     bonusType = type;
@@ -9632,7 +9677,13 @@ function drawFireballs() {
     bonusCollected = 0;
     bonusPoints = 0;
     obstacles = [];
-    if (type === "coin") {
+    bonusCombo = 0; bonusComboT = 0; bonusMagnetUntil = 0; bonusPops = [];
+    if (type === "treasure") {
+      hasFirepower = false;
+      hasDualFire = false;
+      bonusEndsAt = performance.now() + 12500;
+      spawnTreasureWave();
+    } else if (type === "coin") {
       hasFirepower = false;
       hasDualFire = false;
       spawnCoinWave();
@@ -9648,6 +9699,26 @@ function drawFireballs() {
   function popBonusItem(item) {
     if (item.popped) return;
     item.popped = true;
+    if (bonusType === "treasure") {
+      const cxp = item.x + item.w / 2, cyp = item.y + Math.sin(item.bobPhase) * item.bobAmount + item.h / 2;
+      if (item.kind === "magnet") {
+        bonusMagnetUntil = performance.now() + 5500;
+        bonusPops.push({ x: cxp, y: cyp, t: 0, text: "MAGNET!", col: "#ff9a7a" });
+      } else if (item.kind === "clock") {
+        bonusEndsAt += 3000;
+        bonusPops.push({ x: cxp, y: cyp, t: 0, text: "+3 SEC", col: "#9fe8ff" });
+      } else {
+        bonusCollected++;
+        bonusCombo++; bonusComboT = performance.now();
+        const mult = Math.min(5, 1 + Math.floor(bonusCombo / 6));
+        const pts = (item.kind === "crate" ? 15 : 3) * mult;
+        bonusPoints += pts; score += pts; scoreVal.textContent = score; bumpScorePop();
+        bonusPops.push({ x: cxp, y: cyp, t: 0, text: "+" + pts, col: item.kind === "crate" ? "#ffd27a" : "#fff3c4" });
+        try { if (window.PowerFX) window.PowerFX.burst(cxp, cyp, { count: item.kind === "crate" ? 18 : 9, colors: ["#ffd24a", "#fff3b0", "#ff9a3d"], speed: item.kind === "crate" ? 190 : 120, glow: true }); } catch (e) {}
+      }
+      try { if (typeof sfxPowerup === "function" && (item.kind === "magnet" || item.kind === "clock" || item.kind === "crate")) sfxPowerup(); else if (typeof sfxTrainingCoin === "function") sfxTrainingCoin(); } catch (e) {}
+      return;
+    }
     bonusCollected++;
     const pts = bonusType === "coin" ? BONUS_COIN_POINTS : BONUS_POP_POINTS;
     bonusPoints += pts;
@@ -9659,7 +9730,7 @@ function drawFireballs() {
   }
 
   function endBonusRound() {
-    const wasCoin = bonusType === "coin";
+    const wasCoin = bonusType === "coin" || bonusType === "treasure";
     bonusActive = false;
     bonusItems = [];
     hasFirepower = false;
@@ -9704,9 +9775,16 @@ function drawFireballs() {
     if (!bonusActive) return;
 
     const frameDuration = 1 / OBSTACLE_ANIM_FPS;
+    const nowT = performance.now();
+    if (bonusType === "treasure" && bonusCombo > 0 && nowT - bonusComboT > 1800) bonusCombo = 0;
+    const magnetOn = bonusType === "treasure" && nowT < bonusMagnetUntil;
     bonusItems.forEach(b => {
       if (b.popped) return;
       b.x -= b.vx * dt;
+      if (magnetOn && b.kind !== "magnet") {
+        const mx = player.x - (b.x + b.w / 2), my = player.y - (b.y + b.h / 2), md = Math.hypot(mx, my);
+        if (md < 300 && md > 1) { const pull = 460 * (1 - md / 330) + 120; b.x += (mx / md) * pull * dt; b.y += (my / md) * pull * dt; }
+      }
       b.bobPhase += b.bobSpeed * dt;
       if (bonusType === "balloon") {
         b.animTimer += dt;
@@ -9732,8 +9810,76 @@ function drawFireballs() {
     }
   }
 
+  function drawTreasureItem(b) {
+    const t = performance.now() * 0.001, cx = b.x + b.w / 2, cy = b.y + Math.sin(b.bobPhase) * b.bobAmount + b.h / 2, r = b.w / 2;
+    ctx.save(); ctx.translate(cx, cy);
+    if (b.kind === "coin") {
+      const sx = Math.max(0.12, Math.abs(Math.cos(t * 4 + b.spin)));
+      ctx.globalCompositeOperation = "lighter";
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 1.9); g.addColorStop(0, "rgba(255,220,110,0.55)"); g.addColorStop(1, "rgba(255,160,40,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r * 1.9, 0, 6.2832); ctx.fill();
+      ctx.globalCompositeOperation = "source-over"; ctx.scale(sx, 1);
+      ctx.fillStyle = "#b8862a"; ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = "#ffd75e"; ctx.beginPath(); ctx.arc(0, 0, r * 0.82, 0, 6.2832); ctx.fill();
+      ctx.strokeStyle = "#e0a93a"; ctx.lineWidth = Math.max(1, r * 0.14); ctx.beginPath(); ctx.arc(0, 0, r * 0.52, 0, 6.2832); ctx.stroke();
+      ctx.fillStyle = "rgba(255,255,230,0.8)"; ctx.beginPath(); ctx.ellipse(-r * 0.3, -r * 0.35, r * 0.2, r * 0.1, -0.6, 0, 6.2832); ctx.fill();
+    } else if (b.kind === "crate") {
+      ctx.rotate(Math.sin(t * 2 + b.spin) * 0.12);
+      ctx.globalCompositeOperation = "lighter";
+      const g2 = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 2.1); g2.addColorStop(0, "rgba(255,200,90,0.4)"); g2.addColorStop(1, "rgba(255,140,30,0)");
+      ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(0, 0, r * 2.1, 0, 6.2832); ctx.fill();
+      ctx.globalCompositeOperation = "source-over";
+      ctx.fillStyle = "#6b4423"; ctx.fillRect(-r, -r * 0.8, r * 2, r * 1.6);
+      ctx.fillStyle = "#8a5a2e"; ctx.fillRect(-r, -r * 0.8, r * 2, r * 0.35);
+      ctx.fillStyle = "#d4a548"; ctx.fillRect(-r, -r * 0.1, r * 2, r * 0.2); ctx.fillRect(-r * 0.12, -r * 0.8, r * 0.24, r * 1.6);
+      ctx.strokeStyle = "#2c1a0c"; ctx.lineWidth = 2; ctx.strokeRect(-r, -r * 0.8, r * 2, r * 1.6);
+      ctx.fillStyle = "#ffe08a"; ctx.beginPath(); ctx.arc(0, -r * 0.0, r * 0.14, 0, 6.2832); ctx.fill();
+    } else if (b.kind === "magnet") {
+      ctx.rotate(Math.sin(t * 3 + b.spin) * 0.25);
+      ctx.globalCompositeOperation = "lighter";
+      const g3 = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 2); g3.addColorStop(0, "rgba(255,110,80,0.45)"); g3.addColorStop(1, "rgba(255,60,40,0)");
+      ctx.fillStyle = g3; ctx.beginPath(); ctx.arc(0, 0, r * 2, 0, 6.2832); ctx.fill();
+      ctx.globalCompositeOperation = "source-over";
+      ctx.lineWidth = r * 0.5; ctx.lineCap = "butt";
+      ctx.strokeStyle = "#d8352a"; ctx.beginPath(); ctx.arc(0, 0, r * 0.62, Math.PI, 0, false); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-r * 0.62, 0); ctx.lineTo(-r * 0.62, r * 0.55); ctx.moveTo(r * 0.62, 0); ctx.lineTo(r * 0.62, r * 0.55); ctx.stroke();
+      ctx.strokeStyle = "#e8e8ee"; ctx.lineWidth = r * 0.5;
+      ctx.beginPath(); ctx.moveTo(-r * 0.62, r * 0.55); ctx.lineTo(-r * 0.62, r * 0.9); ctx.moveTo(r * 0.62, r * 0.55); ctx.lineTo(r * 0.62, r * 0.9); ctx.stroke();
+    } else {   // clock
+      ctx.globalCompositeOperation = "lighter";
+      const g4 = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 2); g4.addColorStop(0, "rgba(120,220,255,0.5)"); g4.addColorStop(1, "rgba(60,160,255,0)");
+      ctx.fillStyle = g4; ctx.beginPath(); ctx.arc(0, 0, r * 2, 0, 6.2832); ctx.fill();
+      ctx.globalCompositeOperation = "source-over";
+      ctx.fillStyle = "#c9a45c"; ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = "#f6f1e0"; ctx.beginPath(); ctx.arc(0, 0, r * 0.8, 0, 6.2832); ctx.fill();
+      ctx.strokeStyle = "#3a2a14"; ctx.lineWidth = Math.max(1.5, r * 0.12); ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(t * 6) * r * 0.6, Math.sin(t * 6) * r * 0.6); ctx.moveTo(0, 0); ctx.lineTo(0, -r * 0.4); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   function drawBonusRound() {
     if (!bonusActive) return;
+    if (bonusType === "treasure") {
+      const nowT = performance.now(), dtp = Math.min(0.05, Math.max(0, (nowT - (bonusPopsLast || nowT)) / 1000)); bonusPopsLast = nowT;
+      // magnet field around the blimp
+      if (nowT < bonusMagnetUntil) {
+        const left = Math.min(1, (bonusMagnetUntil - nowT) / 800);
+        ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.lineWidth = 2;
+        for (let k = 0; k < 3; k++) { const ph = ((nowT / 700) + k / 3) % 1; ctx.strokeStyle = "rgba(255,120,90," + (0.5 * (1 - ph) * left).toFixed(3) + ")"; ctx.beginPath(); ctx.arc(player.x, player.y, 40 + ph * 230, 0, 6.2832); ctx.stroke(); }
+        ctx.restore();
+      }
+      bonusItems.forEach(b => { if (!b.popped && b.x < W + 80 && b.x + b.w > -40) drawTreasureItem(b); });
+      for (let i = bonusPops.length - 1; i >= 0; i--) {
+        const q = bonusPops[i]; q.t += dtp;
+        if (q.t > 0.9) { bonusPops.splice(i, 1); continue; }
+        ctx.save(); ctx.globalAlpha = 1 - q.t / 0.9; ctx.textAlign = "center";
+        ctx.font = "bold " + Math.max(14, Math.floor(W * 0.045)) + "px Rockwell, Georgia, serif";
+        ctx.lineWidth = 3; ctx.strokeStyle = "rgba(40,24,8,0.85)"; ctx.strokeText(q.text, q.x, q.y - 18 - q.t * 46);
+        ctx.fillStyle = q.col; ctx.fillText(q.text, q.x, q.y - 18 - q.t * 46); ctx.restore();
+      }
+      return;
+    }
     bonusItems.forEach(b => {
       if (b.popped) return;
       const drawY = b.y + Math.sin(b.bobPhase) * b.bobAmount;
@@ -9756,7 +9902,7 @@ function drawFireballs() {
     const totalSecs = Math.max(1, Math.round((typeof BONUS_DURATION_MS !== "undefined" ? BONUS_DURATION_MS : 15000) / 1000));
     const progress = Math.max(0, Math.min(1, bonusTotal ? bonusCollected / bonusTotal : 0));
     const timeFrac = Math.max(0, Math.min(1, secsLeft / totalSecs));
-    const title = bonusType === "coin" ? "COIN RUSH" : "BALLOON BASH";
+    const title = bonusType === "treasure" ? "TREASURE RUN" : (bonusType === "coin" ? "COIN RUSH" : "BALLOON BASH");
     const pulse = 0.92 + Math.sin(performance.now() / 220) * 0.08;
 
     const barW = Math.min(W * 0.78, 360);
@@ -9812,6 +9958,14 @@ function drawFireballs() {
     ctx.fillRect(trackX + trackW * (1 - timeFrac), trackY - 1, 2, 7);
     ctx.globalAlpha = 1;
 
+    if (bonusType === "treasure" && bonusCombo >= 3) {
+      const mult = Math.min(5, 1 + Math.floor(bonusCombo / 6));
+      ctx.textAlign = "center";
+      ctx.font = "bold " + Math.max(15, Math.floor(W * 0.05)) + "px Rockwell, Georgia, serif";
+      ctx.lineWidth = 3; ctx.strokeStyle = "rgba(40,24,8,0.85)";
+      const txt = "COMBO x" + mult + "  (" + bonusCombo + ")";
+      ctx.strokeText(txt, W / 2, by + barH + 24); ctx.fillStyle = mult >= 4 ? "#ff9a5a" : "#ffe29a"; ctx.fillText(txt, W / 2, by + barH + 24);
+    }
     ctx.restore();
   }
 

@@ -120,6 +120,82 @@
     P.speed = Math.min(MAX_SPEED, P.speed + TAP_BOOST);
   };
 
+
+  // ------------------------------------------------------------------
+  // Take-off effects: engine exhaust, dust + sparks kicked off the deck, speed streaks, liftoff steam blast
+  // ------------------------------------------------------------------
+  var fx = [], fxLast = 0, fxAcc = 0;
+  function fpush(o) { if (fx.length > 260) fx.shift(); fx.push(o); }
+  function emitFx(dt, holding) {
+    var spdF = Math.max(0, Math.min(1, (P.speed - MIN_SPEED) / (MAX_SPEED - MIN_SPEED)));
+    var ph = P.phase, dy = deckY();
+    var rear = player.x - player.w * 0.47, ry = player.y + player.h * 0.06;
+    fxAcc += dt;
+    var step = ph === "accel" && holding ? 0.025 : (ph === "climb" ? 0.03 : 0.12);
+    while (fxAcc >= step) {
+      fxAcc -= step;
+      // engine exhaust: dark puff + flicker of flame out of the rear nozzle
+      fpush({ k: "puff", x: rear, y: ry, vx: -50 - spdF * 120 - Math.random() * 30, vy: -6 + (Math.random() - 0.5) * 22, age: 0, life: 0.7 + Math.random() * 0.5, r: 4 + Math.random() * 3, g: 12 + spdF * 8, c: 0 });
+      if (ph !== "ready" && Math.random() < 0.8) fpush({ k: "flame", x: rear, y: ry, vx: -90 - spdF * 160, vy: (Math.random() - 0.5) * 18, age: 0, life: 0.16 + Math.random() * 0.1, r: 3 + Math.random() * 3 + spdF * 2 });
+      if (ph === "accel" && holding) {
+        // dust + steam kicked up off the deck as it rushes past
+        fpush({ k: "puff", x: player.x + (Math.random() - 0.3) * player.w * 0.8, y: dy - 2, vx: -(P.speed * 0.8 + Math.random() * 60), vy: -8 - Math.random() * 28, age: 0, life: 0.6 + Math.random() * 0.4, r: 3 + Math.random() * 4, g: 14, c: 1 });
+        if (spdF > 0.15 && Math.random() < 0.55) fpush({ k: "spark", x: player.x + (Math.random() - 0.5) * player.w * 0.7, y: dy - 1, vx: -(P.speed * 0.6 + Math.random() * 120), vy: -50 - Math.random() * 110, age: 0, life: 0.35 + Math.random() * 0.3 });
+        if (spdF > 0.3 && Math.random() < 0.5) fpush({ k: "streak", x: W + 20, y: H * (0.22 + Math.random() * 0.4), vx: -(700 + spdF * 600 + Math.random() * 300), vy: 0, age: 0, life: 0.28 + Math.random() * 0.15, len: 40 + Math.random() * 70 });
+      }
+      if (ph === "climb") {
+        if (Math.random() < 0.6) fpush({ k: "spark", x: rear, y: ry, vx: -120 - Math.random() * 120, vy: (Math.random() - 0.5) * 80, age: 0, life: 0.4 + Math.random() * 0.3 });
+        if (Math.random() < 0.5) fpush({ k: "streak", x: W + 20, y: H * (0.15 + Math.random() * 0.55), vx: -(650 + Math.random() * 400), vy: 0, age: 0, life: 0.3 + Math.random() * 0.2, len: 50 + Math.random() * 80 });
+      }
+    }
+  }
+  function liftoffBurst() {
+    var dy = deckY(), x = player.x;
+    for (var i = 0; i < 26; i++) {
+      var a = Math.PI + (Math.random() - 0.5) * 2.2 + (i % 2 ? Math.PI * 0.0 : 0);
+      var sp = 60 + Math.random() * 190;
+      fpush({ k: "puff", x: x + (Math.random() - 0.5) * player.w * 1.1, y: dy - 2, vx: Math.cos(a) * sp * (Math.random() < 0.5 ? 1 : -1.2), vy: -Math.abs(Math.sin(a)) * sp * 0.5 - 15, age: 0, life: 0.9 + Math.random() * 0.7, r: 6 + Math.random() * 8, g: 26, c: 2 });
+    }
+    for (var j = 0; j < 22; j++) fpush({ k: "spark", x: x + (Math.random() - 0.5) * player.w * 0.8, y: dy - 2, vx: (Math.random() - 0.5) * 260 - 80, vy: -80 - Math.random() * 190, age: 0, life: 0.5 + Math.random() * 0.4 });
+    fpush({ k: "ring", x: x, y: dy, vx: 0, vy: 0, age: 0, life: 0.7, r: 10 });
+    fpush({ k: "ring", x: x, y: dy, vx: 0, vy: 0, age: -0.12, life: 0.8, r: 6 });
+    try { triggerScreenShake(4, 380); } catch (e) {}
+    try { triggerScreenFlash(0.12, 200); } catch (e) {}
+  }
+  function drawFx() {
+    var tn = now(), dt = Math.min(0.05, Math.max(0, (tn - (fxLast || tn)) / 1000)); fxLast = tn;
+    if (!fx.length) return;
+    for (var i = fx.length - 1; i >= 0; i--) {
+      var f = fx[i]; f.age += dt;
+      if (f.age >= f.life) { fx.splice(i, 1); continue; }
+      if (f.age < 0) continue;
+      var u = f.age / f.life;
+      if (f.k !== "ring") { f.x += f.vx * dt; f.y += f.vy * dt; }
+      if (f.k === "spark") f.vy += 420 * dt;
+      if (f.k === "puff") { f.vx *= (1 - 1.2 * dt); f.vy -= 10 * dt; }
+      ctx.save();
+      if (f.k === "puff") {
+        var col = f.c === 0 ? [74, 68, 64] : (f.c === 1 ? [196, 178, 150] : [236, 238, 240]);
+        ctx.fillStyle = "rgba(" + col[0] + "," + col[1] + "," + col[2] + "," + (0.5 * (1 - u) * (f.c === 0 ? 0.9 : 1)).toFixed(3) + ")";
+        ctx.beginPath(); ctx.arc(f.x, f.y, f.r + f.g * u, 0, 6.2832); ctx.fill();
+      } else if (f.k === "flame") {
+        ctx.globalCompositeOperation = "lighter";
+        var g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r * 2);
+        g.addColorStop(0, "rgba(255,240,170," + (0.9 * (1 - u)).toFixed(3) + ")"); g.addColorStop(0.5, "rgba(255,140,40," + (0.6 * (1 - u)).toFixed(3) + ")"); g.addColorStop(1, "rgba(220,60,10,0)");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * 2, 0, 6.2832); ctx.fill();
+      } else if (f.k === "spark") {
+        ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = "rgba(255,200,110," + (1 - u).toFixed(3) + ")"; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(f.x - f.vx * 0.03, f.y - f.vy * 0.03); ctx.stroke();
+      } else if (f.k === "streak") {
+        ctx.strokeStyle = "rgba(255,255,255," + (0.35 * (1 - u)).toFixed(3) + ")"; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(f.x + f.len, f.y); ctx.stroke();
+      } else if (f.k === "ring") {
+        ctx.strokeStyle = "rgba(235,238,240," + (0.7 * (1 - u)).toFixed(3) + ")"; ctx.lineWidth = 3 * (1 - u) + 1;
+        ctx.beginPath(); ctx.ellipse(f.x, f.y, f.r + u * 150, (f.r + u * 150) * 0.16, 0, 0, 6.2832); ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
   // ------------------------------------------------------------------
   // Update — called every playing frame, before updatePlayer()
   // ------------------------------------------------------------------
@@ -170,12 +246,14 @@
         var endX = P.tileX + END_X_F * g.w;
         if (holding && (P.speed >= LIFT_SPEED || player.x >= endX)) {
           P.phase = "climb";
+          try { liftoffBurst(); } catch (eL) {}
           P.climbT = 0;
           P.climbStartY = player.y;
           try { if (typeof sfxAirfieldTakeoff === "function") sfxAirfieldTakeoff(); } catch (e) {}
           stopEngine();
         }
       }
+      try { emitFx(dt, holding); } catch (eF) {}
       // pin blimp on the deck
       player.x = W * DRIVE_X;
       player.y = restPlayerY();
@@ -186,6 +264,7 @@
 
     if (P.phase === "climb") {
       P.climbT += dt;
+      try { if (P.climbT < 1.6) emitFx(dt, true); } catch (eF2) {}
       var tc = Math.min(1, P.climbT / CLIMB_DUR);
       var e = smooth(tc);
       var endY = H * 0.4;
@@ -223,6 +302,7 @@
   // layer "world": the platform itself (behind obstacles and the blimp)
   // layer "hud":   the on-screen tip
   window.__airborneDrawPlatformTakeoff = function (layer) {
+    if (layer === "hud") { try { drawFx(); } catch (eD) {} }
     if (!P) return;
     try {
       if (layer === "hud") {
