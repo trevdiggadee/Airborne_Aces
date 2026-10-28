@@ -683,6 +683,7 @@ function loop(ts) {
       updateStorm(dt); try { if (window.tickUnifiedProgress) window.tickUnifiedProgress(dt); } catch(e) {};
       try { if (window.PowerFX) window.PowerFX.update(dt); } catch (e) {}
       updateBonusRound(dt);
+      try { updateLuckyCoin(dt); } catch (eLc) {}
       updateLevelEnd(dt);
       updateComboPopups();
       updateRain(dt);
@@ -752,6 +753,7 @@ function loop(ts) {
       try { if (window.__airborneDrawWarSharkExtras) window.__airborneDrawWarSharkExtras(); try { if (window.__airborneDrawBombBlasts) window.__airborneDrawBombBlasts(); } catch(e) {}; } catch (e) {};
     drawPowerup();
     drawBonusRound();
+    try { drawLuckyCoin(); } catch (eLd) {}
     drawLevelEnd();
     drawBullets();
     drawHealPickup();

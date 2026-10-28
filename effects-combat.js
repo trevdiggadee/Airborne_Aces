@@ -81,7 +81,7 @@
         const targetX = boss.x + boss.w * 0.5;
         const targetY = boss.y + boss.h * 0.25;
         if (boss.variant === 2) {
-          const tx = Math.min(boss.x + boss.w * (0.25 + Math.random() * 0.5), W * 0.95), ty = boss.y + boss.h * 0.35;
+          const tx = Math.min(boss.x + boss.w * (0.25 + Math.random() * 0.5), W * 0.95), ty = boss.y + boss.h * 0.55;
           // high lobbed arc: rise ~16% of the screen height before dropping onto the hull
           const g = 950, rise = Math.max(60, H * 0.16);
           const vy0 = -Math.sqrt(2 * g * rise);
@@ -138,13 +138,15 @@
         const dx = Math.abs(b.x - (boss.x + boss.w / 2));
         const dy = Math.abs(b.y - (boss.y + boss.h / 2));
         const ship = boss.variant === 2;
-        if (dx < boss.w * (ship ? 0.47 : 0.38) && dy < boss.h * (ship ? 0.5 : 0.42)) {
+        // battleship: the hull sits low in its sprite — bombs burst once they reach deck level
+        const shipLow = ship && b.y > boss.y + boss.h * 0.44 && b.vy > 0;
+        if ((ship ? (dx < boss.w * 0.47 && shipLow) : (dx < boss.w * 0.38 && dy < boss.h * 0.42))) {
           boss.health--;
           bossHitFlashUntil = performance.now() + 220;
           bossShakeUntil = performance.now() + 420;
           try { spawnBossDamageNum(1, b.x, b.y); } catch (e) {}
           if (ship) {
-            try { shipHitFire(boss, b.x, b.y); } catch (eH) {}
+            try { shipHitFire(boss, b.x, Math.max(b.y, boss.y + boss.h * 0.5) + boss.h * 0.05); } catch (eH) {}
           } else {
             spawnHitParticles(b.x, b.y);
             triggerBigExplosion(b.x, b.y, 42, 42);

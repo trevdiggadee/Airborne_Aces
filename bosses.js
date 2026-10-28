@@ -8816,7 +8816,7 @@ function drawFireballs() {
   let bonusPendingAt = 0;
   let bonusPendingType = null;
   let bonusEndsAt = 0;
-  const BONUS_DURATION_MS = 9000;
+  const BONUS_DURATION_MS = 14000;
   let bonusItems = [];
   let bonusTotal = 0;
   let bonusCollected = 0;
@@ -8831,6 +8831,7 @@ function drawFireballs() {
   let levelEndActive = false;
   let levelEndPhase = null; // "windDown" | "approach" | "landing" | "victory" | "stats" | "fadeOut"
   let levelEndTimer = 0;
+  let levelEndTouchdownT = 99;
   let levelEndPad = null; // { x, y, w, h, surfaceY, docked }
   let levelEndParticles = [];
   let levelEndFireworks = [];
@@ -9014,6 +9015,19 @@ function drawFireballs() {
       levelEndPad.surfaceY + 2
     );
     triggerScreenShake(3, 280);
+    // touchdown: ring of steam venting from the deck + a spray of sparks
+    {
+      const tdx = levelEndPad.x + levelEndPad.w * (levelEndPad.deckCenterFrac || 0.42), tdy = levelEndPad.surfaceY;
+      for (let i = 0; i < 22; i++) {
+        const side = i % 2 ? 1 : -1;
+        levelEndParticles.push({ kind: "steam", x: tdx + side * (6 + Math.random() * 20), y: tdy, vx: side * (50 + Math.random() * 130), vy: -15 - Math.random() * 45, life: 0.9 + Math.random() * 0.8, age: 0, r: 5 + Math.random() * 8, alpha: 0.45 });
+      }
+      for (let i = 0; i < 16; i++) {
+        const side = i % 2 ? 1 : -1;
+        levelEndFireworks.push({ x: tdx + side * 8, y: tdy - 2, vx: side * (40 + Math.random() * 160), vy: -70 - Math.random() * 120, life: 0.5 + Math.random() * 0.4, age: 0, r: 2 + Math.random() * 1.5, color: "#ffd98a" });
+      }
+      levelEndTouchdownT = 0;
+    }
 
     const landingBonus = 50;
     score += landingBonus;
@@ -9213,6 +9227,19 @@ function drawFireballs() {
                        && playerBottom < levelEndPad.surfaceY + player.h * 0.5;
       const descending = player.vy > -80;
 
+      // Glide-path assist: near the X the blimp is guided onto a soft descent slope (no crashing into the roof, no hunting for altitude)
+      if (levelEndPhase === "landing" && Math.abs(player.x - deckCx) < levelEndPad.w * 0.3) {
+        const restYg = levelEndPad.surfaceY - player.h * 0.42;
+        const dist = restYg - player.y;
+        const want = Math.max(-70, Math.min(80, dist * 0.9));
+        player.vy += (want - player.vy) * Math.min(1, dt * 2.6);
+        player.rotation *= Math.max(0, 1 - dt * 5);
+        // landing lights: faint exhaust slows as she settles
+        if (Math.abs(dist) < player.h * 1.4 && Math.random() < dt * 20) {
+          levelEndParticles.push({ kind: "steam", x: player.x, y: player.y + player.h * 0.42, vx: (Math.random() - 0.5) * 50, vy: 10 + Math.random() * 25, life: 0.5 + Math.random() * 0.4, age: 0, r: 3 + Math.random() * 4, alpha: 0.28 });
+        }
+      }
+
       // Gentle touchdown: once over the X the blimp is eased down onto the deck (no snapping / sudden stop)
       const restY = levelEndPad.surfaceY - player.h * 0.42;
       if (levelEndPhase === "landing" && overPad) {
@@ -9317,6 +9344,18 @@ function drawFireballs() {
       ctx.ellipse(deckCx, deckCy + 4, p.w * 0.2, 12, 0, 0, Math.PI * 2);
       ctx.fill();
 
+      // Beacon: a soft light shaft over the X and a stream of chevrons showing the glide path down onto it
+      if (levelEndPhase === "landing" || levelEndPhase === "approach") {
+        const bt = performance.now() / 1000, topY = Math.max(H * 0.1, deckCy - H * 0.42);
+        const bg = ctx.createLinearGradient(0, topY, 0, deckCy);
+        bg.addColorStop(0, "rgba(255,226,150,0)"); bg.addColorStop(1, "rgba(255,226,150," + (0.2 + Math.sin(p.glowPhase * 2) * 0.05).toFixed(3) + ")");
+        ctx.fillStyle = bg; ctx.fillRect(deckCx - 26, topY, 52, deckCy - topY);
+        for (let k = 0; k < 4; k++) {
+          const u = ((bt * 0.8 + k / 4) % 1), cyv = topY + 20 + u * (deckCy - topY - 44);
+          ctx.strokeStyle = "rgba(255,236,170," + (0.75 * Math.sin(u * Math.PI)).toFixed(3) + ")"; ctx.lineWidth = 3; ctx.lineCap = "round";
+          ctx.beginPath(); ctx.moveTo(deckCx - 12, cyv - 6); ctx.lineTo(deckCx, cyv + 4); ctx.lineTo(deckCx + 12, cyv - 6); ctx.stroke();
+        }
+      }
       // Pulsing ring sitting ON the wooden X
       if (levelEndPhase === "landing" || levelEndPhase === "approach") {
         const pulse = 0.5 + Math.sin(p.glowPhase * 2) * 0.5;
@@ -9378,6 +9417,16 @@ function drawFireballs() {
       const a = (1 - levelEndTimer / 0.6) * 0.35;
       ctx.fillStyle = `rgba(255, 220, 140, ${a})`;
       ctx.fillRect(0, 0, W, H);
+    }
+
+    // TOUCHDOWN! pop right at the deck
+    if (levelEndPad && levelEndPad.docked && levelEndPhase === "victory" && levelEndTimer < 1.5) {
+      const tt = levelEndTimer / 1.5, sc = 0.7 + Math.min(1, tt * 6) * 0.35 - tt * 0.1;
+      ctx.save(); ctx.globalAlpha = Math.max(0, 1 - Math.max(0, tt - 0.6) / 0.4); ctx.textAlign = "center";
+      ctx.translate(levelEndPad.x + levelEndPad.w * (levelEndPad.deckCenterFrac || 0.42), levelEndPad.surfaceY - player.h * 1.3 - tt * 26); ctx.scale(sc, sc);
+      ctx.font = "bold " + Math.floor(W * 0.075) + "px 'Rockwell', 'Rockwell Nova', 'Roboto Slab', Georgia, serif";
+      ctx.lineWidth = 5; ctx.strokeStyle = "rgba(40,24,8,0.9)"; ctx.lineJoin = "round"; ctx.strokeText("TOUCHDOWN!", 0, 0);
+      ctx.fillStyle = "#ffe9a8"; ctx.fillText("TOUCHDOWN!", 0, 0); ctx.restore();
     }
 
     // Level complete title during victory
@@ -9663,10 +9712,88 @@ function drawFireballs() {
     return true;
   }
 
+  // ---- LUCKY COIN: 4 tinted coins per level, each worth 5 coins ----
+  let luckyCoin = null, luckyDone = {}, luckyKey = -1, luckyPops = [], luckyFx = [], luckyLast = 0;
+  const LUCKY_AT = [0.12, 0.38, 0.62, 0.84];
+  function luckyBlocked() {
+    return (typeof state === "undefined" || state !== "playing") || bossActive || bonusActive || bonusPending || levelEndActive ||
+      window.__airborneAirfield || window.__airborneTrainingFlight || window.__airborneRuffActive || window.__airbornePlatformTakeoffActive || window.__airborneWorldFrozen;
+  }
+  function updateLuckyCoin(dt) {
+    if (luckyBlocked()) { if (luckyCoin && (bossActive || bonusActive || levelEndActive || state !== "playing")) luckyCoin = null; return; }
+    const nb = nextBossConfig();
+    if (nb) {
+      const prev = BOSSES.find(x => x.num === nb.num - 1), lo = prev ? prev.threshold : 0;
+      const frac = (gameplayScore - lo) / Math.max(1, nb.threshold - lo);
+      if (luckyKey !== nb.num) {          // new level (or a restart): skip stations already passed
+        luckyKey = nb.num; luckyDone = {}; luckyCoin = null;
+        for (let i = 0; i < LUCKY_AT.length; i++) if (frac > LUCKY_AT[i] + 0.08) luckyDone[i] = true;
+      }
+      if (!luckyCoin) {
+        for (let i = 0; i < LUCKY_AT.length; i++) {
+          if (!luckyDone[i] && frac >= LUCKY_AT[i]) {
+            luckyDone[i] = true;
+            luckyCoin = { x: W + 40, y: H * (0.2 + Math.random() * 0.3), r: Math.min(20, W * 0.05), vx: Math.max(140, (typeof obstacleSpeed !== "undefined" ? obstacleSpeed : 200) * 0.8), t: Math.random() * 6, phase: Math.random() * 6 };
+            break;
+          }
+        }
+      }
+    }
+    if (!luckyCoin) return;
+    const c = luckyCoin; c.t += dt; c.x -= c.vx * dt;
+    const cy = c.y + Math.sin(c.t * 2.4) * 8;
+    if (Math.random() < dt * 22) luckyFx.push({ x: c.x + (Math.random() - 0.5) * c.r * 2.2, y: cy + (Math.random() - 0.5) * c.r * 2.2, vx: -20 - Math.random() * 30, vy: -10 - Math.random() * 25, age: 0, life: 0.5 + Math.random() * 0.4, r: 1.5 + Math.random() * 2 });
+    if (c.x < -60) { luckyCoin = null; return; }
+    if (Math.abs(player.x - c.x) < player.w * 0.5 + c.r * 1.6 && Math.abs(player.y - cy) < player.h * 0.5 + c.r * 1.6) {
+      luckyCoin = null;
+      window.__airborneCollectCoins = (window.__airborneCollectCoins || 0) + 5;
+      try { if (typeof ruffStats !== "undefined" && ruffStats) ruffStats.coins = (ruffStats.coins || 0) + 5; } catch (e) {}
+      try { if (typeof updateCollectDock === "function") updateCollectDock(); else { const el = document.getElementById("collectPowerPct"); if (el) el.textContent = String(window.__airborneCollectCoins); } } catch (e) {}
+      try { if (typeof window.addStormChargeForScore === "function") window.addStormChargeForScore(gameplayScore); } catch (e) {}
+      try { sfxPowerup(); } catch (e) {}
+      luckyPops.push({ x: c.x, y: cy, t: 0 });
+      for (let i = 0; i < 18; i++) { const a = Math.random() * 6.2832, sp = 60 + Math.random() * 150; luckyFx.push({ x: c.x, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 30, age: 0, life: 0.5 + Math.random() * 0.4, r: 2 + Math.random() * 2.5 }); }
+      try { if (window.PowerFX) window.PowerFX.burst(c.x, cy, { count: 14, colors: ["#7fdcff", "#ffffff", "#30c4ff"], speed: 170, glow: true }); } catch (e) {}
+    }
+  }
+  function drawLuckyCoin() {
+    const now = performance.now(), dt = Math.min(0.05, Math.max(0, (now - (luckyLast || now)) / 1000)); luckyLast = now;
+    for (let i = luckyFx.length - 1; i >= 0; i--) {
+      const f = luckyFx[i]; f.age += dt;
+      if (f.age >= f.life) { luckyFx.splice(i, 1); continue; }
+      f.x += f.vx * dt; f.y += f.vy * dt;
+      ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = "rgba(150,230,255," + (0.9 * (1 - f.age / f.life)).toFixed(3) + ")";
+      ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (1 - 0.5 * f.age / f.life), 0, 6.2832); ctx.fill(); ctx.restore();
+    }
+    if (luckyCoin) {
+      const c = luckyCoin, cy = c.y + Math.sin(c.t * 2.4) * 8, size = c.r * 3.0, pul = 0.75 + 0.25 * Math.sin(c.t * 6);
+      ctx.save(); ctx.globalCompositeOperation = "lighter";
+      const g = ctx.createRadialGradient(c.x, cy, 0, c.x, cy, size * 1.5);
+      g.addColorStop(0, "rgba(120,220,255," + (0.55 * pul).toFixed(3) + ")"); g.addColorStop(1, "rgba(48,196,255,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c.x, cy, size * 1.5, 0, 6.2832); ctx.fill();
+      ctx.restore();
+      if (!drawCoinAsset(c.x, cy, size, 1, c.phase)) {
+        ctx.save(); ctx.translate(c.x, cy); ctx.scale(Math.max(0.15, Math.abs(Math.cos(c.t * 4))), 1);
+        ctx.fillStyle = "#1f8fc4"; ctx.beginPath(); ctx.arc(0, 0, c.r * 1.3, 0, 6.2832); ctx.fill();
+        ctx.fillStyle = "#7fe0ff"; ctx.beginPath(); ctx.arc(0, 0, c.r * 1.05, 0, 6.2832); ctx.fill(); ctx.restore();
+      }
+      ctx.save(); ctx.textAlign = "center"; ctx.font = "bold " + Math.max(11, Math.floor(c.r * 0.9)) + "px Rockwell, Georgia, serif";
+      ctx.lineWidth = 3; ctx.strokeStyle = "rgba(10,30,45,0.85)"; ctx.strokeText("x5", c.x, cy - size * 0.62);
+      ctx.fillStyle = "#aef0ff"; ctx.fillText("x5", c.x, cy - size * 0.62); ctx.restore();
+    }
+    for (let i = luckyPops.length - 1; i >= 0; i--) {
+      const q = luckyPops[i]; q.t += dt;
+      if (q.t > 1.0) { luckyPops.splice(i, 1); continue; }
+      ctx.save(); ctx.globalAlpha = 1 - q.t; ctx.textAlign = "center"; ctx.font = "bold " + Math.max(16, Math.floor(W * 0.05)) + "px Rockwell, Georgia, serif";
+      ctx.lineWidth = 3; ctx.strokeStyle = "rgba(10,30,45,0.85)"; ctx.strokeText("+5 COINS", q.x, q.y - 20 - q.t * 50);
+      ctx.fillStyle = "#aef0ff"; ctx.fillText("+5 COINS", q.x, q.y - 20 - q.t * 50); ctx.restore();
+    }
+  }
+
   // ---- TREASURE RUN (boss 2 bonus): ribbons of coins, crates, a magnet and a clock, with a combo multiplier ----
   function spawnTreasureWave() {
     bonusItems = [];
-    const SPEED = 210, dur = 12.5;
+    const SPEED = 210, dur = 17.5;
     const lo = H * 0.15, hi = H * 0.58, mid = (lo + hi) / 2, amp = (hi - lo) * 0.42;
     const cw = Math.min(34, W * 0.085), crate = Math.min(54, W * 0.13);
     let cx = W + 90, total = 0, n = 0, magnetsLeft = 2, clockLeft = 1, curTint = 0;
@@ -9718,7 +9845,7 @@ function drawFireballs() {
     if (type === "treasure") {
       hasFirepower = false;
       hasDualFire = false;
-      bonusEndsAt = performance.now() + 12500;
+      bonusEndsAt = performance.now() + 17500;
       spawnTreasureWave();
     } else if (type === "coin") {
       hasFirepower = false;
@@ -10072,6 +10199,12 @@ function drawFireballs() {
     checkpointPickup.bobPhase += dt * 2.8;
     checkpointPickup.glowPhase += dt * 3.5;
     checkpointPickup.ringPhase += dt * 4;
+    if (checkpointPickup.kind === "ring") {   // same ambient rim sparks the training rings have
+      const ro = checkpointPickup.ro || (checkpointPickup.ro = { r: checkpointPickup.r / 1.59, pulseT: 0, spinT: 0, sparks: [], sparkT: 0 });
+      ro.pulseT += dt; ro.spinT += dt; ro.sparkT += dt; ro.r = checkpointPickup.r / 1.59;
+      if (ro.sparkT > 0.12) { ro.sparkT = 0; if (ro.sparks.length < 12) ro.sparks.push({ a: Math.random() * 6.2832, r: 0.55 + Math.random() * 0.35, life: 0.4 + Math.random() * 0.35, age: 0, spd: 0.4 + Math.random() * 0.6 }); }
+      for (let si = ro.sparks.length - 1; si >= 0; si--) { const sp = ro.sparks[si]; sp.age += dt; sp.r += sp.spd * dt * 0.25; if (sp.age >= sp.life) ro.sparks.splice(si, 1); }
+    }
     checkpointPickup.x -= checkpointPickup.vx * dt;
 
     // bob up and down as it drifts left
@@ -10092,7 +10225,13 @@ function drawFireballs() {
       : (dx < player.w * 0.5 + checkpointPickup.r * 0.9 && dy < player.h * 0.5 + checkpointPickup.r * 0.9);
     if (hit) {
       checkpointPickup.collected = true;
-      if (isRing) {
+      const ringAsset = !!(window.__airborneDrawCheckeredRing && window.__ringCheckeredImg && window.__ringCheckeredImg.naturalWidth > 0);
+      if (isRing && ringAsset) {
+        // the training ring's own "passed" celebration glow, nothing extra
+        const ro2 = Object.assign({}, checkpointPickup.ro || { r: checkpointPickup.r / 1.59, pulseT: 0, spinT: 0, sparks: [] });
+        ro2.passed = true; ro2.passGlowT = 0.95; ro2.passPulse = 1; ro2.passWhoosh = 1; ro2.streakMult = 1;
+        checkpointBursts.push({ ro: ro2, x: checkpointPickup.x, y: drawY, r: checkpointPickup.r, age: 0, life: 0.95 });
+      } else if (isRing) {
         checkpointBursts.push({ x: checkpointPickup.x, y: drawY, r: checkpointPickup.r, age: 0, life: 0.9 });
         checkpointBursts.push({ x: checkpointPickup.x, y: drawY, r: checkpointPickup.r, age: -0.15, life: 1.1 });
       }
@@ -10108,7 +10247,7 @@ function drawFireballs() {
         updateHealthDisplay();
       }
       // small confetti burst
-      const burstN = isRing ? 40 : 14;
+      const burstN = (isRing && ringAsset) ? 0 : (isRing ? 40 : 14);
       for (let i = 0; i < burstN; i++) {
         const angle = Math.random() * Math.PI * 2;
         const speed = 80 + Math.random() * (isRing ? 260 : 120);
@@ -10131,6 +10270,11 @@ function drawFireballs() {
     for (const bu of checkpointBursts) {
       if (bu.age < 0) continue;
       const t = bu.age / bu.life;
+      if (bu.ro) {
+        bu.ro.passGlowT = 0.95 * (1 - t); bu.ro.passPulse = Math.max(0, 1 - t * 1.4); bu.ro.passWhoosh = Math.max(0, 1 - t * 2.2); bu.ro.spinT += 0.016; bu.ro.pulseT += 0.016;
+        ctx.save(); window.__airborneDrawCheckeredRing(bu.ro, bu.x, bu.y); ctx.restore();
+        continue;
+      }
       ctx.save();
       ctx.translate(bu.x, bu.y);
       ctx.globalAlpha = (1 - t) * 0.9;
@@ -10146,6 +10290,11 @@ function drawFireballs() {
   }
 
   function drawCheckpointRing(cp) {
+    if (cp.ro && window.__airborneDrawCheckeredRing && window.__ringCheckeredImg && window.__ringCheckeredImg.naturalWidth > 0) {
+      // training-level ring asset with its own effects only
+      ctx.save(); window.__airborneDrawCheckeredRing(cp.ro, cp.x, cp.y); ctx.restore();
+      return;
+    }
     const R = cp.r, Rx = R * 0.42;
     const pulse = 1 + Math.sin(cp.glowPhase) * 0.05;
     ctx.save();
