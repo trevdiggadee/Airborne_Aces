@@ -648,8 +648,8 @@
   }
   // far clouds sit behind the city strip (called from world-atmosphere's city layer)
   window.__airborneL2CloudsFar = function () {
-    if (!cloudsFar.length) return;
-    ctx.save(); drawCloudArr(cloudsFar); ctx.restore();
+    if (!cloudsFar.length && !cloudsMid.length) return;
+    ctx.save(); drawCloudArr(cloudsFar); drawCloudArr(cloudsMid); ctx.restore();
   };
   function drawAtmoBack() {
     if (!wisps.length) return;
@@ -665,8 +665,6 @@
     var band = ctx.createLinearGradient(0, h * 0.28, 0, gy - h * 0.1);
     band.addColorStop(0, "rgba(150,118,92,0)"); band.addColorStop(0.5, "rgba(150,118,92,0.20)"); band.addColorStop(1, "rgba(150,118,92,0)");
     ctx.fillStyle = band; ctx.fillRect(ex0, h * 0.28, ew, gy - h * 0.38);
-    // dark cloud layer drifting in front of the city
-    drawCloudArr(cloudsMid);
     // chimney smoke plumes
     for (var i = 0; i < smokes.length; i++) {
       var p = smokes[i], t = p.age / p.life;
@@ -694,7 +692,7 @@
   window.__airborneL2Draw = function () {
     if (!on || !atlasReady) return;
     ctx.save();
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = (typeof window.__airborneLandHide === "number") ? window.__airborneLandHide : 1;
     drawAtmoBack();
     // buildings first, stacks over them
     var order = structs.slice().sort(function (a, b) { return (a.isStack ? 1 : 0) - (b.isStack ? 1 : 0); });

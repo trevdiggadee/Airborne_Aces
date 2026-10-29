@@ -200,7 +200,8 @@
   function drawLayer0Img(img, key, alpha, items, groundY) {
     ctx.globalAlpha = alpha;
     if (key !== "skylineFarL3") {
-      items.forEach(function(item) { ctx.drawImage(img, item.x, groundY - item.h, item.w, item.h); });
+      var ex0 = window.__airborneCamExt || { l: 0, r: 0 };
+      items.forEach(function(item) { if (item.x > W + ex0.r + 2 || item.x + item.w < -ex0.l - 2) return; ctx.drawImage(img, item.x, groundY - item.h, item.w, item.h); });
       return;
     }
     ctx.globalAlpha = Math.min(1, alpha * 1.55);   // painted scene: keep it readable (0.85)
@@ -347,7 +348,9 @@
     try { if (typeof window.__airborneL2CloudsFar === "function") window.__airborneL2CloudsFar(); } catch (eCl) {}
     ctx.save();
     ctx.globalAlpha = 1;
+    const exc = window.__airborneCamExt || { l: 0, r: 0 };
     for (let i = 0; i < l2CityTiles.length; i++) {
+      if (l2CityTiles[i] > W + exc.r + 2 || l2CityTiles[i] + g.tileW < -exc.l - 2) continue;
       try { ctx.drawImage(img, l2CityTiles[i], g.y, g.tileW, g.tileH); } catch (e) {}
     }
     ctx.restore();

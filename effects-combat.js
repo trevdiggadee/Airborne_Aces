@@ -247,30 +247,44 @@
     });
   }
 
+  // Pre-rendered soft glow sprites: one drawImage per particle instead of a fresh radial gradient + arc + save/restore
+  const _glowCache = {};
+  const GLOW_DEFS = {
+    fire:  [[0, "rgba(255,245,200,0.95)"], [0.35, "rgba(255,140,30,0.85)"], [0.7, "rgba(220,40,10,0.45)"], [1, "rgba(40,10,0,0)"]],
+    flash: [[0, "rgba(255,250,220,0.9)"], [0.4, "rgba(255,170,60,0.5)"], [1, "rgba(255,90,20,0)"]],
+    ink:   [[0, "rgba(60,20,90,0.7)"], [1, "rgba(20,5,40,0)"]],
+    bsmoke:[[0, "rgba(14,12,12,0.8)"], [1, "rgba(10,10,10,0)"]],
+    smoke: [[0, "rgba(55,48,40,0.55)"], [1, "rgba(25,22,20,0)"]],
+    ember: [[0, "rgba(255,250,200,1)"], [0.4, "rgba(255,160,40,0.95)"], [1, "rgba(220,40,10,0)"]],
+    dust:  [[0, "rgba(90,82,70,1)"], [0.45, "rgba(60,54,46,0.45)"], [1, "rgba(40,36,30,0)"]]
+  };
+  function glowSprite(kind) {
+    let c = _glowCache[kind];
+    if (c) return c;
+    c = document.createElement("canvas"); c.width = c.height = 64;
+    const g = c.getContext("2d"), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    const d = GLOW_DEFS[kind] || GLOW_DEFS.smoke;
+    for (let i = 0; i < d.length; i++) gr.addColorStop(d[i][0], d[i][1]);
+    g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+    return (_glowCache[kind] = c);
+  }
+  window.__airborneGlowSprite = glowSprite;
+
   function drawRocketTrail() {
-    rocketTrailParticles.forEach(function(p) {
-      const t = 1 - p.age / p.life;
-      ctx.save();
+    const emb = glowSprite("ember");
+    ctx.save();
+    ctx.fillStyle = "rgba(90, 85, 80, 1)";
+    for (let i = 0; i < rocketTrailParticles.length; i++) {
+      const p = rocketTrailParticles[i], t = 1 - p.age / p.life;
       if (p.isSmoke) {
         ctx.globalAlpha = t * 0.35;
-        ctx.fillStyle = "rgba(90, 85, 80, 1)";
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
       } else {
-        // hot ember
         ctx.globalAlpha = t * 0.9;
-        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
-        g.addColorStop(0, "rgba(255, 250, 200, 1)");
-        g.addColorStop(0.4, "rgba(255, 160, 40, 0.95)");
-        g.addColorStop(1, "rgba(220, 40, 10, 0)");
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.drawImage(emb, p.x - p.size, p.y - p.size, p.size * 2, p.size * 2);
       }
-      ctx.restore();
-    });
+    }
+    ctx.restore();
   }
 
   function updateRockets(dt) {
@@ -423,47 +437,36 @@
     return out.length > 320 ? out.slice(out.length - 320) : out;
   }
   function fxDrawList(list) {
+    ctx.save();
     for (let i = 0; i < list.length; i++) {
       const p = list[i];
       const pt = 1 - p.age / p.life;
-      ctx.save();
-      const k = p.kind;
+      if (pt <= 0) continue;
+      const k = p.kind, r = Math.max(0.5, p.r);
       ctx.globalAlpha = Math.max(0, pt * (k === "smoke" || k === "ink" ? (p.r > 18 ? 0.72 : 0.55) : (k === "bsmoke" ? 0.8 : 0.92)));
-      if (k === "fire") {
-        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        g.addColorStop(0, "rgba(255,245,200," + (0.95 * pt) + ")"); g.addColorStop(0.35, "rgba(255,140,30," + (0.85 * pt) + ")");
-        g.addColorStop(0.7, "rgba(220,40,10," + (0.45 * pt) + ")"); g.addColorStop(1, "rgba(40,10,0,0)");
-        ctx.fillStyle = g;
+      if (k === "fire" || k === "ink" || k === "bsmoke") {
+        ctx.drawImage(glowSprite(k), p.x - r, p.y - r, r * 2, r * 2);
       } else if (k === "flash") {
         ctx.globalCompositeOperation = "lighter";
-        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        g.addColorStop(0, "rgba(255,250,220," + (0.9 * pt) + ")"); g.addColorStop(0.4, "rgba(255,170,60," + (0.5 * pt) + ")"); g.addColorStop(1, "rgba(255,90,20,0)");
-        ctx.fillStyle = g;
+        ctx.drawImage(glowSprite("flash"), p.x - r, p.y - r, r * 2, r * 2);
+        ctx.globalCompositeOperation = "source-over";
       } else if (k === "ember" || k === "spark") {
         ctx.fillStyle = "rgba(255," + Math.floor(140 + 90 * pt) + ",40," + (0.95 * pt) + ")";
+        ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
       } else if (k === "dust") {
         ctx.fillStyle = "rgba(140,120,90," + (0.5 * pt) + ")";
-      } else if (k === "ink") {
-        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        g.addColorStop(0, "rgba(60,20,90," + (0.7 * pt) + ")"); g.addColorStop(1, "rgba(20,5,40,0)");
-        ctx.fillStyle = g;
-      } else if (k === "bsmoke") {
-        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        g.addColorStop(0, "rgba(14,12,12," + (0.8 * pt) + ")"); g.addColorStop(1, "rgba(10,10,10,0)");
-        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
       } else if (k === "drop") {
         ctx.fillStyle = "rgba(225,242,250," + (0.9 * pt) + ")";
+        ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
       } else if (k === "foam") {
         ctx.fillStyle = "rgba(235,246,252," + (0.55 * pt) + ")";
-        ctx.beginPath(); ctx.ellipse(p.x, p.y, p.r * 1.8, Math.max(1, p.r * 0.55), 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); continue;
+        ctx.beginPath(); ctx.ellipse(p.x, p.y, p.r * 1.8, Math.max(1, p.r * 0.55), 0, 0, Math.PI * 2); ctx.fill();
       } else {
-        const g2 = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        g2.addColorStop(0, "rgba(55,48,40," + (0.55 * pt) + ")"); g2.addColorStop(1, "rgba(25,22,20,0)");
-        ctx.fillStyle = g2;
+        ctx.drawImage(glowSprite("smoke"), p.x - r, p.y - r, r * 2, r * 2);
       }
-      ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(0.5, p.r), 0, Math.PI * 2); ctx.fill();
-      ctx.restore();
     }
+    ctx.restore();
   }
   function fxPush(list, o) { list.push(o); }
 
@@ -1532,6 +1535,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
 
   function drawDustParticles() {
     const now = performance.now() / 1000;
+    const dustSpr = glowSprite("dust");
     ctx.save();
     dustParticles.forEach(p => {
       const y = p.y + Math.sin(now * p.bobFreq + p.bobPhase) * p.bobAmp;
@@ -1541,14 +1545,8 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
       const alpha = p.baseAlpha * flicker;
       if (alpha <= 0.004) return;
       const r = p.size * 2.6; // tighter glow
-      const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-      grad.addColorStop(0, `rgba(90, 82, 70, ${alpha})`);
-      grad.addColorStop(0.45, `rgba(60, 54, 46, ${alpha * 0.45})`);
-      grad.addColorStop(1, "rgba(40,36,30,0)");
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.globalAlpha = Math.min(1, alpha);
+      ctx.drawImage(dustSpr, x - r, y - r, r * 2, r * 2);
     });
     ctx.restore();
   }

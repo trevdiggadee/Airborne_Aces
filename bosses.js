@@ -8866,7 +8866,7 @@ function drawFireballs() {
       return;
     }
     levelEndActive = true;
-    window.__airborneLandScrollMul = 1;
+    window.__airborneLandScrollMul = 1; window.__airborneLandHide = 1;
     levelEndPhase = "windDown";
     // Clear weather leftovers so level-3 rain/clouds don't show on the pad
     if (typeof stormCloudsDecorative !== "undefined") stormCloudsDecorative = [];
@@ -8904,7 +8904,7 @@ function drawFireballs() {
     // Horizontal center of the circular X pad within the sprite
     const deckCenterFrac = 0.42;
     levelEndPad = {
-      x: W + 20,
+      x: Math.max(W * 0.2, W * 0.72 - w * 0.42),
       y: groundY - h,
       w: w,
       h: h,
@@ -8912,7 +8912,7 @@ function drawFireballs() {
       deckFromTop: deckFromTop,
       deckCenterFrac: deckCenterFrac,
       // Stop with the X well onto the screen so the player can reach it
-      targetX: W * 0.28,
+      targetX: Math.max(W * 0.2, W * 0.72 - w * 0.42),
       docked: false,
       glowPhase: 0
     };
@@ -9069,7 +9069,7 @@ function drawFireballs() {
   }
 
   function finishLevelEndAndResume() {
-    window.__airborneLandScrollMul = 1;
+    window.__airborneLandScrollMul = 1; window.__airborneLandHide = 1;
     // Show world map between levels, then resume
     if (window.__airborneShowWorldMap) {
       window.__airborneShowWorldMap({
@@ -9131,7 +9131,7 @@ function drawFireballs() {
   }
 
   function updateLevelEnd(dt) {
-    if (!levelEndActive) { window.__airborneLandScrollMul = 1; return; }
+    if (!levelEndActive) { window.__airborneLandScrollMul = 1; window.__airborneLandHide = 1; return; }
     levelEndTimer += dt;
 
     // Ambient steam while pad is on-screen
@@ -9171,9 +9171,12 @@ function drawFireballs() {
     }
 
     if (levelEndPhase === "windDown") {
-      // Wait until city has mostly cleared, or timeout
-      // City freezes immediately; short beat so "CITY CLEAR" can be read, then pad approaches
-      if ((groundLayersCleared() && levelEndTimer > 1.1) || levelEndTimer > 3.5) {
+      // The world eases to a halt and the buildings fade out; from here on the blimp is the only thing that moves
+      const k = Math.min(1, levelEndTimer / 1.4);
+      window.__airborneLandScrollMul = (1 - k) * (1 - k);
+      window.__airborneLandHide = 1 - k;
+      if (levelEndTimer >= 1.4) {
+        window.__airborneLandScrollMul = 0; window.__airborneLandHide = 0;
         levelEndPhase = "approach";
         levelEndTimer = 0;
         spawnLandingPad();
@@ -9191,28 +9194,15 @@ function drawFireballs() {
       levelEndPad.surfaceY = levelEndPad.y + levelEndPad.h * levelEndPad.deckFromTop;
       const deckCx = levelEndPad.x + levelEndPad.w * levelEndPad.deckCenterFrac;
 
-      // The whole world (ground, parallax, pad) eases to a stop as the pad arrives — the blimp "comes in" rather than the level just scrolling on
-      if (levelEndPad.landP === undefined) {
-        levelEndPad.landP = 0; levelEndPad.startX = levelEndPad.x;
-        const D = Math.max(1, levelEndPad.x - levelEndPad.targetX);
-        const base0 = 48 * (typeof obstacleSpeedScale === "function" ? obstacleSpeedScale() : 1);
-        levelEndPad.landT = Math.max(4.5, Math.min(9, D / (0.882 * Math.max(10, base0))));
-      }
-      if (levelEndPad.landP < 1) {
-        const pp = levelEndPad.landP = Math.min(1, levelEndPad.landP + dt / levelEndPad.landT);
-        const D = levelEndPad.startX - levelEndPad.targetX;
-        const Fp = pp - pp * pp / 2 + 1.2 * (1 / Math.PI - (1 - pp) * Math.cos(Math.PI * pp) / Math.PI - Math.sin(Math.PI * pp) / (Math.PI * Math.PI));
-        levelEndPad.x = levelEndPad.startX - D * Fp / 0.882;
-        window.__airborneLandScrollMul = Math.max(0, (1 - pp) * (1 + 1.2 * Math.sin(Math.PI * pp)));
-        if (pp >= 1) {
-          levelEndPad.x = levelEndPad.targetX; window.__airborneLandScrollMul = 0;
-          if (levelEndPhase === "approach") {
-            levelEndPhase = "landing";
-            levelEndTimer = 0;
-            showBanner("TAP TO SET DOWN ON THE X!", 2500, "defeat");
-            if (typeof sfxLandPrompt === "function") sfxLandPrompt();
-          }
-        }
+      // Everything is standing still: the pad fades in where it will stay and the blimp flies in to it
+      window.__airborneLandScrollMul = 0; window.__airborneLandHide = 0;
+      levelEndPad.fade = Math.min(1, (levelEndPad.fade || 0) + dt / 1.2);
+      levelEndPad.x = levelEndPad.targetX;
+      if (levelEndPhase === "approach" && (Math.abs(deckCx - player.x) < levelEndPad.w * 0.3 || levelEndTimer > 9)) {
+        levelEndPhase = "landing";
+        levelEndTimer = 0;
+        showBanner("TAP TO SET DOWN ON THE X!", 2500, "defeat");
+        if (typeof sfxLandPrompt === "function") sfxLandPrompt();
       }
 
       // Glide slope: the blimp is eased down a shallow slope toward the deck as the pad draws near, nose pitching with the descent
@@ -9230,7 +9220,7 @@ function drawFireballs() {
       const padDx = targetPlayerX - player.x;
       if (padDx > 0.4) {
         // glide forward and ease out as it reaches the X (no constant-speed stop)
-        const speed = levelEndPhase === "landing" ? 95 : 55;
+        const speed = levelEndPhase === "landing" ? 95 : 70;
         const v = Math.max(10, Math.min(speed, padDx * 1.7));
         player.x += Math.min(padDx, v * dt);
       } else if (padDx < -0.4) {
@@ -9326,6 +9316,7 @@ function drawFireballs() {
       const img = images.landing_pad;
       const p = levelEndPad;
       ctx.save();
+      ctx.globalAlpha = Math.min(1, p.fade === undefined ? 1 : p.fade);
       // Deck target point (center of the X)
       const deckCx = p.x + p.w * (p.deckCenterFrac || 0.42);
       const deckCy = p.y + p.h * (p.deckFromTop || 0.525);
@@ -9468,7 +9459,7 @@ function drawFireballs() {
     if ((levelEndPhase === "stats" || levelEndPhase === "fadeOut") && levelEndStats) {
       const s = levelEndStats;
       const panelW = Math.min(W * 0.78, 320);
-      const panelH = 210;
+      const panelH = 236;
       const px = (W - panelW) / 2;
       const py = H * 0.28;
       const fadeOutA = levelEndPhase === "fadeOut" ? Math.max(0, 1 - levelEndFade) : 1;
@@ -9589,6 +9580,7 @@ function drawFireballs() {
             ["SCORE", countInt(s.score).toLocaleString(), false],
             ["TIME", s.timeStr, true],
             ["LANDING BONUS", "+" + countInt(s.landingBonus), false],
+            ["BONUS ROUND", "+" + countInt(s.bonusRound), false],
             ["HEALTH LEFT", String(countInt(s.health)), false]
           ];
           rows.forEach((row, i) => {
@@ -9896,7 +9888,7 @@ function drawFireballs() {
         bonusCombo++; bonusComboT = performance.now();
         const mult = Math.min(5, 1 + Math.floor(bonusCombo / 6));
         const pts = (item.kind === "crate" ? 15 : 3) * mult;
-        bonusPoints += pts; score += pts; scoreVal.textContent = score; bumpScorePop();
+        bonusPoints += pts; window.__airborneBonusBank = (window.__airborneBonusBank || 0) + pts;   // bonus points are kept apart from the main score
         bonusPops.push({ x: cxp, y: cyp, t: 0, text: "+" + pts, col: item.kind === "crate" ? "#ffd27a" : "#fff3c4" });
         try { if (window.PowerFX) window.PowerFX.burst(cxp, cyp, { count: item.kind === "crate" ? 18 : 9, colors: ["#ffd24a", "#fff3b0", "#ff9a3d"], speed: item.kind === "crate" ? 190 : 120, glow: true }); } catch (e) {}
       }
@@ -9906,9 +9898,7 @@ function drawFireballs() {
     bonusCollected++;
     const pts = bonusType === "coin" ? BONUS_COIN_POINTS : BONUS_POP_POINTS;
     bonusPoints += pts;
-    score += pts;
-    scoreVal.textContent = score;
-    bumpScorePop();
+    window.__airborneBonusBank = (window.__airborneBonusBank || 0) + pts;   // not added to the main score
     spawnHitParticles(item.x, item.y);
     triggerBigExplosion(item.x, item.y, item.w * 0.7, item.h * 0.7);
   }
@@ -9922,10 +9912,8 @@ function drawFireballs() {
 
     let finalMsg = "BONUS COMPLETE! +" + bonusPoints;
     if (bonusCollected >= bonusTotal) {
-      score += BONUS_PERFECT_BONUS;
-      scoreVal.textContent = score;
-      bumpScorePop();
-      finalMsg = (wasCoin ? "PERFECT HAUL! +" : "PERFECT BONUS! +") + (bonusPoints + BONUS_PERFECT_BONUS);
+      bonusPoints += BONUS_PERFECT_BONUS; window.__airborneBonusBank = (window.__airborneBonusBank || 0) + BONUS_PERFECT_BONUS;
+      finalMsg = (wasCoin ? "PERFECT HAUL! +" : "PERFECT BONUS! +") + bonusPoints;
     }
     showBanner(finalMsg, 2000, "defeat");
 

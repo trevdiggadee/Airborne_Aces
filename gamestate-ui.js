@@ -503,6 +503,7 @@
   }
 
   function startGame() {
+    window.__airborneBonusBank = 0;
     try { ensureAudio(); } catch (eA) { console.warn("[startGame] ensureAudio", eA); }
     try { if (typeof setMusicTheme === "function") setMusicTheme(THEME_NORMAL); } catch (eT) {}
     try { if (typeof startMusic === "function") startMusic(); } catch (eM) {}
@@ -584,7 +585,7 @@
     bonusActive = false;
     bonusType = null;
     bonusPending = false;
-    window.__airborneLandScrollMul = 1; if (typeof levelEndActive !== "undefined") { levelEndActive = false; levelEndPhase = null; levelEndPad = null; levelEndFade = 0; }
+    window.__airborneLandScrollMul = 1; window.__airborneLandHide = 1; if (typeof levelEndActive !== "undefined") { levelEndActive = false; levelEndPhase = null; levelEndPad = null; levelEndFade = 0; }
     if (typeof stopWorldWindDown === "function") stopWorldWindDown();
     window.__airborneWorldFrozen = false;
     if (typeof resetHudFade === "function") resetHudFade();
@@ -861,7 +862,7 @@
     comboPopups = [];
 
     // Clear any level-end / bonus leftovers so a checkpoint resume is a clean level
-    window.__airborneLandScrollMul = 1; if (typeof levelEndActive !== "undefined") { levelEndActive = false; levelEndPhase = null; levelEndPad = null; levelEndFade = 0; }
+    window.__airborneLandScrollMul = 1; window.__airborneLandHide = 1; if (typeof levelEndActive !== "undefined") { levelEndActive = false; levelEndPhase = null; levelEndPad = null; levelEndFade = 0; }
     window.__airborneLevelEndMapShown = false;
     try { if (window.__airbornePlatformReset) window.__airbornePlatformReset(); } catch (ePl) {}
     // Clear boss state

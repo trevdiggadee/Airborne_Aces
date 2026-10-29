@@ -551,6 +551,8 @@ function loop(ts) {
     if (typeof updateMountainParallax === "function") updateMountainParallax(dtScale);
     updateSkyline(dtScale);
     drawSkyline();
+    // clouds sit directly on the main backdrop, behind every other layer
+    try { if (window.__airborneDrawL3Clouds) window.__airborneDrawL3Clouds(); } catch (eL3c) {}
 
     // Front cloud layer OFF for now
     // updateClouds(dtScale);
@@ -728,7 +730,6 @@ function loop(ts) {
       drawStreetlamps();
       drawGroundVehicles();
     }
-    try { if (window.__airborneDrawL3Clouds) window.__airborneDrawL3Clouds(); } catch (eL3c) {}
     drawBossShadow();
     drawWindParticlesBack();
     // Training background balloons — behind blimps and clouds

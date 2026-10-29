@@ -1905,6 +1905,8 @@
 
   function drawBuildings() {
     if (airfieldMode) return;
+    const lh = (typeof window.__airborneLandHide === "number") ? window.__airborneLandHide : 1;   // buildings fade away for the landing
+    if (lh <= 0.01) return;
     if (typeof window.__airborneL2On === "function" && window.__airborneL2On()) {
       try { window.__airborneL2Draw(); } catch (eL2) { console.warn("[L2] draw", eL2); }
       return;
@@ -1912,9 +1914,11 @@
     const groundY = groundLevelY();
     const img = images[buildingRowKey];
     if (!img || !img.naturalWidth) return;
+    const ga = ctx.globalAlpha; ctx.globalAlpha = ga * lh;
     buildings.forEach(b => {
       ctx.drawImage(img, b.x, groundY - b.h, b.w, b.h);
     });
+    ctx.globalAlpha = ga;
   }
 
   // ---------- Distant sketch-skyline layer — sits behind the power lines,
@@ -2314,6 +2318,7 @@
     const dt = Math.min(0.05, Math.max(0, t - (l2BoatT || t))); l2BoatT = t;
     const e = l2Ext(), x0 = -e.l, x1 = W + e.r;
     if (typeof bossActive !== "undefined" && bossActive) { l2Boats.length = 0; l2Puffs.length = 0; l2BoatNext = t + 4; l2BoatDock = dockX; return; }
+    if (typeof levelEndActive !== "undefined" && levelEndActive) { l2Puffs.length = 0; l2BoatNext = t + 6; l2BoatDock = dockX; return; }   // landing: only the blimp moves
     let scroll = 0;
     if (l2BoatDock !== null) { scroll = dockX - l2BoatDock; if (scroll < -50 || scroll > 200) scroll = 0; }
     l2BoatDock = dockX;
@@ -2826,6 +2831,11 @@
 
   function updateBirdFlocks(dt) {
     if (window.__airborneRuffStage === "intro") return;
+    // no decorative flocks around boss fights, bonus rounds, landings, or once boss 2 has fallen
+    const noBirds = (typeof bossActive !== "undefined" && bossActive) || (typeof bossSinking !== "undefined" && bossSinking) ||
+      (typeof bonusActive !== "undefined" && bonusActive) || (typeof bonusPending !== "undefined" && bonusPending) ||
+      (typeof levelEndActive !== "undefined" && levelEndActive) || (typeof bossesDefeatedCount !== "undefined" && bossesDefeatedCount >= 2);
+    if (noBirds) { if (birdFlocks.length) birdFlocks = []; birdFlockTimer = Math.max(birdFlockTimer, 20); return; }
     if (worldScrollFrozen()) return;
     birdFlockTimer -= dt;
     if (birdFlockTimer <= 0) {
