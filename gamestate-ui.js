@@ -584,7 +584,7 @@
     bonusActive = false;
     bonusType = null;
     bonusPending = false;
-    if (typeof levelEndActive !== "undefined") { levelEndActive = false; levelEndPhase = null; levelEndPad = null; levelEndFade = 0; }
+    window.__airborneLandScrollMul = 1; if (typeof levelEndActive !== "undefined") { levelEndActive = false; levelEndPhase = null; levelEndPad = null; levelEndFade = 0; }
     if (typeof stopWorldWindDown === "function") stopWorldWindDown();
     window.__airborneWorldFrozen = false;
     if (typeof resetHudFade === "function") resetHudFade();
@@ -861,7 +861,7 @@
     comboPopups = [];
 
     // Clear any level-end / bonus leftovers so a checkpoint resume is a clean level
-    if (typeof levelEndActive !== "undefined") { levelEndActive = false; levelEndPhase = null; levelEndPad = null; levelEndFade = 0; }
+    window.__airborneLandScrollMul = 1; if (typeof levelEndActive !== "undefined") { levelEndActive = false; levelEndPhase = null; levelEndPad = null; levelEndFade = 0; }
     window.__airborneLevelEndMapShown = false;
     try { if (window.__airbornePlatformReset) window.__airbornePlatformReset(); } catch (ePl) {}
     // Clear boss state

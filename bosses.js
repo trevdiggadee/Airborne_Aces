@@ -8866,6 +8866,7 @@ function drawFireballs() {
       return;
     }
     levelEndActive = true;
+    window.__airborneLandScrollMul = 1;
     levelEndPhase = "windDown";
     // Clear weather leftovers so level-3 rain/clouds don't show on the pad
     if (typeof stormCloudsDecorative !== "undefined") stormCloudsDecorative = [];
@@ -9068,6 +9069,7 @@ function drawFireballs() {
   }
 
   function finishLevelEndAndResume() {
+    window.__airborneLandScrollMul = 1;
     // Show world map between levels, then resume
     if (window.__airborneShowWorldMap) {
       window.__airborneShowWorldMap({
@@ -9129,7 +9131,7 @@ function drawFireballs() {
   }
 
   function updateLevelEnd(dt) {
-    if (!levelEndActive) return;
+    if (!levelEndActive) { window.__airborneLandScrollMul = 1; return; }
     levelEndTimer += dt;
 
     // Ambient steam while pad is on-screen
@@ -9189,11 +9191,21 @@ function drawFireballs() {
       levelEndPad.surfaceY = levelEndPad.y + levelEndPad.h * levelEndPad.deckFromTop;
       const deckCx = levelEndPad.x + levelEndPad.w * levelEndPad.deckCenterFrac;
 
-      // Scroll pad left until it reaches target dock position
-      if (levelEndPad.x > levelEndPad.targetX) {
-        levelEndPad.x -= (typeof obstacleSpeedScale === "function" ? 48 * obstacleSpeedScale() : 48) * dt; // ground speed — same as the world scroll
-        if (levelEndPad.x <= levelEndPad.targetX) {
-          levelEndPad.x = levelEndPad.targetX;
+      // The whole world (ground, parallax, pad) eases to a stop as the pad arrives — the blimp "comes in" rather than the level just scrolling on
+      if (levelEndPad.landP === undefined) {
+        levelEndPad.landP = 0; levelEndPad.startX = levelEndPad.x;
+        const D = Math.max(1, levelEndPad.x - levelEndPad.targetX);
+        const base0 = 48 * (typeof obstacleSpeedScale === "function" ? obstacleSpeedScale() : 1);
+        levelEndPad.landT = Math.max(4.5, Math.min(9, D / (0.882 * Math.max(10, base0))));
+      }
+      if (levelEndPad.landP < 1) {
+        const pp = levelEndPad.landP = Math.min(1, levelEndPad.landP + dt / levelEndPad.landT);
+        const D = levelEndPad.startX - levelEndPad.targetX;
+        const Fp = pp - pp * pp / 2 + 1.2 * (1 / Math.PI - (1 - pp) * Math.cos(Math.PI * pp) / Math.PI - Math.sin(Math.PI * pp) / (Math.PI * Math.PI));
+        levelEndPad.x = levelEndPad.startX - D * Fp / 0.882;
+        window.__airborneLandScrollMul = Math.max(0, (1 - pp) * (1 + 1.2 * Math.sin(Math.PI * pp)));
+        if (pp >= 1) {
+          levelEndPad.x = levelEndPad.targetX; window.__airborneLandScrollMul = 0;
           if (levelEndPhase === "approach") {
             levelEndPhase = "landing";
             levelEndTimer = 0;
@@ -9201,6 +9213,15 @@ function drawFireballs() {
             if (typeof sfxLandPrompt === "function") sfxLandPrompt();
           }
         }
+      }
+
+      // Glide slope: the blimp is eased down a shallow slope toward the deck as the pad draws near, nose pitching with the descent
+      if (levelEndPhase === "approach" || (levelEndPhase === "landing" && Math.abs(player.x - deckCx) >= levelEndPad.w * 0.3)) {
+        const restYs = levelEndPad.surfaceY - player.h * 0.42;
+        const slopeY = Math.max(H * 0.2, restYs - Math.max(0, deckCx - player.x) * 0.3);
+        const wantVy = Math.max(-60, Math.min(70, (slopeY - player.y) * 0.9));
+        player.vy += (wantVy - player.vy) * Math.min(1, dt * 1.8);
+        player.rotation += (Math.max(-0.12, Math.min(0.14, player.vy / 420)) - player.rotation) * Math.min(1, dt * 3);
       }
 
       // Move the blimp forward toward the landing X (unlock from fixed x)
@@ -10177,16 +10198,27 @@ function drawFireballs() {
     if (gameplayScore < mid || gameplayScore >= nb.threshold - 8) return;
     if (checkpointReached >= nb.num && checkpointGameplayScore >= mid) return; // already saved past the halfway mark
     ckRingSpawnedNum = nb.num;
-    spawnCheckpointPickup(nb.num);
-    const cp = checkpointPickup;
-    cp.kind = "ring";
-    cp.x = W + 120;
-    cp.y = H * (0.3 + Math.random() * 0.25);
-    cp.r = Math.min(H * 0.17, 90);   // half-height of the gate
-    cp.vx = Math.max(150, (typeof obstacleSpeed !== "undefined" ? obstacleSpeed : 199) * 0.9);
+    // a genuine training-level ring: same size, scroll, funnel/centre assist, rim bounce and pass glow
+    {
+      const rr = Math.min(48, W * 0.115), cyy = H * (0.3 + Math.random() * 0.3);
+      const ring = { type: "gold_ring", x: W + rr * 2, y: cyy - rr, w: rr * 2, h: rr * 2, r: rr, vx: 0, scored: false, collected: false,
+        spin: Math.random() * 6.28, bobPhase: Math.random() * 6.28, bobAmount: 6, speedMult: 0.993, isRing: true, isCheckpointRing: true,
+        checkpointNum: nb.num, ringNum: 0, animFrame: 0, animT: 0 };
+      if (window.__airborneObstacles) window.__airborneObstacles.push(ring);
+    }
     showBanner("CHECKPOINT AHEAD", 1800, "checkpoint");
   }
 
+  window.__airborneCheckpointPass = function (o) {
+    o.streakMult = 1;
+    checkpointReached = Math.max(checkpointReached, o.checkpointNum || 0);
+    checkpointScore = score;
+    checkpointGameplayScore = gameplayScore;
+    checkpointBossesDefeated = bossesDefeatedCount;
+    try { sfxPowerup(); } catch (e) {}
+    showBanner("CHECKPOINT SAVED!", 2000, "checkpoint");
+    if (health < MAX_HEALTH + MAX_BONUS_HEARTS) { health = Math.min(MAX_HEALTH + MAX_BONUS_HEARTS, health + 1); updateHealthDisplay(); }
+  };
   function updateCheckpointPickup(dt) {
     for (let i = checkpointBursts.length - 1; i >= 0; i--) {
       checkpointBursts[i].age += dt;

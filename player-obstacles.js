@@ -2315,6 +2315,9 @@ window.__airborneRingDebug = false;
                 var quality = 1 - Math.min(1, absDy / Math.max(8, g.holeH));
                 o.passQuality = quality;
                 var streakInfo = null;
+                if (o.isCheckpointRing) {
+                  try { if (typeof window.__airborneCheckpointPass === "function") window.__airborneCheckpointPass(o); } catch (eCk) {}
+                } else {
                 try {
                   if (typeof window.__airborneOnRingCollect === "function") {
                     streakInfo = window.__airborneOnRingCollect(quality);
@@ -2332,6 +2335,7 @@ window.__airborneRingDebug = false;
                 try {
                   if (window.__airborneRuffOnEvent) window.__airborneRuffOnEvent("ring");
                 } catch (e2) {}
+                }
               }
             } else if (inRimBand && o.rimCool <= 0) {
               // Soft trampoline off metal — only if clearly outside hole
@@ -2589,7 +2593,7 @@ window.__airborneRingDebug = false;
       } else if (o.shockFall || o.electrified) {
         drop = !(o.y < (H || 700) + 100 && o.x > -80 && o.x < (W || 400) + 80);
       } else if ((o.isRing || o.type === "gold_ring") && o.x < -120) {
-        if (!o.passed && !o._missed) {
+        if (!o.passed && !o._missed && !o.isCheckpointRing) {
           o._missed = true;
           try { if (window.__airborneOnRingMiss) window.__airborneOnRingMiss(); } catch (eM) {}
         }

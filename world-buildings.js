@@ -140,7 +140,8 @@
     const base = (typeof obstacleSpeed === "number" && isFinite(obstacleSpeed) && obstacleSpeed > 0)
       ? obstacleSpeed
       : 220;
-    return base / 220;
+    const lm = (typeof window.__airborneLandScrollMul === "number") ? window.__airborneLandScrollMul : 1;   // eases the whole world to a stop for the landing
+    return base / 220 * lm;
   }
 
   // shared ground line — raised up from the very bottom edge so there's room
@@ -2291,7 +2292,7 @@
     ctx.stroke();
   }
   // ---- harbour traffic + dockside props (level2_boats.webp atlas) ----
-  const BOATS = {"tug0":[0,0,241,174],"tug1":[243,0,240,172],"tug2":[485,0,238,171],"tug3":[725,0,242,170],"barge0":[969,0,333,95],"barge1":[0,176,341,102],"barge2":[343,176,322,98],"ferry0":[667,176,247,143],"ferry1":[916,176,240,145],"ferry2":[1158,176,239,145],"ferry3":[0,323,248,144],"cargo0":[250,323,239,167],"cargo1":[491,323,235,165],"cargo2":[728,323,235,164],"cargo3":[965,323,236,167],"row0":[1203,323,228,63],"row1":[0,492,222,64],"row2":[224,492,224,63],"row3":[450,492,232,63],"speed0":[684,492,256,91],"speed1":[942,492,251,91],"speed2":[1195,492,245,89],"speed3":[0,585,233,88],"lamp":[235,585,94,186],"post":[331,585,58,159],"fence":[391,585,342,143],"buoy":[735,585,79,155],"crates":[816,585,131,129]};
+  const BOATS = {"tug0":[0,0,241,174],"tug1":[243,0,240,172],"tug2":[485,0,238,171],"tug3":[725,0,242,170],"barge0":[969,0,333,95],"barge1":[0,176,341,102],"barge2":[343,176,322,98],"ferry0":[667,176,247,143],"ferry1":[916,176,240,145],"ferry2":[1158,176,239,145],"ferry3":[0,323,248,144],"cargo0":[250,323,239,167],"cargo1":[491,323,235,165],"cargo2":[728,323,235,164],"cargo3":[965,323,236,167],"row0":[1203,323,228,63],"row1":[0,492,222,64],"row2":[224,492,224,63],"row3":[450,492,232,63],"speed0":[684,492,256,91],"speed1":[942,492,251,91],"speed2":[1195,492,245,89],"speed3":[0,585,233,88],"lamp":[235,585,94,186],"post":[331,585,58,159],"fence":[391,585,342,143],"crates":[735,585,131,129]};
   // kind: [names, speed (px/s relative to water), smoke x-fraction (or 0), weight]
   const BOAT_KINDS = [
     { n: ["tug0","tug1","tug2","tug3"], v: 26, sm: 0.5, w: 3 },
@@ -2299,10 +2300,10 @@
     { n: ["ferry0","ferry1","ferry2","ferry3"], v: 22, sm: 0.5, w: 3 },
     { n: ["cargo0","cargo1","cargo2","cargo3"], v: 18, sm: 0.6, w: 2 },
     { n: ["row0","row1","row2","row3"], v: 7, sm: 0, w: 2 },
-    { n: ["speed0","speed1","speed2","speed3"], v: 70, sm: 0, w: 2 }
+    { n: ["speed0","speed1","speed2","speed3"], v: 48, sm: 0, w: 2 }
   ];
   const l2Boats = [], l2Puffs = []; let l2BoatT = 0, l2BoatDock = null, l2BoatNext = 0;
-  function l2BoatScale() { return H * 0.0007; }
+  function l2BoatScale() { return H * 0.00063; }   // 10% smaller
   function l2PickBoat() {
     let tot = 0; for (const k of BOAT_KINDS) tot += k.w;
     let r = Math.random() * tot, kind = BOAT_KINDS[0];
@@ -2312,6 +2313,7 @@
   function l2BoatTick(t, top) {
     const dt = Math.min(0.05, Math.max(0, t - (l2BoatT || t))); l2BoatT = t;
     const e = l2Ext(), x0 = -e.l, x1 = W + e.r;
+    if (typeof bossActive !== "undefined" && bossActive) { l2Boats.length = 0; l2Puffs.length = 0; l2BoatNext = t + 4; l2BoatDock = dockX; return; }
     let scroll = 0;
     if (l2BoatDock !== null) { scroll = dockX - l2BoatDock; if (scroll < -50 || scroll > 200) scroll = 0; }
     l2BoatDock = dockX;
@@ -2335,7 +2337,7 @@
         b.sm -= dt;
         if (b.sm <= 0) {
           b.sm = 0.28 + Math.random() * 0.2;
-          const fx = b.dir > 0 ? b.kind.sm : 1 - b.kind.sm;
+          const fx = b.dir > 0 ? 1 - b.kind.sm : b.kind.sm;
           l2Puffs.push({ x: b.x - b.w / 2 + b.w * fx, y: 0, bo: b, dy: 0, r: 3 + Math.random() * 2, a: 0.5, vx: -b.dir * (8 + Math.random() * 6) - 6 });
         }
       }
@@ -2350,6 +2352,7 @@
     const img = images.l2_boats;
     if (!img || !img.naturalWidth) return;
     l2BoatTick(t, top);
+    if (typeof bossActive !== "undefined" && bossActive) return;
     const sc = l2BoatScale(), ratio = img.naturalWidth / 1500;
     for (const b of l2Boats) {
       const r = BOATS[b.name], sy = l2SurfY(b.x, t, top);
@@ -2357,7 +2360,7 @@
       b.cy = sy + Math.sin(b.ph * 1.4) * 0.8 + b.h * (b.name.indexOf('row') === 0 ? 0.3 : 0.2);   // hull sits down in the water; the water tint drawn after covers the submerged part
       b.sy = sy;
       ctx.save(); ctx.translate(b.x, b.cy); ctx.rotate(Math.atan(sl) * 0.8 + Math.sin(b.ph * 0.9) * 0.012);
-      ctx.scale(b.dir, 1);
+      ctx.scale(b.dir * (b.name.indexOf('barge') === 0 ? 1 : -1), 1);   // bow leads the way
       ctx.drawImage(img, r[0] * ratio, r[1] * ratio, r[2] * ratio, r[3] * ratio, -b.w / 2, -b.h, b.w, b.h);
       ctx.restore();
     }
@@ -2369,7 +2372,7 @@
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, by, p.r, 0, 6.2832); ctx.fill();
     }
   }
-  const DOCK_PROPS = [[0.06, "lamp"], [0.19, "crates"], [0.33, "post"], [0.46, "fence"], [0.6, "buoy"], [0.72, "lamp"], [0.83, "post"], [0.93, "crates"]];
+  const DOCK_PROPS = [[0.06, "lamp"], [0.19, "crates"], [0.33, "post"], [0.46, "fence"], [0.72, "lamp"], [0.83, "post"], [0.93, "crates"]];
   function l2DrawDockProps(sw, deckY, x0) {
     const img = images.l2_boats;
     if (!img || !img.naturalWidth) return;
@@ -2378,7 +2381,18 @@
       for (const dp of DOCK_PROPS) {
         const r = BOATS[dp[1]], w = r[2] * sc, h = r[3] * sc, px = x + dp[0] * sw;
         if (px + w < -e.l || px - w > W + e.r) continue;
-        ctx.drawImage(img, r[0] * ratio, r[1] * ratio, r[2] * ratio, r[3] * ratio, Math.round(px - w / 2), Math.round(deckY - h + H * 0.004), w, h);
+        const dxp = Math.round(px - w / 2), dyp = Math.round(deckY - h + H * 0.004);
+        ctx.drawImage(img, r[0] * ratio, r[1] * ratio, r[2] * ratio, r[3] * ratio, dxp, dyp, w, h);
+        if (dp[1] === "lamp") {   // blinking lantern glow
+          const tt = performance.now() / 1000, ph = dp[0] * 40;
+          const bl = 0.55 + 0.45 * Math.sin(tt * 3.1 + ph) * (Math.sin(tt * 0.9 + ph) > -0.6 ? 1 : 0.2) + (Math.random() < 0.02 ? 0.15 : 0);
+          const lx = dxp + w * 0.81, ly = dyp + h * 0.35, gr = h * 0.5 * (0.8 + 0.25 * bl);
+          ctx.save(); ctx.globalCompositeOperation = "lighter";
+          const lg = ctx.createRadialGradient(lx, ly, 0, lx, ly, gr);
+          lg.addColorStop(0, "rgba(255,225,140," + Math.min(0.9, 0.75 * bl).toFixed(3) + ")"); lg.addColorStop(0.35, "rgba(255,170,60," + (0.3 * bl).toFixed(3) + ")"); lg.addColorStop(1, "rgba(255,140,30,0)");
+          ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(lx, ly, gr, 0, 6.2832); ctx.fill();
+          ctx.restore();
+        }
       }
     }
   }
