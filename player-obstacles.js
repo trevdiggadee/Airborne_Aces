@@ -77,8 +77,8 @@ window.__airborneRingDebug = false;
       try { if (window.__airbornePlatformTap) window.__airbornePlatformTap(); } catch (eP) {}
       return;
     }
-    // Don't flap-react while docked on the pad
-    if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) return;
+    // Don't flap-react while docked on the pad, or during the scripted dock landing
+    if (typeof levelEndPad !== "undefined" && levelEndPad && (levelEndPad.docked || levelEndPad.auto)) return;
     // Airfield runway / post-land taxi: never flap (prevents jump)
     var afp = window.__airborneAirfieldPhase;
     if (window.__airborneAirfield &&
@@ -137,6 +137,12 @@ window.__airborneRingDebug = false;
       return;
     }
 
+    // scripted dock landing owns the blimp's position
+    if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.auto) {
+      player.vy = 0;
+      updateBlimpPersonality(dt);
+      return;
+    }
     // Level 2 launch platform: scripted take-off owns the blimp's position
     if (window.__airbornePlatformTakeoffActive) {
       player.vy = 0;
@@ -1041,6 +1047,15 @@ window.__airborneRingDebug = false;
     })();
   }
 
+  // Smooth coin spin: 24-frame sheet played at a steady rate with the next frame cross-faded in
+  window.__airborneCoinBlit = function (c2, sheet, phase, dx, dy, size) {
+    var fw = sheet.height || sheet.naturalHeight || 128, nF = Math.max(1, Math.round((sheet.width || sheet.naturalWidth) / fw));
+    var tf = performance.now() / 1000 * 22 + (phase || 0) * 3, i = Math.floor(tf), f = tf - i;
+    i = ((i % nF) + nF) % nF; var j = (i + 1) % nF;
+    c2.drawImage(sheet, i * fw, 0, fw, fw, dx, dy, size, size);
+    if (f > 0.03) { var ga = c2.globalAlpha; c2.globalAlpha = ga * f; c2.drawImage(sheet, j * fw, 0, fw, fw, dx, dy, size, size); c2.globalAlpha = ga; }
+  };
+
   function drawHitCoins() {
     var list = window.__airborneHitCoins;
     if (!list || !list.length || typeof ctx === "undefined") return;
@@ -1071,7 +1086,7 @@ window.__airborneRingDebug = false;
       ctx.globalCompositeOperation = "source-over";
       ctx.globalAlpha = fade;
       if (sheetReady) {
-        ctx.drawImage(sheet, frame * fw, 0, fw, fw, -size / 2, -size / 2, size, size);
+        window.__airborneCoinBlit(ctx, sheet, c.bob, -size / 2, -size / 2, size);
       } else {
         var squash = 0.55 + 0.45 * Math.abs(Math.cos(c.spin));
         ctx.scale(squash, 1);

@@ -3039,7 +3039,7 @@
       ctx.globalCompositeOperation = "source-over";
       ctx.globalAlpha = 1;
       if (sheetReady) {
-        ctx.drawImage(sheet, frame * fw, 0, fw, fw, -size / 2, -size / 2, size, size);
+        if (window.__airborneCoinBlit) window.__airborneCoinBlit(ctx, sheet, c.bob, -size / 2, -size / 2, size); else ctx.drawImage(sheet, 0, 0, fw, fw, -size / 2, -size / 2, size, size);
       } else {
         // fallback gold disc + star
         const squash = 0.55 + 0.45 * Math.abs(Math.cos(c.spin));

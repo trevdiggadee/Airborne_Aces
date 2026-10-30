@@ -8897,38 +8897,43 @@ function drawFireballs() {
   }
   function dockLandY() { return l2DeckY() - player.h * 0.42; }
   function updateDockLanding(dt) {
+    // Fully scripted: the world is standing still, the blimp banks in on a curved glide path, flares, touches
+    // down on the lit landing zone of the dock with a little bounce, then the celebration starts.
     const pad = levelEndPad, deckY = l2DeckY(), landY = dockLandY();
     pad.surfaceY = deckY;
+    window.__airborneLandScrollMul = 0; window.__airborneLandHide = 0;
+    pad.fade = Math.min(1, (pad.fade || 0) + dt / 1.5);
     if (levelEndPhase === "approach") {
-      window.__airborneLandScrollMul = 1; window.__airborneLandHide = 0;
-      if (pad.t0 === undefined) { pad.t0 = 0; pad.y0 = player.y; showBanner("COME IN FOR A LANDING!", 2600, "defeat"); if (typeof sfxPadApproach === "function") sfxPadApproach(); }
+      if (pad.t0 === undefined) {
+        pad.t0 = 0; pad.px0 = player.x; pad.py0 = Math.min(player.y, landY - H * 0.12);
+        pad.tx = Math.max(W * 0.5, Math.min(W * 0.66, W - 120));
+        showBanner("COMING IN FOR A LANDING", 2600, "defeat"); if (typeof sfxPadApproach === "function") sfxPadApproach();
+      }
       pad.t0 += dt;
-      player.x += (W * 0.25 - player.x) * Math.min(1, dt * 2.5);
-      const u = Math.min(1, pad.t0 / 5), e = u * u * (3 - 2 * u);
-      const targetY = pad.y0 + (landY - pad.y0) * e;
-      const want = Math.max(-110, Math.min(110, (targetY - player.y) * 1.5));
-      player.vy += (want - player.vy) * Math.min(1, dt * 3);
-      if (pad.t0 > 6) player.vy += 160 * dt;
-      player.rotation += (Math.max(-0.25, Math.min(0.28, player.vy / 500)) - player.rotation) * Math.min(1, dt * 4);
-      if (player.y > landY) { player.y = landY; if (player.vy > 0) player.vy = 0; }
-      if ((pad.t0 > 1.5 && player.y >= landY - 5) || pad.t0 > 9) {
-        levelEndPhase = "skid"; levelEndTimer = 0;
-        player.y = landY; player.vy = 0;
-        try { if (typeof sfxAirfieldLand === "function") sfxAirfieldLand(); if (typeof sfxAirfieldScreech === "function") sfxAirfieldScreech(); } catch (e) {}
-        for (let i = 0; i < 6; i++) spawnLandingDust(player.x + (Math.random() - 0.5) * 50, landY + player.h * 0.42 + Math.random() * 6);
-        triggerScreenShake(3, 220);
+      const T = 5.2, u = Math.min(1, pad.t0 / T);
+      const ex = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;        // ease in-out along the way in
+      const ey = 1 - Math.pow(1 - u, 2.2);                                    // descent flattens into the flare
+      const nx = pad.px0 + (pad.tx - pad.px0) * ex, ny = pad.py0 + (landY - pad.py0) * ey;
+      const vx = (nx - player.x) / Math.max(dt, 0.001), vy = (ny - player.y) / Math.max(dt, 0.001);
+      player.x = nx; player.y = ny; player.vy = 0;
+      const pitch = Math.max(-0.2, Math.min(0.22, vy / Math.max(60, Math.abs(vx) + 60) * 0.55)) - (u > 0.82 ? 0.1 * Math.min(1, (u - 0.82) / 0.1) : 0);   // nose down on the glide, nose up for the flare
+      player.rotation += (pitch - player.rotation) * Math.min(1, dt * 6);
+      if (Math.random() < dt * 14) levelEndParticles.push({ kind: "steam", x: player.x - player.w * 0.35, y: player.y + player.h * 0.1, vx: -30 - Math.random() * 40, vy: -5 + Math.random() * 12, life: 0.5 + Math.random() * 0.4, age: 0, r: 3 + Math.random() * 3, alpha: 0.22 });
+      if (u >= 1) {
+        levelEndPhase = "landing"; levelEndTimer = 0; pad.tdx = player.x;
+        triggerScreenShake(4, 260);
+        try { if (typeof sfxAirfieldLand === "function") sfxAirfieldLand(); else if (typeof sfxTouchdown === "function") sfxTouchdown(); } catch (e) {}
+        for (let i = 0; i < 6; i++) spawnLandingDust(player.x + (Math.random() - 0.5) * 60, deckY + 2 + Math.random() * 4);
       }
       return;
     }
-    if (levelEndPhase === "skid") {
-      const T = 2.875, prog = Math.min(1, levelEndTimer / T), mul = Math.pow(1 - prog, 2.2);
-      window.__airborneLandScrollMul = mul; window.__airborneLandHide = 0;
-      try { emitSkidFx(240 * mul, 240, dt); updateRollSmoke(dt); } catch (e) {}
-      player.x += (W * 0.25 - player.x) * Math.min(1, dt * 6);
-      player.y += (landY - player.y) * Math.min(1, dt * 14); player.vy = 0;
-      player.rotation = (typeof skidRotation === "function") ? skidRotation(levelEndTimer, prog) : 0;
-      if (prog >= 1) {
-        window.__airborneLandScrollMul = 0; player.rotation = 0;
+    if (levelEndPhase === "landing") {                                          // touchdown bounce, then settle
+      const t = levelEndTimer;
+      player.x = pad.tdx; player.vy = 0;
+      player.y = landY - 14 * Math.exp(-t * 5.5) * Math.abs(Math.sin(t * 13));
+      player.rotation = 0.05 * Math.exp(-t * 4) * Math.sin(t * 18);
+      if (t > 0.8) {
+        player.y = landY; player.rotation = 0;
         pad.w = 100; pad.x = player.x - 50; pad.y = deckY; pad.h = 0; pad.deckCenterFrac = 0.5; pad.surfaceY = deckY;
         completeLevelLanding();
       }
@@ -8937,7 +8942,7 @@ function drawFireballs() {
 
   function spawnLandingPad() {
     if (isDockLanding()) {   // the dock itself is the runway: a hidden stand-in pad carries the geometry for the celebration
-      levelEndPad = { dock: true, x: player.x - 50, y: l2DeckY(), w: 100, h: 0, surfaceY: l2DeckY(), deckFromTop: 0, deckCenterFrac: 0.5, targetX: 0, docked: false, glowPhase: 0 };
+      levelEndPad = { dock: true, auto: true, x: player.x - 50, y: l2DeckY(), w: 100, h: 0, surfaceY: l2DeckY(), deckFromTop: 0, deckCenterFrac: 0.5, targetX: 0, docked: false, glowPhase: 0 };
       return;
     }
     const img = images.landing_pad;
@@ -9222,10 +9227,10 @@ function drawFireballs() {
     if (levelEndPhase === "windDown") {
       // The world eases to a halt and the buildings fade out; from here on the blimp is the only thing that moves
       const k = Math.min(1, levelEndTimer / 1.4);
-      window.__airborneLandScrollMul = isDockLanding() ? 1 : (1 - k) * (1 - k);   // dock level keeps rolling: the blimp is about to land on it
+      window.__airborneLandScrollMul = (1 - k) * (1 - k);
       window.__airborneLandHide = 1 - k;
       if (levelEndTimer >= 1.4) {
-        window.__airborneLandScrollMul = isDockLanding() ? 1 : 0; window.__airborneLandHide = 0;
+        window.__airborneLandScrollMul = 0; window.__airborneLandHide = 0;
         levelEndPhase = "approach";
         levelEndTimer = 0;
         spawnLandingPad();
@@ -9363,6 +9368,23 @@ function drawFireballs() {
   function drawLevelEnd() {
     if (!levelEndActive) return;
 
+    // Dock landing zone: a glowing landing circle + blinking runway-style lights on the deck
+    if (levelEndPad && levelEndPad.dock && levelEndPad.tx !== undefined || (levelEndPad && levelEndPad.dock && levelEndPhase === "approach")) {
+      const p = levelEndPad, tx = (p.tdx !== undefined ? p.tdx : (p.tx !== undefined ? p.tx : W * 0.6)), dy = l2DeckY(), fa = Math.min(1, p.fade || 0), tt = performance.now() / 1000;
+      ctx.save(); ctx.globalAlpha = fa;
+      ctx.globalCompositeOperation = "lighter";
+      const pulse = 0.65 + 0.35 * Math.sin(tt * 4);
+      const gg = ctx.createRadialGradient(tx, dy, 0, tx, dy, 90);
+      gg.addColorStop(0, "rgba(255,220,130," + (0.45 * pulse).toFixed(3) + ")"); gg.addColorStop(1, "rgba(255,180,60,0)");
+      ctx.fillStyle = gg; ctx.beginPath(); ctx.ellipse(tx, dy, 90, 22, 0, 0, 6.2832); ctx.fill();
+      for (let i = -4; i <= 4; i++) {
+        const lx = tx + i * 26, on = (Math.floor(tt * 3 + Math.abs(i) * 0.6) % 2 === 0) ? 1 : 0.25;
+        const lg = ctx.createRadialGradient(lx, dy - 2, 0, lx, dy - 2, 11);
+        lg.addColorStop(0, "rgba(255,240,170," + (0.95 * on).toFixed(3) + ")"); lg.addColorStop(1, "rgba(255,160,40,0)");
+        ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(lx, dy - 2, 11, 0, 6.2832); ctx.fill();
+      }
+      ctx.restore();
+    }
     // Landing pad (the dock level lands on the dock itself)
     if (levelEndPad && !levelEndPad.dock) {
       const img = images.landing_pad;
@@ -9763,8 +9785,7 @@ function drawFireballs() {
   function drawCoinAsset(cx, cy, size, tintIdx, phase, fixedFrame) {
     const sh = coinSheetFor(tintIdx);
     if (!sh) return false;
-    const fw = sh.height || 128, nF = Math.max(1, Math.round(sh.width / fw));
-    const fr = (fixedFrame !== undefined) ? fixedFrame : Math.floor((performance.now() / 1000 * 18 + (phase || 0) * 6)) % nF;
+    const fw = sh.height || 128;
     const gl = COIN_GLOWS[tintIdx % COIN_GLOWS.length];
     ctx.save(); ctx.translate(cx, cy);
     ctx.globalCompositeOperation = "lighter";
@@ -9772,7 +9793,7 @@ function drawFireballs() {
     g.addColorStop(0, "rgba(" + gl + ",0.5)"); g.addColorStop(1, "rgba(" + gl + ",0)");
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, size * 0.95, 0, 6.2832); ctx.fill();
     ctx.globalCompositeOperation = "source-over";
-    ctx.drawImage(sh, fr * fw, 0, fw, fw, -size / 2, -size / 2, size, size);
+    if (window.__airborneCoinBlit) window.__airborneCoinBlit(ctx, sh, phase, -size / 2, -size / 2, size); else ctx.drawImage(sh, 0, 0, fw, fw, -size / 2, -size / 2, size, size);
     ctx.restore();
     return true;
   }
