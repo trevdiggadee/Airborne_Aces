@@ -1036,7 +1036,7 @@ window.__airborneRingDebug = false;
   if (!window.__airborneCoinSheet) {
     window.__airborneCoinSheet = (function () {
       var im = new Image();
-      im.src = "coin_star_sheet.png?v=ruff298";
+      im.src = "coin_sheet24.png?v=1";
       return im;
     })();
   }
@@ -1053,7 +1053,7 @@ window.__airborneRingDebug = false;
       var fade = c.y > (typeof H !== "undefined" ? H : 600) - 40
         ? Math.max(0.15, 1 - (c.y - ((typeof H !== "undefined" ? H : 600) - 40)) / 80)
         : 1;
-      var frame = 0; // single static image, no animation
+      var frame = Math.floor(performance.now() / 1000 * 18 + (c.bob || 0) * 3) % Math.max(1, Math.round((sheet && sheet.naturalWidth || 0) / fw));   // 24-frame spin
       var size = (c.r || 12) * 2.4;
       ctx.save();
       ctx.translate(c.x, by);
@@ -2138,7 +2138,7 @@ window.__airborneRingDebug = false;
     try { updateFirePower(dt); } catch (e) {}
     try { checkCampaignBossGate(); } catch (eBg) { console.warn("boss gate", eBg); }
     try { updateHitCoins(dt); } catch (e) {}
-    if (!bossActive && !bonusActive && !bonusPending && !(typeof isLevelEndActive === "function" && isLevelEndActive())) {
+    if (!bossActive && !bonusActive && !bonusPending && !(typeof bossSinking !== "undefined" && bossSinking) && !(typeof isLevelEndActive === "function" && isLevelEndActive())) {
       spawnTimer += dt * ((window.__airborneAirfield || window.__airborneTrainingFlight) ? 1 : 1.25); // campaign: +25% birds/obstacles
       if (spawnTimer >= spawnInterval) {
         spawnTimer = 0;

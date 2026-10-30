@@ -1265,7 +1265,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
   function spawnPowerup() {
     const cfg = bossConfig(bossNumber);
     powerup = {
-      x: W + 60,
+      x: W + 60 + Math.max((window.__airborneCamExt && window.__airborneCamExt.r) || 0, W * 0.2),   // enters from the edge of the pulled-back view
       y: H * 0.1 + Math.random() * H * 0.14,
       r: Math.min(18, W * 0.045),
       bobPhase: Math.random() * Math.PI * 2,
@@ -1282,7 +1282,8 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     const alreadyHasThisBoss = cfg && cfg.powerupKind === "blue" ? hasDualFire
       : cfg && cfg.powerupKind === "arcbomb" ? hasArcBomb
       : hasFirepower;
-    if (boss && boss.variant === 2 && !boss.arrived) return;   // battleship: the weapon pick-up floats in once the ship has arrived
+    // battleship: the weapon pick-up floats in the moment the camera starts pulling back
+    if (boss && boss.variant === 2 && boss.kind === "rocket" && !(window.__airborneShipZoom && window.__airborneShipZoom())) return;
     if (!powerup && !alreadyHasThisBoss) {
       powerupRespawnTimer -= dt;
       if (powerupRespawnTimer <= 0) {

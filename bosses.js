@@ -8890,7 +8890,56 @@ function drawFireballs() {
     if (typeof sfxCityClear === "function") sfxCityClear();
   }
 
+  // Level 2 (dock) landing mimics the training-level landing: the blimp is brought down onto the dock deck,
+  // touches down, skids while the ground scroll decelerates to a stop, then the celebration starts.
+  function isDockLanding() {
+    return typeof window.__airborneL2On === "function" && window.__airborneL2On() && typeof l2DeckY === "function";
+  }
+  function dockLandY() { return l2DeckY() - player.h * 0.42; }
+  function updateDockLanding(dt) {
+    const pad = levelEndPad, deckY = l2DeckY(), landY = dockLandY();
+    pad.surfaceY = deckY;
+    if (levelEndPhase === "approach") {
+      window.__airborneLandScrollMul = 1; window.__airborneLandHide = 0;
+      if (pad.t0 === undefined) { pad.t0 = 0; pad.y0 = player.y; showBanner("COME IN FOR A LANDING!", 2600, "defeat"); if (typeof sfxPadApproach === "function") sfxPadApproach(); }
+      pad.t0 += dt;
+      player.x += (W * 0.25 - player.x) * Math.min(1, dt * 2.5);
+      const u = Math.min(1, pad.t0 / 5), e = u * u * (3 - 2 * u);
+      const targetY = pad.y0 + (landY - pad.y0) * e;
+      const want = Math.max(-110, Math.min(110, (targetY - player.y) * 1.5));
+      player.vy += (want - player.vy) * Math.min(1, dt * 3);
+      if (pad.t0 > 6) player.vy += 160 * dt;
+      player.rotation += (Math.max(-0.25, Math.min(0.28, player.vy / 500)) - player.rotation) * Math.min(1, dt * 4);
+      if (player.y > landY) { player.y = landY; if (player.vy > 0) player.vy = 0; }
+      if ((pad.t0 > 1.5 && player.y >= landY - 5) || pad.t0 > 9) {
+        levelEndPhase = "skid"; levelEndTimer = 0;
+        player.y = landY; player.vy = 0;
+        try { if (typeof sfxAirfieldLand === "function") sfxAirfieldLand(); if (typeof sfxAirfieldScreech === "function") sfxAirfieldScreech(); } catch (e) {}
+        for (let i = 0; i < 6; i++) spawnLandingDust(player.x + (Math.random() - 0.5) * 50, landY + player.h * 0.42 + Math.random() * 6);
+        triggerScreenShake(3, 220);
+      }
+      return;
+    }
+    if (levelEndPhase === "skid") {
+      const T = 2.875, prog = Math.min(1, levelEndTimer / T), mul = Math.pow(1 - prog, 2.2);
+      window.__airborneLandScrollMul = mul; window.__airborneLandHide = 0;
+      try { emitSkidFx(240 * mul, 240, dt); updateRollSmoke(dt); } catch (e) {}
+      player.x += (W * 0.25 - player.x) * Math.min(1, dt * 6);
+      player.y += (landY - player.y) * Math.min(1, dt * 14); player.vy = 0;
+      player.rotation = (typeof skidRotation === "function") ? skidRotation(levelEndTimer, prog) : 0;
+      if (prog >= 1) {
+        window.__airborneLandScrollMul = 0; player.rotation = 0;
+        pad.w = 100; pad.x = player.x - 50; pad.y = deckY; pad.h = 0; pad.deckCenterFrac = 0.5; pad.surfaceY = deckY;
+        completeLevelLanding();
+      }
+    }
+  }
+
   function spawnLandingPad() {
+    if (isDockLanding()) {   // the dock itself is the runway: a hidden stand-in pad carries the geometry for the celebration
+      levelEndPad = { dock: true, x: player.x - 50, y: l2DeckY(), w: 100, h: 0, surfaceY: l2DeckY(), deckFromTop: 0, deckCenterFrac: 0.5, targetX: 0, docked: false, glowPhase: 0 };
+      return;
+    }
     const img = images.landing_pad;
     const aspect = (img && img.naturalWidth && img.naturalHeight)
       ? img.naturalWidth / img.naturalHeight : 0.7;
@@ -9135,7 +9184,7 @@ function drawFireballs() {
     levelEndTimer += dt;
 
     // Ambient steam while pad is on-screen
-    if (levelEndPad && (levelEndPhase === "approach" || levelEndPhase === "landing" || levelEndPhase === "victory" || levelEndPhase === "stats")) {
+    if (levelEndPad && !levelEndPad.dock && (levelEndPhase === "approach" || levelEndPhase === "landing" || levelEndPhase === "victory" || levelEndPhase === "stats")) {
       spawnPadSteam(levelEndPad, dt);
     }
 
@@ -9173,19 +9222,22 @@ function drawFireballs() {
     if (levelEndPhase === "windDown") {
       // The world eases to a halt and the buildings fade out; from here on the blimp is the only thing that moves
       const k = Math.min(1, levelEndTimer / 1.4);
-      window.__airborneLandScrollMul = (1 - k) * (1 - k);
+      window.__airborneLandScrollMul = isDockLanding() ? 1 : (1 - k) * (1 - k);   // dock level keeps rolling: the blimp is about to land on it
       window.__airborneLandHide = 1 - k;
       if (levelEndTimer >= 1.4) {
-        window.__airborneLandScrollMul = 0; window.__airborneLandHide = 0;
+        window.__airborneLandScrollMul = isDockLanding() ? 1 : 0; window.__airborneLandHide = 0;
         levelEndPhase = "approach";
         levelEndTimer = 0;
         spawnLandingPad();
-        showBanner("LAND ON THE PAD!", 2500, "defeat");
-        if (typeof sfxPadApproach === "function") sfxPadApproach();
+        if (!(levelEndPad && levelEndPad.dock)) {
+          showBanner("LAND ON THE PAD!", 2500, "defeat");
+          if (typeof sfxPadApproach === "function") sfxPadApproach();
+        }
       }
       return;
     }
 
+    if ((levelEndPhase === "approach" || levelEndPhase === "landing" || levelEndPhase === "skid") && levelEndPad && levelEndPad.dock) { updateDockLanding(dt); return; }
     if (levelEndPhase === "approach" || levelEndPhase === "landing") {
       if (!levelEndPad) return;
       levelEndPad.glowPhase += dt * 3;
@@ -9311,8 +9363,8 @@ function drawFireballs() {
   function drawLevelEnd() {
     if (!levelEndActive) return;
 
-    // Landing pad
-    if (levelEndPad) {
+    // Landing pad (the dock level lands on the dock itself)
+    if (levelEndPad && !levelEndPad.dock) {
       const img = images.landing_pad;
       const p = levelEndPad;
       ctx.save();
@@ -9688,7 +9740,7 @@ function drawFireballs() {
     bonusTotal = count;
   }
 
-  // ---- coin asset (coin_star_sheet.png) re-coloured with a hue tint for the bonus rounds ----
+  // ---- coin asset (coin_sheet24.png) re-coloured with a hue tint for the bonus rounds ----
   const COIN_TINTS = [null, "#30c4ff", "#ff4fae", "#5dff6e", "#ff8a1e"];
   const COIN_GLOWS = ["255,200,60", "60,190,255", "255,90,180", "100,255,120", "255,140,30"];
   const _coinTinted = {};
@@ -9785,7 +9837,7 @@ function drawFireballs() {
       g.addColorStop(0, "rgba(120,220,255," + (0.55 * pul).toFixed(3) + ")"); g.addColorStop(1, "rgba(48,196,255,0)");
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c.x, cy, size * 1.5, 0, 6.2832); ctx.fill();
       ctx.restore();
-      if (!drawCoinAsset(c.x, cy, size, 1, c.phase, 0)) {   // single static frame, same as the normal coins
+      if (!drawCoinAsset(c.x, cy, size, 1, c.phase)) {
         ctx.save(); ctx.translate(c.x, cy); ctx.fillStyle = "#1f8fc4"; ctx.beginPath(); ctx.arc(0, 0, c.r * 1.3, 0, 6.2832); ctx.fill();
         ctx.fillStyle = "#7fe0ff"; ctx.beginPath(); ctx.arc(0, 0, c.r * 1.05, 0, 6.2832); ctx.fill(); ctx.restore();
       }

@@ -193,6 +193,7 @@ function triggerBoss(num) {
     setMusicTheme(THEME_BOSS);
     lastBossTriggered = num;
     bossActive = true;
+    try { powerup = null; powerupRespawnTimer = 0; } catch (ePu) {}   // the weapon pick-up comes in right as the camera pulls back
     bossNumber = num;
     obstacles = []; // clear the sky for the encounter
     // Training: no incoming/defeat banners
@@ -275,7 +276,7 @@ function triggerBoss(num) {
     hasArcBomb = false; // battleship fight: the arcing bomb-missiles are unlocked by the floating power-up (spawns once the ship has arrived)
     arcBombTimer = 0.6;
     try { if (window.__airborneResetShipFx) window.__airborneResetShipFx(); } catch (e) {}
-    powerupRespawnTimer = 1.2;
+    powerupRespawnTimer = (num === 2) ? 0 : 1.2;
   }
 
   function updateBoss(dt) {

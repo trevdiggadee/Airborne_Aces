@@ -2953,7 +2953,7 @@
   // Star-coin sprite sheet (36 frames, horizontal, bg removed)
   window.__airborneCoinSheet = window.__airborneCoinSheet || (function () {
     var im = new Image();
-    im.src = "coin_star_sheet.png?v=ruff298";
+    im.src = "coin_sheet24.png?v=1";
     return im;
   })();
   window.__airborneCoinFrame = 0;
@@ -2968,7 +2968,7 @@
       if (c.collected) return;
       const by = c.y + Math.sin(c.bob) * 5;
       // Single static frame — no animation
-      var frame = 0;
+      var frame = Math.floor(performance.now() / 1000 * 18 + (c.bob || 0) * 3) % Math.max(1, Math.round((sheet && sheet.naturalWidth || 0) / fw));   // 24-frame spin
       const size = c.r * 2.5;
       var pulse = 0.75 + 0.25 * Math.sin((c.glow || c.bob) * 1.2);
       ctx.save();
@@ -2986,6 +2986,7 @@
       ctx.beginPath();
       ctx.arc(0, 0, c.r * 2.6, 0, Math.PI * 2);
       ctx.fill();
+      if (!sheetReady) {
       // Solid opaque core
       ctx.globalAlpha = 1;
       var core = ctx.createRadialGradient(-coreR*0.15, -coreR*0.15, 0, 0, 0, coreR);
@@ -3010,6 +3011,7 @@
       ctx.beginPath();
       ctx.arc(0, 0, coreR * 1.25, 0, Math.PI * 2);
       ctx.stroke();
+      }
       // Glimmer sparkles around floating coin
       (c.sparks || []).forEach(function(sp) {
         var t = 1 - sp.age / sp.life;
