@@ -153,7 +153,72 @@
     props2Img.onerror = function () { props2Ready = false; };
     props2Img.src = "level2_props2.webp?v=ruff548";
   })();
-  function rectOf(name) { return ATLAS[name] || PROPS[name] || PROPS2[name]; }
+  // ---- REFINERY SECTION (build ruff560): from the halfway mark to the boss the colliding skyline is a stitched refinery strip
+  //      (level2_refinery.webp) plus standalone refinery pieces from the "Steam City refinery assets" sheet (level2_refinery_props.webp)
+  var RATLAS = {"r_cluster":[0,0,176,353],"r_crack":[178,0,202,373],"r_derrick":[382,0,216,364],"r_factory":[600,0,345,235],"r_sphere":[947,0,125,252],"r_tanks":[1074,0,378,311],"r_sph2":[0,375,156,157],"r_redtank":[158,375,136,147],"r_graytank":[296,375,109,138],"r_t14":[407,375,53,146],"r_t15":[462,375,89,146],"r_t16":[553,375,107,137],"r_horiz":[662,375,213,112],"r_proc1":[877,375,128,156],"r_proc2":[1007,375,118,161],"r_proc3":[1127,375,131,153],"r_hut":[1260,375,130,140],"r_brick":[1392,375,139,147],"r_lighthouse":[0,538,88,164],"r_wtower":[90,538,82,160],"r_pair":[174,538,108,159],"r_tower":[284,538,70,163],"r_redpair":[356,538,90,144],"r_pump":[448,538,213,122],"r_crane":[663,538,158,150],"r_lattice":[823,538,71,172],"d_crate":[896,538,106,53],"d_barrels":[1004,538,61,56],"d_crates":[1067,538,73,62],"d_blue":[1142,538,32,55],"d_green":[1176,538,72,47],"d_valve":[1250,538,33,44],"d_gauge1":[1285,538,36,47],"d_gauge2":[1323,538,33,62],"d_wheel":[1358,538,43,70],"d_box":[1403,538,44,78],"d_box2":[1449,538,58,60],"d_tee":[1509,538,54,37],"d_pipe":[0,712,73,16]};
+  var RTALL = ["r_cluster", "r_crack", "r_derrick", "r_tanks", "r_sphere", "r_lattice", "r_crane", "r_lighthouse", "r_wtower"];
+  var RMID = ["r_factory", "r_pair", "r_tower", "r_redpair", "r_pump", "r_proc1", "r_proc2", "r_proc3", "r_sph2", "r_redtank", "r_graytank", "r_horiz", "r_t14"];
+  var RSMALL = ["r_hut", "r_brick", "r_t15", "r_t16"];
+  var RDECOR = ["d_crate", "d_barrels", "d_crates", "d_blue", "d_green", "d_valve", "d_gauge1", "d_gauge2", "d_wheel", "d_box", "d_box2"];
+  var RFOREGROUND = ["r_proc1", "r_proc2", "r_proc3", "r_t14", "r_horiz", "r_pump"];
+  var SMOKY = { r_cluster: 1, r_factory: 1, r_hut: 1, r_brick: 1, r_sphere: 1, r_proc1: 1, r_crack: 1 };
+  var BEACONED = { r_lattice: 1, r_crane: 1, r_derrick: 1, r_lighthouse: 1, r_wtower: 1, r_crack: 1 };
+  var REF_R = 128, DECK_F = 0.775;
+  var refImg = null, refReady = false, refStripImg = null, refStripReady = false, refStripCols = 0, refStripAspect = 8.78;
+  var refPeaks = {};
+  var refMode = false, refSeq = 0, refFxP = [], refExitK = 0;
+  function findPeaks(t, rows, maxN) {
+    var n = t.length, w = Math.max(2, Math.round(n * 0.012)), out = [];
+    for (var x = w; x < n - w; x++) {
+      var v = t[x]; if (v >= rows * 0.9) continue;
+      var ok = true; for (var k = -w; k <= w; k++) if (t[x + k] < v) { ok = false; break; }
+      if (!ok || (x > w && t[x - 1] === v)) continue;
+      var a = t[Math.max(0, x - 4 * w)], b = t[Math.min(n - 1, x + 4 * w)];
+      if (Math.min(a, b) - v < rows * 0.10) continue;
+      var wide = 0; for (k = -3 * w; k <= 3 * w; k++) { var q = t[Math.max(0, Math.min(n - 1, x + k))]; if (q <= v + rows * 0.04) wide++; }
+      if (wide > 4 * w) continue;
+      out.push({ x: x, f: (x + 0.5) / n, row: v });
+    }
+    out.sort(function (p, q) { return p.row - q.row; });
+    var res = [];
+    out.forEach(function (p) { if (res.length < maxN && res.every(function (r) { return Math.abs(r.x - p.x) > n * 0.05; })) res.push(p); });
+    res.sort(function (p, q) { return p.x - q.x; });
+    return res;
+  }
+  (function loadRefinery() {
+    refImg = new Image();
+    refImg.onload = function () {
+      try {
+        var c = document.createElement("canvas"); c.width = refImg.naturalWidth; c.height = refImg.naturalHeight;
+        var g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(refImg, 0, 0);
+        Object.keys(RATLAS).forEach(function (k) {
+          var r = RATLAS[k], d = g.getImageData(r[0], r[1], r[2], r[3]).data, t = new Int16Array(r[2]);
+          for (var x = 0; x < r[2]; x++) { t[x] = r[3]; for (var y = 0; y < r[3]; y++) { if (d[(y * r[2] + x) * 4 + 3] > 70) { t[x] = y; break; } } }
+          tops[k] = t; if (k.charAt(0) === "r") refPeaks[k] = findPeaks(t, r[3], 3);
+        });
+        refReady = true;
+      } catch (e) { refReady = false; }
+    };
+    refImg.onerror = function () { refReady = false; };
+    refImg.src = "level2_refinery_props.webp?v=ruff560";
+    refStripImg = new Image();
+    refStripImg.onload = function () {
+      try {
+        refStripAspect = refStripImg.naturalWidth / refStripImg.naturalHeight;
+        refStripCols = Math.round(REF_R * refStripAspect);
+        var c = document.createElement("canvas"); c.width = refStripCols; c.height = REF_R;
+        var g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(refStripImg, 0, 0, refStripCols, REF_R);
+        var d = g.getImageData(0, 0, refStripCols, REF_R).data, t = new Int16Array(refStripCols);
+        for (var x = 0; x < refStripCols; x++) { t[x] = REF_R; for (var y = 0; y < REF_R; y++) { if (d[(y * refStripCols + x) * 4 + 3] > 70) { t[x] = y; break; } } }
+        tops.refstrip = t; refPeaks.refstrip = findPeaks(t, REF_R, 14);
+        refStripReady = true;
+      } catch (e) { refStripReady = false; }
+    };
+    refStripImg.onerror = function () { refStripReady = false; };
+    refStripImg.src = "level2_refinery.webp?v=ruff560";
+  })();
+  function refAssetsReady() { return refReady && refStripReady; }
+  function rectOf(name) { return ATLAS[name] || PROPS[name] || PROPS2[name] || RATLAS[name] || (name === "refstrip" ? [0, 0, refStripCols, REF_R] : null); }
 
   // ------------------------------------------------------------------
   // When is the Level 2 skyline wanted?
@@ -345,7 +410,78 @@
     return c;
   }
 
+  // ---- refinery section spawning ----
+  function refKind(n) {
+    if (n < 2) return n === 0 ? "small" : "mid";
+    if ((n - 2) % 2 === 0) return "strip";
+    return (((n - 3) / 2) % 2 === 0) ? "tall" : "mid";
+  }
+  function makeRefStruct(name, x) {
+    var r = RATLAS[name], u = U();
+    var fr = RTALL.indexOf(name) >= 0 ? rnd(0.40, 0.48) : (RMID.indexOf(name) >= 0 ? rnd(0.22, 0.30) : rnd(0.15, 0.20));
+    var h = Math.min(H * fr, gY() - H * 0.30), s = h / r[3];
+    if (r[2] * s > W * 0.55) s = W * 0.55 / r[2];
+    var sw = r[2] * s, sh = r[3] * s;
+    return { name: name, ref: "prop", x: x, y: gY() - sh, w: sw, h: sh, s: s, fx: [] };
+  }
+  function addRefFx(st, peaks, strip) {
+    var vc = 0, flare = false, k = 0;
+    peaks.forEach(function (p, i) {
+      var f = { f: p.f, row: p.row, t: rnd(0, 1), type: "smoke" };
+      if (strip && vc < 2 && (i === 1 || i === 4 || i === 7) && p.row > REF_R * 0.12) {
+        vc++; f.type = "vent";
+        addVent(st, "up", p.f * st.w, p.row * st.s, Math.max(H * 0.09, Math.min(H * 0.17, st.y + p.row * st.s - H * 0.22)));
+      } else if (strip && !flare && i === 3) { flare = true; f.type = "flare"; }
+      st.fx.push(f);
+    });
+    // blinking aircraft-warning beacons on the very tallest tops
+    peaks.slice().sort(function (a, b) { return a.row - b.row; }).slice(0, strip ? 3 : 1).forEach(function (p, i) {
+      st.fx.push({ f: p.f, row: p.row, type: "beacon", ph: rnd(0, 6.28) + i });
+    });
+  }
+  function refClutter(st) {
+    var out = [], n = 14;
+    for (var i = 0; i < n; i++) out.push({ name: pick(RDECOR), f: (i + rnd(0.1, 0.9)) / n, hf: rnd(0.04, 0.07) });
+    for (var j = 0; j < 4; j++) out.push({ name: pick(RFOREGROUND), f: (j + rnd(0.15, 0.85)) / 4, hf: rnd(0.10, 0.14) });
+    out.sort(function (a, b) { return a.f - b.f; });
+    st.clutter = out;
+  }
+  function spawnRef() {
+    var u = U(), kind = refKind(refSeq++);
+    var prev = null;
+    for (var i = structs.length - 1; i >= 0; i--) { if (!structs[i].isStack) { prev = structs[i]; break; } }
+    var gap = Math.random() < 0.5 ? 0 : rnd(4, 20) * u;
+    if (kind === "strip") {
+      var h = H * 0.46, w = h * refStripAspect;
+      var st = { name: "refstrip", ref: "strip", x: spawnX + gap, y: gY() - h, w: w, h: h, s: h / REF_R, fx: [] };
+      structs.push(st);
+      addRefFx(st, refPeaks.refstrip || [], true);
+      refClutter(st);
+      for (var a = 0; a < 2; a++) {      // coin arcs flying over the roofline
+        var f0 = a ? 0.70 : 0.24, crystalAt = crystalDue() ? 2 : -1;
+        for (var q = 0; q < 5; q++) {
+          var ox = w * (f0 + q * 0.018), oy = -H * 0.065 - Math.sin(q / 4 * Math.PI) * H * 0.03;
+          if (st.y + oy < H * 0.15) oy = H * 0.15 - st.y;
+          if (q === crystalAt) addCrystalRef(st, ox, oy); else addCoinRef(st, ox, oy);
+        }
+      }
+      spawnX = st.x + st.w;
+    } else {
+      var list = kind === "tall" ? RTALL : (kind === "mid" ? RMID : RSMALL);
+      var name = pick(list);
+      var ps = makeRefStruct(name, spawnX + gap);
+      structs.push(ps);
+      var pk = refPeaks[name] || [];
+      if (SMOKY[name] && pk.length) addRefFx(ps, pk.slice(0, 1), false);
+      else if (BEACONED[name] && pk.length) ps.fx.push({ f: pk[0].f, row: pk[0].row, type: "beacon", ph: rnd(0, 6.28) });
+      decorate(prev, ps, null);
+      spawnX = ps.x + ps.w;
+    }
+    spawnCount++;
+  }
+
   function spawnOne(first) {
+    if (refMode && !first) { if (refAssetsReady()) { spawnRef(); return; } refMode = false; }
     var u = U();
     var prev = null;
     for (var i = structs.length - 1; i >= 0; i--) { if (!structs[i].isStack) { prev = structs[i]; break; } }
@@ -371,6 +507,7 @@
 
   function reset() {
     structs = []; vents = []; canyonRefs = [];
+    refMode = false; refSeq = 0; refFxP = []; refExitK = 0;
     spawnCount = 0; recentTall = 0; coinsPlaced = 0; crystalsPlaced = 0; lastClass = "low"; sinceCanyon = 0;
     spawnX = (typeof W === "number" ? W : 412) * 0.85;
     try { if (typeof window.__airborneResetCampaignCollectibles === "function") window.__airborneResetCampaignCollectibles(); } catch (e) {}
@@ -431,6 +568,19 @@
     var scale = (typeof obstacleSpeedScale === "function") ? obstacleSpeedScale() : 1;
     var ending = (typeof levelEndActive !== "undefined" && levelEndActive);
     var sp = frozen ? 0 : 48 * scale * dt;   // same ground speed as the street (also during the landing approach)
+    // after the boss every building scrolls off during the bonus round (nothing is left for the landing)
+    var exiting = (typeof bossesDefeatedCount === "number" && bossesDefeatedCount >= 2) ||
+      (typeof bonusActive !== "undefined" && bonusActive) || (typeof bonusPending !== "undefined" && bonusPending) || ending;
+    if (exiting) {
+      refExitK += dt;
+      if (!frozen) sp = 48 * Math.max(scale, 1) * dt * (1 + 5 * Math.min(1, refExitK / 1.2));
+      structs = structs.filter(function (s) { return s.isStack || s.x < W + 20 || s.x + s.w < 0; });   // nothing new comes on screen
+    } else refExitK = 0;
+    // halfway through the level the skyline becomes the refinery, all the way into the boss fight
+    if (!refMode && !exiting && typeof bossesDefeatedCount === "number" && bossesDefeatedCount === 1 && refAssetsReady()) {
+      var fr = (typeof window.__airborneLevelFrac === "function") ? window.__airborneLevelFrac() : null;
+      if (fr !== null && fr >= 0.5) { refMode = true; refSeq = 0; }
+    }
 
     structs.forEach(function (s) {
       if (s.isStack) return;
@@ -450,12 +600,13 @@
     vents = vents.filter(function (v) { return structs.indexOf(v.host) >= 0; });
 
     // endless supply (but stop during the landing sequence)
-    if (!ending) {
+    if (!exiting) {
       var guard = 0;
       while (spawnX < W + 420 && guard++ < 8) spawnOne(false);
     }
 
     updateAtmo(dt, sp);
+    updateRefFx(dt, sp);
 
     // steam timing + damage
     var canHurt = (typeof state !== "undefined" && state === "playing") && !window.__airbornePlatformTakeoffActive &&
@@ -506,6 +657,126 @@
   // ------------------------------------------------------------------
   // Drawing
   // ------------------------------------------------------------------
+  // ---- refinery effects: chimney smoke, flare stack, warning beacons, deck lamps, sparks and steam leaks ----
+  var glowCache = {};
+  function glowSpr(rgb) {
+    if (glowCache[rgb]) return glowCache[rgb];
+    var c = document.createElement("canvas"); c.width = c.height = 64;
+    var g = c.getContext("2d"), rg = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    rg.addColorStop(0, "rgba(" + rgb + ",1)"); rg.addColorStop(0.35, "rgba(" + rgb + ",0.45)"); rg.addColorStop(1, "rgba(" + rgb + ",0)");
+    g.fillStyle = rg; g.fillRect(0, 0, 64, 64); glowCache[rgb] = c; return c;
+  }
+  function glowAt(x, y, r, rgb, a) { ctx.globalAlpha = a; ctx.drawImage(glowSpr(rgb), x - r, y - r, r * 2, r * 2); }
+  function pushFx(p) { if (refFxP.length > 420) refFxP.shift(); refFxP.push(p); }
+  function updateRefFx(dt, sp) {
+    var u = U();
+    for (var i = 0; i < structs.length; i++) {
+      var s = structs[i];
+      if (!s.ref || s.x > W + 60 || s.x + s.w < -60) continue;
+      if (s.fx) s.fx.forEach(function (f) {
+        var px = s.x + f.f * s.w, py = s.y + f.row * s.s;
+        if (px < -30 || px > W + 30) return;
+        f.t = (f.t || 0) - dt;
+        if (f.type === "smoke" && f.t <= 0) {
+          f.t = rnd(0.22, 0.42);
+          pushFx({ k: "smoke", x: px + rnd(-2, 2) * u, y: py - 2 * u, r: rnd(3, 5) * u, g: rnd(1.1, 1.8) * u, age: 0, life: rnd(3.2, 5.2), a: rnd(0.5, 0.72), d: rnd(0, 1) });
+        } else if (f.type === "flare") {
+          if (f.t <= 0) { f.t = 0.035; pushFx({ k: "flame", x: px + rnd(-2, 2) * u, y: py - 2 * u, r: rnd(3.5, 6) * u, age: 0, life: rnd(0.28, 0.5), vy: rnd(40, 75) * u }); }
+        }
+      });
+      if (s.ref === "strip") {          // deck: sparks from welding / valves, hissing steam leaks
+        s.deckT = (s.deckT === undefined ? rnd(0.5, 2) : s.deckT) - dt;
+        if (s.deckT <= 0) {
+          s.deckT = rnd(0.7, 2.2);
+          var dx = s.x + s.w * rnd(0.03, 0.97), dy = s.y + s.h * (DECK_F - 0.01);
+          if (dx > -20 && dx < W + 20) {
+            if (Math.random() < 0.5) { var n = 9 + Math.floor(Math.random() * 6); for (var k = 0; k < n; k++) pushFx({ k: "spark", x: dx, y: dy, vx: rnd(-70, 70) * u, vy: -rnd(40, 130) * u, age: 0, life: rnd(0.35, 0.8) }); }
+            else for (var q = 0; q < 6; q++) pushFx({ k: "puff", x: dx + rnd(-3, 3) * u, y: dy - 4 * u, r: rnd(2.5, 4) * u, g: rnd(6, 10) * u, age: -q * 0.07, life: rnd(0.9, 1.5), vy: rnd(18, 34) * u });
+          }
+        }
+      }
+    }
+    for (var j = refFxP.length - 1; j >= 0; j--) {
+      var p = refFxP[j]; p.age += dt;
+      if (p.age < 0) continue;
+      if (p.age >= p.life) { refFxP.splice(j, 1); continue; }
+      p.x -= sp + (p.k === "smoke" ? (10 + p.age * 4) * dt : 0);
+      if (p.k === "smoke") { p.y -= (16 + 11 * p.d) * u * dt; p.r += p.g * 4 * dt; }
+      else if (p.k === "flame") { p.y -= p.vy * dt; p.r *= (1 - 1.4 * dt); }
+      else if (p.k === "spark") { p.vy += 330 * dt; p.x += p.vx * dt; p.y += p.vy * dt; }
+      else if (p.k === "puff") { p.y -= p.vy * dt; p.r += p.g * dt; }
+    }
+  }
+  function drawRefStrip(s) {
+    var cx = window.__airborneCamExt || { l: 0, r: 0 };
+    var x0 = Math.max(s.x, -cx.l - 8), x1 = Math.min(s.x + s.w, W + cx.r + 8);
+    if (x1 <= x0) return;
+    var iw = refStripImg.naturalWidth, ih = refStripImg.naturalHeight, k = iw / s.w;
+    ctx.drawImage(refStripImg, (x0 - s.x) * k, 0, (x1 - x0) * k, ih, x0, s.y, x1 - x0, s.h);
+  }
+  function drawRefDecor(s) {          // foreground cargo, gauges and valves along the deck + lamp string
+    if (!s.clutter) return;
+    var deck = s.y + s.h * DECK_F + 2;
+    for (var i = 0; i < s.clutter.length; i++) {
+      var c = s.clutter[i], r = RATLAS[c.name], h = H * c.hf, w = r[2] * h / r[3], x = s.x + c.f * s.w - w / 2;
+      if (x > W + 20 || x + w < -20) continue;
+      ctx.drawImage(refImg, r[0], r[1], r[2], r[3], x, deck - h, w, h);
+    }
+  }
+  function drawRefGlows(s, tt) {
+    var u = U(), deck = s.y + s.h * DECK_F;
+    ctx.globalCompositeOperation = "lighter";
+    // lamp string along the deck rail, each lamp breathing on its own rhythm
+    if (s.ref === "strip") {
+      var step = 62 * u, i0 = Math.max(0, Math.floor((-20 - s.x) / step)), i1 = Math.min(Math.floor(s.w / step), Math.ceil((W + 20 - s.x) / step));
+      for (var i = i0; i <= i1; i++) {
+        var lx = s.x + i * step + 9 * u, ph = i * 1.7 + (s.x * 0 );
+        var on = 0.55 + 0.45 * Math.sin(tt * 2.3 + ph);
+        glowAt(lx, deck - 3 * u, 9 * u, "255,196,96", 0.55 * on);
+      }
+    }
+    if (s.fx) s.fx.forEach(function (f) {
+      var px = s.x + f.f * s.w, py = s.y + f.row * s.s;
+      if (px < -60 || px > W + 60) return;
+      if (f.type === "beacon") {
+        var on = (Math.floor(tt * 1.4 + f.ph) % 2 === 0) ? 1 : 0.12;
+        glowAt(px, py - 3 * u, 11 * u, "255,60,40", 0.9 * on);
+        glowAt(px, py - 3 * u, 3.5 * u, "255,220,200", 0.9 * on);
+      } else if (f.type === "flare") {
+        var fl = 0.7 + 0.3 * Math.sin(tt * 17 + f.f * 40) * Math.sin(tt * 9.3);
+        glowAt(px, py - 8 * u, 46 * u * fl, "255,120,30", 0.55);
+        glowAt(px, py - 6 * u, 16 * u * fl, "255,230,150", 0.85);
+      }
+    });
+    ctx.globalCompositeOperation = "source-over";
+  }
+  function drawRefFxParticles(tt) {
+    var u = U(), i, p, t;
+    ctx.globalCompositeOperation = "source-over";
+    for (i = 0; i < refFxP.length; i++) {          // soft soot smoke and white steam
+      p = refFxP[i]; if (p.age < 0 || (p.k !== "smoke" && p.k !== "puff")) continue;
+      if (p.x < -50 || p.x > W + 50) continue;
+      t = p.age / p.life;
+      if (p.k === "smoke") {
+        var a = p.a * Math.min(1, p.age * 2.2) * (1 - t) * (1 - t * 0.3), gcol = 46 + Math.floor(44 * t);
+        ctx.globalAlpha = Math.max(0, a * 0.9);
+        ctx.fillStyle = "rgb(" + gcol + "," + (gcol - 3) + "," + (gcol - 7) + ")";
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.2832); ctx.fill();
+      } else {
+        ctx.globalAlpha = Math.max(0, 0.5 * (1 - t));
+        ctx.fillStyle = "#eef2f3"; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.2832); ctx.fill();
+      }
+    }
+    ctx.globalCompositeOperation = "lighter";
+    for (i = 0; i < refFxP.length; i++) {
+      p = refFxP[i]; if (p.age < 0 || (p.k !== "flame" && p.k !== "spark")) continue;
+      t = p.age / p.life;
+      if (p.k === "flame") glowAt(p.x, p.y, p.r * 2.4, t < 0.45 ? "255,190,70" : "255,90,30", 0.8 * (1 - t));
+      else glowAt(p.x, p.y, 3.2 * u, "255,200,110", 1 - t);
+    }
+    ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+  }
+
   function drawSteam(v) {
     var ph = ventPhase(v);
     var x = v.sx, y = v.sy;
@@ -692,7 +963,7 @@
   window.__airborneL2Draw = function () {
     if (!on || !atlasReady) return;
     ctx.save();
-    ctx.globalAlpha = (typeof window.__airborneLandHide === "number") ? window.__airborneLandHide : 1;
+    ctx.globalAlpha = 1;
     drawAtmoBack();
     // buildings first, stacks over them
     var order = structs.slice().sort(function (a, b) { return (a.isStack ? 1 : 0) - (b.isStack ? 1 : 0); });
@@ -712,11 +983,16 @@
         ctx.drawImage(propsImg, pr[0] * PS, pr[1] * PS, pr[2] * PS, pr[3] * PS, s.x, s.y, s.w, s.h);
         continue;
       }
+      if (s.ref === "strip") { if (refStripReady) { drawRefStrip(s); drawRefDecor(s); } continue; }
+      if (s.ref === "prop") { if (refReady) { var rp = RATLAS[s.name]; ctx.drawImage(refImg, rp[0], rp[1], rp[2], rp[3], s.x, s.y, s.w, s.h); } continue; }
       var r = ATLAS[s.name];
       ctx.drawImage(atlasImg, r[0] * AS, r[1] * AS, r[2] * AS, r[3] * AS, s.x, s.y, s.w, s.h);
     }
+    var ttR = performance.now() / 1000;
+    for (var gi = 0; gi < order.length; gi++) { var gs = order[gi]; if (gs.ref && gs.x < W + 60 && gs.x + gs.w > -60) drawRefGlows(gs, ttR); }
     vents.forEach(function (v) { if (v.kind === "left") drawWallNozzle(v); });
     vents.forEach(drawSteam);
+    if (refFxP.length) drawRefFxParticles(ttR);
     ctx.restore();
   };
 

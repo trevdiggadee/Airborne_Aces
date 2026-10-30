@@ -327,6 +327,33 @@
   };
 
   // ------------------------------------------------------------------
+  // the platform art at an explicit x (also used for the level-end landing, same size/height as the take-off)
+  function drawWorldAt(tx) {
+      var im = img();
+      if (!im || !im.naturalWidth) return;
+      var g = geom();
+      if (tx > W + 20 || tx + g.w < -20) return;
+      if (typeof failedAssetKeys !== "undefined" && failedAssetKeys.indexOf("level2_platform") >= 0) {
+        // art not in the repo yet → solid steampunk deck so the take-off is still readable
+        var dy = deckY(), x0 = tx + g.w * 0.26, dw = g.w * 0.62;
+        ctx.fillStyle = "#3b2c1f";
+        for (var li = 0; li < 4; li++) ctx.fillRect(x0 + dw * (0.06 + li * 0.27), dy, dw * 0.05, H - dy);
+        ctx.strokeStyle = "#6b5236"; ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(x0 + dw * 0.08, dy + 10); ctx.lineTo(x0 + dw * 0.92, H);
+        ctx.moveTo(x0 + dw * 0.92, dy + 10); ctx.lineTo(x0 + dw * 0.08, H);
+        ctx.stroke();
+        ctx.fillStyle = "#8a6a3f"; ctx.fillRect(x0, dy, dw, 16);
+        ctx.fillStyle = "#c9a45c"; ctx.fillRect(x0, dy - 2, dw, 4);
+        ctx.fillStyle = "#e8d49a";
+        for (var ci = 0; ci < 9; ci++) ctx.fillRect(x0 + dw * (0.1 + ci * 0.1), dy + 6, dw * 0.04, 3);
+        return;
+      }
+      ctx.drawImage(im, tx, H - g.h, g.w, g.h);
+  }
+  window.__airborneLandingPlatform = function () { var g = geom(); return { w: g.w, h: g.h, deckY: deckY(), restFrac: REST_Y_F, x0: 0.40, x1: 0.85, center: 0.62 }; };
+  window.__airborneDrawLandingPlatform = function (tx) { try { drawWorldAt(tx); } catch (e) {} };
+
   // Draw
   // ------------------------------------------------------------------
   // layer "world": the platform itself (behind obstacles and the blimp)
@@ -356,27 +383,7 @@
         return;
       }
       // world layer
-      var im = img();
-      if (!im || !im.naturalWidth) return;
-      var g = geom();
-      if (P.tileX > W + 20 || P.tileX + g.w < -20) return;
-      if (typeof failedAssetKeys !== "undefined" && failedAssetKeys.indexOf("level2_platform") >= 0) {
-        // art not in the repo yet → solid steampunk deck so the take-off is still readable
-        var dy = deckY(), x0 = P.tileX + g.w * 0.26, dw = g.w * 0.62;
-        ctx.fillStyle = "#3b2c1f";
-        for (var li = 0; li < 4; li++) ctx.fillRect(x0 + dw * (0.06 + li * 0.27), dy, dw * 0.05, H - dy);
-        ctx.strokeStyle = "#6b5236"; ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(x0 + dw * 0.08, dy + 10); ctx.lineTo(x0 + dw * 0.92, H);
-        ctx.moveTo(x0 + dw * 0.92, dy + 10); ctx.lineTo(x0 + dw * 0.08, H);
-        ctx.stroke();
-        ctx.fillStyle = "#8a6a3f"; ctx.fillRect(x0, dy, dw, 16);
-        ctx.fillStyle = "#c9a45c"; ctx.fillRect(x0, dy - 2, dw, 4);
-        ctx.fillStyle = "#e8d49a";
-        for (var ci = 0; ci < 9; ci++) ctx.fillRect(x0 + dw * (0.1 + ci * 0.1), dy + 6, dw * 0.04, 3);
-        return;
-      }
-      ctx.drawImage(im, P.tileX, H - g.h, g.w, g.h);
+      drawWorldAt(P.tileX);
     } catch (e) { /* never break the game loop */ }
   };
 })();

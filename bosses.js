@@ -84,6 +84,13 @@
   ];
   function bossConfig(num) { return BOSSES.find(b => b.num === num); }
   function nextBossConfig() { return BOSSES.find(b => b.num > lastBossTriggered); }
+  // 0..1 progress through the current level (score between the previous boss threshold and the next one); null when no boss is ahead
+  window.__airborneLevelFrac = function () {
+    const nb = nextBossConfig();
+    if (!nb || typeof gameplayScore !== "number") return null;
+    const prev = BOSSES.find(x => x.num === nb.num - 1), lo = prev ? prev.threshold : 0;
+    return (gameplayScore - lo) / Math.max(1, nb.threshold - lo);
+  };
   function bossImgKey(num) { return num === 1 ? "boss" : "boss" + num; }
 
   // Called from map level select — must live here so it writes the real lets
@@ -8940,11 +8947,60 @@ function drawFireballs() {
     }
   }
 
+  // Level 2 landing: the take-off platform scrolls in from the right at take-off height; it and the whole world stop together,
+  // and the pilot flies the blimp down onto it (taps control altitude, a soft assist only takes over for the last few feet).
+  function updatePlatLanding(dt) {
+    const pad = levelEndPad, g = window.__airborneLandingPlatform();
+    pad.glowPhase += dt * 3; pad.fade = 1; window.__airborneLandHide = 1;
+    pad.w = g.w; pad.h = g.h; pad.y = H - g.h; pad.surfaceY = g.deckY;
+    const restY = pad.surfaceY - player.h * 0.42;
+    let dist = 0;
+    if (!pad.arrived) {
+      pad.targetX = player.x - g.w * pad.deckCenterFrac;
+      if (pad.t0 === undefined) { pad.t0 = 0; showBanner("COMING IN FOR A LANDING", 2400, "defeat"); if (typeof sfxPadApproach === "function") sfxPadApproach(); }
+      pad.t0 += dt;
+      dist = pad.x - pad.targetX;
+      const v0 = Math.max(150, Math.min(230, W * 0.28));
+      const f = Math.max(0.14, Math.min(1, (function (q) { return q * q * (3 - 2 * q); })(Math.min(1, dist / (v0 * 0.9)))));   // one shared slow-down for the platform and every layer
+      const step = v0 * f * dt;
+      if (dist - step <= 0.5) {
+        pad.x = pad.targetX; pad.arrived = true;
+        window.__airborneLandScrollMul = 0;
+        levelEndPhase = "landing"; levelEndTimer = 0;
+        showBanner("SET DOWN ON THE PLATFORM", 2200, "defeat"); if (typeof sfxLandPrompt === "function") sfxLandPrompt();
+      } else { pad.x -= step; window.__airborneLandScrollMul = f; }
+    } else { window.__airborneLandScrollMul = 0; pad.x = pad.targetX; }
+    window.__airborneLandHide = 1;
+    // very light help while the platform closes in: a gentle glide slope toward deck height (taps still override)
+    if (!pad.arrived && dist < W * 0.7) {
+      const slopeY = Math.max(H * 0.22, restY - Math.max(0, dist) * 0.28);
+      const wantVy = Math.max(-50, Math.min(55, (slopeY - player.y) * 0.8));
+      player.vy += (wantVy - player.vy) * Math.min(1, dt * 0.9);
+    }
+    player.rotation += (Math.max(-0.12, Math.min(0.14, player.vy / 420)) - player.rotation) * Math.min(1, dt * 3);
+    // the deck and the dock are solid
+    const overDeck = pad.x + pad.w * pad.deckX1 > player.x - player.w * 0.2 && pad.x + pad.w * pad.deckX0 < player.x + player.w * 0.2;
+    if (overDeck && player.y > restY && levelEndPhase === "approach") { player.y = restY; if (player.vy > 0) player.vy = 0; }
+    const dockLim = l2DeckY() - player.h * 0.42;
+    if (player.y > dockLim) { player.y = dockLim; if (player.vy > 0) player.vy = 0; }
+    if (levelEndPhase === "landing") {
+      const gap = restY - player.y, playerBottom = player.y + player.h * 0.45;
+      if (levelEndTimer > 9 && gap > player.h * 1.6) player.vy += (60 - player.vy) * Math.min(1, dt * 0.8);   // gentle nudge if the pilot hovers for ages
+      if (gap > 0 && gap < player.h * 1.6) {                                  // last few feet: soft settle, nose level
+        player.vy = Math.min(player.vy, 42) * Math.max(0, 1 - dt * 4);
+        player.y += Math.min(gap, Math.max(14, Math.min(70, gap * 1.8)) * dt);
+        player.rotation *= Math.max(0, 1 - dt * 5);
+        if (Math.random() < dt * 18) levelEndParticles.push({ kind: "steam", x: player.x, y: player.y + player.h * 0.42, vx: (Math.random() - 0.5) * 50, vy: 10 + Math.random() * 25, life: 0.5 + Math.random() * 0.4, age: 0, r: 3 + Math.random() * 4, alpha: 0.28 });
+        if (gap < 2) { player.y = restY; player.vy = 0; completeLevelLanding(); }
+      } else if (gap <= 0) { player.y = restY; player.vy = 0; completeLevelLanding(); }
+    }
+  }
+
   function spawnLandingPad() {
-    if (isDockLanding()) {   // level 2: a raised steampunk landing platform standing on the dock; the player flies the approach
-      const deckY = l2DeckY(), raise = Math.round(Math.max(34, player.h * 0.55)), pw = Math.min(W * 0.42, 340);
-      const px = Math.max(W * 0.34, Math.min(W - pw - 24, W * 0.62 - pw * 0.5));
-      levelEndPad = { plat: true, x: px, y: deckY - raise, w: pw, h: 0, raise: raise, surfaceY: deckY - raise, deckFromTop: 0, deckCenterFrac: 0.5, targetX: px, docked: false, glowPhase: 0, fade: 0 };
+    if (isDockLanding() && window.__airborneLandingPlatform) {   // level 2: the take-off platform again, scrolling in from the right at the same height
+      const g = window.__airborneLandingPlatform();
+      levelEndPad = { plat: true, x: W + 40, y: H - g.h, w: g.w, h: g.h, surfaceY: g.deckY, deckFromTop: g.restFrac, deckCenterFrac: g.center, deckX0: g.x0, deckX1: g.x1,
+        targetX: player.x - g.w * g.center, docked: false, glowPhase: 0, fade: 1, arrived: false };
       return;
     }
     const img = images.landing_pad;
@@ -9228,11 +9284,12 @@ function drawFireballs() {
 
     if (levelEndPhase === "windDown") {
       // The world eases to a halt and the buildings fade out; from here on the blimp is the only thing that moves
+      const dockL = isDockLanding() && !!window.__airborneLandingPlatform;
       const k = Math.min(1, levelEndTimer / 1.4);
-      window.__airborneLandScrollMul = (1 - k) * (1 - k);
-      window.__airborneLandHide = 1 - k;
-      if (levelEndTimer >= 1.4) {
-        window.__airborneLandScrollMul = 0; window.__airborneLandHide = 0;
+      if (dockL) { window.__airborneLandScrollMul = 1; window.__airborneLandHide = 1; }   // level 2: nothing fades; the world keeps rolling until the platform stops it
+      else { window.__airborneLandScrollMul = (1 - k) * (1 - k); window.__airborneLandHide = 1 - k; }
+      if (levelEndTimer >= (dockL ? 0.8 : 1.4)) {
+        if (!dockL) { window.__airborneLandScrollMul = 0; window.__airborneLandHide = 0; }
         levelEndPhase = "approach";
         levelEndTimer = 0;
         spawnLandingPad();
@@ -9242,6 +9299,7 @@ function drawFireballs() {
       return;
     }
 
+    if ((levelEndPhase === "approach" || levelEndPhase === "landing") && levelEndPad && levelEndPad.plat) { updatePlatLanding(dt); return; }
     if (levelEndPhase === "approach" || levelEndPhase === "landing") {
       if (!levelEndPad) return;
       levelEndPad.glowPhase += dt * 3;
@@ -9375,39 +9433,25 @@ function drawFireballs() {
   function drawLevelEnd() {
     if (!levelEndActive) return;
 
-    // Level 2 landing platform: raised steampunk deck standing on the dock
+    // Level 2 landing platform: the take-off platform art, with blinking runway lights along the deck
     if (levelEndPad && levelEndPad.plat) {
-      const p = levelEndPad, dy = l2DeckY(), sy = p.surfaceY, x0 = p.x, x1 = p.x + p.w, cx = (x0 + x1) / 2, tt = performance.now() / 1000;
-      p.glowPhase += 0.05;
-      ctx.save(); ctx.globalAlpha = Math.min(1, p.fade === undefined ? 1 : p.fade);
-      // legs + cross braces
-      ctx.fillStyle = "#33261a"; ctx.strokeStyle = "#5e4630"; ctx.lineWidth = 3;
-      const legs = [x0 + p.w * 0.06, x0 + p.w * 0.36, x0 + p.w * 0.64, x0 + p.w * 0.94];
-      legs.forEach(lx => ctx.fillRect(lx - 4, sy, 8, dy - sy));
-      for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(legs[i], sy + 6); ctx.lineTo(legs[i + 1], dy); ctx.moveTo(legs[i + 1], sy + 6); ctx.lineTo(legs[i], dy); ctx.stroke(); }
-      // deck slab
-      ctx.fillStyle = "#6e5233"; ctx.fillRect(x0 - 10, sy, p.w + 20, 12);
-      ctx.fillStyle = "#b08d52"; ctx.fillRect(x0 - 10, sy - 4, p.w + 20, 5);
-      ctx.fillStyle = "#2a1f15"; ctx.fillRect(x0 - 10, sy + 12, p.w + 20, 4);
-      for (let rx = x0 + 6; rx < x1; rx += 22) { ctx.fillStyle = "#d3b878"; ctx.beginPath(); ctx.arc(rx, sy + 6, 1.6, 0, 6.2832); ctx.fill(); }
-      // painted landing circle + X
-      ctx.strokeStyle = "#f1e2a8"; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(cx, sy - 1, 46, 7, 0, 0, 6.2832); ctx.stroke();
-      ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cx - 20, sy - 4); ctx.lineTo(cx + 20, sy + 3); ctx.moveTo(cx + 20, sy - 4); ctx.lineTo(cx - 20, sy + 3); ctx.stroke();
-      // end posts with blinking beacons + edge lights
-      ctx.globalCompositeOperation = "lighter";
-      const pulse = 0.55 + 0.45 * Math.sin(tt * 4);
-      const gg = ctx.createRadialGradient(cx, sy, 0, cx, sy, p.w * 0.45);
-      gg.addColorStop(0, "rgba(255,220,130," + (0.32 * pulse).toFixed(3) + ")"); gg.addColorStop(1, "rgba(255,180,60,0)");
-      ctx.fillStyle = gg; ctx.beginPath(); ctx.ellipse(cx, sy, p.w * 0.45, 26, 0, 0, 6.2832); ctx.fill();
-      for (let i = 0; i <= 8; i++) {
-        const lx = x0 + p.w * i / 8, on = (Math.floor(tt * 3 + i * 0.5) % 2 === 0) ? 1 : 0.3;
-        const lg = ctx.createRadialGradient(lx, sy - 5, 0, lx, sy - 5, 12);
-        lg.addColorStop(0, "rgba(255,240,170," + (0.95 * on).toFixed(3) + ")"); lg.addColorStop(1, "rgba(255,150,40,0)");
-        ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(lx, sy - 5, 12, 0, 6.2832); ctx.fill();
+      const p = levelEndPad, sy = p.surfaceY, tt = performance.now() / 1000;
+      if (window.__airborneDrawLandingPlatform) window.__airborneDrawLandingPlatform(p.x);
+      const x0 = p.x + p.w * p.deckX0, x1 = p.x + p.w * p.deckX1, cx = (x0 + x1) / 2;
+      if (x1 > -20 && x0 < W + 20) {
+        ctx.save(); ctx.globalCompositeOperation = "lighter";
+        const pulse = 0.55 + 0.45 * Math.sin(tt * 4), lv = Math.max(0.35, p.arrived ? 1 : 0.7);
+        const gg = ctx.createRadialGradient(cx, sy, 0, cx, sy, (x1 - x0) * 0.5);
+        gg.addColorStop(0, "rgba(255,220,130," + (0.30 * pulse * lv).toFixed(3) + ")"); gg.addColorStop(1, "rgba(255,180,60,0)");
+        ctx.fillStyle = gg; ctx.beginPath(); ctx.ellipse(cx, sy, (x1 - x0) * 0.5, 22, 0, 0, 6.2832); ctx.fill();
+        for (let i = 0; i <= 8; i++) {
+          const lx = x0 + (x1 - x0) * i / 8, on = (Math.floor(tt * 3 + i * 0.5) % 2 === 0) ? 1 : 0.3;
+          const lg = ctx.createRadialGradient(lx, sy - 4, 0, lx, sy - 4, 11);
+          lg.addColorStop(0, "rgba(255,240,170," + (0.95 * on).toFixed(3) + ")"); lg.addColorStop(1, "rgba(255,150,40,0)");
+          ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(lx, sy - 4, 11, 0, 6.2832); ctx.fill();
+        }
+        ctx.restore();
       }
-      ctx.globalCompositeOperation = "source-over";
-      [x0 - 4, x1 + 4].forEach(px2 => { ctx.fillStyle = "#4a3a28"; ctx.fillRect(px2 - 2, sy - 34, 4, 30); ctx.fillStyle = "#c9a45c"; ctx.beginPath(); ctx.arc(px2, sy - 36, 4, 0, 6.2832); ctx.fill(); });
-      ctx.restore();
     }
     // Landing pad (the dock level lands on the dock itself)
     if (levelEndPad && !levelEndPad.dock && !levelEndPad.plat) {
