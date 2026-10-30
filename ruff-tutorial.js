@@ -2953,7 +2953,7 @@
   // Star-coin sprite sheet (36 frames, horizontal, bg removed)
   window.__airborneCoinSheet = window.__airborneCoinSheet || (function () {
     var im = new Image();
-    im.src = "coin_sheet24.png?v=1";
+    im.src = "coin_sheet48.png?v=1";
     return im;
   })();
   window.__airborneCoinFrame = 0;

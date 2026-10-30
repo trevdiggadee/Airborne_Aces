@@ -8941,8 +8941,10 @@ function drawFireballs() {
   }
 
   function spawnLandingPad() {
-    if (isDockLanding()) {   // the dock itself is the runway: a hidden stand-in pad carries the geometry for the celebration
-      levelEndPad = { dock: true, auto: true, x: player.x - 50, y: l2DeckY(), w: 100, h: 0, surfaceY: l2DeckY(), deckFromTop: 0, deckCenterFrac: 0.5, targetX: 0, docked: false, glowPhase: 0 };
+    if (isDockLanding()) {   // level 2: a raised steampunk landing platform standing on the dock; the player flies the approach
+      const deckY = l2DeckY(), raise = Math.round(Math.max(34, player.h * 0.55)), pw = Math.min(W * 0.42, 340);
+      const px = Math.max(W * 0.34, Math.min(W - pw - 24, W * 0.62 - pw * 0.5));
+      levelEndPad = { plat: true, x: px, y: deckY - raise, w: pw, h: 0, raise: raise, surfaceY: deckY - raise, deckFromTop: 0, deckCenterFrac: 0.5, targetX: px, docked: false, glowPhase: 0, fade: 0 };
       return;
     }
     const img = images.landing_pad;
@@ -9189,7 +9191,7 @@ function drawFireballs() {
     levelEndTimer += dt;
 
     // Ambient steam while pad is on-screen
-    if (levelEndPad && !levelEndPad.dock && (levelEndPhase === "approach" || levelEndPhase === "landing" || levelEndPhase === "victory" || levelEndPhase === "stats")) {
+    if (levelEndPad && !levelEndPad.plat && (levelEndPhase === "approach" || levelEndPhase === "landing" || levelEndPhase === "victory" || levelEndPhase === "stats")) {
       spawnPadSteam(levelEndPad, dt);
     }
 
@@ -9234,15 +9236,12 @@ function drawFireballs() {
         levelEndPhase = "approach";
         levelEndTimer = 0;
         spawnLandingPad();
-        if (!(levelEndPad && levelEndPad.dock)) {
-          showBanner("LAND ON THE PAD!", 2500, "defeat");
-          if (typeof sfxPadApproach === "function") sfxPadApproach();
-        }
+        showBanner(levelEndPad && levelEndPad.plat ? "LAND ON THE PLATFORM!" : "LAND ON THE PAD!", 2500, "defeat");
+        if (typeof sfxPadApproach === "function") sfxPadApproach();
       }
       return;
     }
 
-    if ((levelEndPhase === "approach" || levelEndPhase === "landing" || levelEndPhase === "skid") && levelEndPad && levelEndPad.dock) { updateDockLanding(dt); return; }
     if (levelEndPhase === "approach" || levelEndPhase === "landing") {
       if (!levelEndPad) return;
       levelEndPad.glowPhase += dt * 3;
@@ -9284,6 +9283,14 @@ function drawFireballs() {
         player.x += Math.max(padDx, -Math.max(10, Math.min(70, -padDx * 2)) * dt);   // slide back onto the X if the pad scrolled past
       }
       if (levelEndPhase === "landing") player.rotation *= Math.max(0, 1 - dt * 6);   // level out for touchdown
+
+      // Platform is solid: never sink through the deck or the dock
+      if (levelEndPad.plat) {
+        const lim = levelEndPad.surfaceY - player.h * 0.42;
+        if (player.x > levelEndPad.x - player.w * 0.3 && player.x < levelEndPad.x + levelEndPad.w + player.w * 0.3 && player.y > lim + 2 && levelEndPhase === "approach") { player.y = lim; if (player.vy > 0) player.vy = 0; }
+        const dockLim = l2DeckY() - player.h * 0.42;
+        if (player.y > dockLim) { player.y = dockLim; if (player.vy > 0) player.vy = 0; }
+      }
 
       // Landing zone around the X on the deck
       const padLeft = deckCx - levelEndPad.w * 0.22;
@@ -9368,25 +9375,42 @@ function drawFireballs() {
   function drawLevelEnd() {
     if (!levelEndActive) return;
 
-    // Dock landing zone: a glowing landing circle + blinking runway-style lights on the deck
-    if (levelEndPad && levelEndPad.dock && levelEndPad.tx !== undefined || (levelEndPad && levelEndPad.dock && levelEndPhase === "approach")) {
-      const p = levelEndPad, tx = (p.tdx !== undefined ? p.tdx : (p.tx !== undefined ? p.tx : W * 0.6)), dy = l2DeckY(), fa = Math.min(1, p.fade || 0), tt = performance.now() / 1000;
-      ctx.save(); ctx.globalAlpha = fa;
+    // Level 2 landing platform: raised steampunk deck standing on the dock
+    if (levelEndPad && levelEndPad.plat) {
+      const p = levelEndPad, dy = l2DeckY(), sy = p.surfaceY, x0 = p.x, x1 = p.x + p.w, cx = (x0 + x1) / 2, tt = performance.now() / 1000;
+      p.glowPhase += 0.05;
+      ctx.save(); ctx.globalAlpha = Math.min(1, p.fade === undefined ? 1 : p.fade);
+      // legs + cross braces
+      ctx.fillStyle = "#33261a"; ctx.strokeStyle = "#5e4630"; ctx.lineWidth = 3;
+      const legs = [x0 + p.w * 0.06, x0 + p.w * 0.36, x0 + p.w * 0.64, x0 + p.w * 0.94];
+      legs.forEach(lx => ctx.fillRect(lx - 4, sy, 8, dy - sy));
+      for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(legs[i], sy + 6); ctx.lineTo(legs[i + 1], dy); ctx.moveTo(legs[i + 1], sy + 6); ctx.lineTo(legs[i], dy); ctx.stroke(); }
+      // deck slab
+      ctx.fillStyle = "#6e5233"; ctx.fillRect(x0 - 10, sy, p.w + 20, 12);
+      ctx.fillStyle = "#b08d52"; ctx.fillRect(x0 - 10, sy - 4, p.w + 20, 5);
+      ctx.fillStyle = "#2a1f15"; ctx.fillRect(x0 - 10, sy + 12, p.w + 20, 4);
+      for (let rx = x0 + 6; rx < x1; rx += 22) { ctx.fillStyle = "#d3b878"; ctx.beginPath(); ctx.arc(rx, sy + 6, 1.6, 0, 6.2832); ctx.fill(); }
+      // painted landing circle + X
+      ctx.strokeStyle = "#f1e2a8"; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(cx, sy - 1, 46, 7, 0, 0, 6.2832); ctx.stroke();
+      ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cx - 20, sy - 4); ctx.lineTo(cx + 20, sy + 3); ctx.moveTo(cx + 20, sy - 4); ctx.lineTo(cx - 20, sy + 3); ctx.stroke();
+      // end posts with blinking beacons + edge lights
       ctx.globalCompositeOperation = "lighter";
-      const pulse = 0.65 + 0.35 * Math.sin(tt * 4);
-      const gg = ctx.createRadialGradient(tx, dy, 0, tx, dy, 90);
-      gg.addColorStop(0, "rgba(255,220,130," + (0.45 * pulse).toFixed(3) + ")"); gg.addColorStop(1, "rgba(255,180,60,0)");
-      ctx.fillStyle = gg; ctx.beginPath(); ctx.ellipse(tx, dy, 90, 22, 0, 0, 6.2832); ctx.fill();
-      for (let i = -4; i <= 4; i++) {
-        const lx = tx + i * 26, on = (Math.floor(tt * 3 + Math.abs(i) * 0.6) % 2 === 0) ? 1 : 0.25;
-        const lg = ctx.createRadialGradient(lx, dy - 2, 0, lx, dy - 2, 11);
-        lg.addColorStop(0, "rgba(255,240,170," + (0.95 * on).toFixed(3) + ")"); lg.addColorStop(1, "rgba(255,160,40,0)");
-        ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(lx, dy - 2, 11, 0, 6.2832); ctx.fill();
+      const pulse = 0.55 + 0.45 * Math.sin(tt * 4);
+      const gg = ctx.createRadialGradient(cx, sy, 0, cx, sy, p.w * 0.45);
+      gg.addColorStop(0, "rgba(255,220,130," + (0.32 * pulse).toFixed(3) + ")"); gg.addColorStop(1, "rgba(255,180,60,0)");
+      ctx.fillStyle = gg; ctx.beginPath(); ctx.ellipse(cx, sy, p.w * 0.45, 26, 0, 0, 6.2832); ctx.fill();
+      for (let i = 0; i <= 8; i++) {
+        const lx = x0 + p.w * i / 8, on = (Math.floor(tt * 3 + i * 0.5) % 2 === 0) ? 1 : 0.3;
+        const lg = ctx.createRadialGradient(lx, sy - 5, 0, lx, sy - 5, 12);
+        lg.addColorStop(0, "rgba(255,240,170," + (0.95 * on).toFixed(3) + ")"); lg.addColorStop(1, "rgba(255,150,40,0)");
+        ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(lx, sy - 5, 12, 0, 6.2832); ctx.fill();
       }
+      ctx.globalCompositeOperation = "source-over";
+      [x0 - 4, x1 + 4].forEach(px2 => { ctx.fillStyle = "#4a3a28"; ctx.fillRect(px2 - 2, sy - 34, 4, 30); ctx.fillStyle = "#c9a45c"; ctx.beginPath(); ctx.arc(px2, sy - 36, 4, 0, 6.2832); ctx.fill(); });
       ctx.restore();
     }
     // Landing pad (the dock level lands on the dock itself)
-    if (levelEndPad && !levelEndPad.dock) {
+    if (levelEndPad && !levelEndPad.dock && !levelEndPad.plat) {
       const img = images.landing_pad;
       const p = levelEndPad;
       ctx.save();

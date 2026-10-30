@@ -78,7 +78,7 @@ window.__airborneRingDebug = false;
       return;
     }
     // Don't flap-react while docked on the pad, or during the scripted dock landing
-    if (typeof levelEndPad !== "undefined" && levelEndPad && (levelEndPad.docked || levelEndPad.auto)) return;
+    if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.docked) return;
     // Airfield runway / post-land taxi: never flap (prevents jump)
     var afp = window.__airborneAirfieldPhase;
     if (window.__airborneAirfield &&
@@ -137,12 +137,6 @@ window.__airborneRingDebug = false;
       return;
     }
 
-    // scripted dock landing owns the blimp's position
-    if (typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.auto) {
-      player.vy = 0;
-      updateBlimpPersonality(dt);
-      return;
-    }
     // Level 2 launch platform: scripted take-off owns the blimp's position
     if (window.__airbornePlatformTakeoffActive) {
       player.vy = 0;
@@ -196,8 +190,10 @@ window.__airborneRingDebug = false;
       }
     }
 
-    player.vy += GRAVITY * dt;
-    if (player.vy > MAX_FALL_SPEED) player.vy = MAX_FALL_SPEED;
+    var __landing = (typeof levelEndActive !== "undefined" && levelEndActive && typeof levelEndPad !== "undefined" && levelEndPad && levelEndPad.plat);
+    player.vy += GRAVITY * (__landing ? 0.5 : 1) * dt;      // floatier air on final approach so a tap-controlled landing feels natural
+    var __mf = __landing ? 190 : MAX_FALL_SPEED;
+    if (player.vy > __mf) player.vy = __mf;
     player.y += player.vy * dt;
 
     // rotation follows velocity, clamped
@@ -1042,7 +1038,7 @@ window.__airborneRingDebug = false;
   if (!window.__airborneCoinSheet) {
     window.__airborneCoinSheet = (function () {
       var im = new Image();
-      im.src = "coin_sheet24.png?v=1";
+      im.src = "coin_sheet48.png?v=1";
       return im;
     })();
   }
@@ -1050,7 +1046,7 @@ window.__airborneRingDebug = false;
   // Smooth coin spin: 24-frame sheet played at a steady rate with the next frame cross-faded in
   window.__airborneCoinBlit = function (c2, sheet, phase, dx, dy, size) {
     var fw = sheet.height || sheet.naturalHeight || 128, nF = Math.max(1, Math.round((sheet.width || sheet.naturalWidth) / fw));
-    var tf = performance.now() / 1000 * 22 + (phase || 0) * 3, i = Math.floor(tf), f = tf - i;
+    var tf = performance.now() / 1000 * 40 + (phase || 0) * 3, i = Math.floor(tf), f = tf - i;
     i = ((i % nF) + nF) % nF; var j = (i + 1) % nF;
     c2.drawImage(sheet, i * fw, 0, fw, fw, dx, dy, size, size);
     if (f > 0.03) { var ga = c2.globalAlpha; c2.globalAlpha = ga * f; c2.drawImage(sheet, j * fw, 0, fw, fw, dx, dy, size, size); c2.globalAlpha = ga; }
