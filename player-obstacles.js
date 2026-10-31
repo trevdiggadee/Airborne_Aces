@@ -1319,6 +1319,7 @@ window.__airborneRingDebug = false;
         aspect = 0.85;
       }
       dispW = Math.min(86, W * 0.176);
+      if (type === "bird_c" || type === "bird_a") dispW *= 0.85;   // the goggled gull and the blue bird are 15% smaller
     }
     const dispH2 = (type === "bird_a" || type === "bird_b" || type === "bird_c") ? dispW * aspect : dispH;
     if (type === "bird_a" || type === "bird_b" || type === "bird_c") {

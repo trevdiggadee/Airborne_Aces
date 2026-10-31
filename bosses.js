@@ -8959,11 +8959,11 @@ function drawFireballs() {
   function lpGeom() {
     const base = window.__airborneLandingPlatform();
     if (!lpReady || !lpImg.naturalWidth) return Object.assign({ art: false }, base);
-    const w = Math.min(W * 0.92, H * 1.306 * 1.5), h = w * lpImg.naturalHeight / lpImg.naturalWidth;   // 50% bigger than the take-off scale
-    return { art: true, w: w, h: h, deckY: base.deckY, restFrac: 0.643, center: 0.26, x0: 0.07, x1: 0.42 };   // art is mirrored: the deck is on the left of the sprite, the platform sits at the right edge
+    const w = Math.min(W * 0.92, base.w), h = w * lpImg.naturalHeight / lpImg.naturalWidth;   // same width as the take-off platform
+    return { art: true, w: w, h: h, deckY: base.deckY, restFrac: 0.643, center: 0.74, x0: 0.58, x1: 0.93 };   // original orientation: deck on the right of the sprite, platform flush with the right edge
   }
   function drawLandingPlatformArt(p) {
-    if (p.art && lpReady) { ctx.save(); ctx.translate(p.x + p.w, 0); ctx.scale(-1, 1); ctx.drawImage(lpImg, 0, p.surfaceY - p.deckFromTop * p.h, p.w, p.h); ctx.restore(); }
+    if (p.art && lpReady) ctx.drawImage(lpImg, p.x, p.surfaceY - p.deckFromTop * p.h, p.w, p.h);
     else if (window.__airborneDrawLandingPlatform) window.__airborneDrawLandingPlatform(p.x);
   }
   function updatePlatLanding(dt) {
@@ -8974,7 +8974,7 @@ function drawFireballs() {
     const restY = pad.surfaceY - player.h * 0.42;
     let dist = 0;
     if (!pad.arrived) {
-      pad.targetX = pad.art ? W - 0.75 * g.w : player.x - g.w * pad.deckCenterFrac;   // new art: always leaves 25% of the platform off the right edge; the blimp glides forward over the deck
+      pad.targetX = pad.art ? Math.min(W - 0.7 * g.w, 0.70 * W - g.center * g.w) : player.x - g.w * pad.deckCenterFrac;   // new art: always leaves 25% of the platform off the right edge; the blimp glides forward over the deck
       if (pad.t0 === undefined) { pad.t0 = 0; showBanner("COMING IN FOR A LANDING", 2400, "defeat"); if (typeof sfxPadApproach === "function") sfxPadApproach(); }
       pad.t0 += dt;
       dist = pad.x - pad.targetX;
