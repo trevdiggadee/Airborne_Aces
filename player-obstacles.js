@@ -3036,6 +3036,7 @@ window.__airborneRingDebug = false;
           }
         } catch (eD) {}
         ctx.restore();
+        try { drawObjWind(o, drawY, obstacleSpeed * (o.speedMult || 1)); } catch (eW) {}
         return;
       }
       var frames = OBSTACLE_ANIM_SETS[o.type];
@@ -3065,6 +3066,7 @@ window.__airborneRingDebug = false;
     });
   }
   window.drawObstacles = drawObstacles;
+  window.__airborneDrawMiniBullets = function () { try { drawMiniBullets(); } catch (e) {} };
 
   // Exhaust for the boss-2 mini blimps — same look as the Storm Chaser: a layered additive flame ribbon
   // streaming from the rear nozzle (orange -> yellow -> white-hot core) with soft smoke behind the tip.
@@ -3137,6 +3139,75 @@ window.__airborneRingDebug = false;
     ribbon(0.24, "rgba(255,240,160,0.58)");
     ctx.restore();
   }
+  // Rushing-wind streaks for birds (same look as the blimps': thin white air lines racing past the body, behind it)
+  function drawObjWind(o, drawY, speed) {
+    var nowT = (typeof performance !== "undefined") ? performance.now() : Date.now();
+    var dt = o._wT ? Math.min(0.05, (nowT - o._wT) / 1000) : 0.016;
+    o._wT = nowT;
+    var P = o._wP || (o._wP = []), sc = Math.max(0.5, o.w / 140);
+    o._wAcc = (o._wAcc || 0) + dt;
+    while (o._wAcc >= 0.05) {
+      o._wAcc -= 0.05;
+      if (Math.random() < 0.5) P.push({ x: o.x + o.w * (0.20 + Math.random() * 0.5), y: drawY + o.h * (0.32 + Math.random() * 0.36), vx: 380 + Math.random() * 320 + speed * 0.5, age: 0, life: 0.22 + Math.random() * 0.18, len: (28 + Math.random() * 46) * sc });
+    }
+    if (P.length > 24) P.splice(0, P.length - 24);
+    ctx.save(); ctx.lineCap = "round"; ctx.lineWidth = 1.8; ctx.globalCompositeOperation = "source-over";
+    for (var i = P.length - 1; i >= 0; i--) {
+      var q = P[i]; q.age += dt;
+      if (q.age >= q.life) { P.splice(i, 1); continue; }
+      q.x += q.vx * dt;
+      var u = q.age / q.life, a = 0.6 * Math.sin(Math.PI * Math.min(1, u * 1.1));
+      ctx.strokeStyle = "rgba(255,255,255," + a.toFixed(3) + ")";
+      ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(q.x - q.len, q.y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Boss-2 mini blimps fire tracer bullets at the pilot
+  var miniBullets = [];
+  function miniShoot(o, drawY, dt, speed) {
+    if (typeof state !== "undefined" && state !== "playing") return;
+    if ((typeof levelEndActive !== "undefined" && levelEndActive) || (typeof bonusActive !== "undefined" && bonusActive)) return;
+    o._shotT = (o._shotT === undefined ? 0.9 + Math.random() * 1.2 : o._shotT) - dt;
+    if (o._shotT > 0) return;
+    o._shotT = 2.4 + Math.random() * 1.4;
+    var W0 = (typeof W !== "undefined") ? W : 400;
+    if (o.x > W0 - 30 || o.x < player.x + 90) return;                    // only while on screen and still ahead of the pilot
+    var bx = o.x + o.w * 0.08, by = drawY + o.h * 0.56, vx = -(430 + speed * 0.4);
+    var tt = Math.max(0.2, (bx - player.x) / -vx);
+    var vy = Math.max(-150, Math.min(150, (player.y - by) / tt));
+    miniBullets.push({ x: bx, y: by, vx: vx, vy: vy, age: 0 });
+    if (o._twP) o._twP.push({ k: "flash", x: bx, y: by, vx: 0, vy: 0, age: 0, life: 0.12, r: Math.max(5, o.w * 0.06) });
+    try { if (typeof sfxFlap === "function") { /* reuse a short click so the shot is audible */ } } catch (e) {}
+  }
+  var _mbT = 0;
+  function drawMiniBullets() {
+    if (!miniBullets.length) return;
+    var nowT = (typeof performance !== "undefined") ? performance.now() : Date.now();
+    var dt = _mbT ? Math.min(0.05, (nowT - _mbT) / 1000) : 0.016; _mbT = nowT;
+    var live = (typeof state === "undefined" || state === "playing") && !(typeof levelEndActive !== "undefined" && levelEndActive);
+    var hw = (player.w || 80) * 0.32, hh = (player.h || 50) * 0.32;
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    for (var i = miniBullets.length - 1; i >= 0; i--) {
+      var b = miniBullets[i];
+      if (!live) { miniBullets.splice(i, 1); continue; }
+      b.age += dt; b.x += b.vx * dt; b.y += b.vy * dt;
+      if (b.x < -30 || b.age > 4) { miniBullets.splice(i, 1); continue; }
+      if (Math.abs(b.x - player.x) < hw && Math.abs(b.y - player.y) < hh &&
+          !window.__airbornePlatformTakeoffActive && typeof takeHit === "function") {
+        miniBullets.splice(i, 1);
+        try { takeHit(); } catch (eH) {}
+        continue;
+      }
+      var g = ctx.createLinearGradient(b.x, b.y, b.x - b.vx * 0.05, b.y - b.vy * 0.05);
+      g.addColorStop(0, "rgba(255,240,170,0.95)"); g.addColorStop(1, "rgba(255,110,30,0)");
+      ctx.strokeStyle = g; ctx.lineWidth = 3; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 0.05, b.y - b.vy * 0.05); ctx.stroke();
+      ctx.fillStyle = "rgba(255,255,220,0.95)"; ctx.beginPath(); ctx.arc(b.x, b.y, 2.4, 0, 6.2832); ctx.fill();
+    }
+    ctx.restore();
+  }
+
   // Take-off style engine exhaust (dark puffs, glowing flame flicker, sparks) plus rushing-wind streaks for the boss-2 mini blimps.
   // Same recipe as the level-2 launch platform, mirrored because the minis fly left.
   function drawMiniBlimpTakeoffFx(o, drawY, speed) {
@@ -3145,6 +3216,7 @@ window.__airborneRingDebug = false;
     o._twT = nowT;
     var P = o._twP || (o._twP = []);
     var sc = o.w / 140, nx = o.x + o.w * 0.86, ny = drawY + o.h * 0.52;
+    miniShoot(o, drawY, dt, speed);
     o._twAcc = (o._twAcc || 0) + dt;
     while (o._twAcc >= 0.03) {
       o._twAcc -= 0.03;
@@ -3152,7 +3224,7 @@ window.__airborneRingDebug = false;
       if (Math.random() < 0.8) P.push({ k: "flame", x: nx, y: ny, vx: (100 + Math.random() * 90) * sc, vy: (Math.random() - 0.5) * 18, age: 0, life: 0.16 + Math.random() * 0.1, r: (3 + Math.random() * 3) * sc });
       if (Math.random() < 0.45) P.push({ k: "spark", x: nx, y: ny, vx: (110 + Math.random() * 120) * sc, vy: (Math.random() - 0.5) * 80, age: 0, life: 0.35 + Math.random() * 0.3 });
       // wind: thin air-streaks racing past the hull (the blimp flies left, so the air rushes right)
-      if (Math.random() < 0.55) P.push({ k: "streak", x: o.x + o.w * (0.05 + Math.random() * 0.5), y: drawY + o.h * (0.32 + Math.random() * 0.36), vx: 380 + Math.random() * 320 + speed * 0.5, vy: 0, age: 0, life: 0.22 + Math.random() * 0.18, len: (28 + Math.random() * 46) * sc });
+      if (Math.random() < 0.55) P.push({ k: "streak", x: o.x + o.w * (0.20 + Math.random() * 0.5), y: drawY + o.h * (0.32 + Math.random() * 0.36), vx: 380 + Math.random() * 320 + speed * 0.5, vy: 0, age: 0, life: 0.22 + Math.random() * 0.18, len: (28 + Math.random() * 46) * sc });
     }
     if (P.length > 90) P.splice(0, P.length - 90);
     ctx.save();
@@ -3172,6 +3244,11 @@ window.__airborneRingDebug = false;
         var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 2);
         g.addColorStop(0, "rgba(255,240,170," + (0.9 * (1 - u)).toFixed(3) + ")"); g.addColorStop(0.5, "rgba(255,140,40," + (0.6 * (1 - u)).toFixed(3) + ")"); g.addColorStop(1, "rgba(220,60,10,0)");
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 2, 0, 6.2832); ctx.fill();
+      } else if (p.k === "flash") {
+        ctx.globalCompositeOperation = "lighter";
+        var gf = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 2);
+        gf.addColorStop(0, "rgba(255,250,200," + (1 - u).toFixed(3) + ")"); gf.addColorStop(1, "rgba(255,150,40,0)");
+        ctx.fillStyle = gf; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 2, 0, 6.2832); ctx.fill();
       } else if (p.k === "spark") {
         ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = "rgba(255,200,110," + (1 - u).toFixed(3) + ")"; ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 0.03, p.y - p.vy * 0.03); ctx.stroke();

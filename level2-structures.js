@@ -425,13 +425,19 @@
     return { name: name, ref: "prop", x: x, y: gY() - sh, w: sw, h: sh, s: s, fx: [] };
   }
   function addRefFx(st, peaks, strip) {
-    var vc = 0, flare = false, k = 0;
+    var steam = 0, fire = 0, flare = false;
     peaks.forEach(function (p, i) {
       var f = { f: p.f, row: p.row, t: rnd(0, 1), type: "smoke" };
-      if (strip && vc < 2 && (i === 1 || i === 4 || i === 7) && p.row > REF_R * 0.12) {
-        vc++; f.type = "vent";
-        addVent(st, "up", p.f * st.w, p.row * st.s, Math.max(H * 0.09, Math.min(H * 0.17, st.y + p.row * st.s - H * 0.22)));
-      } else if (strip && !flare && i === 3) { flare = true; f.type = "flare"; }
+      var oy = p.row * st.s, ox = p.f * st.w, room = st.y + oy - H * 0.22;
+      if (strip && p.row > REF_R * 0.12) {
+        if (fire < 3 && i % 4 === 3) { fire++; f.type = "fire"; addVent(st, "up", ox, oy, Math.max(H * 0.08, Math.min(H * 0.15, room))); vents[vents.length - 1].fire = true; }
+        else if (steam < 5 && i % 3 === 1) { steam++; f.type = "vent"; addVent(st, "up", ox, oy, Math.max(H * 0.09, Math.min(H * 0.18, room))); }
+        else if (!flare && i === 2) { flare = true; f.type = "flare"; }
+      } else if (!strip && p.row > st.h / st.s * 0.12) {
+        // standalone refinery pieces: a few of them vent steam or burn off flame as well
+        if (SMOKY[st.name] && Math.random() < 0.5) { f.type = "vent"; addVent(st, "up", ox, oy, Math.max(H * 0.08, Math.min(H * 0.15, room))); }
+        else if (st.name === "r_derrick" || st.name === "r_cluster") { f.type = "fire"; addVent(st, "up", ox, oy, Math.max(H * 0.07, Math.min(H * 0.13, room))); vents[vents.length - 1].fire = true; }
+      }
       st.fx.push(f);
     });
     // blinking aircraft-warning beacons on the very tallest tops
@@ -472,7 +478,7 @@
       var ps = makeRefStruct(name, spawnX + gap);
       structs.push(ps);
       var pk = refPeaks[name] || [];
-      if (SMOKY[name] && pk.length) addRefFx(ps, pk.slice(0, 1), false);
+      if ((SMOKY[name] || name === "r_derrick") && pk.length) addRefFx(ps, pk.slice(0, 1), false);
       else if (BEACONED[name] && pk.length) ps.fx.push({ f: pk[0].f, row: pk[0].row, type: "beacon", ph: rnd(0, 6.28) });
       decorate(prev, ps, null);
       spawnX = ps.x + ps.w;
@@ -777,6 +783,28 @@
     ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
   }
 
+  // roaring flame jet (damaging): pilot flicker while warning, a fierce tongue of fire in the blast
+  function drawFlameJet(v) {
+    var ph = ventPhase(v), x = v.sx, y = v.sy;
+    if (x === undefined || x < -120 || x > W + 120) return;
+    var u = U(), t = clockT, blast = ph.p === "blast", warn = ph.p === "warn", cool = ph.p === "cool";
+    var tL = blast ? (0.6 + 0.4 * Math.min(1, ph.f * 4)) : (warn ? 0.14 + 0.1 * ph.f : (cool ? 0.1 : 0.05));
+    if (v._fl === undefined) v._fl = tL;
+    v._fl += (tL - v._fl) * Math.min(1, 0.25);
+    var len = v.len * v._fl, nn = 16, i;
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    ctx.drawImage(glowSpr("255,120,30"), x - 16 * u, y - 16 * u, 32 * u, 32 * u);
+    for (i = 0; i < nn; i++) {
+      var q = i / nn, d = q * len, fl = 0.75 + 0.25 * Math.sin(t * 30 + i * 2.1 + v.seed);
+      var r = (9 - 6.5 * q) * u * (blast ? 1.25 : 0.7) * fl;
+      var wob = Math.sin(t * 14 + i * 0.9 + v.seed) * (2 + 6 * q) * u;
+      var a = (1 - q) * (blast ? 0.85 : 0.55) * (warn ? 0.7 + 0.3 * Math.sin(t * 40) : 1);
+      ctx.globalAlpha = Math.max(0, a);
+      ctx.drawImage(glowSpr(q < 0.35 ? "255,230,160" : (q < 0.7 ? "255,150,40" : "230,70,20")), x + wob - r * 1.6, y - d - r * 1.6, r * 3.2, r * 3.2);
+    }
+    ctx.restore();
+  }
+
   function drawSteam(v) {
     var ph = ventPhase(v);
     var x = v.sx, y = v.sy;
@@ -991,7 +1019,7 @@
     var ttR = performance.now() / 1000;
     for (var gi = 0; gi < order.length; gi++) { var gs = order[gi]; if (gs.ref && gs.x < W + 60 && gs.x + gs.w > -60) drawRefGlows(gs, ttR); }
     vents.forEach(function (v) { if (v.kind === "left") drawWallNozzle(v); });
-    vents.forEach(drawSteam);
+    vents.forEach(function (v) { if (v.fire) drawFlameJet(v); else drawSteam(v); });
     if (refFxP.length) drawRefFxParticles(ttR);
     ctx.restore();
   };

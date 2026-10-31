@@ -738,6 +738,7 @@ function loop(ts) {
     try { if (window.__airborneDrawTrainingPlatforms) window.__airborneDrawTrainingPlatforms(); } catch (e) {}
     try { if (window.__airborneDrawPlatformTakeoff) window.__airborneDrawPlatformTakeoff("world"); } catch (e) {}
     try { if (typeof drawObstacles === "function") drawObstacles(); } catch (eObs) { console.warn("drawObstacles", eObs); }
+    try { if (window.__airborneDrawMiniBullets) window.__airborneDrawMiniBullets(); } catch (eMB) {}
     try { if (window.__airborneDrawRingStreakHud) window.__airborneDrawRingStreakHud(ctx); } catch (eHud) {}
 
     if (bossActive) {

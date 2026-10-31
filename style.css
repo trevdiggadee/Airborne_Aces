@@ -2906,13 +2906,18 @@ body.pause-open #unifiedDock {
   border-radius: 50% !important;
   pointer-events: none !important;
 }
+/* Both gauges only use the 270° of the ring that is visible above the clock (225° → 135° clockwise); the fill colour shifts as it fills */
 .udRingProgress {
   inset: 0 !important;
   background:
     conic-gradient(
       from 225deg,
-      rgba(120, 200, 255, 0.95) var(--ud-progress, 0%),
-      rgba(30, 40, 55, 0.55) var(--ud-progress, 0%)
+      var(--ud-progress-color, rgba(120, 200, 255, 0.95)) 0%,
+      var(--ud-progress-color, rgba(120, 200, 255, 0.95)) calc(var(--ud-progress, 0%) * 0.75),
+      rgba(30, 40, 55, 0.55) calc(var(--ud-progress, 0%) * 0.75),
+      rgba(30, 40, 55, 0.55) 75%,
+      transparent 75%,
+      transparent 100%
     ) !important;
   -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 10px)) !important;
   mask-image: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 10px)) !important;
@@ -2922,12 +2927,24 @@ body.pause-open #unifiedDock {
   background:
     conic-gradient(
       from 225deg,
-      rgba(255, 190, 60, 0.95) var(--ud-power, 0%),
-      rgba(40, 28, 12, 0.5) var(--ud-power, 0%)
+      var(--ud-power-color, rgba(255, 190, 60, 0.95)) 0%,
+      var(--ud-power-color, rgba(255, 190, 60, 0.95)) calc(var(--ud-power, 0%) * 0.75),
+      rgba(40, 28, 12, 0.5) calc(var(--ud-power, 0%) * 0.75),
+      rgba(40, 28, 12, 0.5) 75%,
+      transparent 75%,
+      transparent 100%
     ) !important;
   -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 10px)) !important;
   mask-image: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 10px)) !important;
 }
+/* no square tap-highlight / focus box around the round power button when it is ready */
+#stormMeter, #stormMeter *, #unifiedDock .udCircle, #unifiedDock .udCircle * {
+  -webkit-tap-highlight-color: transparent !important;
+  outline: none !important;
+  -webkit-user-select: none; user-select: none;
+}
+#stormMeter.ready::before { box-sizing: border-box !important; aspect-ratio: 1 / 1; border-radius: 50% !important; }
+.udCore #stormIcon, #stormMeter #stormIcon { border-radius: 50% !important; background: transparent !important; box-shadow: none !important; }
 .udCore {
   position: absolute !important;
   inset: 28px !important;

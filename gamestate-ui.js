@@ -1387,6 +1387,13 @@ window.tickUnifiedProgress = function (dt) {
     window.__udProgressShown = shown;
     var ring = document.getElementById("udProgressRing");
     var circle = document.querySelector("#unifiedDock .udCircle") || document.getElementById("stormMeter");
+    window.__udGaugeColor = window.__udGaugeColor || function (p) {   // blue -> green -> gold -> red as a gauge fills
+      var st = [[0, 74, 168, 255], [35, 63, 224, 160], [65, 255, 210, 60], [100, 255, 90, 42]], i = 0;
+      while (i < st.length - 2 && p > st[i + 1][0]) i++;
+      var a = st[i], b = st[i + 1], t = Math.max(0, Math.min(1, (p - a[0]) / (b[0] - a[0])));
+      return "rgb(" + Math.round(a[1] + (b[1] - a[1]) * t) + "," + Math.round(a[2] + (b[2] - a[2]) * t) + "," + Math.round(a[3] + (b[3] - a[3]) * t) + ")";
+    };
+    if (ring) ring.style.setProperty("--ud-progress-color", window.__udGaugeColor(shown));
     if (ring) ring.style.setProperty("--ud-progress", shown.toFixed(2) + "%");
     if (circle) circle.style.setProperty("--ud-progress", shown.toFixed(2) + "%");
   } catch (e) {}
