@@ -3149,7 +3149,7 @@ window.__airborneRingDebug = false;
     o._wAcc = (o._wAcc || 0) + dt;
     while (o._wAcc >= 0.05) {
       o._wAcc -= 0.05;
-      if (Math.random() < 0.5) P.push({ x: o.x + o.w * (0.20 + Math.random() * 0.5), y: drawY + o.h * (0.41 + Math.random() * 0.18), vx: 380 + Math.random() * 320 + speed * 0.5, age: 0, life: 0.22 + Math.random() * 0.18, len: (28 + Math.random() * 46) * sc * 0.5 });
+      if (Math.random() < 0.5) P.push({ x: o.x + o.w * (0.20 + Math.random() * 0.5), y: drawY + o.h * (0.41 + Math.random() * 0.18), vx: 380 + Math.random() * 320 + speed * 0.5, age: 0, life: 0.22 + Math.random() * 0.18, len: (28 + Math.random() * 46) * sc * 0.25 });
     }
     if (P.length > 24) P.splice(0, P.length - 24);
     ctx.save(); ctx.lineCap = "round"; ctx.lineWidth = 1.2; ctx.globalCompositeOperation = "source-over";

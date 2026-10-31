@@ -8959,11 +8959,39 @@ function drawFireballs() {
   function lpGeom() {
     const base = window.__airborneLandingPlatform();
     if (!lpReady || !lpImg.naturalWidth) return Object.assign({ art: false }, base);
-    const w = Math.min(W * 0.92, base.w), h = w * lpImg.naturalHeight / lpImg.naturalWidth;   // same width as the take-off platform
+    const w = Math.min(W * 0.95, base.w * 1.25), h = w * lpImg.naturalHeight / lpImg.naturalWidth;   // same width as the take-off platform
     return { art: true, w: w, h: h, deckY: base.deckY, restFrac: 0.643, center: 0.74, x0: 0.58, x1: 0.93 };   // original orientation: deck on the right of the sprite, platform flush with the right edge
   }
+  // animated steam rising from the platform's chimneys (the old baked-in smoke was removed from the art)
+  const PLAT_STEAM = [[1100, 172, 1], [1235, 246, 0.8], [1203, 240, 0.5]];
+  function drawPlatSteam(p) {
+    const nowT = performance.now(), dt = p._stT ? Math.min(0.05, (nowT - p._stT) / 1000) : 0.016; p._stT = nowT;
+    const k = p.w / 1293, top = p.surfaceY - p.deckFromTop * p.h;
+    const P = p._st || (p._st = []);
+    p._stE = p._stE || [0, 0, 0];
+    PLAT_STEAM.forEach(function (e, i) {
+      p._stE[i] += dt;
+      const ex = p.x + e[0] * k;
+      if (p._stE[i] >= 0.11 / e[2] && ex > -40 && ex < W + 40) {
+        p._stE[i] = 0;
+        P.push({ ox: e[0] * k + (Math.random() - 0.5) * 3 * k, y: top + e[1] * k, r: (11 + Math.random() * 7) * k, g: (22 + Math.random() * 14) * k, vy: (46 + Math.random() * 30) * k * 1.6, age: 0, life: 2.2 + Math.random() * 1.4, a: 0.5 + Math.random() * 0.3, w: (Math.random() - 0.3) });
+      }
+    });
+    if (P.length > 140) P.splice(0, P.length - 140);
+    ctx.save();
+    for (let i = P.length - 1; i >= 0; i--) {
+      const q = P[i]; q.age += dt;
+      if (q.age >= q.life) { P.splice(i, 1); continue; }
+      q.y -= q.vy * dt * (1 - 0.35 * q.age / q.life); q.ox += (q.w * 10 - 14) * k * dt * (0.6 + q.age / q.life); q.r += q.g * dt;
+      const u = q.age / q.life, al = q.a * Math.min(1, q.age * 3) * (1 - u) * (1 - u * 0.4), x = p.x + q.ox;
+      const gr = ctx.createRadialGradient(x, q.y, 0, x, q.y, q.r);
+      gr.addColorStop(0, "rgba(247,240,228," + al.toFixed(3) + ")"); gr.addColorStop(0.6, "rgba(232,222,206," + (al * 0.6).toFixed(3) + ")"); gr.addColorStop(1, "rgba(220,210,195,0)");
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, q.y, q.r, 0, 6.2832); ctx.fill();
+    }
+    ctx.restore();
+  }
   function drawLandingPlatformArt(p) {
-    if (p.art && lpReady) ctx.drawImage(lpImg, p.x, p.surfaceY - p.deckFromTop * p.h, p.w, p.h);
+    if (p.art && lpReady) { ctx.drawImage(lpImg, p.x, p.surfaceY - p.deckFromTop * p.h, p.w, p.h); drawPlatSteam(p); }
     else if (window.__airborneDrawLandingPlatform) window.__airborneDrawLandingPlatform(p.x);
   }
   function updatePlatLanding(dt) {
@@ -10102,7 +10130,19 @@ function drawFireballs() {
     }
   }
 
+  // during the bonus round only bonus items exist: no gameplay hearts, shields, power-ups, coins, crystals, checkpoint or lucky coin
+  function purgeGameplayItems() {
+    try { if (typeof healPickup !== "undefined") healPickup = null; } catch (e) {}
+    try { if (typeof shieldPickup !== "undefined") shieldPickup = null; } catch (e) {}
+    try { powerup = null; } catch (e) {}
+    try { luckyCoin = null; } catch (e) {}
+    try { checkpointPickup = null; } catch (e) {}
+    try { window.__airborneHitCoins = []; } catch (e) {}
+    try { if (typeof window.__airborneResetCampaignCollectibles === "function") window.__airborneResetCampaignCollectibles(); } catch (e) {}
+    try { if (window.__airborneObstacles) window.__airborneObstacles = window.__airborneObstacles.filter(function (o) { return !(o && o.isCheckpointRing); }); } catch (e) {}
+  }
   function updateBonusRound(dt) {
+    if (bonusPending || bonusActive) purgeGameplayItems();
     if (bonusPending && performance.now() >= bonusPendingAt) {
       bonusPending = false;
       startBonusRound(bonusPendingType);
