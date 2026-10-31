@@ -417,6 +417,42 @@
     bird_b_34: "bird_b_34.webp?cb=2",
     bird_b_35: "bird_b_35.webp?cb=2",
     bird_b_36: "bird_b_36.webp?cb=2",
+    bird_c_01: "bird_c_01.webp?v=ruff564",
+    bird_c_02: "bird_c_02.webp?v=ruff564",
+    bird_c_03: "bird_c_03.webp?v=ruff564",
+    bird_c_04: "bird_c_04.webp?v=ruff564",
+    bird_c_05: "bird_c_05.webp?v=ruff564",
+    bird_c_06: "bird_c_06.webp?v=ruff564",
+    bird_c_07: "bird_c_07.webp?v=ruff564",
+    bird_c_08: "bird_c_08.webp?v=ruff564",
+    bird_c_09: "bird_c_09.webp?v=ruff564",
+    bird_c_10: "bird_c_10.webp?v=ruff564",
+    bird_c_11: "bird_c_11.webp?v=ruff564",
+    bird_c_12: "bird_c_12.webp?v=ruff564",
+    bird_c_13: "bird_c_13.webp?v=ruff564",
+    bird_c_14: "bird_c_14.webp?v=ruff564",
+    bird_c_15: "bird_c_15.webp?v=ruff564",
+    bird_c_16: "bird_c_16.webp?v=ruff564",
+    bird_c_17: "bird_c_17.webp?v=ruff564",
+    bird_c_18: "bird_c_18.webp?v=ruff564",
+    bird_c_19: "bird_c_19.webp?v=ruff564",
+    bird_c_20: "bird_c_20.webp?v=ruff564",
+    bird_c_21: "bird_c_21.webp?v=ruff564",
+    bird_c_22: "bird_c_22.webp?v=ruff564",
+    bird_c_23: "bird_c_23.webp?v=ruff564",
+    bird_c_24: "bird_c_24.webp?v=ruff564",
+    bird_c_25: "bird_c_25.webp?v=ruff564",
+    bird_c_26: "bird_c_26.webp?v=ruff564",
+    bird_c_27: "bird_c_27.webp?v=ruff564",
+    bird_c_28: "bird_c_28.webp?v=ruff564",
+    bird_c_29: "bird_c_29.webp?v=ruff564",
+    bird_c_30: "bird_c_30.webp?v=ruff564",
+    bird_c_31: "bird_c_31.webp?v=ruff564",
+    bird_c_32: "bird_c_32.webp?v=ruff564",
+    bird_c_33: "bird_c_33.webp?v=ruff564",
+    bird_c_34: "bird_c_34.webp?v=ruff564",
+    bird_c_35: "bird_c_35.webp?v=ruff564",
+    bird_c_36: "bird_c_36.webp?v=ruff564",
     balloon_anim_01: "balloon_anim_01.webp?cb=2",
     balloon_anim_02: "balloon_anim_02.webp?cb=2",
     balloon_anim_03: "balloon_anim_03.webp?cb=2",
@@ -1421,6 +1457,7 @@
   const BOSS4_ANIM_FPS = 16;
   const BIRD_A_KEYS = Array.from({ length: OBSTACLE_ANIM_FRAME_COUNT }, (_, i) => `bird_a_${String(i + 1).padStart(2, "0")}`);
   const BIRD_B_KEYS = Array.from({ length: OBSTACLE_ANIM_FRAME_COUNT }, (_, i) => `bird_b_${String(i + 1).padStart(2, "0")}`);
+  const BIRD_C_KEYS = Array.from({ length: OBSTACLE_ANIM_FRAME_COUNT }, (_, i) => `bird_c_${String(i + 1).padStart(2, "0")}`);
   const BALLOON_ANIM_KEYS = Array.from({ length: OBSTACLE_ANIM_FRAME_COUNT }, (_, i) => `balloon_anim_${String(i + 1).padStart(2, "0")}`);
   // mini lead-in enemies for bosses 2-5 — single static sprite repeated across the
   // frame slots (no per-frame animation art yet), so they still bob/drift normally
@@ -1429,7 +1466,7 @@
   const MINI_HELI_KEYS = Array.from({ length: OBSTACLE_ANIM_FRAME_COUNT }, (_, i) => `mini_heli_${String(i + 1).padStart(2, "0")}`);
   const MINI_EBOMB_KEYS = Array.from({ length: OBSTACLE_ANIM_FRAME_COUNT }, () => "mini_ebomb");
   const OBSTACLE_ANIM_SETS = {
-    bird_a: BIRD_A_KEYS, bird_b: BIRD_B_KEYS, balloon_anim: BALLOON_ANIM_KEYS,
+    bird_a: BIRD_A_KEYS, bird_b: BIRD_B_KEYS, bird_c: BIRD_C_KEYS, balloon_anim: BALLOON_ANIM_KEYS,
     mini_blimp: MINI_BLIMP_KEYS, mini_tank: MINI_TANK_KEYS, mini_heli: MINI_HELI_KEYS, mini_ebomb: MINI_EBOMB_KEYS
   };
 

@@ -670,7 +670,7 @@ window.__airborneRingDebug = false;
         return next.miniType;
       }
     }
-    return Math.random() < 0.5 ? "bird_a" : "bird_b";
+    { var rb = Math.random(); return rb < 0.34 ? "bird_a" : (rb < 0.67 ? "bird_b" : "bird_c"); }
   }
 
   // Training bird spritesheets (new aviator birds)
@@ -1308,7 +1308,7 @@ window.__airborneRingDebug = false;
       aspect = 1;
       // force square-ish size after later assignments
     }
-    if (type === "bird_a" || type === "bird_b") {
+    if (type === "bird_a" || type === "bird_b" || type === "bird_c") {
       // ORIGINAL two bird assets only (frame sequences bird_a / bird_b)
       birdSpecies = null;
       birdFrameCount = OBSTACLE_ANIM_FRAME_COUNT || 28;
@@ -1320,8 +1320,8 @@ window.__airborneRingDebug = false;
       }
       dispW = Math.min(86, W * 0.176);
     }
-    const dispH2 = (type === "bird_a" || type === "bird_b") ? dispW * aspect : dispH;
-    if (type === "bird_a" || type === "bird_b") {
+    const dispH2 = (type === "bird_a" || type === "bird_b" || type === "bird_c") ? dispW * aspect : dispH;
+    if (type === "bird_a" || type === "bird_b" || type === "bird_c") {
       // use recomputed size (+10%)
     }
     if (type === "drone_scout") {
@@ -1333,11 +1333,11 @@ window.__airborneRingDebug = false;
       x: W + dispW,
       y,
       w: dispW,
-      h: (type === "bird_a" || type === "bird_b") ? (dispW * aspect) : dispH,
+      h: (type === "bird_a" || type === "bird_b" || type === "bird_c") ? (dispW * aspect) : dispH,
       bobPhase: Math.random() * Math.PI * 2,
       bobSpeed: 1.5 + Math.random() * 1.2,
       bobAmount: 8 + Math.random() * 10,
-      speedMult: type === "balloon_anim" ? 0.72 : (type === "drone_scout" ? 0.43 : ((type === "bird_a" || type === "bird_b") ? 0.855 : 1)),
+      speedMult: type === "balloon_anim" ? 0.72 : (type === "drone_scout" ? 0.43 : ((type === "bird_a" || type === "bird_b" || type === "bird_c") ? 0.855 : 1)),
       animFrame: Math.floor(Math.random() * birdFrameCount),
       animTimer: Math.random() / OBSTACLE_ANIM_FPS,
       birdSpecies: birdSpecies,
@@ -3001,7 +3001,7 @@ window.__airborneRingDebug = false;
         return;
       }
       // Classic bird_a / bird_b frame draw (no species sheets)
-      if (o.type === "bird_a" || o.type === "bird_b") {
+      if (o.type === "bird_a" || o.type === "bird_b" || o.type === "bird_c") {
         var framesB = OBSTACLE_ANIM_SETS[o.type];
         var imgB = null;
         if (framesB && framesB.length && typeof images !== "undefined" && images) {
@@ -3148,10 +3148,10 @@ window.__airborneRingDebug = false;
     o._wAcc = (o._wAcc || 0) + dt;
     while (o._wAcc >= 0.05) {
       o._wAcc -= 0.05;
-      if (Math.random() < 0.5) P.push({ x: o.x + o.w * (0.20 + Math.random() * 0.5), y: drawY + o.h * (0.32 + Math.random() * 0.36), vx: 380 + Math.random() * 320 + speed * 0.5, age: 0, life: 0.22 + Math.random() * 0.18, len: (28 + Math.random() * 46) * sc });
+      if (Math.random() < 0.5) P.push({ x: o.x + o.w * (0.20 + Math.random() * 0.5), y: drawY + o.h * (0.41 + Math.random() * 0.18), vx: 380 + Math.random() * 320 + speed * 0.5, age: 0, life: 0.22 + Math.random() * 0.18, len: (28 + Math.random() * 46) * sc * 0.5 });
     }
     if (P.length > 24) P.splice(0, P.length - 24);
-    ctx.save(); ctx.lineCap = "round"; ctx.lineWidth = 1.8; ctx.globalCompositeOperation = "source-over";
+    ctx.save(); ctx.lineCap = "round"; ctx.lineWidth = 1.2; ctx.globalCompositeOperation = "source-over";
     for (var i = P.length - 1; i >= 0; i--) {
       var q = P[i]; q.age += dt;
       if (q.age >= q.life) { P.splice(i, 1); continue; }

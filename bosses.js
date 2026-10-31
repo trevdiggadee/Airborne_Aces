@@ -8959,11 +8959,11 @@ function drawFireballs() {
   function lpGeom() {
     const base = window.__airborneLandingPlatform();
     if (!lpReady || !lpImg.naturalWidth) return Object.assign({ art: false }, base);
-    const w = Math.min(W * 0.9, H * 1.306), h = w * lpImg.naturalHeight / lpImg.naturalWidth;
-    return { art: true, w: w, h: h, deckY: base.deckY, restFrac: 0.643, center: 0.74, x0: 0.58, x1: 0.93 };
+    const w = Math.min(W * 0.92, H * 1.306 * 1.5), h = w * lpImg.naturalHeight / lpImg.naturalWidth;   // 50% bigger than the take-off scale
+    return { art: true, w: w, h: h, deckY: base.deckY, restFrac: 0.643, center: 0.26, x0: 0.07, x1: 0.42 };   // art is mirrored: the deck is on the left of the sprite, the platform sits at the right edge
   }
   function drawLandingPlatformArt(p) {
-    if (p.art && lpReady) ctx.drawImage(lpImg, p.x, p.surfaceY - p.deckFromTop * p.h, p.w, p.h);
+    if (p.art && lpReady) { ctx.save(); ctx.translate(p.x + p.w, 0); ctx.scale(-1, 1); ctx.drawImage(lpImg, 0, p.surfaceY - p.deckFromTop * p.h, p.w, p.h); ctx.restore(); }
     else if (window.__airborneDrawLandingPlatform) window.__airborneDrawLandingPlatform(p.x);
   }
   function updatePlatLanding(dt) {
@@ -8974,7 +8974,7 @@ function drawFireballs() {
     const restY = pad.surfaceY - player.h * 0.42;
     let dist = 0;
     if (!pad.arrived) {
-      pad.targetX = pad.art ? -0.25 * g.w : player.x - g.w * pad.deckCenterFrac;   // new art: always leaves 25% of the platform off-screen; the blimp glides forward over the deck
+      pad.targetX = pad.art ? W - 0.75 * g.w : player.x - g.w * pad.deckCenterFrac;   // new art: always leaves 25% of the platform off the right edge; the blimp glides forward over the deck
       if (pad.t0 === undefined) { pad.t0 = 0; showBanner("COMING IN FOR A LANDING", 2400, "defeat"); if (typeof sfxPadApproach === "function") sfxPadApproach(); }
       pad.t0 += dt;
       dist = pad.x - pad.targetX;
@@ -8991,7 +8991,7 @@ function drawFireballs() {
     window.__airborneLandHide = 1;
     if (pad.art) {          // ease the blimp forward over the deck as the platform settles (like a real approach)
       const tx = pad.targetX + pad.w * pad.deckCenterFrac, dxp = tx - player.x;
-      if (Math.abs(dxp) > 0.5) player.x += Math.sign(dxp) * Math.min(Math.abs(dxp), Math.max(8, Math.min(70, Math.abs(dxp) * 1.5)) * dt); else player.x = tx;
+      if (Math.abs(dxp) > 0.5) player.x += Math.sign(dxp) * Math.min(Math.abs(dxp), Math.max(8, Math.min(110, Math.abs(dxp) * 1.5)) * dt); else player.x = tx;
     }
     // very light help while the platform closes in: a gentle glide slope toward deck height (taps still override)
     if (!pad.arrived && dist < W * 0.7) {

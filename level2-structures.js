@@ -181,7 +181,7 @@
     }
     out.sort(function (p, q) { return p.row - q.row; });
     var res = [];
-    out.forEach(function (p) { if (res.length < maxN && res.every(function (r) { return Math.abs(r.x - p.x) > n * 0.05; })) res.push(p); });
+    out.forEach(function (p) { if (res.length < maxN && res.every(function (r) { return Math.abs(r.x - p.x) > n * (maxN > 8 ? 0.03 : 0.05); })) res.push(p); });
     res.sort(function (p, q) { return p.x - q.x; });
     return res;
   }
@@ -210,7 +210,7 @@
         var g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(refStripImg, 0, 0, refStripCols, REF_R);
         var d = g.getImageData(0, 0, refStripCols, REF_R).data, t = new Int16Array(refStripCols);
         for (var x = 0; x < refStripCols; x++) { t[x] = REF_R; for (var y = 0; y < REF_R; y++) { if (d[(y * refStripCols + x) * 4 + 3] > 70) { t[x] = y; break; } } }
-        tops.refstrip = t; refPeaks.refstrip = findPeaks(t, REF_R, 14);
+        tops.refstrip = t; refPeaks.refstrip = findPeaks(t, REF_R, 24);
         refStripReady = true;
       } catch (e) { refStripReady = false; }
     };
@@ -430,12 +430,12 @@
       var f = { f: p.f, row: p.row, t: rnd(0, 1), type: "smoke" };
       var oy = p.row * st.s, ox = p.f * st.w, room = st.y + oy - H * 0.22;
       if (strip && p.row > REF_R * 0.12) {
-        if (fire < 3 && i % 4 === 3) { fire++; f.type = "fire"; addVent(st, "up", ox, oy, Math.max(H * 0.08, Math.min(H * 0.15, room))); vents[vents.length - 1].fire = true; }
-        else if (steam < 5 && i % 3 === 1) { steam++; f.type = "vent"; addVent(st, "up", ox, oy, Math.max(H * 0.09, Math.min(H * 0.18, room))); }
+        if (fire < 8 && i % 2 === 1) { fire++; f.type = "fire"; addVent(st, "up", ox, oy, Math.max(H * 0.10, Math.min(H * 0.20, room))); vents[vents.length - 1].fire = true; vents[vents.length - 1].cyc = 1.3; }
+        else if (steam < 9 && i % 3 === 0) { steam++; f.type = "vent"; addVent(st, "up", ox, oy, Math.max(H * 0.11, Math.min(H * 0.22, room))); vents[vents.length - 1].cyc = 1.15; }
         else if (!flare && i === 2) { flare = true; f.type = "flare"; }
       } else if (!strip && p.row > st.h / st.s * 0.12) {
         // standalone refinery pieces: a few of them vent steam or burn off flame as well
-        if (SMOKY[st.name] && Math.random() < 0.5) { f.type = "vent"; addVent(st, "up", ox, oy, Math.max(H * 0.08, Math.min(H * 0.15, room))); }
+        if (SMOKY[st.name] && Math.random() < 0.8) { f.type = "vent"; addVent(st, "up", ox, oy, Math.max(H * 0.08, Math.min(H * 0.15, room))); }
         else if (st.name === "r_derrick" || st.name === "r_cluster") { f.type = "fire"; addVent(st, "up", ox, oy, Math.max(H * 0.07, Math.min(H * 0.13, room))); vents[vents.length - 1].fire = true; }
       }
       st.fx.push(f);
@@ -579,8 +579,10 @@
       (typeof bonusActive !== "undefined" && bonusActive) || (typeof bonusPending !== "undefined" && bonusPending) || ending;
     if (exiting) {
       refExitK += dt;
-      if (!frozen) sp = 48 * Math.max(scale, 1) * dt * (1 + 5 * Math.min(1, refExitK / 1.2));
-      structs = structs.filter(function (s) { return s.isStack || s.x < W + 20 || s.x + s.w < 0; });   // nothing new comes on screen
+      if (!frozen) sp = 48 * Math.max(scale, 1) * dt;      // same speed as normal play: the skyline simply drifts out
+      if (ending && !frozen) sp = Math.max(0.15, (typeof window.__airborneLandScrollMul === 'number' ? window.__airborneLandScrollMul : 1)) * Math.max(150, Math.min(230, W * 0.28)) * dt * ((typeof window.__airborneLandScrollMul === 'number' && window.__airborneLandScrollMul <= 0) ? 0 : 1);   // landing: leftovers leave at the platform's own speed and stop with it
+      structs = structs.filter(function (s) { return s.isStack || s.x < W + 20 || s.x + (s.visW || s.w) < 0; });   // nothing new comes on screen
+      structs.forEach(function (s) { if (s.ref && !s.visW && s.x + s.w > W + 12) s.visW = Math.max(40, W + 12 - s.x); });   // the off-screen tail of a long strip is dropped so it clears in time
     } else refExitK = 0;
     // halfway through the level the skyline becomes the refinery, all the way into the boss fight
     if (!refMode && !exiting && typeof bossesDefeatedCount === "number" && bossesDefeatedCount === 1 && refAssetsReady()) {
@@ -601,7 +603,7 @@
     canyonRefs.forEach(function (r) { r.x -= sp; });
     spawnX -= sp;
     // cull
-    structs = structs.filter(function (s) { return s.x + s.w > -260; });
+    structs = structs.filter(function (s) { return s.x + (s.visW || s.w) > -260; });
     canyonRefs = canyonRefs.filter(function (r) { return r.x + r.w > -260; });
     vents = vents.filter(function (v) { return structs.indexOf(v.host) >= 0; });
 
@@ -619,7 +621,7 @@
       !(typeof bonusActive !== "undefined" && bonusActive) && !ending && typeof takeHit === "function";
     var pb = canHurt ? playerBox() : null;
     vents.forEach(function (v) {
-      if (!frozen) v.t += dt;
+      if (!frozen) v.t += dt * (v.cyc || 1);
       var pos = ventPos(v);
       v.sx = pos.x; v.sy = pos.y;
       if (!pb || pos.x < -80 || pos.x > W + 80) return;
@@ -673,7 +675,7 @@
     g.fillStyle = rg; g.fillRect(0, 0, 64, 64); glowCache[rgb] = c; return c;
   }
   function glowAt(x, y, r, rgb, a) { ctx.globalAlpha = a; ctx.drawImage(glowSpr(rgb), x - r, y - r, r * 2, r * 2); }
-  function pushFx(p) { if (refFxP.length > 420) refFxP.shift(); refFxP.push(p); }
+  function pushFx(p) { if (refFxP.length > 700) refFxP.shift(); refFxP.push(p); }
   function updateRefFx(dt, sp) {
     var u = U();
     for (var i = 0; i < structs.length; i++) {
@@ -683,9 +685,9 @@
         var px = s.x + f.f * s.w, py = s.y + f.row * s.s;
         if (px < -30 || px > W + 30) return;
         f.t = (f.t || 0) - dt;
-        if (f.type === "smoke" && f.t <= 0) {
-          f.t = rnd(0.22, 0.42);
-          pushFx({ k: "smoke", x: px + rnd(-2, 2) * u, y: py - 2 * u, r: rnd(3, 5) * u, g: rnd(1.1, 1.8) * u, age: 0, life: rnd(3.2, 5.2), a: rnd(0.5, 0.72), d: rnd(0, 1) });
+        if ((f.type === "smoke" || f.type === "fire" || f.type === "vent") && f.t <= 0) {
+          f.t = rnd(0.10, 0.20);
+          pushFx({ k: "smoke", x: px + rnd(-2, 2) * u, y: py - 2 * u, r: rnd(3, 5) * u, g: rnd(1.1, 1.8) * u, age: 0, life: rnd(3.6, 5.8), a: rnd(0.55, 0.8), d: rnd(0, 1) });
         } else if (f.type === "flare") {
           if (f.t <= 0) { f.t = 0.035; pushFx({ k: "flame", x: px + rnd(-2, 2) * u, y: py - 2 * u, r: rnd(3.5, 6) * u, age: 0, life: rnd(0.28, 0.5), vy: rnd(40, 75) * u }); }
         }
@@ -715,7 +717,7 @@
   }
   function drawRefStrip(s) {
     var cx = window.__airborneCamExt || { l: 0, r: 0 };
-    var x0 = Math.max(s.x, -cx.l - 8), x1 = Math.min(s.x + s.w, W + cx.r + 8);
+    var x0 = Math.max(s.x, -cx.l - 8), x1 = Math.min(s.x + (s.visW || s.w), W + cx.r + 8);
     if (x1 <= x0) return;
     var iw = refStripImg.naturalWidth, ih = refStripImg.naturalHeight, k = iw / s.w;
     ctx.drawImage(refStripImg, (x0 - s.x) * k, 0, (x1 - x0) * k, ih, x0, s.y, x1 - x0, s.h);
