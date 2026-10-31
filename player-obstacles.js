@@ -3058,7 +3058,7 @@ window.__airborneRingDebug = false;
         ctx.globalAlpha = 1;
         ctx.drawImage(img, o.x, drawY, o.w, o.h);
         ctx.restore();
-        if (o.type === "mini_blimp") drawMiniBlimpExhaust(o, drawY, speed);
+        if (o.type === "mini_blimp") { drawMiniBlimpExhaust(o, drawY, speed); drawMiniBlimpTakeoffFx(o, drawY, speed); }
       } catch (eD) {
         try { ctx.drawImage(img, o.x, drawY, o.w, o.h); } catch (e2) {}
       }
@@ -3135,6 +3135,52 @@ window.__airborneRingDebug = false;
     ribbon(0.72, "rgba(255,120,25,0.40)");
     ribbon(0.45, "rgba(255,180,50,0.50)");
     ribbon(0.24, "rgba(255,240,160,0.58)");
+    ctx.restore();
+  }
+  // Take-off style engine exhaust (dark puffs, glowing flame flicker, sparks) plus rushing-wind streaks for the boss-2 mini blimps.
+  // Same recipe as the level-2 launch platform, mirrored because the minis fly left.
+  function drawMiniBlimpTakeoffFx(o, drawY, speed) {
+    var nowT = (typeof performance !== "undefined") ? performance.now() : Date.now();
+    var dt = o._twT ? Math.min(0.05, (nowT - o._twT) / 1000) : 0.016;
+    o._twT = nowT;
+    var P = o._twP || (o._twP = []);
+    var sc = o.w / 140, nx = o.x + o.w * 0.86, ny = drawY + o.h * 0.52;
+    o._twAcc = (o._twAcc || 0) + dt;
+    while (o._twAcc >= 0.03) {
+      o._twAcc -= 0.03;
+      P.push({ k: "puff", x: nx, y: ny, vx: (50 + Math.random() * 30) * sc, vy: -6 + (Math.random() - 0.5) * 22, age: 0, life: 0.7 + Math.random() * 0.5, r: (4 + Math.random() * 3) * sc, g: 14 * sc });
+      if (Math.random() < 0.8) P.push({ k: "flame", x: nx, y: ny, vx: (100 + Math.random() * 90) * sc, vy: (Math.random() - 0.5) * 18, age: 0, life: 0.16 + Math.random() * 0.1, r: (3 + Math.random() * 3) * sc });
+      if (Math.random() < 0.45) P.push({ k: "spark", x: nx, y: ny, vx: (110 + Math.random() * 120) * sc, vy: (Math.random() - 0.5) * 80, age: 0, life: 0.35 + Math.random() * 0.3 });
+      // wind: thin air-streaks racing past the hull (the blimp flies left, so the air rushes right)
+      if (Math.random() < 0.55) P.push({ k: "streak", x: o.x - o.w * 0.15 + Math.random() * o.w * 0.5, y: drawY + o.h * (-0.15 + Math.random() * 1.3), vx: 380 + Math.random() * 320 + speed * 0.5, vy: 0, age: 0, life: 0.22 + Math.random() * 0.18, len: (28 + Math.random() * 46) * sc });
+    }
+    if (P.length > 90) P.splice(0, P.length - 90);
+    ctx.save();
+    for (var i = P.length - 1; i >= 0; i--) {
+      var p = P[i]; p.age += dt;
+      if (p.age >= p.life) { P.splice(i, 1); continue; }
+      var u = p.age / p.life;
+      p.x += (p.vx - (p.k === "streak" ? 0 : speed * 0.55)) * dt; p.y += p.vy * dt;
+      if (p.k === "spark") p.vy += 380 * dt;
+      if (p.k === "puff") { p.vx *= (1 - 1.2 * dt); p.vy -= 10 * dt; }
+      ctx.globalCompositeOperation = "source-over";
+      if (p.k === "puff") {
+        ctx.fillStyle = "rgba(74,68,64," + (0.42 * (1 - u)).toFixed(3) + ")";
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r + p.g * u, 0, 6.2832); ctx.fill();
+      } else if (p.k === "flame") {
+        ctx.globalCompositeOperation = "lighter";
+        var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 2);
+        g.addColorStop(0, "rgba(255,240,170," + (0.9 * (1 - u)).toFixed(3) + ")"); g.addColorStop(0.5, "rgba(255,140,40," + (0.6 * (1 - u)).toFixed(3) + ")"); g.addColorStop(1, "rgba(220,60,10,0)");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 2, 0, 6.2832); ctx.fill();
+      } else if (p.k === "spark") {
+        ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = "rgba(255,200,110," + (1 - u).toFixed(3) + ")"; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 0.03, p.y - p.vy * 0.03); ctx.stroke();
+      } else {
+        var a = 0.6 * Math.sin(Math.PI * Math.min(1, u * 1.1));
+        ctx.strokeStyle = "rgba(255,255,255," + a.toFixed(3) + ")"; ctx.lineWidth = 1.8; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.len, p.y); ctx.stroke();
+      }
+    }
     ctx.restore();
   }
 
