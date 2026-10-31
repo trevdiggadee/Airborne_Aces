@@ -8949,10 +8949,26 @@ function drawFireballs() {
 
   // Level 2 landing: the take-off platform scrolls in from the right at take-off height; it and the whole world stop together,
   // and the pilot flies the blimp down onto it (taps control altitude, a soft assist only takes over for the last few feet).
+  const lpImg = new Image(); let lpReady = false;
+  lpImg.onload = function () { lpReady = true; }; lpImg.onerror = function () { lpReady = false; };
+  lpImg.src = "level2_landing_platform.webp?v=ruff562";
+  // landing platform geometry: the dedicated landing-platform art when loaded (deck at take-off height, ~25% of it left off-screen),
+  // otherwise the take-off platform art
+  function lpGeom() {
+    const base = window.__airborneLandingPlatform();
+    if (!lpReady || !lpImg.naturalWidth) return Object.assign({ art: false }, base);
+    const w = W * 0.449, h = w * lpImg.naturalHeight / lpImg.naturalWidth;
+    return { art: true, w: w, h: h, deckY: base.deckY, restFrac: 0.643, center: 0.74, x0: 0.58, x1: 0.93 };
+  }
+  function drawLandingPlatformArt(p) {
+    if (p.art && lpReady) ctx.drawImage(lpImg, p.x, p.surfaceY - p.deckFromTop * p.h, p.w, p.h);
+    else if (window.__airborneDrawLandingPlatform) window.__airborneDrawLandingPlatform(p.x);
+  }
   function updatePlatLanding(dt) {
-    const pad = levelEndPad, g = window.__airborneLandingPlatform();
+    const pad = levelEndPad, g = lpGeom();
     pad.glowPhase += dt * 3; pad.fade = 1; window.__airborneLandHide = 1;
-    pad.w = g.w; pad.h = g.h; pad.y = H - g.h; pad.surfaceY = g.deckY;
+    pad.art = g.art; pad.w = g.w; pad.h = g.h; pad.deckFromTop = g.restFrac; pad.y = g.deckY - g.restFrac * g.h; pad.surfaceY = g.deckY;
+    pad.deckCenterFrac = g.center; pad.deckX0 = g.x0; pad.deckX1 = g.x1;
     const restY = pad.surfaceY - player.h * 0.42;
     let dist = 0;
     if (!pad.arrived) {
@@ -8998,8 +9014,8 @@ function drawFireballs() {
 
   function spawnLandingPad() {
     if (isDockLanding() && window.__airborneLandingPlatform) {   // level 2: the take-off platform again, scrolling in from the right at the same height
-      const g = window.__airborneLandingPlatform();
-      levelEndPad = { plat: true, x: W + 40, y: H - g.h, w: g.w, h: g.h, surfaceY: g.deckY, deckFromTop: g.restFrac, deckCenterFrac: g.center, deckX0: g.x0, deckX1: g.x1,
+      const g = lpGeom();
+      levelEndPad = { plat: true, art: g.art, x: W + 40, y: H - g.h, w: g.w, h: g.h, surfaceY: g.deckY, deckFromTop: g.restFrac, deckCenterFrac: g.center, deckX0: g.x0, deckX1: g.x1,
         targetX: player.x - g.w * g.center, docked: false, glowPhase: 0, fade: 1, arrived: false };
       return;
     }
@@ -9436,7 +9452,7 @@ function drawFireballs() {
     // Level 2 landing platform: the take-off platform art, with blinking runway lights along the deck
     if (levelEndPad && levelEndPad.plat) {
       const p = levelEndPad, sy = p.surfaceY, tt = performance.now() / 1000;
-      if (window.__airborneDrawLandingPlatform) window.__airborneDrawLandingPlatform(p.x);
+      drawLandingPlatformArt(p);
       const x0 = p.x + p.w * p.deckX0, x1 = p.x + p.w * p.deckX1, cx = (x0 + x1) / 2;
       if (x1 > -20 && x0 < W + 20) {
         ctx.save(); ctx.globalCompositeOperation = "lighter";

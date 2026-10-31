@@ -3058,7 +3058,7 @@ window.__airborneRingDebug = false;
         ctx.globalAlpha = 1;
         ctx.drawImage(img, o.x, drawY, o.w, o.h);
         ctx.restore();
-        if (o.type === "mini_blimp") { drawMiniBlimpExhaust(o, drawY, speed); drawMiniBlimpTakeoffFx(o, drawY, speed); }
+        if (o.type === "mini_blimp") drawMiniBlimpTakeoffFx(o, drawY, speed);
       } catch (eD) {
         try { ctx.drawImage(img, o.x, drawY, o.w, o.h); } catch (e2) {}
       }
@@ -3152,7 +3152,7 @@ window.__airborneRingDebug = false;
       if (Math.random() < 0.8) P.push({ k: "flame", x: nx, y: ny, vx: (100 + Math.random() * 90) * sc, vy: (Math.random() - 0.5) * 18, age: 0, life: 0.16 + Math.random() * 0.1, r: (3 + Math.random() * 3) * sc });
       if (Math.random() < 0.45) P.push({ k: "spark", x: nx, y: ny, vx: (110 + Math.random() * 120) * sc, vy: (Math.random() - 0.5) * 80, age: 0, life: 0.35 + Math.random() * 0.3 });
       // wind: thin air-streaks racing past the hull (the blimp flies left, so the air rushes right)
-      if (Math.random() < 0.55) P.push({ k: "streak", x: o.x - o.w * 0.15 + Math.random() * o.w * 0.5, y: drawY + o.h * (-0.15 + Math.random() * 1.3), vx: 380 + Math.random() * 320 + speed * 0.5, vy: 0, age: 0, life: 0.22 + Math.random() * 0.18, len: (28 + Math.random() * 46) * sc });
+      if (Math.random() < 0.55) P.push({ k: "streak", x: o.x + o.w * (0.05 + Math.random() * 0.5), y: drawY + o.h * (0.32 + Math.random() * 0.36), vx: 380 + Math.random() * 320 + speed * 0.5, vy: 0, age: 0, life: 0.22 + Math.random() * 0.18, len: (28 + Math.random() * 46) * sc });
     }
     if (P.length > 90) P.splice(0, P.length - 90);
     ctx.save();
