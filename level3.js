@@ -32,23 +32,39 @@
     is1: [{ fx: 0.50, fy: 0.95, dir: "d", len: 0.16 }]
   };
 
-  // ---------- cave geometry (sprite is 2079x372) ----------
-  var CAVE_W = 2079, CAVE_H = 372;
-  var CAVE_CEIL = 118, CAVE_FLOOR = 298, CAVE_CAP = 270, HOLE_Y0 = 140, HOLE_Y1 = 272, CAVE_EDGE = 30;
-  var CAVE_RECTS = [   // solid pillars / slabs (sprite px)
-    [644, 176, 770, 204], [680, 204, 736, 298],        // pillar A
-    [380, 236, 550, 280],                                // slab 1
-    [730, 260, 860, 300],                                // slab 2
-    [956, 190, 1120, 222], [1000, 222, 1080, 298],      // pillar B
-    [1090, 256, 1240, 280],                              // slab 3
-    [1260, 200, 1420, 236], [1310, 236, 1380, 298],     // pillar C
-    [1460, 196, 1600, 232],                              // slab D
-    [1600, 220, 1720, 260]                               // slab 4
+  // ---------- cave geometry (sprite is 2576x357, full screen height) ----------
+  var CAVE_W = 2576, CAVE_H = 357;
+  var WALL_L = 216, WALL_R = 2420, CORR0 = 131, CORR1 = 193, CAVE_CEIL = 46;
+  var CAVE_RECTS = [   // solid parts (sprite px). 0..3 = ceiling and the three floors (the blimp is pushed off those)
+    [216, 0, 2420, CAVE_CEIL], [216, 225, 700, 357], [700, 333, 1930, 357], [1930, 228, 2420, 357],
+    [205, 100, 310, 128],                                   // ledge over the entrance
+    [297, 165, 388, 205],                                   // platform just inside the entrance
+    [408, 142, 478, 168], [428, 168, 460, 200], [445, 186, 520, 202],
+    [558, 153, 642, 172], [580, 172, 625, 215],
+    [1035, 218, 1160, 240], [1060, 240, 1135, 333],         // big centre pillar
+    [1160, 158, 1262, 205],
+    [1500, 133, 1690, 160], [1620, 183, 1750, 198],
+    [2005, 110, 2090, 130], [2018, 155, 2105, 180], [2172, 168, 2255, 196], [2272, 155, 2352, 178], [2340, 98, 2425, 120]
   ];
-  var CAVE_NODES = [   // crystal arcs [fx(of 1039), fy(of 186), dir, len(frac of cave height), cycle offset]
-    [354, 86, "u", 0.30, 0.0], [520, 93, "u", 0.30, 0.9], [670, 98, "u", 0.30, 1.8], [765, 96, "u", 0.30, 2.6],
-    [240, 150, "u", 0.30, 1.3], [600, 150, "u", 0.34, 0.4], [815, 150, "u", 0.34, 2.1], [440, 148, "u", 0.30, 2.9]
+  var CAVE_NODES = [   // crystal arcs [x, y (sprite px), dir, length (fraction of cave height), cycle offset]
+    [340, 222, "u", 0.30, 0.0], [610, 222, "u", 0.28, 1.5], [1090, 216, "u", 0.36, 0.8], [980, 333, "u", 0.34, 2.2],
+    [1250, 333, "u", 0.34, 0.4], [1420, 333, "u", 0.34, 1.9], [1640, 330, "u", 0.34, 2.7], [1860, 330, "u", 0.34, 1.1],
+    [2040, 226, "u", 0.30, 0.6], [2200, 226, "u", 0.28, 2.4], [2330, 226, "u", 0.30, 1.3]
   ];
+  var PIPES = { l: { key: "level3_pipe_l", x: 16, y: 129 }, r: { key: "level3_pipe_r", x: 2435, y: 130 } };
+  var caveMaskData = null;
+  function caveMask() {      // coarse opaque/transparent map of the cave art (for the rock walls around the pipes)
+    if (caveMaskData) return caveMaskData;
+    var im = img("level3_cave"); if (!im || !im.naturalWidth) return null;
+    try {
+      var k = 4, w = Math.ceil(CAVE_W / k), h = Math.ceil(CAVE_H / k), c = document.createElement("canvas"); c.width = w; c.height = h;
+      var g = c.getContext("2d"); g.drawImage(im, 0, 0, w, h); var px = g.getImageData(0, 0, w, h).data, d = new Uint8Array(w * h);
+      for (var i = 0; i < d.length; i++) d[i] = px[i * 4 + 3] > 128 ? 1 : 0;
+      caveMaskData = { w: w, h: h, k: k, d: d };
+    } catch (e) { caveMaskData = null; }
+    return caveMaskData;
+  }
+  function caveOpaque(m, x, y) { var ix = (x / m.k) | 0, iy = (y / m.k) | 0; if (ix < 0 || iy < 0 || ix >= m.w || iy >= m.h) return false; return m.d[iy * m.w + ix] === 1; }
 
   var on = false, structs = [], spawnX = 0, cave = null, caveDone = false, clockT = 0, playT = 0, groundX = 0, parX = 0;
   var fxP = [];
@@ -131,12 +147,12 @@
   }
   function caveDims() {
     var h = H, s = h / CAVE_H;
-    return { h: h, s: s, w: CAVE_W * s, top: groundY() - (CAVE_FLOOR / CAVE_H) * h };
+    return { h: h, s: s, w: CAVE_W * s, top: 0 };
   }
   function spawnCave() {
     var d = caveDims();
     cave = { x: Math.max(W + 60, spawnX), w: d.w, h: d.h, s: d.s, top: d.top, nodes: [] };
-    CAVE_NODES.forEach(function (n) { cave.nodes.push({ fx: n[0] / 1039, fy: n[1] / 186, dir: n[2], len: n[3], t: n[4], cyc: 1 }); });
+    CAVE_NODES.forEach(function (n) { cave.nodes.push({ fx: n[0] / CAVE_W, fy: n[1] / CAVE_H, dir: n[2], len: n[3], t: n[4], cyc: 1 }); });
     spawnX = cave.x + cave.w + 420;
     window.__airborneL3Cave = true;
   }
@@ -153,14 +169,14 @@
   };
   window.__airborneL3InCave = function () {
     if (!cave) return false;
-    return player.x > cave.x + CAVE_CAP * cave.s * 0.9 && player.x < cave.x + cave.w - CAVE_CAP * cave.s * 0.9;
+    return player.x > cave.x + (WALL_L + 40) * cave.s && player.x < cave.x + (WALL_R - 40) * cave.s;
   };
   // cave on screen? the boss waits until it has been flown through
   window.__airborneL3HoldBoss = function () { return !!(cave && cave.x < W + 200 && cave.x + cave.w > -50); };
   // rect of rock mass covering the screen (rain / clouds are clipped out of it)
   window.__airborneL3CaveRect = function () {
     if (!cave) return null;
-    var x0 = Math.max(0, cave.x + CAVE_EDGE * cave.s), x1 = Math.min(W, cave.x + cave.w - CAVE_EDGE * cave.s);
+    var x0 = Math.max(0, cave.x + WALL_L * cave.s), x1 = Math.min(W, cave.x + WALL_R * cave.s);
     return x1 > x0 ? { x0: x0, x1: x1 } : null;
   };
   window.__airborneL3WithClip = function (fn) {
@@ -325,16 +341,23 @@
     }
     if (cave) {
       var c = cave, sC = c.s, lx = (player.x - c.x) / sC, ly0 = (player.y - c.top) / sC;
-      var lhw = hw / sC, lhh = hh / sC;
-      if (player.x > c.x + CAVE_EDGE * sC && player.x - hw < c.x + c.w - CAVE_EDGE * sC) {
-        var bad = false, inLeft = (lx - lhw) < CAVE_CAP, inRight = (lx + lhw) > CAVE_W - CAVE_CAP;
-        if (inLeft || inRight) { if (ly0 - lhh < HOLE_Y0 || ly0 + lhh > HOLE_Y1) bad = true; }
-        else {
-          if (ly0 - lhh < CAVE_CEIL) { player.y = c.top + (CAVE_CEIL + lhh) * sC; if (player.vy < 0) player.vy = 0; bad = true; }
-          if (ly0 + lhh > CAVE_FLOOR) { player.y = c.top + (CAVE_FLOOR - lhh) * sC; bad = true; }
-          for (var r = 0; r < CAVE_RECTS.length && !bad; r++) {
-            var q = CAVE_RECTS[r];
-            if (lx + lhw > q[0] && lx - lhw < q[2] && ly0 + lhh > q[1] && ly0 - lhh < q[3]) bad = true;
+      var lhw = hw / sC, lhh = hh / sC, bad = false;
+      if (lx + lhw > 0 && lx - lhw < CAVE_W) {
+        if (lx - lhw < WALL_L || lx + lhw > WALL_R) {          // rock walls round the pipes: only the pipe corridor is open
+          var m = caveMask();
+          if (m) {
+            for (var q0 = 0; q0 < pts.length && !bad; q0++) {
+              var qx = lx + pts[q0][0] / sC, qy = ly0 + pts[q0][1] / sC;
+              if ((qx < WALL_L || qx > WALL_R) && caveOpaque(m, qx, qy) && !(qy >= CORR0 && qy <= CORR1)) bad = true;
+            }
+          }
+        }
+        for (var r = 0; r < CAVE_RECTS.length && !bad; r++) {
+          var q = CAVE_RECTS[r];
+          if (lx + lhw > q[0] && lx - lhw < q[2] && ly0 + lhh > q[1] && ly0 - lhh < q[3]) {
+            bad = true;
+            if (r === 0) { player.y = c.top + (q[3] + lhh) * sC; if (player.vy < 0) player.vy = 0; }
+            else if (r <= 3) player.y = c.top + (q[1] - lhh) * sC;
           }
         }
         if (bad) { try { takeHit(); } catch (e2) {} return true; }
@@ -383,11 +406,7 @@
     if (!cave) return;
     var c = cave, im = img("level3_cave"); if (!im) return;
     if (c.x > W + 40 || c.x + c.w < -40) return;
-    var sC = c.s, mx0 = c.x + CAVE_EDGE * sC, mx1 = c.x + c.w - CAVE_EDGE * sC;
-    // rock mass above and below the cut-away so nothing of the outside world shows through
-    var gr = ctx.createLinearGradient(0, 0, 0, c.top + 40 * sC); gr.addColorStop(0, "#0b0814"); gr.addColorStop(1, "#201733");
-    ctx.fillStyle = gr; ctx.fillRect(mx0, 0, mx1 - mx0, c.top + 130 * sC);
-    ctx.fillStyle = "#150f20"; ctx.fillRect(mx0, c.top + c.h - 4 * sC, mx1 - mx0, H);
+    var sC = c.s;
     ctx.drawImage(im, c.x, c.top, c.w, c.h);
     // arcs on the crystals
     var host = { x: c.x, y: c.top, w: c.w, h: c.h };
@@ -402,19 +421,19 @@
     }
     ctx.restore();
   }
-  // Cave entrance / exit rims (rock, lantern, pipes) are drawn again AFTER the blimp: while the blimp is passing the
-  // entrance or exit it is layered under the cave; once it is inside the cave it is above it.
-  var FRONT_W = 340;
+  // The two copper pipes (black mouths masked out) are drawn AFTER the blimp: it flies into the pipe and is hidden by
+  // the pipe body, and shows again through the open mouth / out of the far end — it appears to travel through the pipe.
   window.__airborneL3DrawFront = function () {
     if (!on || !cave) return;
-    var c = cave, im = img("level3_cave"); if (!im) return;
-    if (c.x > W + 40 || c.x + c.w < -40) return;
-    var fw = FRONT_W * c.s;
+    var c = cave; if (c.x > W + 40 || c.x + c.w < -40) return;
     ctx.save();
     try {
-      if (c.x < W && c.x + fw > 0) ctx.drawImage(im, 0, 0, FRONT_W, CAVE_H, c.x, c.top, fw, c.h);
-      var rx = c.x + c.w - fw;
-      if (rx < W && rx + fw > 0) ctx.drawImage(im, CAVE_W - FRONT_W, 0, FRONT_W, CAVE_H, rx, c.top, fw, c.h);
+      ["l", "r"].forEach(function (k) {
+        var p = PIPES[k], im = img(p.key); if (!im || !im.naturalWidth) return;
+        var dx = c.x + p.x * c.s, dy = c.top + p.y * c.s, w = im.naturalWidth * c.s, h = im.naturalHeight * c.s;
+        if (dx > W + 20 || dx + w < -20) return;
+        ctx.drawImage(im, dx, dy, w, h);
+      });
     } catch (e) {}
     ctx.restore();
   };
