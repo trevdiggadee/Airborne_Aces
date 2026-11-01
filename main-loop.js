@@ -766,6 +766,7 @@ function loop(ts) {
     try { ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; } catch (e) {}
     try { if (window.__airborneDrawRoyalBehind) window.__airborneDrawRoyalBehind(); } catch (e) {}
     drawPlayer();
+    try { if (window.__airborneL3DrawFront) window.__airborneL3DrawFront(); } catch (eL3f) {}
       try { if (window.drawBlimpSurfaceShadow) window.drawBlimpSurfaceShadow(); } catch (eSh) {}
       /* OLD medal drawer removed — uses __airborneDrawRingSummary only */
 try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePowerVisual(); } catch(e) {};

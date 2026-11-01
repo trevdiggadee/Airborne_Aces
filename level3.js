@@ -97,6 +97,7 @@
   }
 
   // ---------- placement ----------
+  function baseY() { return H - 6 * U(); }     // outside assets stand on the very bottom edge of the screen
   function groundY() { return (typeof groundLevelY === "function") ? groundLevelY() : H * 0.9; }
   function mkStruct(key, x, y, h) {
     var r = SP[key], w = h * r[2] / r[3];
@@ -106,7 +107,7 @@
   }
   function pick(list) { return list[(Math.random() * list.length) | 0]; }
   function spawnOne() {
-    var u = U(), gY = groundY(), roll = Math.random(), s, x = spawnX, gap = rnd(0.55, 0.95) * W;
+    var u = U(), gY = baseY(), roll = Math.random(), s, x = spawnX, gap = rnd(0.55, 0.95) * W;
     if (roll < 0.24) {                                   // rock stacks (tunnel rocks have a gap you can fly through)
       var k = pick(["rock0", "rock1", "rock2", "rock3", "rock4"]), h = rnd(0.30, 0.44) * H;
       s = mkStruct(k, x, gY - h + 6 * u, h); spawnX = x + s.w + gap;
@@ -345,7 +346,7 @@
   // ---------- drawing ----------
   function drawParallax() {
     var im = img("level3_parallax"); if (!im) return;
-    var gY = groundY(), tileH = H * 0.60, tileW = tileH * im.naturalWidth / im.naturalHeight, y = gY - tileH + H * 0.05;
+    var gY = baseY(), tileH = H * 0.60, tileW = tileH * im.naturalWidth / im.naturalHeight, y = gY - tileH + H * 0.05;
     var off = -(parX % tileW);
     ctx.save(); ctx.globalAlpha = 0.95;
     for (var x = off - tileW, n = 0; x < W + 2 && n < 8; x += tileW - 1, n++) { if (x + tileW < 0) continue; ctx.drawImage(im, x, y, tileW, tileH); }
@@ -353,7 +354,7 @@
   }
   function noise(i) { var s = Math.sin(i * 12.9898) * 43758.5453; return s - Math.floor(s); }
   function drawGround() {
-    var gY = groundY(), step = 26, u = U(), base = Math.floor(groundX / step);
+    var gY = baseY(), step = 26, u = U(), base = Math.floor(groundX / step);
     var gr = ctx.createLinearGradient(0, gY - 6 * u, 0, H); gr.addColorStop(0, "#4a3d56"); gr.addColorStop(0.18, "#2e2538"); gr.addColorStop(1, "#120d1a");
     ctx.save(); ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(-10, H + 4);
     var xs = [];
@@ -401,6 +402,22 @@
     }
     ctx.restore();
   }
+  // Cave entrance / exit rims (rock, lantern, pipes) are drawn again AFTER the blimp: while the blimp is passing the
+  // entrance or exit it is layered under the cave; once it is inside the cave it is above it.
+  var FRONT_W = 340;
+  window.__airborneL3DrawFront = function () {
+    if (!on || !cave) return;
+    var c = cave, im = img("level3_cave"); if (!im) return;
+    if (c.x > W + 40 || c.x + c.w < -40) return;
+    var fw = FRONT_W * c.s;
+    ctx.save();
+    try {
+      if (c.x < W && c.x + fw > 0) ctx.drawImage(im, 0, 0, FRONT_W, CAVE_H, c.x, c.top, fw, c.h);
+      var rx = c.x + c.w - fw;
+      if (rx < W && rx + fw > 0) ctx.drawImage(im, CAVE_W - FRONT_W, 0, FRONT_W, CAVE_H, rx, c.top, fw, c.h);
+    } catch (e) {}
+    ctx.restore();
+  };
   window.__airborneL3Draw = function () {
     if (!on) return;
     ctx.save();
