@@ -29,6 +29,14 @@
   var REST_Y_F      = 290 / 495;     // runway deck surface (blimp rests here)
   var START_X_F     = 610 / 1403;    // blimp's starting spot along the deck
   var END_X_F       = 1140 / 1403;   // end of the deck — forced liftoff if reached
+  // Level 3 uses the FLOATING platform (level3_platform.webp): same mechanics, different art + layout
+  var LV = 2, KEY = "level2_platform", LIFT = 0;
+  function setLevel(n) {
+    LV = (n === 3) ? 3 : 2;
+    if (LV === 3) { KEY = "level3_platform"; HEIGHT_FRAC = 0.50; REST_Y_F = 0.703; START_X_F = 0.28; END_X_F = 0.78; LIFT = 0.16; }
+    else { KEY = "level2_platform"; HEIGHT_FRAC = 0.50; REST_Y_F = 290 / 495; START_X_F = 610 / 1403; END_X_F = 1140 / 1403; LIFT = 0; }
+  }
+  function bobY() { return LV === 3 ? Math.sin((typeof performance !== "undefined" ? performance.now() : Date.now()) / 1000 * 1.7) * 3 * Math.max(0.6, H / 420) : 0; }
 
   // ---- Feel (mirrors the training runway, tuned for the shorter deck) ----
   var MIN_SPEED  = 40;
@@ -44,7 +52,7 @@
   var P = null; // platform state; null when there is no platform
 
   function img() {
-    return (typeof images !== "undefined" && images) ? images.level2_platform : null;
+    return (typeof images !== "undefined" && images) ? images[KEY] : null;
   }
   function imgReady() {
     var im = img();
@@ -58,7 +66,7 @@
   }
   function deckY() {                  // screen y of the deck surface
     var g = geom();
-    return (H - g.h) + REST_Y_F * g.h;
+    return (H - LIFT * H - g.h) + REST_Y_F * g.h + bobY();
   }
   function restPlayerY() {
     var ph = (player && player.h > 0) ? player.h : 40;
@@ -85,7 +93,8 @@
     window.__airbornePlatformTakeoffActive = false;
   };
 
-  window.__airborneBeginPlatformTakeoff = function () {
+  window.__airborneBeginPlatformTakeoff = function (level) {
+    setLevel(level);
     // Called once per level-2 start (the map path can call it twice): ignore repeats
     if (window.__airbornePlatformTakeoffActive && P && P.phase !== "climb") return true;
     if (!imgReady() || typeof player === "undefined" || !player) return false; // art missing → just fly
@@ -349,10 +358,56 @@
         for (var ci = 0; ci < 9; ci++) ctx.fillRect(x0 + dw * (0.1 + ci * 0.1), dy + 6, dw * 0.04, 3);
         return;
       }
+      if (LV === 3) { drawFloatingPlatform(im, tx, g); return; }
       ctx.drawImage(im, tx, H - g.h, g.w, g.h);
   }
-  window.__airborneLandingPlatform = function () { var g = geom(); return { w: g.w, h: g.h, deckY: deckY(), restFrac: REST_Y_F, x0: 0.40, x1: 0.85, center: 0.62 }; };
-  window.__airborneDrawLandingPlatform = function (tx) { try { drawWorldAt(tx); } catch (e) {} };
+
+  // ---- Level 3: floating platform — hover bob, anti-grav thrusters, drifting steam, pulsing lamps, animated windsock ----
+  var l3p = [], l3Last = 0, l3Acc = [0, 0, 0, 0];
+  var JETS = [0.17, 0.40, 0.62, 0.84];
+  function glowDot(x, y, r, rgb, a) {
+    var key = "gd" + rgb, c = glowDot[key];
+    if (!c) { c = glowDot[key] = document.createElement("canvas"); c.width = c.height = 64; var g = c.getContext("2d"), rg = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      rg.addColorStop(0, "rgba(" + rgb + ",1)"); rg.addColorStop(0.4, "rgba(" + rgb + ",0.4)"); rg.addColorStop(1, "rgba(" + rgb + ",0)"); g.fillStyle = rg; g.fillRect(0, 0, 64, 64); }
+    ctx.globalAlpha = a; ctx.drawImage(c, x - r, y - r, r * 2, r * 2);
+  }
+  function drawFloatingPlatform(im, tx, g) {
+    var t = now() / 1000, dt = l3Last ? Math.min(0.05, t - l3Last) : 0.016; l3Last = t;
+    var y0 = H - LIFT * H - g.h + bobY(), k = g.h / 528, bot = y0 + g.h * 0.985, u = Math.max(0.6, H / 420);
+    // particles first (they sit behind the hull)
+    for (var j = 0; j < JETS.length; j++) {
+      l3Acc[j] += dt;
+      if (l3Acc[j] > 0.035) { l3Acc[j] = 0; l3p.push({ k: "jet", x: tx + JETS[j] * g.w + (Math.random() - 0.5) * 10 * k, y: bot - 6 * k, vy: 150 * u + Math.random() * 120 * u, vx: (Math.random() - 0.5) * 22 * u, a: 0, life: 0.5 + Math.random() * 0.3, r: (7 + Math.random() * 6) * k }); }
+    }
+    if (Math.random() < dt * 14) l3p.push({ k: "mist", x: tx + (0.05 + Math.random() * 0.9) * g.w, y: bot + 4 * k, vy: 22 * u, vx: (Math.random() - 0.5) * 30 * u, a: 0, life: 1.8 + Math.random() * 1.2, r: (14 + Math.random() * 14) * k });
+    if (l3p.length > 220) l3p.splice(0, l3p.length - 220);
+    ctx.save();
+    for (var i = l3p.length - 1; i >= 0; i--) {
+      var p = l3p[i]; p.a += dt; if (p.a >= p.life) { l3p.splice(i, 1); continue; }
+      p.x += p.vx * dt; p.y += p.vy * dt; var f = p.a / p.life;
+      if (p.k === "jet") { p.r *= 1 + dt * 1.6; ctx.globalCompositeOperation = "lighter"; glowDot(p.x, p.y, p.r * 1.6, f < 0.35 ? "255,190,90" : "120,190,255", (1 - f) * 0.75); }
+      else { p.r *= 1 + dt * 0.9; ctx.globalCompositeOperation = "source-over"; glowDot(p.x, p.y, p.r, "225,232,240", (1 - f) * 0.30); }
+    }
+    ctx.restore();
+    // hull
+    ctx.drawImage(im, tx, y0, g.w, g.h);
+    // thruster nozzle glow + lamps + tower beacon
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    for (var n = 0; n < JETS.length; n++) glowDot(tx + JETS[n] * g.w, bot - 4 * k, 26 * k, "255,170,70", 0.55 + 0.25 * Math.sin(t * 18 + n * 2));
+    var lamps = [[0.254, 0.585], [0.346, 0.585], [0.564, 0.585], [0.653, 0.585], [0.806, 0.585], [0.054, 0.175], [0.945, 0.37]];
+    for (var q = 0; q < lamps.length; q++) glowDot(tx + lamps[q][0] * g.w, y0 + lamps[q][1] * g.h, 15 * k, "255,205,110", 0.38 + 0.2 * Math.sin(t * 3 + q * 1.7));
+    ctx.restore();
+    // windsock (the training-level one) on the control-tower mount
+    var sock = (typeof images !== "undefined" && images) ? images.wind_sock : null;
+    if (sock && sock.naturalWidth) {
+      var cols = 6, rows = 6, fw = sock.naturalWidth / cols, fh = sock.naturalHeight / rows, fr = Math.floor(t * 14) % (cols * rows);
+      var dh = g.h * 0.30, dw = fw * dh / fh, bx = tx + 0.0958 * g.w, by = y0 + 0.2073 * g.h;
+      try { ctx.drawImage(sock, (fr % cols) * fw, Math.floor(fr / cols) * fh, fw, fh, bx - dw * 0.28, by - dh * 0.98, dw, dh); } catch (eS) {}
+    }
+  }
+  function withL2(fn) { var prev = LV; if (prev !== 2) setLevel(2); try { return fn(); } finally { if (prev !== 2) setLevel(prev); } }
+  window.__airborneLandingPlatform = function () { return withL2(function () { var g = geom(); return { w: g.w, h: g.h, deckY: deckY(), restFrac: REST_Y_F, x0: 0.40, x1: 0.85, center: 0.62 }; }); };
+  window.__airborneDrawLandingPlatform = function (tx) { try { withL2(function () { drawWorldAt(tx); }); } catch (e) {} };
 
   // Draw
   // ------------------------------------------------------------------

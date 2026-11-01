@@ -87,6 +87,7 @@
     initStreetTiles();
     // Level 2: swap the colliding strip for the industrial skyline (parallax layers untouched)
     try { if (typeof window.__airborneL2Sync === "function") window.__airborneL2Sync(); } catch (eL2) { console.warn("[L2] sync", eL2); }
+    try { if (typeof window.__airborneL3Sync === "function") window.__airborneL3Sync(); } catch (eL3) { console.warn("[L3] sync", eL3); }
   }
 
   function updateBuildings(dtScale) {
@@ -1907,6 +1908,7 @@
     if (airfieldMode) return;
     const lh = (typeof window.__airborneLandHide === "number") ? window.__airborneLandHide : 1;   // buildings fade away for the landing
     if (lh <= 0.01) return;
+    if (l3On()) { try { window.__airborneL3Draw(); } catch (eL3) { console.warn("[L3] draw", eL3); } return; }
     if (typeof window.__airborneL2On === "function" && window.__airborneL2On()) {
       try { window.__airborneL2Draw(); } catch (eL2) { console.warn("[L2] draw", eL2); }
       return;
@@ -1958,6 +1960,7 @@
   }
 
   function drawSketchSkyline() {
+    if (l3On()) return;
     if (typeof airfieldMode !== "undefined" && airfieldMode) return;
     const img = images.sketchSkyline;
     if (!img || !img.naturalWidth) return;
@@ -2014,6 +2017,7 @@
   }
 
   function drawPowerlines() {
+    if (l3On()) return;
     if (typeof airfieldMode !== "undefined" && airfieldMode) return;
     const img = images.powerlines;
     if (!img || !img.naturalWidth) return;
@@ -2160,6 +2164,7 @@
   // Level 2 road dock: seamless looping strip (main dock -> connector -> gear-tower
   // connector -> connector -> back to main dock), scrolls with the buildings.
   let dockX = 0;
+  function l3On() { return typeof window.__airborneL3On === "function" && window.__airborneL3On(); }
   function l2DockOn() { return typeof window.__airborneL2On === "function" && window.__airborneL2On(); }
   // Water under the dock — canvas port of the menu lake (translucent body, two scrolling
   // sine-wave rows, sliding shimmer streaks, light path and a faint surface line).
@@ -2467,6 +2472,7 @@
 
   function drawStreet() {
     if (typeof airfieldMode !== "undefined" && airfieldMode) return;
+    if (l3On()) return;
     if (l2DockOn() && drawL2Dock()) return;
     const img = images.streetTexture;
     if (!img || !img.naturalWidth) return;
@@ -2525,6 +2531,7 @@
   }
 
   function drawBuildingSmoke() {
+    if (l3On()) return;
     if (typeof airfieldMode !== "undefined" && airfieldMode) return;
     buildingSmokeParticles.forEach(p => {
       const t = p.age / p.life;
@@ -2592,6 +2599,7 @@
   }
 
   function drawStreetlamps() {
+    if (l3On()) return;
     if (typeof airfieldMode !== "undefined" && airfieldMode) return;
     if (l2DockOn()) return;
     if (!isStreetlampLevel()) return;
@@ -2648,6 +2656,7 @@
   }
 
   function drawGroundVehicles() {
+    if (l3On()) return;
     if (typeof airfieldMode !== "undefined" && airfieldMode) return;
     if (l2DockOn()) return;
     // anchored toward the bottom of the street band (where the road portion
@@ -2666,6 +2675,7 @@
     if (bonusActive) return; // invincible during the bonus round
     if (window.__airborneAirfield || (typeof airfieldMode !== "undefined" && airfieldMode)) return;
     if (window.__airborneAirfieldInvuln && (window.__airborneAirfield || window.__airborneRuffActive)) return;
+    if (l3On()) { try { window.__airborneL3Collide(); } catch (eL3) {} return; }
     if (typeof window.__airborneL2On === "function" && window.__airborneL2On()) {
       try { window.__airborneL2Collide(); } catch (eL2) {}
       return;

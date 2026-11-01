@@ -2128,6 +2128,7 @@ window.__airborneRingDebug = false;
   function checkCampaignBossGate() {
     var blocked = window.__airborneAirfield || window.__airborneTrainingFlight || window.__airborneTrainingBoss ||
       window.__airbornePlatformTakeoffActive || state !== "playing" || bossActive || bonusActive || bonusPending ||
+      (typeof window.__airborneL3HoldBoss === "function" && window.__airborneL3HoldBoss()) ||
       (typeof isLevelEndActive === "function" && isLevelEndActive()) ||
       (typeof levelEndActive !== "undefined" && levelEndActive);
     var next = blocked ? null : nextBossConfig();

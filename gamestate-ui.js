@@ -749,8 +749,8 @@
     // Banner after art refresh so it isn't overwritten by LEVEL 1
     showBanner("LEVEL " + lvl, 2400, "level");
     // Level 2 begins on the launch platform (hold to accelerate, then lift off)
-    if (lvl === 2) {
-      try { if (window.__airborneBeginPlatformTakeoff) window.__airborneBeginPlatformTakeoff(); } catch (ePl) { console.warn("[Airborne] platform takeoff", ePl); }
+    if (lvl === 2 || lvl === 3) {
+      try { if (window.__airborneBeginPlatformTakeoff) window.__airborneBeginPlatformTakeoff(lvl); } catch (ePl) { console.warn("[Airborne] platform takeoff", ePl); }
     }
     else if (lvl >= 3) {
       try { if (window.__airborneTakeoffFx) window.__airborneTakeoffFx.launch(); } catch (eLf) {}

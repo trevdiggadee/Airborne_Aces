@@ -18,7 +18,7 @@
     cloud_soft_b: "cloud_soft_b.webp",
     skylineFar: "skylineFar.webp",
     skylineFarL2: "IMG_0845.png",
-    skylineFarL3: "skylineFarL3.webp",
+    skylineFarL3: "skylineFarL3.webp?v=ruff567",
     l2_city_layer: "level2_city_layer.webp",
     l2_dock: "level2_dock.webp",
     l2_boats: "level2_boats.webp",
@@ -46,6 +46,10 @@
     streetrow1: "streetrow1.webp",
     airfield_strip: "airfield_strip.webp",
     level2_platform: "level2_takeoff_platform.webp?v=ruff517",
+    level3_platform: "level3_platform.webp?v=ruff567",
+    level3_assets: "level3_assets.webp?v=ruff567",
+    level3_cave: "level3_cave.webp?v=ruff567",
+    level3_parallax: "level3_parallax.webp?v=ruff567",
     parallax_mountains: "mountains_cutout.webp",
     art_deco_sky: "art_deco_sky.webp",
     art_deco_clouds: "art_deco_clouds.webp",
@@ -1546,7 +1550,7 @@
         // game appear stuck.
         const skipFeather =
           /_flight_|player_blimp_|boss_throw_|boss\d+_|rocket_flight_|ship_(pirate|wood|ivory|purple|cargo|lightning)_\d/.test(key) ||
-          /skylineFar|streetrow|Far_Bg|hangar_bg|airborne_aces_map|medal_badge|l2_city_layer|l2_dock|parallax_mountains|mountains_cutout|airfield_strip|level2_platform|landing_field|wind_flag_left|finish_flag|wind_sock|ruff_|blue_crystal_|cloud_soft_/.test(key);
+          /skylineFar|streetrow|Far_Bg|hangar_bg|airborne_aces_map|medal_badge|l2_city_layer|l2_dock|parallax_mountains|mountains_cutout|airfield_strip|level2_platform|level3_|landing_field|wind_flag_left|finish_flag|wind_sock|ruff_|blue_crystal_|cloud_soft_/.test(key);
         if (skipFeather) {
           images[key] = img;
           settle();

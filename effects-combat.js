@@ -1716,7 +1716,23 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     return Math.max(0, 1 - (t - 0.05) / (life - 0.05));
   }
 
-  function drawL3Clouds() {
+  // the cloud bank is drawn ABOVE the rain; it fades out below the top of the screen so the blimp and obstacles stay readable
+  let l3cOff = null;
+  function drawL3CloudsAbove() {
+    if (!l3cReady || l3cAlpha < 0.01 || !l3cList.length) return;
+    if (!l3cOff || l3cOff.width !== W || l3cOff.height !== H) { l3cOff = document.createElement("canvas"); l3cOff.width = W; l3cOff.height = H; }
+    const g = l3cOff.getContext("2d");
+    g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = "source-over"; g.globalAlpha = 1; g.clearRect(0, 0, W, H);
+    drawL3CloudsCore(g);
+    g.globalCompositeOperation = "destination-in";
+    const m = g.createLinearGradient(0, 0, 0, H * 0.46); m.addColorStop(0, "rgba(0,0,0,1)"); m.addColorStop(0.45, "rgba(0,0,0,0.9)"); m.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = m; g.fillRect(0, 0, W, H);
+    g.globalCompositeOperation = "source-over";
+    ctx.drawImage(l3cOff, 0, 0, W, H);
+  }
+  window.__airborneDrawL3CloudsAbove = drawL3CloudsAbove;
+  function drawL3Clouds() { drawL3CloudsCore(ctx); }
+  function drawL3CloudsCore(ctx) {
     if (!l3cReady || l3cAlpha < 0.01 || !l3cList.length) return;
     if (typeof levelEndPhase === "string" && levelEndPhase === "fadeOut") return;
     const I = l3cFlashIntensity();
@@ -1847,6 +1863,10 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
   }
 
   function drawRain() {
+    if (window.__airborneL3WithClip) { window.__airborneL3WithClip(drawRainInner); return; }
+    drawRainInner();
+  }
+  function drawRainInner() {
     if (typeof levelEndPhase === "string" && levelEndPhase === "fadeOut") return;
     const raining = isRainLevel();
     if (!raining && rainDrops.length === 0 && stormCloudsDecorative.length === 0) return;

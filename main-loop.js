@@ -552,7 +552,6 @@ function loop(ts) {
     updateSkyline(dtScale);
     drawSkyline();
     // clouds sit directly on the main backdrop, behind every other layer
-    try { if (window.__airborneDrawL3Clouds) window.__airborneDrawL3Clouds(); } catch (eL3c) {}
 
     // Front cloud layer OFF for now
     // updateClouds(dtScale);
@@ -658,6 +657,7 @@ function loop(ts) {
       try { if (window.__airborneUpdateCampaignCollectibles) window.__airborneUpdateCampaignCollectibles(dt); } catch (eCc) { console.warn("collectibles", eCc); }
       updateBuildings(dtScale);
       try { if (window.__airborneL2Update) window.__airborneL2Update(dt); } catch (eL2) { console.warn("[L2] update", eL2); }
+      try { if (window.__airborneL3Update) window.__airborneL3Update(dt); } catch (eL3u) { console.warn("[L3] update", eL3u); }
       updatePowerlines(dtScale);
       updateSketchSkyline(dtScale);
       updateStreet(dtScale);
@@ -798,6 +798,8 @@ try { if (window.__airborneDrawActivePowerVisual) window.__airborneDrawActivePow
     drawStorm();
     try { if (window.__airborneDrawRoyal) window.__airborneDrawRoyal(); } catch (e) {}
     drawRain();
+    // the storm-cloud bank is layered ABOVE the rain; neither is drawn inside the cave
+    try { if (window.__airborneDrawL3CloudsAbove) { if (window.__airborneL3WithClip) window.__airborneL3WithClip(window.__airborneDrawL3CloudsAbove); else window.__airborneDrawL3CloudsAbove(); } } catch (eL3c) {}
     drawCloudWisps();
     drawDustParticles();
     drawCheckpointPickup();
