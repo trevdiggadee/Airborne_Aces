@@ -48,7 +48,7 @@
     level2_platform: "level2_takeoff_platform.webp?v=ruff517",
     level3_platform: "level3_platform.webp?v=ruff567",
     level3_assets: "level3_assets.webp?v=ruff567",
-    level3_cave: "level3_cave.webp?v=ruff570",
+    level3_cave: "level3_cave.webp?v=ruff572",
     level3_pipe_l: "level3_pipe_l.webp?v=ruff570",
     level3_pipe_r: "level3_pipe_r.webp?v=ruff570",
     level3_parallax: "level3_parallax.webp?v=ruff567",

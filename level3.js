@@ -32,29 +32,27 @@
     is1: [{ fx: 0.50, fy: 0.95, dir: "d", len: 0.16 }]
   };
 
-  // ---------- cave geometry (sprite is 1776x467: image rows above the cave ceiling are cropped, so the ceiling is the top of the screen) ----------
-  var CAVE_W = 1776, CAVE_H = 467, CAVE_FLOOR = 305, CAVE_CEIL = 24;
-  var WALL_L = 478, WALL_R = 1350;                  // the rock wings: only the pipe corridor is open
-  var PIPE_CY = 165, PIPE_HALF = 35, CORR_HALF = 27, CORR0 = PIPE_CY - CORR_HALF, CORR1 = PIPE_CY + CORR_HALF;
+  // ---------- cave geometry (sprite is 2170x327: image rows above the cave ceiling are cropped, so the ceiling is the top of the screen) ----------
+  // The outer entrance / exit pipes are part of the art now: open end faces outward, the barrel runs into the rock and a smaller pipe opens into the cave.
+  var CAVE_W = 2170, CAVE_H = 327, CAVE_FLOOR = 252, CAVE_CEIL = 10, WATER_Y = 244;
+  var WALL_L = 335, WALL_R = 1880;                  // the rock wings: only the pipe corridor is open
+  var PIPE_HALF = 30, CORR_HALF = 22;
   var CAVE_RECTS = [[WALL_L, 0, WALL_R, CAVE_CEIL], [WALL_L, CAVE_FLOOR, WALL_R, CAVE_H]];   // 0 = ceiling, 1 = floor
-  var CAVE_NODES = [   // crystal arcs [x, y (sprite px), dir, length (fraction of cave height), cycle offset]
-    [556, 276, "u", 0.26, 0.0], [672, 284, "u", 0.26, 1.5], [782, 280, "u", 0.26, 0.8], [936, 270, "u", 0.26, 2.2],
-    [1050, 276, "u", 0.26, 0.4], [1184, 270, "u", 0.26, 1.9], [1290, 246, "u", 0.26, 2.7]
-  ];
-  // outer entrance / exit pipes (art from level3_pipe_*.webp): the open mouth faces outward, the other end disappears into the rock
-  var OUTER = {
-    l: { key: "level3_pipe_r", k: 70 / 53, x1: 45 },            // right end sits on the left rock face
-    r: { key: "level3_pipe_l", k: 70 / 57, x0: CAVE_W - 45 }    // left end sits on the right rock face
-  };
-  var MOUTH_L = 490, MOUTH_R = 1360;                           // the inner pipe mouths (sprite px)
+  var CAVE_NODES = [];                              // no electricity in the cave: the crystals only glow and sparkle
+  function pipeCY(lx) {                             // pipe centre line (sprite px): outer barrels sit lower than the inner mouths
+    if (lx < 262) return 131 - 16 * Math.max(0, Math.min(1, (lx - 115) / 147));
+    if (lx > 1941) return 115 + 16 * Math.max(0, Math.min(1, (lx - 1941) / 129));
+    return 115;
+  }
+  var PIPE_L = [12, 330], PIPE_R = [1884, 2158];     // hide zones (sprite px): open outer end .. inner mouth
   var CAVE_FX = {
-    crystals: [[465,372,0],[482,392,1],[548,398,1],[556,408,0],[640,405,1],[672,412,0],[745,405,1],[780,405,0],[935,395,0],[965,410,1],[987,388,0],[1050,402,1],[1095,408,0],[1183,395,1],[1240,398,0],[1296,372,1],
-      [612,162,1],[690,170,0],[1100,160,1],[1185,152,0],[872,205,1],[946,195,0],[1262,188,1],[575,150,0],[1452,238,1],[1422,368,1],[1448,428,0],[1642,380,1],[1602,428,1],[1470,452,0],[1676,388,1],[1600,470,0],[185,515,0]],
-    lamps: [[668,298,"255,160,60"],[975,288,"255,160,60"],[1262,265,"110,190,255"],[492,290,"255,170,80"],[1362,290,"255,170,80"],[240,258,"255,230,170"],[285,300,"255,230,170"]],
-    steam: [[376,166],[326,190],[402,364],[575,188],[662,238],[760,190],[952,242],[1142,212],[1252,232],[1246,332],[1448,176],[1527,186],[1556,262],[1522,412]],
-    tips: [[578,200],[606,214],[632,172],[720,152],[872,215],[962,216],[1086,196],[1116,184],[1182,162],[1276,202],[1236,176],[790,178]]
+    crystals: [[330,205,1],[470,215,1],[580,212,0],[650,222,1],[710,218,1],[775,222,0],[855,218,0],[915,222,1],[1040,218,1],[1090,222,0],[1210,220,0],[1290,222,1],[1335,218,1],[1470,215,0],[1510,222,1],[1565,220,1],[1640,215,0],[1700,220,1],[1780,222,0],[108,240,1],
+      [440,40,0],[478,30,0],[610,38,0],[715,45,0],[860,50,0],[945,55,0],[1100,35,0],[1195,40,0],[1335,30,0],[1425,35,0],[1530,30,0],[1615,35,0],[1715,45,0]],
+    lamps: [[490,122,"255,170,80"],[790,112,"255,170,80"],[1068,122,"255,170,80"],[1402,114,"255,170,80"],[1662,120,"255,170,80"]],
+    steam: [[255,22],[412,72],[468,100],[548,40],[742,85],[830,102],[1030,90],[1300,62],[1448,47],[1625,52],[1700,90],[1990,60]],
+    tips: [[430,55],[465,45],[605,45],[710,55],[855,60],[945,65],[1040,40],[1100,42],[1190,45],[1330,35],[1420,40],[1525,35],[1610,40],[1710,50]],
+    pipes: [[600,82],[1130,124],[1500,88],[1690,68],[1850,124]]   // open pipe ends: water pours from these down to the floor
   };
-  (function () { var F = CAVE_FX; [F.crystals, F.lamps, F.steam, F.tips].forEach(function (a) { a.forEach(function (p) { p[1] -= 125; }); }); })();
   var caveMaskData = null;
   function caveMask() {      // coarse opaque/transparent map of the cave art (for the rock walls around the pipes)
     if (caveMaskData) return caveMaskData;
@@ -334,7 +332,7 @@
     var hw = (player.w || 80) * 0.30, hh = (player.h || 50) * 0.28;
     if (cave) {                                        // inside a pipe the blimp is held in the middle of it
       var pz = playerInPipe();
-      if (pz) { var cy = cave.top + PIPE_CY * cave.s, lim = Math.max(2, CORR_HALF * cave.s - hh); player.y = Math.max(cy - lim, Math.min(cy + lim, player.y)); if (player.vy) player.vy = 0; }
+      if (pz) { var cy = cave.top + pipeCY((player.x - cave.x) / cave.s) * cave.s, lim = Math.max(2, CORR_HALF * cave.s - hh); player.y = Math.max(cy - lim, Math.min(cy + lim, player.y)); if (player.vy) player.vy = 0; }
     }
     var pts = [[0, 0], [-hw, 0], [hw, 0], [0, -hh], [0, hh], [-hw, hh], [hw, hh], [-hw, -hh], [hw, -hh]];
     for (var i = 0; i < structs.length; i++) {
@@ -356,7 +354,7 @@
           if (m) {
             for (var q0 = 0; q0 < pts.length && !bad; q0++) {
               var qx = lx + pts[q0][0] / sC, qy = ly0 + pts[q0][1] / sC;
-              if ((qx < WALL_L || qx > WALL_R) && caveOpaque(m, qx, qy) && !(qy >= CORR0 && qy <= CORR1)) bad = true;
+              if ((qx < WALL_L || qx > WALL_R) && caveOpaque(m, qx, qy)) { var pc = pipeCY(qx); if (!(qy >= pc - CORR_HALF && qy <= pc + CORR_HALF)) bad = true; }
             }
           }
         }
@@ -412,19 +410,15 @@
       }
     }
   }
-  // ----- pipe zones: [outer lip .. inner mouth] on each side, in screen px -----
+  // ----- pipe zones: [open outer end .. inner mouth] on each side, in screen px -----
   function pipeZones() {
     if (!cave) return null;
-    var c = cave, k = c.s, ol = OUTER.l, orr = OUTER.r;
-    var lw = 127 * ol.k, rw = 184 * orr.k;
-    return [
-      { x0: c.x + (ol.x1 - lw + 22) * k, x1: c.x + MOUTH_L * k },
-      { x0: c.x + MOUTH_R * k, x1: c.x + (orr.x0 + rw - 22) * k }
-    ];
+    var c = cave, k = c.s;
+    return [{ x0: c.x + PIPE_L[0] * k, x1: c.x + PIPE_L[1] * k }, { x0: c.x + PIPE_R[0] * k, x1: c.x + PIPE_R[1] * k }];
   }
   function playerInPipe() {
     var z = pipeZones(); if (!z) return null;
-    var cy = cave.top + PIPE_CY * cave.s, band = (PIPE_HALF * cave.s) + (player.h || 50) * 0.3;
+    var cy = cave.top + pipeCY((player.x - cave.x) / cave.s) * cave.s, band = (PIPE_HALF * cave.s) + (player.h || 50) * 0.3;
     if (Math.abs(player.y - cy) > band) return null;
     for (var i = 0; i < z.length; i++) if (player.x > z[i].x0 && player.x < z[i].x1) return z[i];
     return null;
@@ -447,7 +441,7 @@
     var now = clockT, dt = fx.last ? Math.min(0.05, now - fx.last) : 0.016; fx.last = now;
     var s = c.s, F = CAVE_FX, i, p, u = U();
     function sx(x) { return c.x + x * s; } function sy(y) { return c.top + y * s; }
-    var floorY = sy(CAVE_FLOOR - 2);
+    var floorY = sy(WATER_Y);
     // spawn
     for (i = 0; i < F.crystals.length; i++) {
       p = F.crystals[i]; var X = sx(p[0]); if (X < -20 || X > W + 20) continue;
@@ -519,30 +513,68 @@
     }
     ctx.restore();
   }
+  // ----- far-background fog, open-pipe waterfalls, floor pools -----
+  var FOG = null;
+  function fogInit() {
+    FOG = []; var x = 360, i = 0;
+    while (x < CAVE_W - 330) { FOG.push({ bx: x, by: 105 + ((i * 53) % 110), w: 260 + ((i * 37) % 170), h: 60 + ((i * 29) % 60), sp: 0.12 + (i % 5) * 0.05, ph: i * 1.7, am: 28 + (i % 4) * 14, a: 0.10 + (i % 3) * 0.03 }); x += 66; i++; }
+    for (var j = 0; j < 12; j++) FOG.push({ bx: 380 + j * 130, by: 222, w: 330, h: 34, sp: 0.09 + (j % 3) * 0.04, ph: j * 2.3, am: 40, a: 0.09 });   // low ground mist
+  }
+  var POOLS = [[760, 48], [905, 38], [1245, 54], [1385, 42], [1585, 50], [1000, 30], [1790, 34], [520, 36], [600, 62], [1130, 62], [1500, 62], [1690, 58], [1850, 58]];
+  function drawFog(c, now) {
+    if (!FOG) fogInit();
+    var s = c.s, x0 = Math.max(0, c.x + WALL_L * s), x1 = Math.min(W, c.x + WALL_R * s); if (x1 <= x0) return;
+    ctx.save(); ctx.beginPath(); ctx.rect(x0, c.top + CAVE_CEIL * s, x1 - x0, (WATER_Y - CAVE_CEIL) * s); ctx.clip(); ctx.globalCompositeOperation = "lighter";
+    var g = glow("120,170,235");
+    for (var i = 0; i < FOG.length; i++) {
+      var f = FOG[i], X = c.x + (f.bx + Math.sin(now * f.sp + f.ph) * f.am) * s; if (X < -f.w * s || X > W + f.w * s) continue;
+      var Y = c.top + (f.by + Math.sin(now * f.sp * 1.3 + f.ph) * 6) * s, w = f.w * s, h = f.h * s;
+      ctx.globalAlpha = f.a * (0.8 + 0.2 * Math.sin(now * 0.7 + f.ph)); ctx.drawImage(g, X - w / 2, Y - h / 2, w, h);
+    }
+    ctx.restore();
+  }
+  function drawWater(c, now, dt) {
+    var s = c.s, u = U(), i, p, F = CAVE_FX, wy = c.top + WATER_Y * s;
+    // pools on the floor
+    ctx.save();
+    for (i = 0; i < POOLS.length; i++) {
+      p = POOLS[i]; var PX = c.x + p[0] * s; if (PX < -90 * s || PX > W + 90 * s) continue;
+      var rx = p[1] * s, ry = 5.2 * s, sh = 0.5 + 0.5 * Math.sin(now * 1.6 + i * 1.9);
+      var gr = ctx.createRadialGradient(PX, wy, 1, PX, wy, rx);
+      gr.addColorStop(0, "rgba(90,175,245,0.62)"); gr.addColorStop(0.7, "rgba(50,120,215,0.45)"); gr.addColorStop(1, "rgba(30,80,180,0)");
+      ctx.globalAlpha = 1; ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(PX, wy, rx, ry, 0, 0, 6.283); ctx.fill();
+      ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = "rgba(190,230,255,1)"; ctx.lineWidth = 1;
+      for (var k = 0; k < 2; k++) { var ph = (now * 0.5 + i * 0.37 + k * 0.5) % 1; ctx.globalAlpha = 0.35 * (1 - ph) * (0.6 + 0.4 * sh); ctx.beginPath(); ctx.ellipse(PX + (k ? 0.25 : -0.2) * rx, wy, rx * (0.15 + 0.55 * ph), ry * (0.2 + 0.7 * ph), 0, 0, 6.283); ctx.stroke(); }
+      ctx.globalAlpha = 0.28 * sh; ctx.fillStyle = "rgba(210,240,255,1)"; ctx.fillRect(PX - rx * 0.35, wy - ry * 0.25, rx * 0.5, Math.max(1, 1.2 * s)); ctx.globalCompositeOperation = "source-over";
+    }
+    ctx.restore();
+    // waterfalls from the open pipe ends
+    ctx.save(); ctx.lineCap = "round";
+    for (i = 0; i < F.pipes.length; i++) {
+      p = F.pipes[i]; var X = c.x + p[0] * s; if (X < -20 || X > W + 20) continue;
+      var y0 = c.top + p[1] * s, y1 = wy, wob = Math.sin(now * 3 + i) * 0.8 * s, flow = 0.85 + 0.15 * Math.sin(now * 2.1 + i * 1.3);
+      var lg = ctx.createLinearGradient(0, y0, 0, y1); lg.addColorStop(0, "rgba(170,220,255,0.42)"); lg.addColorStop(1, "rgba(110,180,245,0.22)");
+      ctx.globalAlpha = flow; ctx.strokeStyle = lg; ctx.lineWidth = 3.2 * s; ctx.beginPath(); ctx.moveTo(X, y0); ctx.lineTo(X + wob, y1); ctx.stroke();
+      ctx.setLineDash([5 * s, 13 * s, 9 * s, 8 * s]); ctx.lineDashOffset = -now * 150 * s - i * 13; ctx.globalAlpha = 0.5 * flow; ctx.strokeStyle = "rgba(225,244,255,0.9)"; ctx.lineWidth = 1.3 * s;
+      ctx.beginPath(); ctx.moveTo(X - 0.8 * s, y0); ctx.lineTo(X - 0.8 * s + wob, y1); ctx.stroke(); ctx.setLineDash([]);
+      ctx.globalCompositeOperation = "lighter"; glowAt(X, y0 + 2 * s, 11 * s, "150,210,255", 0.55); glowAt(X + wob, y1, 15 * s, "140,205,255", 0.4 + 0.15 * Math.sin(now * 5 + i)); ctx.globalCompositeOperation = "source-over";
+      // splash at the bottom
+      if (Math.random() < dt * 18) fx.sp.push({ k: "drop", x: X + wob + rnd2(-2, 2) * s, y: y1, vx: rnd2(-38, 38) * u, vy: -rnd2(45, 105) * u, age: 0, life: 0.38 });
+      if (Math.random() < dt * 3.2) fx.rp.push({ x: X + wob, y: y1, age: 0 });
+    }
+    ctx.restore();
+  }
   function drawCave() {
     if (!cave) return;
     var c = cave, im = img("level3_cave"); if (!im) return;
     if (c.x > W + 40 || c.x + c.w < -40) return;
     ctx.drawImage(im, c.x, c.top, c.w, c.h);
-    // arcs on the crystals
-    var host = { x: c.x, y: c.top, w: c.w, h: c.h };
-    var nodes = c.nodes.map(function (n) { return { fx: n.fx, fy: n.fy, dir: n.dir, len: n.len * c.h, t: n.t, cyc: n.cyc }; });
-    drawNodes(host, nodes);
+    var now = clockT, dt = fx.last ? Math.min(0.05, Math.max(0, now - fx.last)) : 0.016;
+    drawFog(c, now);
+    drawWater(c, now, dt);
     caveFx(c);
   }
-  // Outer entrance / exit pipes: drawn after the blimp. The open mouth faces outward; the blimp slips into it and is hidden
-  // (main-loop clips drawPlayer with __airborneL3BlimpHide) until it comes out of the inner pipe mouth inside the cave.
-  window.__airborneL3DrawFront = function () {
-    if (!on || !cave) return;
-    var c = cave; if (c.x > W + 40 || c.x + c.w < -40) return;
-    ctx.save();
-    try {
-      var il = img(OUTER.l.key), ir = img(OUTER.r.key), k = c.s;
-      if (il && il.naturalWidth) { var wl = il.naturalWidth * OUTER.l.k * k, hl = il.naturalHeight * OUTER.l.k * k; ctx.drawImage(il, c.x + OUTER.l.x1 * k - wl, c.top + PIPE_CY * k - hl / 2, wl, hl); }
-      if (ir && ir.naturalWidth) { var wr = ir.naturalWidth * OUTER.r.k * k, hr = ir.naturalHeight * OUTER.r.k * k; ctx.drawImage(ir, c.x + OUTER.r.x0 * k, c.top + PIPE_CY * k - hr / 2, wr, hr); }
-    } catch (e) {}
-    ctx.restore();
-  };
+  window.__airborneL3DrawFront = function () {};   // the pipes are part of the cave art now; the blimp is simply hidden inside them
   window.__airborneL3Draw = function () {
     if (!on) return;
     ctx.save();
