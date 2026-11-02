@@ -765,7 +765,10 @@ function loop(ts) {
     // Ensure power-up fade never leaves the blimp transparent
     try { ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; } catch (e) {}
     try { if (window.__airborneDrawRoyalBehind) window.__airborneDrawRoyalBehind(); } catch (e) {}
+    var _l3h = null; try { _l3h = window.__airborneL3BlimpHide ? window.__airborneL3BlimpHide() : null; } catch (eL3h) {}
+    if (_l3h) { ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, H); _l3h.forEach(function (r) { ctx.rect(r.x0, 0, r.x1 - r.x0, H); }); ctx.clip("evenodd"); }
     drawPlayer();
+    if (_l3h) ctx.restore();
     try { if (window.__airborneL3DrawFront) window.__airborneL3DrawFront(); } catch (eL3f) {}
       try { if (window.drawBlimpSurfaceShadow) window.drawBlimpSurfaceShadow(); } catch (eSh) {}
       /* OLD medal drawer removed — uses __airborneDrawRingSummary only */
