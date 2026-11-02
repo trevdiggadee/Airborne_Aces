@@ -1629,42 +1629,40 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
   // ---------- Level 3 storm-cloud ceiling ----------
   // Dark cloud banks (three kinds, overlapped) fill the top of the screen, just below the HUD. They stay put (gentle sway only,
   // never scroll off) and the whole bank lights up with lightning flashes. Replaces the old drifting decorative clouds.
-  const L3C = {"A": [[4, 0, 484, 397], [528, 3, 484, 397], [1020, 0, 484, 397]], "B": [[1504, 15, 533, 333], [2046, 0, 533, 333], [2596, 2, 533, 333]], "C": [[3154, 0, 404, 405], [3594, 4, 404, 405], [4022, 1, 404, 405]]};
-  let l3cImg = null, l3cLit = null, l3cReady = false;
+  // two painted storm-cloud banks (level3_cloud_a / _b); each cloud is composited per frame with slow drifting cloud layers moving inside its silhouette
+  const L3C_FILES = ["level3_cloud_a.webp?v=ruff573", "level3_cloud_b.webp?v=ruff573"];
+  const L3IM = [];
+  let l3cReady = false;
   let l3cList = [], l3cAlpha = 0, l3cT = 0, l3cFlash = null, l3cNextFlash = 2.5, l3cBolt = null, l3cThunderAt = 0, l3cSeedKey = "";
   (function () {
-    l3cImg = new Image();
-    l3cImg.onload = function () {
-      try {
-        l3cLit = document.createElement("canvas");
-        l3cLit.width = l3cImg.naturalWidth; l3cLit.height = l3cImg.naturalHeight;
-        const g = l3cLit.getContext("2d");
-        g.drawImage(l3cImg, 0, 0);
-        g.globalCompositeOperation = "source-atop";
-        g.fillStyle = "rgba(190,215,255,0.78)";
-        g.fillRect(0, 0, l3cLit.width, l3cLit.height);
-      } catch (e) { l3cLit = null; }
-      l3cReady = true;
-    };
-    l3cImg.src = "level3_clouds.webp?v=ruff541";
+    L3C_FILES.forEach(function (f, i) {
+      const im = new Image();
+      const rec = { img: im, lit: null, ok: false };
+      im.onload = function () {
+        try {
+          rec.lit = document.createElement("canvas"); rec.lit.width = im.naturalWidth; rec.lit.height = im.naturalHeight;
+          const g = rec.lit.getContext("2d"); g.drawImage(im, 0, 0);
+          g.globalCompositeOperation = "source-atop"; g.fillStyle = "rgba(190,215,255,0.78)"; g.fillRect(0, 0, rec.lit.width, rec.lit.height);
+        } catch (e) { rec.lit = null; }
+        rec.ok = true; l3cReady = L3IM.every(function (r) { return r.ok; });
+      };
+      im.src = f; L3IM.push(rec);
+    });
   })();
 
   function l3cSeed() {
     l3cList = [];
-    const u = H / 800;
-    // back -> front: wisps (C), jagged (B), dense puffs (A). Fractions of screen width, overlapping on purpose.
+    // back -> front: [image, cx, cy (fractions of the screen), width fraction]. Overlapping on purpose.
     const plan = [
-      ["C", 0.02, 0.07, 0.62], ["C", 0.34, 0.10, 0.66], ["C", 0.66, 0.06, 0.62], ["C", 0.95, 0.10, 0.60],
-      ["B", 0.10, 0.12, 0.72], ["B", 0.42, 0.08, 0.76], ["B", 0.74, 0.13, 0.72], ["B", 1.0, 0.09, 0.66],
-      ["A", 0.00, 0.05, 0.60], ["A", 0.28, 0.12, 0.58], ["A", 0.56, 0.05, 0.62], ["A", 0.84, 0.11, 0.60]
+      [1, 0.05, 0.03, 0.62], [0, 0.40, 0.00, 0.64], [1, 0.72, 0.04, 0.62], [0, 0.98, 0.02, 0.58],
+      [0, 0.16, 0.09, 0.60], [1, 0.50, 0.07, 0.66], [0, 0.82, 0.10, 0.60], [1, 0.30, 0.12, 0.56]
     ];
     plan.forEach(function (p, i) {
-      const frames = L3C[p[0]];
-      const r0 = frames[0];
-      const w = W * p[3];
-      l3cList.push({ t: p[0], cx: W * p[1], cy: H * p[2], w: w, h: w * r0[3] / r0[2], ph: Math.random() * 6.28,
-                     flip: i % 2 === 1, fp: Math.random() * 6.28, fs: 0.25 + Math.random() * 0.2,
-                     a: p[0] === "C" ? 0.85 : 0.95, sway: (6 + Math.random() * 8) * u });
+      const r = L3IM[p[0]].img, asp = (r.naturalHeight || 390) / (r.naturalWidth || 768);
+      const w = Math.min(W * p[3], H * 0.62 / asp);
+      const o = L3IM[1 - p[0]].img;
+      l3cList.push({ k: p[0], cx: W * p[1], cy: H * p[2], w: w, h: w * asp, ph: Math.random() * 6.28, flip: i % 2 === 1,
+                     a: i < 4 ? 0.88 : 0.96, sway: (6 + Math.random() * 8) * (H / 800), sp: 0.5 + Math.random() * 0.6, cv: null });
     });
     l3cSeedKey = W + "x" + H;
   }
@@ -1743,26 +1741,41 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
       ctx.fillRect(0, 0, W, H * 0.45);
     }
     for (let i = 0; i < l3cList.length; i++) {
-      const c = l3cList[i];
-      const frames = L3C[c.t];
-      // slow morph between two frames of the animation
-      const m = 0.5 + 0.5 * Math.sin(l3cT * c.fs + c.fp);
-      const fa = frames[0], fb = frames[1 + (i % 2)];
+      const c = l3cList[i], rec = L3IM[c.k], oth = L3IM[1 - c.k];
       const x = c.cx + Math.sin(l3cT * 0.25 + c.ph) * c.sway;
       const y = c.cy + Math.sin(l3cT * 0.19 + c.ph * 1.7) * c.sway * 0.4;
+      const cw = Math.max(2, Math.round(c.w)), ch = Math.max(2, Math.round(c.h));
+      if (!c.cv || c.cv.width !== cw || c.cv.height !== ch) { c.cv = document.createElement("canvas"); c.cv.width = cw; c.cv.height = ch; }
+      const g = c.cv.getContext("2d"), t = l3cT * c.sp;
+      g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = "source-over"; g.globalAlpha = 1; g.clearRect(0, 0, cw, ch);
+      g.drawImage(rec.img, 0, 0, cw, ch);
+      // slow churning inside the cloud: other cloud layers drift through it (clipped to this cloud's silhouette)
+      g.globalCompositeOperation = "source-atop";
+      g.globalAlpha = 0.50; g.drawImage(oth.img, -cw * 0.25 + Math.sin(t * 0.11 + c.ph) * cw * 0.16, -ch * 0.18 + Math.sin(t * 0.08 + c.ph * 2) * ch * 0.06, cw * 1.5, ch * 1.4);
+      g.save(); g.translate(cw, 0); g.scale(-1, 1);
+      g.globalAlpha = 0.34; g.drawImage(rec.img, -cw * 0.2 + Math.sin(t * 0.07 + c.ph * 3) * cw * 0.2, -ch * 0.1 + Math.cos(t * 0.09 + c.ph) * ch * 0.06, cw * 1.35, ch * 1.3);
+      g.restore();
+      // pale mist banks sliding through
+      g.globalAlpha = 0.16;
+      for (let m = 0; m < 3; m++) {
+        const mx = ((t * 0.035 + m / 3 + c.ph) % 1) * (cw * 1.6) - cw * 0.3;
+        const grd = g.createRadialGradient(mx, ch * (0.35 + 0.18 * m), 2, mx, ch * (0.35 + 0.18 * m), cw * 0.3);
+        grd.addColorStop(0, "rgba(150,175,205,1)"); grd.addColorStop(1, "rgba(150,175,205,0)");
+        g.fillStyle = grd; g.fillRect(0, 0, cw, ch);
+      }
+      g.globalAlpha = 1; g.globalCompositeOperation = "destination-in";   // feather the cut left/right edges of the art
+      const fe = g.createLinearGradient(0, 0, cw, 0); fe.addColorStop(0, "rgba(0,0,0,0)"); fe.addColorStop(0.16, "rgba(0,0,0,1)"); fe.addColorStop(0.84, "rgba(0,0,0,1)"); fe.addColorStop(1, "rgba(0,0,0,0)");
+      g.fillStyle = fe; g.fillRect(0, 0, cw, ch); g.globalCompositeOperation = "source-over";
       ctx.save();
       ctx.translate(x, y);
       if (c.flip) ctx.scale(-1, 1);
-      const dx = -c.w / 2, dy = -c.h / 2;
-      ctx.globalAlpha = c.a * l3cAlpha * (1 - m * 0.55);
-      ctx.drawImage(l3cImg, fa[0], fa[1], fa[2], fa[3], dx, dy, c.w, c.h);
-      ctx.globalAlpha = c.a * l3cAlpha * (0.45 + m * 0.55);
-      ctx.drawImage(l3cImg, fb[0], fb[1], fb[2], fb[3], dx, dy, c.w, c.h);
-      if (I > 0.02 && l3cLit) {
+      ctx.globalAlpha = c.a * l3cAlpha;
+      ctx.drawImage(c.cv, -cw / 2, -ch / 2);
+      if (I > 0.02 && rec.lit) {
         // lightning lights the cloud from inside; clouds near the strike glow brightest
         const near = l3cFlash ? Math.max(0.25, 1 - Math.abs(x - l3cFlash.x) / (W * 0.7)) : 0.3;
         ctx.globalAlpha = Math.min(1, I * near * 0.9) * l3cAlpha;
-        ctx.drawImage(l3cLit, fa[0], fa[1], fa[2], fa[3], dx, dy, c.w, c.h);
+        ctx.drawImage(rec.lit, -cw / 2, -ch / 2, cw, ch);
       }
       ctx.restore();
     }
