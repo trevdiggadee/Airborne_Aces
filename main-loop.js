@@ -68,6 +68,7 @@ window.__AIRBORNE_MAIN_BUILD = "ruff412";
     ctx.restore();
   }
   function startBossCamCinematic() {
+    try { if (window.__airborneL3ArenaZoom && window.__airborneL3ArenaZoom()) return; } catch (eA) {}   // Level 3 arena keeps its own pulled-back framing
     // Boss zoom disabled — never pause the game
     try {
       window.__airborneBossCamPause = false;
@@ -117,7 +118,9 @@ window.__AIRBORNE_MAIN_BUILD = "ruff412";
       // Battleship fight: pull the camera back 25% so the whole ship is in view (CSS scale on the canvas).
       var shipCam = false;
       try { shipCam = !!(window.__airborneShipZoom && window.__airborneShipZoom()); } catch (e) {}
-      var target = shipCam ? 0.75 : 1;
+      var l3a = null; try { l3a = (shipCam && window.__airborneL3ArenaCam) ? window.__airborneL3ArenaCam() : null; } catch (eA3) {}
+      var target = shipCam ? (l3a ? l3a.z : 0.75) : 1;
+      if (l3a) { cam.ax = l3a.ax; cam.ay = l3a.ay; }   // Level 3 arena: fixed framing of the whole cavern
       if (!shipCam && cam.z >= 0.995) {
         // not zoomed: keep the zoom anchor on the blimp so it stays exactly where it is when the camera pulls back
         try { cam.ax = player.x; cam.ay = Math.max(H * 0.45, Math.min(H, player.y)); } catch (eA) {}

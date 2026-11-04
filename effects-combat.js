@@ -394,6 +394,7 @@
   };
   window.__airborneShipZoom = function () {
     try {
+      if (window.__airborneL3ArenaZoom && window.__airborneL3ArenaZoom()) return true;   // Level 3 boss arena
       if (bossSinking && bossSinking.mode === "ship_sink") return true;
       if (bossActive && boss && boss.variant === 2 && boss.kind === "rocket") return boss.entryP == null || boss.entryP > 0.55;
     } catch (e) {}
@@ -739,7 +740,9 @@
       shakeX = Math.sin(remaining * 0.9) * 5 * (remaining / 220);
     }
 
-    if (bossImgReady && boss.variant === 2 && boss.kind === "rocket") {
+    if (boss.kind === "l3octo" && window.__airborneL3BossReady && window.__airborneL3BossReady()) {
+      window.__airborneL3DrawBoss(boss, shakeX);
+    } else if (bossImgReady && boss.variant === 2 && boss.kind === "rocket") {
       drawShipBoss(img, shakeX);
     } else if (bossImgReady) {
       drawMotionBlur(img, boss.x + boss.w / 2 + shakeX, boss.y + boss.h / 2, boss.w, boss.h, 0, 80, 0);
@@ -1176,7 +1179,9 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     const cfg = bossConfig(bossNumber);
     const kind = boss ? boss.kind : null;
     const img = boss ? (
-      (kind === "bomber" && bossThrowFrame > 0)
+      (kind === "l3octo" && images.level3_octo_still)
+        ? images.level3_octo_still
+        : (kind === "bomber" && bossThrowFrame > 0)
         ? images[`boss_throw_${String(bossThrowFrame).padStart(2, "0")}`]
         : (boss.variant === 2 && images[BOSS2_FRAME_KEYS[boss.animFrame]]) ? images[BOSS2_FRAME_KEYS[boss.animFrame]]
         : (boss.variant === 3 && images[BOSS3_FRAME_KEYS[boss.animFrame]]) ? images[BOSS3_FRAME_KEYS[boss.animFrame]]
@@ -1191,7 +1196,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     else if (kind === "rocket") mode = "rocket_blast";
     else if (kind === "tank") mode = "tank_crumble";
     else if (kind === "heli") mode = "heli_spin";
-    else if (kind === "octopus") mode = "ink_dissolve";
+    else if (kind === "octopus" || kind === "l3octo") mode = "ink_dissolve";
 
     if (boss) {
       var isTrain = !!(window.__airborneTrainingBoss || window.__airborneAirfield || window.__airborneRuffActive);
@@ -2310,7 +2315,7 @@ if (typeof rocketTrailParticles !== "undefined") rocketTrailParticles = [];
     }
 
     bullets.forEach(b => (b.x += b.vx * dt));
-    bullets = bullets.filter(b => b.x < W + 20);
+    { const __bx = (window.__airborneCamExt && window.__airborneCamExt.r) || 0; bullets = bullets.filter(b => b.x < W + 20 + __bx); }   // boss zoom-out: shots fly on into the pulled-back view
 
     if (boss && bossActive) {
       bullets = bullets.filter(b => {

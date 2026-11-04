@@ -34,7 +34,11 @@ function startBossDialogue(num) {
   const bossBubble = document.getElementById("dlgBossBubble");
   const playerBubble = document.getElementById("dlgPlayerBubble");
 
-  const cfg = bossConfig(num);
+  let cfg = bossConfig(num);
+  if (num === 3 && window.__airborneL3ArenaOn && window.__airborneL3ArenaOn()) {   // Level 3 boss: the electric octopus
+    cfg = Object.assign({}, cfg, { name: "Baron Voltcoil", taunts: ["Every arm of mine carries a thunderbolt!", "You flew into my cavern, ace. You won't fly out.", "Feel the storm I keep in my belly!", "Dodge this, little blimp!"],
+      retorts: ["Shocking. A squid with a short fuse.", "I've flown through worse storms than you!", "Let's see those arms keep up!", "Lights out, Voltcoil!"] });
+  }
   const bossImg = bossPortraitImg(num);
   const dlgBossImgEl = document.getElementById("dlgBossImg");
   dlgBossImgEl.onerror = () => { dlgBossImgEl.style.visibility = "hidden"; };
@@ -181,6 +185,7 @@ function startBossDialogue(num) {
 }
 
 function bossPortraitImg(num) {
+  if (num === 3 && window.__airborneL3ArenaOn && window.__airborneL3ArenaOn() && images.level3_octo_still && images.level3_octo_still.naturalWidth) return images.level3_octo_still;
   return num === 2 ? (images[BOSS2_FRAME_KEYS[0]] || images.boss2)
     : num === 3 ? (images[BOSS3_FRAME_KEYS[0]] || images.boss3)
     : num === 4 ? (images[BOSS4_FRAME_KEYS[0]] || images.boss4)
@@ -258,6 +263,7 @@ function triggerBoss(num) {
       animTimer: 0
     };
 
+    try { if (num === 3 && window.__airborneL3BossInit) window.__airborneL3BossInit(boss); } catch (eL3b) { console.warn("[L3] boss init", eL3b); }   // Level 3: the electric octopus in the cave arena
     bombTimer = 1.5;
     bossThrowFrame = 0;
     bossThrowFrameTimer = 0;
@@ -281,6 +287,7 @@ function triggerBoss(num) {
 
   function updateBoss(dt) {
     if (!boss) return;
+    if (boss.kind === "l3octo") { try { if (window.__airborneL3BossUpdate) window.__airborneL3BossUpdate(boss, dt); } catch (eL3) { console.warn("[L3] boss", eL3); } return; }
     // Training boss encounter: deliberately slow the boss, its attacks, and animation to 1/3 speed.
     if (window.__airborneTrainingBoss) dt *= (1 / 3);
     if (boss.variant === 2 && boss.kind === "rocket") { try { updateShipBoss(dt); } catch (eShip) { console.warn("updateShipBoss", eShip); } }

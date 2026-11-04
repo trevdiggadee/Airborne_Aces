@@ -143,6 +143,8 @@ window.__airborneRingDebug = false;
       updateBlimpPersonality(dt);
       return;
     }
+    // Level 3 boss arena: free flight (hold / drag to steer) instead of tap-to-flap
+    try { if (window.__airborneL3Flight && window.__airborneL3Flight(dt)) { updateBlimpPersonality(dt); return; } } catch (eFl) {}
     // Airfield: scripted phases freeze physics; still run exhaust personality
     const afPhase = window.__airborneAirfieldPhase;
     if (window.__airborneAirfield &&
