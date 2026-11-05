@@ -2153,7 +2153,7 @@ window.__airborneRingDebug = false;
     try { updateFirePower(dt); } catch (e) {}
     try { checkCampaignBossGate(); } catch (eBg) { console.warn("boss gate", eBg); }
     try { updateHitCoins(dt); } catch (e) {}
-    if (!bossActive && !bonusActive && !bonusPending && !(typeof bossSinking !== "undefined" && bossSinking) && !(typeof isLevelEndActive === "function" && isLevelEndActive())) {
+    if (!bossActive && !bonusActive && !bonusPending && !window.__airborneL3Cave && !(typeof bossSinking !== "undefined" && bossSinking) && !(typeof isLevelEndActive === "function" && isLevelEndActive())) {   // no birds while the Level 3 cave is out
       spawnTimer += dt * ((window.__airborneAirfield || window.__airborneTrainingFlight) ? 1 : 1.25); // campaign: +25% birds/obstacles
       if (spawnTimer >= spawnInterval) {
         spawnTimer = 0;

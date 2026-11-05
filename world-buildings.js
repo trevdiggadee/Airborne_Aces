@@ -2866,6 +2866,7 @@
   }
 
   function drawBirdFlocks() {
+    if (window.__airborneL3Cave) return;   // Level 3 cave: no birds (bats live there)
     birdFlocks.forEach(f => {
       const img = images[f.keys[f.animFrame]];
       if (!img || !img.naturalWidth) return;

@@ -32,33 +32,32 @@
     is1: [{ fx: 0.50, fy: 0.95, dir: "d", len: 0.16 }]
   };
 
-  // ---------- cave geometry (sprite 2172x475, sprite px) ----------
-  // Left: entry pipe -> long tunnel (row TUN_TOP is the tunnel ceiling = top of the screen) -> pipe that opens into the boss ARENA on the right.
-  var CAVE_W = 2172, CAVE_H = 475, TUN_TOP = 168, CEIL_T = 176, FLOOR_T = 386, WATER_Y = 378;
-  var WALL_L = 262, TUN_END = 1268;                 // tunnel interior x range; rock wings outside it (only the pipe corridors are open)
+  // ---------- cave geometry (sprite 2048x479, sprite px) ----------
+  // Left: entry pipe -> long tunnel (row TUN_TOP is the tunnel ceiling = top of the screen) -> open archway into the boss ARENA on the right.
+  var CAVE_W = 2048, CAVE_H = 479, TUN_TOP = 165, CEIL_T = 176, FLOOR_T = 392, WATER_Y = 383;
+  var WALL_L = 258;                                 // tunnel interior starts here; the rock wing to its left is only open through the entry pipe
   var CORR_HALF = 22, PIPE_HALF = 30;
-  var PIPE_L = [14, 258], PIPE_M = [1130, 1350];    // pipe hide zones (sprite px): open end .. mouth
-  var PIPE_L_CY = 265, PIPE_M_CY = 272;
-  var ARENA_L = 1370, ARENA_R = 1985, ARENA_CX = 1678, ARENA_FLOOR = 380, ARENA_WATER = 392;   // boss arena (open cavern)
-  var ARENA_CEIL = [[1360, 170], [1430, 148], [1500, 122], [1550, 104], [1650, 94], [1750, 90], [1850, 100], [1930, 118], [1995, 140]];
-  var ARENA_Z = 0.66;                               // camera pull-back once the blimp comes out of the exit pipe
-  var CAVE_RECTS = [[WALL_L, -400, TUN_END, CEIL_T], [WALL_L, FLOOR_T, TUN_END, CAVE_H]];   // 0 = ceiling, 1 = floor (tunnel only)
+  var PIPE_L = [14, 250], PIPE_L_CY = 270;          // entry pipe hide zone (sprite px): open end .. mouth
+  var ARENA_L = 1295, ARENA_R = 1935, ARENA_CX = 1615, ARENA_FLOOR = 388, ARENA_WATER = 405;   // boss arena (open cavern)
+  var ARENA_CEIL = [[1230, 165], [1300, 140], [1400, 108], [1500, 84], [1600, 72], [1700, 74], [1800, 92], [1880, 118], [1940, 150]];
+  var ARENA_Z = 0.52;                               // camera pull-back (whole room visible) once the blimp is in the arena
+  var CAVE_RECTS = [[WALL_L, -400, ARENA_L, CEIL_T], [WALL_L, FLOOR_T, ARENA_L, CAVE_H]];   // 0 = ceiling, 1 = floor (tunnel only)
   var CAVE_NODES = [];                              // no electricity in the cave: the crystals only glow and sparkle
-  function pipeCY(lx) { return lx < 700 ? PIPE_L_CY : PIPE_M_CY; }
+  function pipeCY(lx) { return PIPE_L_CY; }
   function arenaCeil(lx) {
     var A = ARENA_CEIL; if (lx <= A[0][0]) return A[0][1]; if (lx >= A[A.length - 1][0]) return A[A.length - 1][1];
     for (var i = 1; i < A.length; i++) if (lx <= A[i][0]) { var t = (lx - A[i - 1][0]) / (A[i][0] - A[i - 1][0]); return A[i - 1][1] + (A[i][1] - A[i - 1][1]) * t; }
     return 100;
   }
   var CAVE_FX = {
-    crystals: [[265,350,1],[362,358,1],[440,362,0],[580,358,1],[690,362,0],[810,358,1],[900,365,0],[1050,360,1],[1000,362,0],[1130,362,0],[1230,362,0],
-      [320,212,0],[437,208,0],[515,208,1],[700,210,0],[820,212,1],[950,212,0],[1010,205,0],
-      [1220,395,1],[1140,360,1],[1400,415,1],[1470,355,1],[1950,360,1],[2040,415,1],[1700,260,0],[1675,300,0],[1730,300,0],[1510,130,0],[1750,115,0],[1880,115,0],[1930,125,0]],
-    lamps: [[377,272,"255,170,80"],[601,272,"255,170,80"],[826,272,"255,170,80"],[1058,272,"255,170,80"],[1700,250,"110,190,255"],[1690,390,"130,170,255"]],
-    steam: [[300,235],[345,222],[470,240],[605,228],[700,240],[820,228],[960,250],[1100,235],[1430,205],[1500,180],[1880,175],[1960,190]],
-    tips: [[312,208],[372,198],[482,188],[512,218],[582,198],[652,212],[712,198],[782,218],[832,208],[882,203],[942,192],[1012,228],[1052,203],[1112,203],[1202,218],
-      [1490,162],[1570,162],[1610,142],[1670,162],[1730,162],[1790,132],[1850,122],[1930,172]],
-    pipes: [[525,264],[655,245],[912,252],[958,252],[1110,258],[1480,212],[1915,212]]   // open pipe ends: water pours from these down to the floor
+    crystals: [[270,365,1],[340,362,1],[525,365,1],[610,368,0],[765,368,1],[870,370,0],[935,372,0],[1010,365,1],[1120,368,0],[1180,368,0],
+      [310,215,0],[362,205,0],[480,210,0],[655,215,0],[795,210,0],[960,210,0],
+      [1170,405,1],[1210,425,1],[1315,430,1],[1365,375,1],[1865,380,1],[1860,425,1],[1610,260,0],[1585,310,0],[1640,310,0],[1415,150,0],[1500,110,0],[1620,100,0],[1700,115,0],[1790,140,0]],
+    lamps: [[540,272,"255,170,80"],[770,272,"255,170,80"],[1018,268,"255,170,80"],[1262,262,"255,170,80"],[1610,250,"110,190,255"],[1610,400,"130,170,255"]],
+    steam: [[300,235],[345,232],[470,235],[600,225],[700,240],[800,250],[900,240],[1100,235],[1330,215],[1380,190],[1560,135],[1800,170],[1880,190]],
+    tips: [[310,225],[362,222],[430,228],[480,225],[530,230],[610,226],[655,232],[760,228],[800,224],[860,228],[900,226],[960,230],[1010,226],[1060,224],[1120,228],
+      [1320,200],[1410,170],[1480,130],[1555,115],[1620,115],[1690,125],[1760,150],[1830,170]],
+    pipes: [[430,245],[487,268],[860,245],[1140,238]]   // open pipe ends: water pours from these down to the floor
   };
   var caveMaskData = null;
   function caveMask() {      // coarse opaque/transparent map of the cave art (for the rock walls around the pipes)
@@ -76,7 +75,7 @@
 
   var on = false, structs = [], spawnX = 0, cave = null, caveDone = false, clockT = 0, playT = 0, groundX = 0, parX = 0;
   var fxP = [];
-  var arena = null, orbs = [], afx = [];
+  var arena = null, orbs = [], afx = [], pshock = 0;
   var maskCache = {};
 
   function rnd(a, b) { return a + Math.random() * (b - a); }
@@ -292,7 +291,6 @@
     if (exit && !frozen && !takeoff) sp = 70 * Math.max(scale, 1) * dt;
     if (ending && !frozen) { var mul = (typeof window.__airborneLandScrollMul === "number") ? window.__airborneLandScrollMul : 1; sp = Math.max(0.15, mul) * Math.max(150, Math.min(230, W * 0.28)) * dt * (mul <= 0 ? 0 : 1); }
     if (sp > 0) playT += dt;
-    if (sp > 0 && cave && playerInPipe()) sp *= 4;      // the ride through a pipe is quick
     if (arena) sp = (arena.st === "done" && !(typeof bossSinking !== "undefined" && bossSinking)) ? Math.max(sp, 280 * dt) : 0;   // arena: the world stops scrolling (the exit-away scroll after the boss is quick)
     groundX += sp; parX += sp * 0.32;
     structs.forEach(function (s) { s.x -= sp; });
@@ -305,7 +303,7 @@
       var fr = frac();
       if ((fr !== null && fr >= 0.78) || playT > 70) spawnCave();
     }
-    if (cave && !arena && !exit && !takeoff && player.x > cave.x + (PIPE_M[1] + 10) * cave.s) startArena();
+    if (cave && !arena && !exit && !takeoff && player.x > cave.x + (ARENA_L + 30) * cave.s) startArena();
     if (arena) arenaUpdate(dt, frozen);
     if (cave && cave.x + cave.w < -60) { cave = null; caveDone = true; arena = null; orbs = []; window.__airborneL3Cave = false; window.__airborneL3Arena = false; }
     // outside set
@@ -360,17 +358,17 @@
     if (cave && !arena) {                              // the tunnel: rock wings, ceiling, floor
       var c = cave, sC = c.s, lx = (player.x - c.x) / sC, ly0 = (player.y - c.top) / sC;
       var lhw = hw / sC, lhh = hh / sC, bad = false;
-      if (lx + lhw > -200 && lx - lhw < PIPE_M[1] + 40) {
-        if (lx - lhw < WALL_L || lx + lhw > TUN_END) {          // rock wings: only the pipe corridors are open
+      if (lx + lhw > -200 && lx - lhw < ARENA_L + 40) {
+        if (lx - lhw < WALL_L) {          // rock wing on the left: only the entry pipe is open
           var m = caveMask();
           if (m) {
             for (var q0 = 0; q0 < pts.length && !bad; q0++) {
               var qx = lx + pts[q0][0] / sC, qy = ly0 + pts[q0][1] / sC;
-              if ((qx < WALL_L || (qx > TUN_END && qx < PIPE_M[1])) && caveOpaque(m, qx, qy)) { var pc = pipeCY(qx); if (!(qy >= pc - CORR_HALF && qy <= pc + CORR_HALF)) bad = true; }
+              if (qx < WALL_L && caveOpaque(m, qx, qy)) { var pc = pipeCY(qx); if (!(qy >= pc - CORR_HALF && qy <= pc + CORR_HALF)) bad = true; }
             }
           }
         }
-        if (lx + lhw > WALL_L && lx - lhw < TUN_END) {
+        if (lx + lhw > WALL_L && lx - lhw < ARENA_L) {
           for (var r = 0; r < CAVE_RECTS.length && !bad; r++) {
             var q = CAVE_RECTS[r];
             if (lx + lhw > q[0] && lx - lhw < q[2] && ly0 + lhh > q[1] && ly0 - lhh < q[3]) {
@@ -426,7 +424,7 @@
   function pipeZones() {
     if (!cave) return null;
     var c = cave, k = c.s;
-    return [{ x0: c.x + PIPE_L[0] * k, x1: c.x + PIPE_L[1] * k, cy: PIPE_L_CY }, { x0: c.x + PIPE_M[0] * k, x1: c.x + PIPE_M[1] * k, cy: PIPE_M_CY }];
+    return [{ x0: c.x + PIPE_L[0] * k, x1: c.x + PIPE_L[1] * k, cy: PIPE_L_CY }];
   }
   function playerInPipe() {
     if (arena) return null;
@@ -532,11 +530,11 @@
   var FOG = null;
   function fogInit() {
     FOG = []; var i = 0, x;
-    for (x = 300; x < 1220; x += 62, i++) FOG.push({ bx: x, by: 225 + ((i * 53) % 100), w: 220 + ((i * 37) % 120), h: 56 + ((i * 29) % 50), sp: 0.12 + (i % 5) * 0.05, ph: i * 1.7, am: 26 + (i % 4) * 12, a: 0.10 + (i % 3) * 0.03 });
-    for (x = 1420; x < 1960; x += 70, i++) FOG.push({ bx: x, by: 210 + ((i * 41) % 110), w: 260 + ((i * 31) % 120), h: 70 + ((i * 23) % 50), sp: 0.10 + (i % 4) * 0.04, ph: i * 1.3, am: 30, a: 0.09 + (i % 3) * 0.02 });
-    for (var j = 0; j < 8; j++) FOG.push({ bx: 300 + j * 120, by: 358, w: 300, h: 32, sp: 0.09 + (j % 3) * 0.04, ph: j * 2.3, am: 40, a: 0.09 });   // low ground mist in the tunnel
+    for (x = 300; x < 1260; x += 62, i++) FOG.push({ bx: x, by: 235 + ((i * 53) % 95), w: 220 + ((i * 37) % 120), h: 56 + ((i * 29) % 50), sp: 0.12 + (i % 5) * 0.05, ph: i * 1.7, am: 26 + (i % 4) * 12, a: 0.10 + (i % 3) * 0.03 });
+    for (x = 1330; x < 1920; x += 70, i++) FOG.push({ bx: x, by: 215 + ((i * 41) % 115), w: 260 + ((i * 31) % 120), h: 70 + ((i * 23) % 50), sp: 0.10 + (i % 4) * 0.04, ph: i * 1.3, am: 30, a: 0.09 + (i % 3) * 0.02 });
+    for (var j = 0; j < 8; j++) FOG.push({ bx: 300 + j * 120, by: 368, w: 300, h: 32, sp: 0.09 + (j % 3) * 0.04, ph: j * 2.3, am: 40, a: 0.09 });   // low ground mist in the tunnel
   }
-  var POOLS = [[330, 46], [520, 40], [700, 38], [880, 46], [1010, 34], [1180, 44], [525, 58], [655, 58], [912, 58], [958, 58], [1110, 58], [1480, 50, 392], [1915, 50, 392]];
+  var POOLS = [[330, 46], [520, 40], [700, 38], [880, 46], [1010, 34], [1160, 44], [430, 58], [487, 58], [860, 58], [1140, 58]];
   function drawFog(c, now) {
     if (!FOG) fogInit();
     var s = c.s, x0 = Math.max(0, c.x + WALL_L * s), x1 = Math.min(W, c.x + ARENA_R * s); if (x1 <= x0) return;
@@ -581,19 +579,94 @@
     }
     ctx.restore();
   }
+  // ================= bats: hanging from the cave ceiling, they flutter off when the blimp comes close =================
+  var BATS = null;
+  function batsInit() {
+    BATS = []; var seed = 11, i;
+    function r() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+    for (i = 0; i < 40; i++) { var x = 290 + (i + r() * 0.85) * (950 / 40); BATS.push({ x: x, y: 192 + r() * 36, ph: r() * 6.28, sc: 0.85 + r() * 0.5, st: "hang", t: 0, dur: 0, vx: 0, vy: 0, px: 0, py: 0, wait: 2 + r() * 9 }); }
+    for (i = 0; i < 20; i++) { var xx = 1250 + (i + r() * 0.85) * (690 / 20); BATS.push({ x: xx, y: arenaCeil(xx) + 8 + r() * 6, ph: r() * 6.28, sc: 0.95 + r() * 0.55, st: "hang", t: 0, dur: 0, vx: 0, vy: 0, px: 0, py: 0, wait: 2 + r() * 12 }); }
+  }
+  function drawBatShape(x, y, sz, wing, flying, ang) {
+    // sz = body scale in screen px; hanging bats point down, flying bats are upright with flapping wings
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+    if (!flying) ctx.scale(1, -1);                   // mirror so the head ends up at the bottom
+    var rim = "rgba(150,120,255,0.55)";
+    function wingPath(sg, open) {                    // sg = side (+1 / -1), open = 0 folded .. 1 spread
+      var L = sz * (0.55 + 1.35 * open), up = -sz * (0.1 + 0.9 * open) * (flying ? 1 : 0.3);
+      ctx.beginPath(); ctx.moveTo(sg * sz * 0.18, -sz * 0.12);
+      ctx.quadraticCurveTo(sg * L * 0.55, up - sz * 0.35 * open, sg * L, up + sz * 0.1);
+      ctx.quadraticCurveTo(sg * L * 0.82, up + sz * 0.38, sg * L * 0.66, up + sz * 0.3);
+      ctx.quadraticCurveTo(sg * L * 0.5, up + sz * 0.62, sg * L * 0.34, up + sz * 0.46);
+      ctx.quadraticCurveTo(sg * L * 0.22, up + sz * 0.66, sg * sz * 0.14, sz * 0.55);
+      ctx.closePath();
+    }
+    ctx.fillStyle = "#17102a"; ctx.strokeStyle = rim; ctx.lineWidth = Math.max(0.6, sz * 0.06);
+    wingPath(1, wing); ctx.fill(); ctx.stroke(); wingPath(-1, wing); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0, sz * 0.2, sz * 0.26, sz * 0.46, 0, 0, 6.283); ctx.fillStyle = "#1d1433"; ctx.fill(); ctx.stroke();   // body
+    ctx.beginPath(); ctx.arc(0, -sz * 0.34, sz * 0.2, 0, 6.283); ctx.fill(); ctx.stroke();                                           // head
+    ctx.beginPath(); ctx.moveTo(-sz * 0.17, -sz * 0.45); ctx.lineTo(-sz * 0.2, -sz * 0.72); ctx.lineTo(-sz * 0.03, -sz * 0.5);
+    ctx.moveTo(sz * 0.17, -sz * 0.45); ctx.lineTo(sz * 0.2, -sz * 0.72); ctx.lineTo(sz * 0.03, -sz * 0.5); ctx.fill();                // ears
+    ctx.fillStyle = "#ff4a4a"; ctx.fillRect(-sz * 0.11, -sz * 0.36, sz * 0.06, sz * 0.06); ctx.fillRect(sz * 0.05, -sz * 0.36, sz * 0.06, sz * 0.06);   // eyes
+    ctx.restore();
+  }
+  function drawBats(c, now, dt) {
+    if (!BATS) batsInit();
+    var s = c.s, hw = (player.w || 80) * 0.5;
+    for (var i = 0; i < BATS.length; i++) {
+      var b = BATS[i], hx = c.x + b.x * s, hy = c.top + b.y * s, sz = 11 * s * b.sc;
+      if (hx < -80 || hx > W + 80) { if (b.st !== "hang") { b.st = "hang"; b.t = 0; } continue; }
+      b.t += dt;
+      if (b.st === "hang") {
+        b.wait -= dt;
+        var near = Math.abs(player.x - hx) < 90 * s && player.y - hy < 160 * s && player.y > hy - 40 * s && hx > 20 && hx < W - 20;
+        if (b.wait <= 0 || near) {
+          if (near || Math.random() < 0.35) { b.st = "fly"; b.t = 0; b.dur = 3 + Math.random() * 2.2; b.px = hx; b.py = hy + sz * 0.4; b.vx = (Math.random() - 0.5) * 150 * s; b.vy = 55 * s; }
+          else b.wait = 3 + Math.random() * 8;
+        }
+        var sway = Math.sin(now * 1.2 + b.ph) * 0.05, tw = Math.pow(Math.max(0, Math.sin(now * 0.55 + b.ph * 3)), 14) * 0.45;
+        ctx.save(); ctx.globalAlpha = 1; drawBatShape(hx, hy + sz * 0.62, sz, tw, false, sway); ctx.restore();
+        // claws on the rock
+        ctx.fillStyle = "#0d0818"; ctx.fillRect(hx - sz * 0.18, hy - 1, sz * 0.36, Math.max(1.5, sz * 0.12));
+        if ((now * 0.5 + b.ph) % 5 < 0.12) { ctx.save(); ctx.globalCompositeOperation = "lighter"; glowAt(hx, hy + sz * 0.85, sz * 0.7, "255,80,80", 0.45); ctx.restore(); }
+      } else if (b.st === "fly") {
+        b.vy += (Math.sin(b.t * 3.1 + b.ph) * 150 * s - b.vy) * Math.min(1, dt * 2.5) * 0.6 - 18 * s * dt;
+        b.vx += (Math.sin(b.t * 2.3 + b.ph * 2) * 130 * s - b.vx) * Math.min(1, dt * 1.8);
+        b.px += b.vx * dt; b.py += b.vy * dt;
+        var fl = 0.15 + 0.85 * (0.5 + 0.5 * Math.sin(b.t * 24 + b.ph));
+        drawBatShape(b.px, b.py, sz * 1.05, fl, true, Math.max(-0.4, Math.min(0.4, b.vx / (400 * s))));
+        if (b.t > b.dur) { b.st = "back"; b.t = 0; b.fx = b.px; b.fy = b.py; }
+      } else {                                       // returning to the roost
+        var k = Math.min(1, b.t / 1.1), ex = hx, ey = hy + sz * 0.62;
+        var bx = b.fx + (ex - b.fx) * k, by = b.fy + (ey - b.fy) * k + Math.sin(k * 3.14) * -14 * s;
+        drawBatShape(bx, by, sz * (1.05 - 0.05 * k), (1 - k) * (0.15 + 0.85 * (0.5 + 0.5 * Math.sin(b.t * 24))), k < 0.9, 0);
+        if (k >= 1) { b.st = "hang"; b.t = 0; b.wait = 5 + Math.random() * 10; }
+      }
+    }
+  }
+
   function drawCave() {
     if (!cave) return;
     var c = cave, im = img("level3_cave"); if (!im) return;
     if (c.x > W + 40 || c.x + c.w < -40) return;
     ctx.drawImage(im, c.x, c.top, c.w, c.h);
     var now = clockT, dt = fx.last ? Math.min(0.05, Math.max(0, now - fx.last)) : 0.016;
-    var ps = img("level3_pipe_r");                      // entry mouth of the pipe that leads into the arena (the art only has its exit end)
-    if (ps && ps.naturalWidth) { var k2 = 1.12, w2 = ps.naturalWidth * k2 * c.s, h2 = ps.naturalHeight * k2 * c.s; ctx.drawImage(ps, c.x + 1272 * c.s - w2, c.top + PIPE_M_CY * c.s - h2 / 2, w2, h2); }
+    drawBats(c, now, dt);
     drawFog(c, now);
     drawWater(c, now, dt);
     caveFx(c);
   }
-  window.__airborneL3DrawFront = function () {};   // the pipes are part of the cave art now; the blimp is simply hidden inside them
+  window.__airborneL3DrawFront = function () {      // after the blimp: electric shock arcs when an orb or the ring hits it
+    if (!on || !arena || pshock <= 0) return;
+    var sf = cave ? cave.s / ARENA_SZ : 1, k = Math.min(1, pshock / 1.1), hw = (player.w || 80) * 0.55, hh = (player.h || 50) * 0.6;
+    ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    glowAt(player.x, player.y, hw * 1.5, "120,190,255", 0.35 * k + 0.1 * Math.random());
+    for (var i = 0; i < 6; i++) {
+      var a = Math.random() * 6.283, a2 = a + (Math.random() - 0.5) * 1.4;
+      bolt(player.x + Math.cos(a) * hw * 0.3, player.y + Math.sin(a) * hh * 0.3, player.x + Math.cos(a2) * hw * (0.9 + Math.random() * 0.5), player.y + Math.sin(a2) * hh * (0.9 + Math.random() * 0.7), 12 * sf, 5, 0.9 * k + 0.2, 2.4);
+    }
+    ctx.restore();
+  };
   // ================= Boss arena: zoom-out, no scrolling, free flight, electric octopus =================
   var ARENA_SZ = 1.45;                                   // reference cave scale (boss / projectile sizes are relative to it)
   function arenaRect() {
@@ -603,13 +676,13 @@
   }
   function startArena() {
     var c = cave, z = ARENA_Z, Xc = c.x + ARENA_CX * c.s;
-    arena = { st: "intro", t: 0, z: z, ax: (W / 2 - z * Xc) / (1 - z), ay: H, dlg: false, vx: 0, vy: 0 };
+    arena = { st: "intro", t: 0, z: z, ax: (W / 2 - z * Xc) / (1 - z), ay: H * 1.03, dlg: false, vx: 0, vy: 0 };
     structs = []; orbs = []; afx = [];
     window.__airborneL3Arena = true;
   }
   function arenaUpdate(dt, frozen) {
     if (frozen) return;
-    arena.t += dt;
+    arena.t += dt; if (pshock > 0) pshock -= dt;
     if (arena.st === "intro") {
       if (bossActive && boss && boss.kind === "l3octo") arena.st = "fight";
       else if (arena.t > 1.7 && !arena.dlg && state === "playing" && !bossActive) {
@@ -652,7 +725,7 @@
   }
   window.__airborneL3Flight = function (dt) {
     if (!on || !arena || !cave || arena.st === "done" || state !== "playing") return false;
-    var R = arenaRect(), hw = (player.w || 80) * 0.36, hh = (player.h || 50) * 0.36, sf = cave.s / ARENA_SZ, SP = 300 * sf;
+    var R = arenaRect(), hw = (player.w || 80) * 0.36, hh = (player.h || 50) * 0.36, sf = cave.s / ARENA_SZ, SP = 300 * sf * (pshock > 0 ? 0.45 : 1);
     var tvx = 0, tvy = 0, k = inp.k;
     var kx = (k.ArrowRight || k.KeyD ? 1 : 0) - (k.ArrowLeft || k.KeyA ? 1 : 0), ky = (k.ArrowDown || k.KeyS ? 1 : 0) - (k.ArrowUp || k.KeyW ? 1 : 0);
     if (kx || ky) { var kl = Math.hypot(kx, ky); tvx = kx / kl * SP; tvy = ky / kl * SP; }
@@ -678,7 +751,7 @@
   window.__airborneL3BossInit = function (b) {
     if (!arena || !cave || !ok("level3_octo")) return;
     var R = arenaRect(), sf = cave.s / ARENA_SZ;
-    b.kind = "l3octo"; b.w = 250 * sf; b.h = b.w * OCT.fh / OCT.fw;
+    b.kind = "l3octo"; b.w = 290 * sf; b.h = b.w * OCT.fh / OCT.fw;
     b.x = R.r - b.w - 30 * sf; b.y = (R.ceilAt(R.cx) + R.floor) / 2 - b.h / 2;
     b.targetX = b.x; b.arrived = true;
     b.l3 = { vx: 0, vy: 0, tx: b.x, ty: b.y, rt: 0, t: 0, orbT: 2.0, shockT: 6.5, sh: null, shHit: false, fr: 0, frT: 0, arcs: [], fan: 0 };
@@ -714,7 +787,7 @@
       var o0 = bossPt(b, OCT_ORBS[0][0], OCT_ORBS[0][1]), ang = Math.atan2(player.y - o0.y, player.x - o0.x), n = (hp < 0.55 && L.fan === 0) ? 3 : 1;
       for (var i = 0; i < n; i++) {
         var aa = ang + (n === 1 ? 0 : (i - 1) * 0.30), sp = (235 + 50 * (1 - hp)) * sf;
-        orbs.push({ x: o0.x, y: o0.y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, r: 21 * sf, hp: 2, t: Math.random(), rot: 0 });
+        orbs.push({ x: o0.x, y: o0.y, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, r: 24 * sf, hp: 2, t: Math.random(), rot: 0 });
       }
       burst(o0.x, o0.y, 8, "170,225,255", 120 * sf);
     }
@@ -726,7 +799,7 @@
       var cx = b.x + b.w * 0.5, cy = b.y + b.h * 0.52, RR = 175 * sf;
       if (L.sh.t > 1.2 && L.sh.t < 2.1 && !L.shHit && typeof takeHit === "function") {
         var pd = Math.hypot(player.x - cx, player.y - cy);
-        if (pd < RR + (player.w || 80) * 0.18) { L.shHit = true; try { takeHit(); } catch (e) {} }
+        if (pd < RR + (player.w || 80) * 0.18) { L.shHit = true; pshock = 1.1; try { takeHit(); } catch (e) {} }
       }
       if (L.sh.t >= 2.2) L.sh = null;
     }
@@ -752,23 +825,28 @@
           }
         }
       }
-      if (!dead && Math.hypot(player.x - o.x, player.y - o.y) < o.r * 0.85 + hw * 0.6) { dead = true; try { takeHit(); } catch (e) {} }
+      if (!dead && Math.hypot(player.x - o.x, player.y - o.y) < o.r * 0.85 + hw * 0.6) { dead = true; pshock = 1.1; try { takeHit(); } catch (e) {} }
       if (o.x < R.l - 120 || o.x > R.r + 160 || o.y < R.ceilAt(o.x) - 160 || o.y > R.floor + 80) dead = true;
       if (dead) { burst(o.x, o.y, 14, "170,225,255", 190); try { if (typeof sfxExplosion === "function") sfxExplosion(0.15); } catch (e) {} orbs.splice(i, 1); }
     }
   }
   function drawOrbs() {
-    var im = img("level3_orb"), sf = cave ? cave.s / ARENA_SZ : 1;
+    var sf = cave ? cave.s / ARENA_SZ : 1;
     for (var i = 0; i < orbs.length; i++) {
-      var o = orbs[i], sz = o.r * 2.5;
-      ctx.save(); ctx.globalCompositeOperation = "lighter"; glowAt(o.x, o.y, o.r * 2.6, "120,190,255", 0.55 + 0.2 * Math.sin(o.t * 14)); ctx.restore();
-      if (im && im.naturalWidth) {
-        var f = ((o.t * 17) | 0) % 25, sw = 128;
-        ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.rot);
-        ctx.drawImage(im, (f % 5) * sw, ((f / 5) | 0) * sw, sw, sw, -sz / 2, -sz / 2, sz, sz); ctx.restore();
-      }
-      ctx.save(); ctx.globalCompositeOperation = "lighter";
-      if (Math.random() < 0.5) { var a = Math.random() * 6.283; bolt(o.x, o.y, o.x + Math.cos(a) * o.r * 1.9, o.y + Math.sin(a) * o.r * 1.9, 5 * sf, 4, 0.8, 1.1); }
+      var o = orbs[i], r = o.r;
+      ctx.save(); ctx.globalCompositeOperation = "lighter"; glowAt(o.x, o.y, r * 2.8, "110,180,255", 0.5 + 0.2 * Math.sin(o.t * 14)); ctx.restore();
+      ctx.save(); ctx.translate(o.x, o.y);
+      var g = ctx.createRadialGradient(0, 0, r * 0.05, 0, 0, r);                 // plasma ball
+      g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(0.28, "rgba(150,215,255,0.98)"); g.addColorStop(0.7, "rgba(40,95,210,0.96)"); g.addColorStop(1, "rgba(14,28,90,0.97)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); ctx.fill();
+      ctx.rotate(o.rot);                                                          // steel spikes + rim
+      ctx.fillStyle = "#8a97a8"; ctx.strokeStyle = "#1a2030"; ctx.lineWidth = Math.max(0.8, r * 0.07);
+      for (var k = 0; k < 4; k++) { ctx.save(); ctx.rotate(k * 1.5708 + 0.4); ctx.beginPath(); ctx.moveTo(r * 0.82, -r * 0.2); ctx.lineTo(r * 1.5, 0); ctx.lineTo(r * 0.82, r * 0.2); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); }
+      ctx.strokeStyle = "rgba(170,185,205,0.95)"; ctx.lineWidth = Math.max(1, r * 0.13); ctx.beginPath(); ctx.arc(0, 0, r * 0.96, 0, 6.283); ctx.stroke();
+      ctx.restore();
+      ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.lineCap = "round";
+      for (var q = 0; q < 5; q++) { var a = q / 5 * 6.283 + o.rot * 0.6 + Math.random() * 0.4; bolt(o.x, o.y, o.x + Math.cos(a) * r * 0.9, o.y + Math.sin(a) * r * 0.9, r * 0.35, 4, 0.95, 1.5); }
+      if (Math.random() < 0.6) { var a2 = Math.random() * 6.283; bolt(o.x + Math.cos(a2) * r, o.y + Math.sin(a2) * r, o.x + Math.cos(a2) * r * 2.1, o.y + Math.sin(a2) * r * 2.1, 6 * sf, 4, 0.8, 1.4); }
       ctx.restore();
     }
   }
