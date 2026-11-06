@@ -23,14 +23,13 @@
     tw0: [11, 421, 112, 290], tw1: [135, 423, 100, 287], tw2: [249, 445, 130, 265], tw3: [392, 439, 125, 270], tw4: [520, 426, 120, 287],
     tw5: [647, 437, 108, 276], tw6: [758, 448, 199, 266], tw7: [961, 432, 214, 279], py0: [1195, 441, 95, 269], py1: [1372, 441, 133, 269],
     is0: [6, 737, 142, 101], is1: [167, 739, 152, 103], is2: [336, 742, 132, 83], is3: [486, 741, 113, 102], is4: [692, 743, 172, 92],
-    is5: [893, 739, 138, 103], is6: [1047, 729, 180, 98]
+    is5: [893, 739, 138, 103], is6: [1047, 729, 180, 98],
+    lamp1: [1431, 743, 57, 164], lamp2: [1493, 748, 31, 164], redpole: [1389, 749, 23, 159], ppost: [1251, 759, 21, 51], volt: [1167, 824, 119, 82],
+    crateA: [14, 856, 75, 50], crateB: [103, 855, 63, 51], rail: [178, 866, 130, 42], barrelB: [586, 845, 56, 64], elbow: [659, 841, 90, 68], barrelR: [765, 850, 40, 59],
+    tank: [863, 836, 37, 72], crateC: [979, 844, 87, 63], crateD: [1077, 851, 65, 56], mesh: [207, 931, 102, 73], mach: [15, 934, 97, 69], pipes: [124, 929, 59, 75], pipeBig: [1087, 930, 144, 75], pipeL: [1239, 935, 136, 69]
   };
   // electric nodes, fractions of the sprite: dir u/d/r, len in screen heights (H) — or "to" another struct (pylon pairs)
-  var NODES = {
-    tw7: [{ fx: 0.40, fy: 0.04, dir: "u", len: 0.30 }],
-    is6: [{ fx: 0.10, fy: 0.86, dir: "d", len: 0.22 }],
-    is1: [{ fx: 0.50, fy: 0.95, dir: "d", len: 0.16 }]
-  };
+  var NODES = {};
 
   // ---------- cave geometry (sprite 2048x479, sprite px) ----------
   // Left: entry pipe -> long tunnel (row TUN_TOP is the tunnel ceiling = top of the screen) -> open archway into the boss ARENA on the right.
@@ -121,7 +120,8 @@
   }
 
   // ---------- placement ----------
-  function baseY() { return H - 6 * U(); }     // outside assets stand on the very bottom edge of the screen
+  function gl() { return Math.max(58, H * 0.088); }
+  function baseY() { return H - gl() + gl() * 0.14; }     // outside assets stand on the very bottom edge of the screen
   function groundY() { return (typeof groundLevelY === "function") ? groundLevelY() : H * 0.9; }
   function mkStruct(key, x, y, h) {
     var r = SP[key], w = h * r[2] / r[3];
@@ -130,28 +130,43 @@
     structs.push(s); return s;
   }
   function pick(list) { return list[(Math.random() * list.length) | 0]; }
+  var DECO = [["barrelB", 0.075], ["barrelR", 0.07], ["crateA", 0.06], ["crateB", 0.065], ["crateC", 0.075], ["crateD", 0.065], ["tank", 0.085], ["rail", 0.05], ["elbow", 0.07], ["mesh", 0.085], ["mach", 0.08], ["pipes", 0.09], ["pipeBig", 0.09], ["pipeL", 0.08], ["volt", 0.095], ["lamp1", 0.2], ["lamp2", 0.2], ["redpole", 0.2]];
+  function mkDeco(k, x, h) { var r = SP[k], s = { k: k, src: r, x: x, y: baseY() - h + 3 * U(), w: h * r[2] / r[3], h: h, mask: null, nodes: [], deco: true, ph: Math.random() * 6 }; structs.push(s); return s; }
+  function sprinkle(x0, x1) {
+    var n = 1 + ((Math.random() * 3) | 0), x = x0 + 20;
+    for (var i = 0; i < n && x < x1 - 60; i++) { var d = pick(DECO), s = mkDeco(d[0], x, d[1] * H * rnd(0.9, 1.15)); x += s.w + rnd(0.04, 0.16) * W; }
+  }
   function spawnOne() {
-    var u = U(), gY = baseY(), roll = Math.random(), s, x = spawnX, gap = rnd(0.55, 0.95) * W;
-    if (roll < 0.24) {                                   // rock stacks (tunnel rocks have a gap you can fly through)
+    var u = U(), gY = baseY(), roll = Math.random(), s, x = spawnX, gap = rnd(0.55, 0.95) * W, x0 = x;
+    if (roll < 0.22) {                                   // rock stacks (tunnel rocks have a gap you can fly through)
       var k = pick(["rock0", "rock1", "rock2", "rock3", "rock4"]), h = rnd(0.30, 0.44) * H;
       s = mkStruct(k, x, gY - h + 6 * u, h); spawnX = x + s.w + gap;
-    } else if (roll < 0.52) {                            // towers
+    } else if (roll < 0.48) {                            // towers
       var kt = pick(["tw0", "tw1", "tw2", "tw3", "tw4", "tw5", "tw6"]), ht = rnd(0.34, 0.52) * H;
       s = mkStruct(kt, x, gY - ht + 6 * u, ht); spawnX = x + s.w + gap;
-    } else if (roll < 0.62) {                            // the charged electric tower
-      var he = 0.44 * H; s = mkStruct("tw7", x, gY - he + 6 * u, he); spawnX = x + s.w + gap;
-    } else if (roll < 0.74) {                            // pylon pair with an electric arc strung between them
+    } else if (roll < 0.60) {                            // the charged electric tower: its arc runs to a mast
+      var he = 0.44 * H; s = mkStruct("tw7", x, gY - he + 6 * u, he);
+      var hm = 0.46 * H, m = mkStruct("tw1", x + s.w + rnd(0.28, 0.42) * W, gY - hm + 6 * u, hm);
+      s.nodes.push({ fx: 0.40, fy: 0.04, dir: "to", to: m, tfx: 0.46, tfy: 0.03, t: rnd(0, 3), cyc: 1 });
+      spawnX = m.x + m.w + gap;
+    } else if (roll < 0.72) {                            // pylon pair with an electric arc strung between them
       var hp = rnd(0.40, 0.50) * H, a = mkStruct("py0", x, gY - hp + 6 * u, hp);
       var b = mkStruct("py1", x + rnd(0.62, 0.8) * W, gY - hp * 1.0 + 6 * u, hp);
       a.nodes.push({ fx: 0.72, fy: 0.10, dir: "to", to: b, tfx: 0.20, tfy: 0.10, t: rnd(0, 3), cyc: 1 });
       b.partner = a; spawnX = b.x + b.w + gap;
-    } else if (roll < 0.88) {                            // bridges hanging in the air
-      var kb = pick(["br0", "br1", "br2", "br3", "br4"]), hb = rnd(0.12, 0.17) * H;
-      s = mkStruct(kb, x, rnd(0.24, 0.50) * H, hb); spawnX = x + s.w + gap;
-    } else {                                             // floating islands
-      var ki = pick(["is0", "is1", "is2", "is3", "is4", "is5", "is6"]), hi = rnd(0.13, 0.19) * H;
+    } else if (roll < 0.80) {                            // bridges standing on the ground (never floating)
+      var kb = pick(["br0", "br1", "br2", "br3", "br4"]), hb = rnd(0.24, 0.32) * H;
+      s = mkStruct(kb, x, gY - hb + 6 * u, hb); spawnX = x + s.w + gap;
+    } else {                                             // floating islands (two of them carry an arc down to a ground rod)
+      var ki = pick(["is0", "is1", "is2", "is3", "is4", "is5", "is6", "is6", "is1"]), hi = rnd(0.13, 0.19) * H;
       s = mkStruct(ki, x, rnd(0.20, 0.50) * H, hi); s.bob = rnd(0, 6.28); spawnX = x + s.w + gap;
+      if (ki === "is6" || ki === "is1") {
+        s.y = rnd(0.26, 0.36) * H; var fx = ki === "is6" ? 0.12 : 0.5, fy = ki === "is6" ? 0.86 : 0.95;
+        var th = 0.15 * H, rod = mkDeco("ppost", s.x + fx * s.w - 6 * u, th);
+        s.nodes.push({ fx: fx, fy: fy, dir: "to", to: rod, tfx: 0.5, tfy: 0.02, t: rnd(0, 3), cyc: 1 });
+      }
     }
+    sprinkle(x0, spawnX);
   }
   function caveDims() {
     var s = 1.16 * H / 420;
@@ -343,11 +358,11 @@
     var hw = (player.w || 80) * 0.30, hh = (player.h || 50) * 0.28;
     if (cave && !arena) {                              // inside a pipe the blimp is held in the middle of it
       var pz = playerInPipe();
-      if (pz) { var cy = cave.top + pz.cy * cave.s, lim = Math.max(2, CORR_HALF * cave.s - hh), py0 = player.y; player.y = Math.max(cy - lim, Math.min(cy + lim, player.y)); if (Math.abs(py0 - player.y) > 0.5) { try { takeHit(); } catch (ep) {} } if (player.vy) player.vy = 0; }
+      if (pz) { var cy = cave.top + pz.cy * cave.s, lim = Math.max(2, CORR_HALF * cave.s - hh), py0 = player.y; player.y = Math.max(cy - lim, Math.min(cy + lim, player.y)); if (player.vy) player.vy = 0; }
     }
     var pts = [[0, 0], [-hw, 0], [hw, 0], [0, -hh], [0, hh], [-hw, hh], [hw, hh], [-hw, -hh], [hw, -hh]];
     for (var i = 0; i < structs.length; i++) {
-      var s = structs[i];
+      var s = structs[i]; if (s.deco) continue;
       if (player.x + hw < s.x || player.x - hw > s.x + s.w) continue;
       var sy = s.y + (s.by || 0);
       for (var k = 0; k < pts.length; k++) {
@@ -365,7 +380,7 @@
           if (m) {
             for (var q0 = 0; q0 < pts.length && !bad; q0++) {
               var qx = lx + pts[q0][0] / sC, qy = ly0 + pts[q0][1] / sC;
-              if (qx < WALL_L && caveOpaque(m, qx, qy)) { var pc = pipeCY(qx); if (!(qy >= pc - CORR_HALF && qy <= pc + CORR_HALF)) bad = true; }
+              if (qx < WALL_L && caveOpaque(m, qx, qy) && !(qx < PIPE_L[1] + 24 && Math.abs(qy - PIPE_L_CY) < PIPE_HALF + 16)) { var pc = pipeCY(qx); if (!(qy >= pc - CORR_HALF && qy <= pc + CORR_HALF)) bad = true; }
             }
           }
         }
@@ -396,16 +411,11 @@
   }
   function noise(i) { var s = Math.sin(i * 12.9898) * 43758.5453; return s - Math.floor(s); }
   function drawGround() {
-    var gY = baseY(), step = 26, u = U(), base = Math.floor(groundX / step);
-    var gr = ctx.createLinearGradient(0, gY - 6 * u, 0, H); gr.addColorStop(0, "#4a3d56"); gr.addColorStop(0.18, "#2e2538"); gr.addColorStop(1, "#120d1a");
-    ctx.save(); ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(-10, H + 4);
-    var xs = [];
-    for (var i = -1; i * step - (groundX % step) < W + step; i++) {
-      var x = i * step - (groundX % step), y = gY + (noise(base + i) - 0.5) * 9 * u - 2 * u; xs.push([x, y]); ctx.lineTo(x, y);
-    }
-    ctx.lineTo(W + step, H + 4); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = "rgba(150,125,170,0.55)"; ctx.lineWidth = 2; ctx.beginPath();
-    xs.forEach(function (p, k) { if (k) ctx.lineTo(p[0], p[1]); else ctx.moveTo(p[0], p[1]); }); ctx.stroke();
+    var im = img("level3_ground"), g = gl(), h = g * 2.1, top = (H - g) - h * 0.30;
+    if (!im || !im.naturalWidth) { ctx.fillStyle = "#2e2538"; ctx.fillRect(0, H - g, W, g); return; }
+    var tw = h * im.naturalWidth / im.naturalHeight, off = -(groundX % tw);
+    ctx.save(); ctx.fillStyle = "#2f2b3b"; ctx.fillRect(0, top + h * 0.88, W, H);
+    for (var x = off - tw, n = 0; x < W + 2 && n < 8; x += tw - 1, n++) { if (x + tw < 0) continue; ctx.drawImage(im, x, top, tw, h); }
     ctx.restore();
   }
   function drawStructs() {
@@ -415,6 +425,15 @@
       var y = s.y + (s.by || 0);
       try { ctx.drawImage(im, s.src[0], s.src[1], s.src[2], s.src[3], s.x, y, s.w, s.h); } catch (e) {}
       if (s.nodes.length) { var h2 = { x: s.x, y: y, w: s.w, h: s.h }; drawNodes(h2, s.nodes); }
+      if (s.deco) {
+        ctx.save(); ctx.globalCompositeOperation = "lighter";
+        if (s.k === "lamp1") glowAt(s.x + s.w * 0.22, y + s.h * 0.1, s.h * 0.35, "255,200,110", 0.32 + 0.06 * Math.sin(clockT * 6 + s.ph));
+        else if (s.k === "lamp2") glowAt(s.x + s.w * 0.5, y + s.h * 0.08, s.h * 0.3, "255,210,120", 0.3 + 0.06 * Math.sin(clockT * 5 + s.ph));
+        else if (s.k === "redpole") glowAt(s.x + s.w * 0.5, y + s.h * 0.1, s.h * 0.2, "255,50,40", Math.sin(clockT * 3 + s.ph) > 0 ? 0.7 : 0.1);
+        else if (s.k === "volt") glowAt(s.x + s.w * 0.5, y + s.h * 0.5, s.h * 0.6, "100,180,255", 0.22 + 0.12 * Math.sin(clockT * 4 + s.ph));
+        else if (s.k === "ppost") { glowAt(s.x + s.w * 0.5, y + s.h * 0.02, s.h * 0.5, "150,215,255", 0.35 + 0.2 * Math.sin(clockT * 9 + s.ph)); }
+        ctx.restore();
+      }
       if (s.k === "tw7") {                       // the charged panel pulses
         ctx.save(); ctx.globalCompositeOperation = "lighter";
         glowAt(s.x + s.w * 0.28, s.y + s.h * 0.42, s.w * 0.34, "90,170,255", 0.22 + 0.14 * Math.sin(clockT * 5)); ctx.restore();
@@ -647,11 +666,6 @@
         else sprite("fly", Math.floor(b.t * 14 + b.ph * 3), b.px, b.py, kk, b.face, false, ang);
         if (isA) {
           ctx.save(); ctx.globalCompositeOperation = "lighter"; glowAt(b.px + b.face * 7 * s, b.py - 2 * s, 9 * s, "255,50,60", 0.4); glowAt(b.px, b.py, 22 * s, "150,80,255", 0.18); ctx.restore();
-          if (hurt && Math.abs(b.px - player.x) < pw * 0.36 + 5 * s && Math.abs(b.py - player.y) < ph * 0.36 + 5 * s) {
-            try { takeHit(); } catch (e) {}
-            for (var q = 0; q < 8; q++) GL.push({ w: 0, x: b.px, y: b.py, vx: (Math.random() - 0.5) * 140 * s, vy: (Math.random() - 0.6) * 120 * s, age: 0, life: 0.6 + Math.random() * 0.4, r: 2 * s, rgb: "255,90,90" });
-            b.st = "back"; b.t = 0; b.cd = 8;
-          }
         }
       }
     }
