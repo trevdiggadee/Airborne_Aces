@@ -49,6 +49,8 @@
     level3_platform: "level3_platform.webp?v=ruff567",
     level3_assets: "level3_assets.webp?v=ruff567",
     level3_cave: "level3_cave.webp?v=ruff576",
+    level3_bats: "level3_bats.webp?v=ruff577",
+    level3_props: "level3_props.webp?v=ruff577",
     level3_octo: "level3_octo.webp?v=ruff574",
     level3_octo_still: "level3_octo_still.webp?v=ruff574",
     level3_pipe_l: "level3_pipe_l.webp?v=ruff570",

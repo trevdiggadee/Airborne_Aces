@@ -579,84 +579,228 @@
     }
     ctx.restore();
   }
-  // ================= bats: hanging from the cave ceiling, they flutter off when the blimp comes close =================
+  // ================= sprite bats (level3_bats.webp): roost on the ceiling, startle, chase and dive at the blimp (they bite) =================
+  var BAT_R = {"hang":[[193,56,67,137],[296,58,67,132],[398,60,67,128],[501,61,66,126],[603,60,66,124],[704,60,65,123],[806,59,66,124],[908,58,66,122],[1010,58,65,124],[1110,58,65,124],[1210,58,67,123],[1313,59,69,124],[1420,60,68,126]],"fly":[[172,287,124,129],[296,304,104,117],[405,332,120,86],[535,331,157,85],[696,337,182,88],[878,309,194,136],[1079,331,184,98],[1263,327,127,106],[1390,315,134,108]],"attack":[[178,556,132,106],[314,566,110,97],[424,558,141,106],[569,566,103,117],[672,556,125,128],[797,558,150,127],[947,561,134,124],[1081,569,138,117],[1219,585,82,84],[1308,587,101,82],[1427,571,97,99]],"dive":[[173,815,112,111],[300,812,93,119],[416,814,97,116],[542,830,100,103],[675,833,91,102],[798,816,91,120],[934,823,111,130],[1043,828,112,125],[1180,834,100,96],[1297,824,93,97],[1412,811,108,105]]};
+  var PROP_R = {"rockBig":[18,72,158,171],"crystalBlue":[438,61,191,194],"crystalDark":[635,26,165,224],"st1":[835,26,168,162],"st2":[1031,26,113,189],"st3":[1165,26,146,192],"st4":[1335,26,164,128],"spike":[816,135,107,119],"crystalSm":[941,151,148,119],"pl1":[18,293,294,112],"pl2":[327,295,251,119],"pl3":[593,267,332,168],"pl4":[937,302,195,108],"pl5":[1154,307,129,107],"wall":[1321,175,198,311],"hook":[1080,434,133,183],"post":[919,430,138,167],"lamp":[17,574,90,263],"hangLamp":[116,581,151,254],"plamp":[272,619,73,214],"wheel":[345,599,47,231],"rockCry":[392,610,108,219],"crLamp":[500,598,81,230],"furn1":[592,599,148,237],"furn2":[761,606,171,233],"gauge":[939,622,138,217],"crate1":[1146,650,101,93],"crate2":[1282,648,97,95],"barrel":[1408,646,73,97],"sign":[1101,757,178,100],"arrow":[1299,775,86,49],"hazard":[1404,770,111,41],"cl1":[16,867,103,124],"cl2":[127,872,76,113],"cl3":[213,890,49,92],"cl4":[266,892,74,85],"gem":[364,878,70,110],"coin":[452,905,63,70],"star":[533,902,68,71],"orb":[612,892,85,89],"lantern":[711,889,64,102],"box":[797,897,95,90],"spring1":[916,888,97,103],"spring2":[1034,880,127,119],"arch":[1178,839,348,163]};
   var BATS = null;
   function batsInit() {
     BATS = []; var seed = 11, i;
     function r() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
-    for (i = 0; i < 40; i++) { var x = 290 + (i + r() * 0.85) * (950 / 40); BATS.push({ x: x, y: 192 + r() * 36, ph: r() * 6.28, sc: 0.85 + r() * 0.5, st: "hang", t: 0, dur: 0, vx: 0, vy: 0, px: 0, py: 0, wait: 2 + r() * 9 }); }
-    for (i = 0; i < 20; i++) { var xx = 1250 + (i + r() * 0.85) * (690 / 20); BATS.push({ x: xx, y: arenaCeil(xx) + 8 + r() * 6, ph: r() * 6.28, sc: 0.95 + r() * 0.55, st: "hang", t: 0, dur: 0, vx: 0, vy: 0, px: 0, py: 0, wait: 2 + r() * 12 }); }
+    function mk(x, y) { return { x: x, y: y, ph: r() * 6.28, sc: 0.8 + r() * 0.4, st: "hang", t: 0, dur: 0, vx: 0, vy: 0, px: 0, py: 0, wait: 1.5 + r() * 8, cd: 0, fr: Math.floor(r() * 13), face: 1 }; }
+    for (i = 0; i < 26; i++) { var x = 290 + (i + r() * 0.85) * (950 / 26); BATS.push(mk(x, 190 + r() * 22)); }
+    for (i = 0; i < 14; i++) { var xx = 1250 + (i + r() * 0.85) * (690 / 14); BATS.push(mk(xx, arenaCeil(xx) + 4 + r() * 8)); }
   }
-  function drawBatShape(x, y, sz, wing, flying, ang) {
-    // sz = body scale in screen px; hanging bats point down, flying bats are upright with flapping wings
-    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
-    if (!flying) ctx.scale(1, -1);                   // mirror so the head ends up at the bottom
-    var rim = "rgba(150,120,255,0.55)";
-    function wingPath(sg, open) {                    // sg = side (+1 / -1), open = 0 folded .. 1 spread
-      var L = sz * (0.55 + 1.35 * open), up = -sz * (0.1 + 0.9 * open) * (flying ? 1 : 0.3);
-      ctx.beginPath(); ctx.moveTo(sg * sz * 0.18, -sz * 0.12);
-      ctx.quadraticCurveTo(sg * L * 0.55, up - sz * 0.35 * open, sg * L, up + sz * 0.1);
-      ctx.quadraticCurveTo(sg * L * 0.82, up + sz * 0.38, sg * L * 0.66, up + sz * 0.3);
-      ctx.quadraticCurveTo(sg * L * 0.5, up + sz * 0.62, sg * L * 0.34, up + sz * 0.46);
-      ctx.quadraticCurveTo(sg * L * 0.22, up + sz * 0.66, sg * sz * 0.14, sz * 0.55);
-      ctx.closePath();
-    }
-    ctx.fillStyle = "#17102a"; ctx.strokeStyle = rim; ctx.lineWidth = Math.max(0.6, sz * 0.06);
-    wingPath(1, wing); ctx.fill(); ctx.stroke(); wingPath(-1, wing); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(0, sz * 0.2, sz * 0.26, sz * 0.46, 0, 0, 6.283); ctx.fillStyle = "#1d1433"; ctx.fill(); ctx.stroke();   // body
-    ctx.beginPath(); ctx.arc(0, -sz * 0.34, sz * 0.2, 0, 6.283); ctx.fill(); ctx.stroke();                                           // head
-    ctx.beginPath(); ctx.moveTo(-sz * 0.17, -sz * 0.45); ctx.lineTo(-sz * 0.2, -sz * 0.72); ctx.lineTo(-sz * 0.03, -sz * 0.5);
-    ctx.moveTo(sz * 0.17, -sz * 0.45); ctx.lineTo(sz * 0.2, -sz * 0.72); ctx.lineTo(sz * 0.03, -sz * 0.5); ctx.fill();                // ears
-    ctx.fillStyle = "#ff4a4a"; ctx.fillRect(-sz * 0.11, -sz * 0.36, sz * 0.06, sz * 0.06); ctx.fillRect(sz * 0.05, -sz * 0.36, sz * 0.06, sz * 0.06);   // eyes
-    ctx.restore();
+  function canHurtNow() { return (typeof state !== "undefined" && state === "playing") && !window.__airbornePlatformTakeoffActive && !(typeof bonusActive !== "undefined" && bonusActive) && !(typeof levelEndActive !== "undefined" && levelEndActive) && typeof takeHit === "function"; }
+  function sprite(list, idx, x, y, k, flip, top, rot, alpha) {
+    var sh = img("level3_bats"); if (!sh || !sh.naturalWidth) return;
+    var L = BAT_R[list], q = L[((idx % L.length) + L.length) % L.length], dw = q[2] * k, dh = q[3] * k;
+    ctx.save(); ctx.translate(x, top ? y : y); if (rot) ctx.rotate(rot); if (flip < 0) ctx.scale(-1, 1);
+    if (alpha !== undefined) ctx.globalAlpha = alpha;
+    ctx.drawImage(sh, q[0], q[1], q[2], q[3], -dw / 2, top ? 0 : -dh / 2, dw, dh); ctx.restore();
   }
   function drawBats(c, now, dt) {
     if (!BATS) batsInit();
-    var s = c.s, hw = (player.w || 80) * 0.5;
-    for (var i = 0; i < BATS.length; i++) {
-      var b = BATS[i], hx = c.x + b.x * s, hy = c.top + b.y * s, sz = 11 * s * b.sc;
-      if (hx < -80 || hx > W + 80) { if (b.st !== "hang") { b.st = "hang"; b.t = 0; } continue; }
-      b.t += dt;
+    var s = c.s, pw = (player.w || 80), ph = (player.h || 50), att = 0, i, k = 0.36 * s, hurt = canHurtNow();
+    for (i = 0; i < BATS.length; i++) if (BATS[i].st === "chase" || BATS[i].st === "dive") att++;
+    for (i = 0; i < BATS.length; i++) {
+      var b = BATS[i], hx = c.x + b.x * s, hy = c.top + b.y * s, kk = k * b.sc;
+      if (hx < -120 && b.st === "hang" || hx > W + 120 && b.st === "hang") { continue; }
+      b.t += dt; b.cd -= dt;
       if (b.st === "hang") {
         b.wait -= dt;
-        var near = Math.abs(player.x - hx) < 90 * s && player.y - hy < 160 * s && player.y > hy - 40 * s && hx > 20 && hx < W - 20;
-        if (b.wait <= 0 || near) {
-          if (near || Math.random() < 0.35) { b.st = "fly"; b.t = 0; b.dur = 3 + Math.random() * 2.2; b.px = hx; b.py = hy + sz * 0.4; b.vx = (Math.random() - 0.5) * 150 * s; b.vy = 55 * s; }
-          else b.wait = 3 + Math.random() * 8;
+        var dx = player.x - hx, dy = player.y - hy;
+        var near = Math.abs(dx) < 80 * s && dy > -20 * s && dy < 150 * s;
+        var inCave = hx > 10 && hx < W - 10 && state === "playing";
+        if (inCave && b.cd <= 0 && att < 3 && Math.abs(dx) < 230 * s && dy > 0 && dy < 260 * s && (b.wait <= 0 || near) && Math.random() < 0.5) {
+          b.st = "chase"; b.t = 0; b.px = hx; b.py = hy + 40 * s * b.sc; b.vx = 0; b.vy = 60 * s; att++; b.dur = 4.5;
+        } else if (inCave && near && b.cd <= 0) { b.st = "fly"; b.t = 0; b.dur = 2 + Math.random() * 1.5; b.px = hx; b.py = hy + 40 * s * b.sc; b.vx = (Math.random() - 0.5) * 220 * s; b.vy = 40 * s; }
+        else if (b.wait <= 0) b.wait = 2 + Math.random() * 7;
+        var fr = Math.floor((now * 3 + b.ph) % 26); fr = fr < 13 ? fr : 25 - fr;     // slow breathing / eyes opening
+        sprite("hang", fr, hx, hy - 3 * s, kk, 1, true, Math.sin(now * 1.1 + b.ph) * 0.03);
+        if (fr > 8) { ctx.save(); ctx.globalCompositeOperation = "lighter"; glowAt(hx, hy + 30 * kk * 4 / 4 + 16 * s, 8 * s, "255,60,60", 0.28); ctx.restore(); }
+      } else {
+        var ang = 0, tx, ty;
+        if (b.st === "fly") {
+          b.vy += (Math.sin(b.t * 3.1 + b.ph) * 150 * s - b.vy) * Math.min(1, dt * 2.5) * 0.6 - 18 * s * dt;
+          b.vx += (Math.sin(b.t * 2.3 + b.ph * 2) * 150 * s - b.vx) * Math.min(1, dt * 1.8);
+          if (b.t > b.dur) { b.st = "back"; b.t = 0; }
+        } else if (b.st === "chase") {
+          tx = player.x; ty = player.y - ph * 0.1; var ddx = tx - b.px, ddy = ty - b.py, dd = Math.hypot(ddx, ddy) || 1, sp = 190 * s;
+          b.vx += (ddx / dd * sp - b.vx) * Math.min(1, dt * 3); b.vy += (ddy / dd * sp - b.vy) * Math.min(1, dt * 3);
+          if (dd < 120 * s && b.t > 0.4) { b.st = "dive"; b.t = 0; b.dvx = ddx / dd * 360 * s; b.dvy = ddy / dd * 360 * s; }
+          else if (b.t > b.dur) { b.st = "back"; b.t = 0; b.cd = 3; }
+        } else if (b.st === "dive") {
+          b.vx = b.dvx; b.vy = b.dvy; if (b.t > 0.75) { b.st = "back"; b.t = 0; b.cd = 7; }
+        } else {                                                     // back: return to the roost
+          tx = hx; ty = hy + 38 * s * b.sc; var rx = tx - b.px, ry = ty - b.py, rd = Math.hypot(rx, ry) || 1;
+          b.vx += (rx / rd * 250 * s - b.vx) * Math.min(1, dt * 3.5); b.vy += (ry / rd * 250 * s - b.vy) * Math.min(1, dt * 3.5);
+          if (rd < 9 * s) { b.st = "hang"; b.t = 0; b.wait = 5 + Math.random() * 9; continue; }
         }
-        var sway = Math.sin(now * 1.2 + b.ph) * 0.05, tw = Math.pow(Math.max(0, Math.sin(now * 0.55 + b.ph * 3)), 14) * 0.45;
-        ctx.save(); ctx.globalAlpha = 1; drawBatShape(hx, hy + sz * 0.62, sz, tw, false, sway); ctx.restore();
-        // claws on the rock
-        ctx.fillStyle = "#0d0818"; ctx.fillRect(hx - sz * 0.18, hy - 1, sz * 0.36, Math.max(1.5, sz * 0.12));
-        if ((now * 0.5 + b.ph) % 5 < 0.12) { ctx.save(); ctx.globalCompositeOperation = "lighter"; glowAt(hx, hy + sz * 0.85, sz * 0.7, "255,80,80", 0.45); ctx.restore(); }
-      } else if (b.st === "fly") {
-        b.vy += (Math.sin(b.t * 3.1 + b.ph) * 150 * s - b.vy) * Math.min(1, dt * 2.5) * 0.6 - 18 * s * dt;
-        b.vx += (Math.sin(b.t * 2.3 + b.ph * 2) * 130 * s - b.vx) * Math.min(1, dt * 1.8);
         b.px += b.vx * dt; b.py += b.vy * dt;
-        var fl = 0.15 + 0.85 * (0.5 + 0.5 * Math.sin(b.t * 24 + b.ph));
-        drawBatShape(b.px, b.py, sz * 1.05, fl, true, Math.max(-0.4, Math.min(0.4, b.vx / (400 * s))));
-        if (b.t > b.dur) { b.st = "back"; b.t = 0; b.fx = b.px; b.fy = b.py; }
-      } else {                                       // returning to the roost
-        var k = Math.min(1, b.t / 1.1), ex = hx, ey = hy + sz * 0.62;
-        var bx = b.fx + (ex - b.fx) * k, by = b.fy + (ey - b.fy) * k + Math.sin(k * 3.14) * -14 * s;
-        drawBatShape(bx, by, sz * (1.05 - 0.05 * k), (1 - k) * (0.15 + 0.85 * (0.5 + 0.5 * Math.sin(b.t * 24))), k < 0.9, 0);
-        if (k >= 1) { b.st = "hang"; b.t = 0; b.wait = 5 + Math.random() * 10; }
+        if (b.px < -200 || b.px > W + 200) { b.st = "hang"; b.t = 0; continue; }
+        if (b.vx > 25 * s) b.face = 1; else if (b.vx < -25 * s) b.face = -1;
+        ang = Math.max(-0.35, Math.min(0.35, b.vy / (900 * s))) * b.face;
+        var isA = b.st === "chase" || b.st === "dive";
+        if (b.st === "dive") sprite("dive", Math.min(10, Math.floor(b.t / 0.75 * 11)), b.px, b.py, kk * 1.1, b.face, false, ang);
+        else if (b.st === "chase") sprite("attack", Math.floor(b.t * 14 + b.ph * 3), b.px, b.py, kk * 1.1, b.face, false, ang);
+        else sprite("fly", Math.floor(b.t * 14 + b.ph * 3), b.px, b.py, kk, b.face, false, ang);
+        if (isA) {
+          ctx.save(); ctx.globalCompositeOperation = "lighter"; glowAt(b.px + b.face * 7 * s, b.py - 2 * s, 9 * s, "255,50,60", 0.4); glowAt(b.px, b.py, 22 * s, "150,80,255", 0.18); ctx.restore();
+          if (hurt && Math.abs(b.px - player.x) < pw * 0.36 + 10 * s && Math.abs(b.py - player.y) < ph * 0.36 + 10 * s) {
+            try { takeHit(); } catch (e) {}
+            for (var q = 0; q < 8; q++) GL.push({ w: 0, x: b.px, y: b.py, vx: (Math.random() - 0.5) * 140 * s, vy: (Math.random() - 0.6) * 120 * s, age: 0, life: 0.6 + Math.random() * 0.4, r: 2 * s, rgb: "255,90,90" });
+            b.st = "back"; b.t = 0; b.cd = 8;
+          }
+        }
       }
     }
   }
-
+  // ================= atmosphere: ground fog, glittering crystals, props with effects =================
+  var GL = [];                          // glitter / embers (w:1 = cave coordinates, w:0 = screen)
+  var fogTex = null;
+  function fogTexture() {
+    if (fogTex) return fogTex;
+    var cv = document.createElement("canvas"); cv.width = 512; cv.height = 128; var g = cv.getContext("2d"), seed = 7;
+    function r() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+    for (var i = 0; i < 34; i++) {
+      var x = r() * 512, y = 40 + r() * 80, rad = 26 + r() * 46;
+      for (var d = -1; d <= 1; d++) {
+        var gr = g.createRadialGradient(x + d * 512, y, 0, x + d * 512, y, rad); gr.addColorStop(0, "rgba(255,255,255,0.28)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+        g.fillStyle = gr; g.beginPath(); g.ellipse(x + d * 512, y, rad * 1.5, rad * 0.55, 0, 0, 6.283); g.fill();
+      }
+    }
+    var fade = g.createLinearGradient(0, 0, 0, 128); fade.addColorStop(0, "rgba(0,0,0,0)"); fade.addColorStop(0.45, "rgba(0,0,0,0.0)"); g.globalCompositeOperation = "destination-in";
+    var fm = g.createLinearGradient(0, 0, 0, 128); fm.addColorStop(0, "rgba(0,0,0,0)"); fm.addColorStop(0.5, "rgba(0,0,0,1)"); fm.addColorStop(1, "rgba(0,0,0,1)"); g.fillStyle = fm; g.fillRect(0, 0, 512, 128);
+    fogTex = cv; return cv;
+  }
+  function fogBand(c, now, layer) {      // layer 0 back, 1 mid, 2 front (drawn after the blimp)
+    var s = c.s, T = fogTexture(), cfg = [[0.55, 12, 190, 0.7, "170,150,255"], [0.7, -17, 230, 0.55, "130,170,255"], [0.85, 26, 270, 0.4, "190,170,255"]][layer];
+    var zones = [[WALL_L, ARENA_L, WATER_Y], [ARENA_L, ARENA_R, ARENA_WATER]];
+    ctx.save();
+    for (var z = 0; z < zones.length; z++) {
+      var zx0 = Math.max(0, c.x + zones[z][0] * s), zx1 = Math.min(W, c.x + zones[z][1] * s); if (zx1 <= zx0) continue;
+      var bh = cfg[2] * s * 0.6, by = c.top + zones[z][2] * s - bh * 0.78;
+      ctx.beginPath(); ctx.rect(zx0, by - 4, zx1 - zx0, bh + 40 * s); ctx.clip();
+      var tw = 512 * (bh / 128) * 1.5, off = ((now * cfg[1] * s * 0.5) % tw + tw) % tw, base = c.x * cfg[0] ;
+      var start = -(((off + base) % tw) + tw) % tw;
+      var tint = glowTint(cfg[4]);
+      for (var X = start; X < W + tw; X += tw) {
+        if (X + tw < zx0 || X > zx1) continue;
+        ctx.globalAlpha = cfg[3] * (0.85 + 0.15 * Math.sin(now * 0.6 + X)); ctx.drawImage(tint, X, by, tw, bh);
+      }
+      ctx.restore(); ctx.save();
+    }
+    ctx.restore();
+  }
+  var tintC = {};
+  function glowTint(rgb) {
+    if (tintC[rgb]) return tintC[rgb];
+    var T = fogTexture(), cv = document.createElement("canvas"); cv.width = 512; cv.height = 128; var g = cv.getContext("2d");
+    g.fillStyle = "rgb(" + rgb + ")"; g.fillRect(0, 0, 512, 128); g.globalCompositeOperation = "destination-in"; g.drawImage(T, 0, 0); tintC[rgb] = cv; return cv;
+  }
+  // props: [sheet rect name, cave x, base y, scale, glow rgb or null, kind]
+  var PROPS = [
+    ["cl1", 330, 388, 0.3, "90,170,255", "cry"], ["crate1", 412, 388, 0.3, null, ""], ["barrel", 442, 388, 0.3, null, ""], ["lamp", 482, 390, 0.26, "255,170,80", "lamp"],
+    ["cl2", 560, 388, 0.28, "200,140,255", "cry"], ["spring1", 640, 388, 0.28, "90,200,255", "spring"], ["furn1", 700, 390, 0.25, "255,150,60", "furn"],
+    ["crystalBlue", 815, 390, 0.24, "100,190,255", "cry"], ["cl3", 905, 388, 0.3, "200,140,255", "cry"], ["gauge", 985, 390, 0.24, null, "steam"],
+    ["lamp", 1075, 390, 0.26, "255,170,80", "lamp"], ["spring2", 1110, 388, 0.26, "90,200,255", "spring"], ["cl4", 1165, 388, 0.3, "110,170,255", "cry"], ["crystalDark", 1235, 390, 0.2, "200,120,255", "cry"],
+    ["lamp", 1318, 394, 0.26, "255,170,80", "lamp"], ["furn2", 1362, 394, 0.25, "255,160,70", "furn"], ["cl1", 1420, 392, 0.3, "90,170,255", "cry"], ["crystalBlue", 1475, 394, 0.26, "100,190,255", "cry"],
+    ["crLamp", 1530, 394, 0.28, "200,120,255", "cry"], ["crystalDark", 1795, 394, 0.22, "200,120,255", "cry"], ["cl2", 1860, 392, 0.3, "200,140,255", "cry"], ["gauge", 1895, 394, 0.25, null, "steam"], ["lamp", 1915, 396, 0.26, "110,190,255", "lamp"]
+  ];
+  var STAL = null;
+  function stalInit() { STAL = [[470, "st1"], [735, "st2"], [945, "st3"], [1095, "st1"], [620, "st3"]].map(function (a) { return { x: a[0], n: a[1], st: "hang", t: 0, y: 0, vy: 0 }; }); }
+  var PLATS = [["pl4", 600, 305, 0.34], ["pl5", 960, 300, 0.4], ["pl4", 1160, 310, 0.34]];
+  var embers = [];
+  function drawPropsAndAtmos(c, now, dt, layer) {
+    var s = c.s, sh = img("level3_props"), i, p; if (!sh || !sh.naturalWidth) return;
+    function sx(x) { return c.x + x * s; } function sy(y) { return c.top + y * s; }
+    function put(name, x, y, k, flip, rot, alpha, midAnchor) {
+      var q = PROP_R[name]; if (!q) return; var dw = q[2] * k * s, dh = q[3] * k * s;
+      ctx.save(); ctx.translate(sx(x), sy(y)); if (rot) ctx.rotate(rot); if (alpha !== undefined) ctx.globalAlpha = alpha;
+      ctx.drawImage(sh, q[0], q[1], q[2], q[3], -dw / 2, midAnchor ? 0 : -dh, dw, dh); ctx.restore();
+    }
+    // floor props
+    for (i = 0; i < PROPS.length; i++) {
+      p = PROPS[i]; var X = sx(p[1]); if (X < -80 || X > W + 80) continue;
+      var q = PROP_R[p[0]], k = p[3], pulse = 0.5 + 0.5 * Math.sin(now * (p[5] === "lamp" ? 9 : 1.6) + i * 2.1);
+      if (p[5] === "spring") { var comp = Math.pow(Math.max(0, Math.sin(now * 2.2 + i)), 8) * 0.12; ctx.save(); ctx.translate(X, sy(p[2])); ctx.scale(1 + comp * 0.5, 1 - comp); ctx.drawImage(sh, q[0], q[1], q[2], q[3], -q[2] * k * s / 2, -q[3] * k * s, q[2] * k * s, q[3] * k * s); ctx.restore(); }
+      else put(p[0], p[1], p[2], k, 1);
+      var cy = sy(p[2] - q[3] * k * 0.55);
+      if (p[4]) {
+        ctx.save(); ctx.globalCompositeOperation = "lighter";
+        var fl = p[5] === "lamp" ? 0.3 + 0.12 * pulse + 0.1 * Math.random() * (Math.random() < 0.15 ? 1 : 0) : p[5] === "furn" ? 0.28 + 0.1 * pulse : 0.2 + 0.14 * pulse;
+        glowAt(X, cy, (p[5] === "cry" ? 36 : 44) * s * (0.95 + 0.08 * pulse), p[4], fl); ctx.restore();
+        if (p[5] === "cry" && Math.random() < dt * 2.4) GL.push({ w: 1, x: p[1] + (Math.random() - 0.5) * q[2] * k * 0.8, y: p[2] - Math.random() * q[3] * k, vx: 0, vy: -3, age: 0, life: 0.9 + Math.random() * 0.8, r: 1.6 + Math.random() * 1.6, rgb: p[4], tw: 1 });
+      }
+      if (p[5] === "furn" && Math.random() < dt * 5) embers.push({ w: 1, x: p[1] + (Math.random() - 0.5) * 14, y: p[2] - q[3] * k * 0.95, vx: (Math.random() - 0.5) * 8, vy: -(14 + Math.random() * 22), age: 0, life: 1 + Math.random() * 1.2, r: 1.2 + Math.random(), rgb: "255,160,60" });
+      if (p[5] === "steam" && Math.random() < dt * 2.2) fx.sp.push({ k: "steam", x: X + 6 * s, y: sy(p[2] - q[3] * k * 0.9), vx: rnd2(-6, 6) * U(), vy: -rnd2(24, 40) * U(), r: rnd2(4, 6) * U(), gr: rnd2(8, 13) * U(), age: 0, life: rnd2(1.2, 1.9), a: rnd2(0.25, 0.4) });
+    }
+    // swaying scaffold hook
+    var hxx = 880, sw = Math.sin(now * 1.3) * 0.07; if (sx(hxx) > -60 && sx(hxx) < W + 60) put("hook", hxx, 200, 0.34, 1, sw, undefined, true);
+    // floating rock platforms (obstacles) – bob up and down
+    for (i = 0; i < PLATS.length; i++) {
+      p = PLATS[i]; var by = p[2] + Math.sin(now * 1.1 + i * 2) * 6, pq = PROP_R[p[0]], PX = sx(p[1]); if (PX < -120 || PX > W + 120) continue;
+      put(p[0], p[1], by + pq[3] * p[3] * 0.35, p[3], 1);
+      ctx.save(); ctx.globalCompositeOperation = "lighter"; glowAt(PX, sy(by + pq[3] * p[3] * 0.6), 34 * s, "170,120,255", 0.18 + 0.08 * Math.sin(now * 2 + i)); ctx.restore();
+      if (canHurtNow()) {
+        var hw = pq[2] * p[3] * s * 0.5, topY = sy(by - pq[3] * p[3] * 0.1), botY = sy(by + pq[3] * p[3] * 0.8);
+        if (Math.abs(player.x - PX) < hw * 0.9 + (player.w || 80) * 0.3 && player.y + (player.h || 50) * 0.28 > topY && player.y - (player.h || 50) * 0.28 < botY) { try { takeHit(); } catch (e) {} }
+      }
+    }
+    // stalactites that shake and drop when the blimp passes
+    if (!STAL) stalInit();
+    for (i = 0; i < STAL.length; i++) {
+      var S = STAL[i], SX = sx(S.x), sq = PROP_R[S.n], ks = 0.3, topC = 196; if (SX < -60 || SX > W + 60) continue;
+      var dxs = Math.abs(player.x - SX);
+      if (S.st === "hang") { if (dxs < 90 * s && player.y < sy(330) && state === "playing" && Math.random() < dt * 1.2) { S.st = "shake"; S.t = 0; } put(S.n, S.x, topC, ks, 1, 0, 1, true); }
+      else if (S.st === "shake") { S.t += dt; var jx = (Math.random() - 0.5) * 2.2 * s; ctx.save(); ctx.translate(jx, 0); put(S.n, S.x, topC, ks, 1, 0, 1, true); ctx.restore();
+        if (Math.random() < dt * 18) GL.push({ w: 1, x: S.x + (Math.random() - 0.5) * 10, y: topC + 4, vx: 0, vy: 20, age: 0, life: 0.5, r: 1.2, rgb: "150,200,255" });
+        if (S.t > 0.8) { S.st = "fall"; S.vy = 0; S.y = 0; } }
+      else if (S.st === "fall") {
+        S.vy += 900 * s * dt; S.y += S.vy * dt; var fy = sy(topC) + S.y, hh = sq[3] * ks * s;
+        put(S.n, S.x, topC + S.y / s, ks, 1, 0, 1, true);
+        if (canHurtNow() && Math.abs(player.x - SX) < sq[2] * ks * s * 0.35 + (player.w || 80) * 0.3 && fy + hh > player.y - (player.h || 50) * 0.3 && fy < player.y + (player.h || 50) * 0.3) { try { takeHit(); } catch (e) {} S.y = 1e6; }
+        if (fy + hh >= sy(WATER_Y) || S.y > 1e5) { for (var g2 = 0; g2 < 14; g2++) GL.push({ w: 1, x: S.x + (Math.random() - 0.5) * 12, y: WATER_Y - 4, vx: (Math.random() - 0.5) * 60, vy: -(30 + Math.random() * 60), age: 0, life: 0.7 + Math.random() * 0.5, r: 1.6 + Math.random() * 1.6, rgb: Math.random() < 0.5 ? "130,215,255" : "200,150,255", g: 200 }); S.st = "gone"; S.t = 0; }
+      } else { S.t += dt; if (S.t > 9) { S.st = "hang"; S.t = 0; } }
+    }
+    // crystal glow + glitter around the baked crystals
+    var F = CAVE_FX;
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    for (i = 0; i < F.crystals.length; i++) {
+      p = F.crystals[i]; var CX = sx(p[0]); if (CX < -40 || CX > W + 40) continue;
+      var pl = 0.5 + 0.5 * Math.sin(now * 1.4 + i * 1.7);
+      glowAt(CX, sy(p[1] - 6), 30 * s * (0.9 + 0.12 * pl), p[2] ? "180,120,255" : "110,190,255", 0.12 + 0.1 * pl);
+      if (Math.random() < dt * 1.6) GL.push({ w: 1, x: p[0] + (Math.random() - 0.5) * 22, y: p[1] - Math.random() * 22, vx: 0, vy: -2, age: 0, life: 0.9 + Math.random() * 1.1, r: 1.5 + Math.random() * 2, rgb: p[2] ? "220,180,255" : "170,230,255", tw: 1 });
+    }
+    // glitter + embers
+    var arr = [GL, embers], ai, j;
+    for (ai = 0; ai < 2; ai++) {
+      var A = arr[ai];
+      for (j = A.length - 1; j >= 0; j--) {
+        var e = A[j]; e.age += dt; if (e.age > e.life) { A.splice(j, 1); continue; }
+        if (e.g) e.vy += e.g * dt; e.x += e.vx * dt * (e.w ? 1 / s : 1); e.y += e.vy * dt * (e.w ? 1 / s : 1);
+        var X2 = e.w ? sx(e.x) : e.x, Y2 = e.w ? sy(e.y) : e.y, f = e.age / e.life, tw = e.tw ? (0.5 + 0.5 * Math.sin(e.age * 14 + e.r * 9)) : 1;
+        var a = Math.sin(Math.min(1, f) * 3.14159) * tw;
+        if (e.tw) star(X2, Y2, e.r * s * 0.9, a * 0.9, e.rgb); else { glowAt(X2, Y2, e.r * s * 3, e.rgb, a * 0.8); }
+      }
+    }
+    ctx.restore(); ctx.globalAlpha = 1;
+  }
   function drawCave() {
     if (!cave) return;
     var c = cave, im = img("level3_cave"); if (!im) return;
     if (c.x > W + 40 || c.x + c.w < -40) return;
     ctx.drawImage(im, c.x, c.top, c.w, c.h);
     var now = clockT, dt = fx.last ? Math.min(0.05, Math.max(0, now - fx.last)) : 0.016;
+    drawPropsAndAtmos(c, now, dt);
     drawBats(c, now, dt);
     drawFog(c, now);
+    fogBand(c, now, 0); fogBand(c, now, 1);
     drawWater(c, now, dt);
     caveFx(c);
   }
   window.__airborneL3DrawFront = function () {      // after the blimp: electric shock arcs when an orb or the ring hits it
+    if (on && cave && cave.x < W && cave.x + cave.w > 0) { try { fogBand(cave, clockT, 2); } catch (e) {} }
     if (!on || !arena || pshock <= 0) return;
     var sf = cave ? cave.s / ARENA_SZ : 1, k = Math.min(1, pshock / 1.1), hw = (player.w || 80) * 0.55, hh = (player.h || 50) * 0.6;
     ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.lineCap = "round"; ctx.lineJoin = "round";
