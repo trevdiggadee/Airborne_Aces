@@ -154,8 +154,8 @@
     }
   }
   function caveDims() {
-    var s = 1.45 * H / 420;
-    return { h: CAVE_H * s, s: s, w: CAVE_W * s, top: -TUN_TOP * s };
+    var s = 1.16 * H / 420;
+    return { h: CAVE_H * s, s: s, w: CAVE_W * s, top: H - CAVE_H * s };
   }
   function spawnCave() {
     var d = caveDims();
@@ -290,6 +290,7 @@
     var sp = (frozen || takeoff) ? 0 : 70 * scale * dt;
     if (exit && !frozen && !takeoff) sp = 70 * Math.max(scale, 1) * dt;
     if (ending && !frozen) { var mul = (typeof window.__airborneLandScrollMul === "number") ? window.__airborneLandScrollMul : 1; sp = Math.max(0.15, mul) * Math.max(150, Math.min(230, W * 0.28)) * dt * (mul <= 0 ? 0 : 1); }
+    if (cave && !arena && sp > 0 && !exit && playerInPipe()) sp *= 2;      // pipe travel 2x
     if (sp > 0) playT += dt;
     if (arena) sp = (arena.st === "done" && !(typeof bossSinking !== "undefined" && bossSinking)) ? Math.max(sp, 280 * dt) : 0;   // arena: the world stops scrolling (the exit-away scroll after the boss is quick)
     groundX += sp; parX += sp * 0.32;
@@ -342,7 +343,7 @@
     var hw = (player.w || 80) * 0.30, hh = (player.h || 50) * 0.28;
     if (cave && !arena) {                              // inside a pipe the blimp is held in the middle of it
       var pz = playerInPipe();
-      if (pz) { var cy = cave.top + pz.cy * cave.s, lim = Math.max(2, CORR_HALF * cave.s - hh); player.y = Math.max(cy - lim, Math.min(cy + lim, player.y)); if (player.vy) player.vy = 0; }
+      if (pz) { var cy = cave.top + pz.cy * cave.s, lim = Math.max(2, CORR_HALF * cave.s - hh), py0 = player.y; player.y = Math.max(cy - lim, Math.min(cy + lim, player.y)); if (Math.abs(py0 - player.y) > 0.5) { try { takeHit(); } catch (ep) {} } if (player.vy) player.vy = 0; }
     }
     var pts = [[0, 0], [-hw, 0], [hw, 0], [0, -hh], [0, hh], [-hw, hh], [hw, hh], [-hw, -hh], [hw, -hh]];
     for (var i = 0; i < structs.length; i++) {
@@ -600,7 +601,7 @@
   }
   function drawBats(c, now, dt) {
     if (!BATS) batsInit();
-    var s = c.s, pw = (player.w || 80), ph = (player.h || 50), att = 0, i, k = 0.36 * s, hurt = canHurtNow();
+    var s = c.s, pw = (player.w || 80), ph = (player.h || 50), att = 0, i, k = 0.18 * s, hurt = canHurtNow();
     for (i = 0; i < BATS.length; i++) if (BATS[i].st === "chase" || BATS[i].st === "dive") att++;
     for (i = 0; i < BATS.length; i++) {
       var b = BATS[i], hx = c.x + b.x * s, hy = c.top + b.y * s, kk = k * b.sc;
@@ -646,7 +647,7 @@
         else sprite("fly", Math.floor(b.t * 14 + b.ph * 3), b.px, b.py, kk, b.face, false, ang);
         if (isA) {
           ctx.save(); ctx.globalCompositeOperation = "lighter"; glowAt(b.px + b.face * 7 * s, b.py - 2 * s, 9 * s, "255,50,60", 0.4); glowAt(b.px, b.py, 22 * s, "150,80,255", 0.18); ctx.restore();
-          if (hurt && Math.abs(b.px - player.x) < pw * 0.36 + 10 * s && Math.abs(b.py - player.y) < ph * 0.36 + 10 * s) {
+          if (hurt && Math.abs(b.px - player.x) < pw * 0.36 + 5 * s && Math.abs(b.py - player.y) < ph * 0.36 + 5 * s) {
             try { takeHit(); } catch (e) {}
             for (var q = 0; q < 8; q++) GL.push({ w: 0, x: b.px, y: b.py, vx: (Math.random() - 0.5) * 140 * s, vy: (Math.random() - 0.6) * 120 * s, age: 0, life: 0.6 + Math.random() * 0.4, r: 2 * s, rgb: "255,90,90" });
             b.st = "back"; b.t = 0; b.cd = 8;
@@ -812,7 +813,7 @@
     ctx.restore();
   };
   // ================= Boss arena: zoom-out, no scrolling, free flight, electric octopus =================
-  var ARENA_SZ = 1.45;                                   // reference cave scale (boss / projectile sizes are relative to it)
+  var ARENA_SZ = 1.16;                                   // reference cave scale (boss / projectile sizes are relative to it)
   function arenaRect() {
     var c = cave, s = c.s;
     return { l: c.x + ARENA_L * s, r: c.x + ARENA_R * s, floor: c.top + ARENA_FLOOR * s, cx: c.x + ARENA_CX * s,
