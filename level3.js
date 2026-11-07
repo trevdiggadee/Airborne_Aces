@@ -39,7 +39,7 @@
   var PIPE_L = [14, 250], PIPE_L_CY = 270;          // entry pipe hide zone (sprite px): open end .. mouth
   var ARENA_L = 1295, ARENA_R = 1935, ARENA_CX = 1615, ARENA_FLOOR = 388, ARENA_WATER = 405;   // boss arena (open cavern)
   var ARENA_CEIL = [[1230, 165], [1300, 140], [1400, 108], [1500, 84], [1600, 72], [1700, 74], [1800, 92], [1880, 118], [1940, 150]];
-  var ARENA_Z = 0.52;                               // camera pull-back (whole room visible) once the blimp is in the arena
+  var ARENA_Z = 0.95;                               // camera pull-back (whole room visible) once the blimp is in the arena
   var CAVE_RECTS = [[WALL_L, -400, ARENA_L, CEIL_T], [WALL_L, FLOOR_T, ARENA_L, CAVE_H]];   // 0 = ceiling, 1 = floor (tunnel only)
   var CAVE_NODES = [];                              // no electricity in the cave: the crystals only glow and sparkle
   function pipeCY(lx) { return PIPE_L_CY; }
@@ -169,7 +169,7 @@
     sprinkle(x0, spawnX);
   }
   function caveDims() {
-    var s = 1.16 * H / 420;
+    var s = 0.93 * H / 420;
     return { h: CAVE_H * s, s: s, w: CAVE_W * s, top: H - CAVE_H * s };
   }
   function spawnCave() {
@@ -459,16 +459,19 @@
   // the blimp is not drawn while it is inside a pipe (main-loop clips drawPlayer with these)
   window.__airborneL3BlimpHide = function () {
     if (!on || !cave) return null;
-    var z = playerInPipe(); if (!z) return null;
-    return [{ x0: z.x0, x1: z.x1 }];
+    var z = playerInPipe(), out = [];
+    if (z) out.push({ x0: z.x0, x1: z.x1 });
+    var ex0 = cave.x + 1958 * cave.s, ex1 = cave.x + CAVE_W * cave.s, ecy = cave.top + 275 * cave.s;
+    if (Math.abs(player.y - ecy) < 34 * cave.s + (player.h || 50) * 0.3 && player.x > ex0) out.push({ x0: ex0, x1: ex1 + 400 });
+    return out.length ? out : null;
   };
   // ----- cave effects: crystal sparkles, lamp glow, pipe steam, ceiling drips -----
   var fx = { sp: [], st: [], dr: [], rp: [], stT: [], drT: [], last: 0 };
   function rnd2(a, b) { return a + Math.random() * (b - a); }
-  function star(x, y, r, a, rgb) {
-    ctx.globalAlpha = a; ctx.drawImage(glow(rgb), x - r * 1.6, y - r * 1.6, r * 3.2, r * 3.2);
-    ctx.globalAlpha = Math.min(1, a * 1.2); ctx.strokeStyle = "rgba(255,255,255,1)"; ctx.lineWidth = 1.1; ctx.beginPath();
-    ctx.moveTo(x - r * 1.4, y); ctx.lineTo(x + r * 1.4, y); ctx.moveTo(x, y - r * 1.4); ctx.lineTo(x, y + r * 1.4); ctx.stroke();
+  function star(x, y, r, a, rgb) {                 // soft diffuse glow (no hard cross)
+    ctx.globalAlpha = a * 0.7; ctx.drawImage(glow(rgb), x - r * 2.6, y - r * 2.6, r * 5.2, r * 5.2);
+    ctx.globalAlpha = a * 0.35; ctx.drawImage(glow("255,255,255"), x - r * 1.0, y - r * 1.0, r * 2, r * 2);
+    ctx.globalAlpha = 1;
   }
   function caveFx(c) {
     var now = clockT, dt = fx.last ? Math.min(0.05, now - fx.last) : 0.016; fx.last = now;
@@ -608,7 +611,7 @@
     function r() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
     function mk(x, y) { return { x: x, y: y, ph: r() * 6.28, sc: 0.8 + r() * 0.4, st: "hang", t: 0, dur: 0, vx: 0, vy: 0, px: 0, py: 0, wait: 1.5 + r() * 8, cd: 0, fr: Math.floor(r() * 13), face: 1 }; }
     for (i = 0; i < 26; i++) { var x = 290 + (i + r() * 0.85) * (950 / 26); BATS.push(mk(x, 190 + r() * 22)); }
-    for (i = 0; i < 14; i++) { var xx = 1250 + (i + r() * 0.85) * (690 / 14); BATS.push(mk(xx, arenaCeil(xx) + 4 + r() * 8)); }
+    for (i = 0; i < 38; i++) { var xx = 1250 + (i + r() * 0.85) * (690 / 38); BATS.push(mk(xx, arenaCeil(xx) + 4 + r() * 8)); }
   }
   function canHurtNow() { return (typeof state !== "undefined" && state === "playing") && !window.__airbornePlatformTakeoffActive && !(typeof bonusActive !== "undefined" && bonusActive) && !(typeof levelEndActive !== "undefined" && levelEndActive) && typeof takeHit === "function"; }
   function sprite(list, idx, x, y, k, flip, top, rot, alpha) {
@@ -842,6 +845,10 @@
     if (!cave) return;
     var c = cave, im = img("level3_cave"); if (!im) return;
     if (c.x > W + 40 || c.x + c.w < -40) return;
+    ctx.save();                                           // dark rock behind the dome: never any sky outside the roof
+    ctx.drawImage(im, c.x - c.w * 0.1, c.top - c.h * 0.9, c.w * 1.2, c.h * 2.8);
+    ctx.fillStyle = "rgba(6,3,16,0.72)"; ctx.fillRect(c.x - c.w * 0.1, c.top - c.h * 0.9, c.w * 1.2, c.h * 2.8);
+    ctx.restore();
     ctx.drawImage(im, c.x, c.top, c.w, c.h);
     var now = clockT, dt = fx.last ? Math.min(0.05, Math.max(0, now - fx.last)) : 0.016;
     drawPropsAndAtmos(c, now, dt);
@@ -865,7 +872,7 @@
     ctx.restore();
   };
   // ================= Boss arena: zoom-out, no scrolling, free flight, electric octopus =================
-  var ARENA_SZ = 1.16;                                   // reference cave scale (boss / projectile sizes are relative to it)
+  var ARENA_SZ = 0.93;                                   // reference cave scale (boss / projectile sizes are relative to it)
   function arenaRect() {
     var c = cave, s = c.s;
     return { l: c.x + ARENA_L * s, r: c.x + ARENA_R * s, floor: c.top + ARENA_FLOOR * s, cx: c.x + ARENA_CX * s,
@@ -873,7 +880,8 @@
   }
   function startArena() {
     var c = cave, z = ARENA_Z, Xc = c.x + ARENA_CX * c.s;
-    arena = { st: "intro", t: 0, z: z, ax: (W / 2 - z * Xc) / (1 - z), ay: H * 1.03, dlg: false, vx: 0, vy: 0 };
+    var xr = c.x + CAVE_W * c.s;
+    arena = { st: "intro", t: 0, z: z, ax: (W - z * xr) / (1 - z), ay: H, dlg: false, vx: 0, vy: 0 };
     structs = []; orbs = []; afx = [];
     window.__airborneL3Arena = true;
   }
@@ -928,7 +936,7 @@
     player.y += player.vy * dt;
     // the camera is fixed: ease the blimp to its station on the left of the room (arrow keys / A-D nudge it for dodging)
     var kx = (k.ArrowRight || k.KeyD ? 1 : 0) - (k.ArrowLeft || k.KeyA ? 1 : 0);
-    arena.home = (arena.home === undefined ? R.l + (R.r - R.l) * 0.24 : arena.home) + kx * 170 * sf * dt;
+    arena.home = (arena.home === undefined ? R.l + (R.r - R.l) * 0.39 : arena.home) + kx * 170 * sf * dt;
     arena.home = Math.max(R.l + hw + 8, Math.min(R.l + (R.r - R.l) * 0.5, arena.home));
     player.x += (arena.home - player.x) * Math.min(1, dt * 4); arena.vx = 0;
     var top = R.ceilAt(player.x) + hh + 6 * sf, bot = R.floor - hh;
@@ -945,7 +953,7 @@
   window.__airborneL3BossInit = function (b) {
     if (!arena || !cave || !ok("level3_octo")) return;
     var R = arenaRect(), sf = cave.s / ARENA_SZ;
-    b.kind = "l3octo"; b.w = 290 * sf; b.h = b.w * OCT.fh / OCT.fw;
+    b.kind = "l3octo"; b.w = 290 * 0.75 * sf; b.h = b.w * OCT.fh / OCT.fw;
     b.x = R.r - b.w - 30 * sf; b.y = (R.ceilAt(R.cx) + R.floor) / 2 - b.h / 2;
     b.targetX = b.x; b.arrived = true;
     b.l3 = { vx: 0, vy: 0, tx: b.x, ty: b.y, rt: 0, t: 0, orbT: 2.0, shockT: 6.5, sh: null, shHit: false, fr: 0, frT: 0, arcs: [], fan: 0 };

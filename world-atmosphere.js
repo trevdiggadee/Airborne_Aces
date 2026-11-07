@@ -1172,7 +1172,7 @@
     if (!isRainLevel()) return;
 
     const beamLength = W * 0.35;
-    const beamWidth = player.h * 0.8;
+    const beamWidth = player.h * 1.0;
     const sourceX = player.x + player.w * 0.2;
     const sourceY = player.y - player.h * 0.05;
     const aimAngle = player.rotation * 0.5;
@@ -1181,12 +1181,13 @@
     const hiddenStart = player.w * 0.22;
 
     ctx.save();
+    try { ctx.filter = 'blur(7px)'; } catch (eBl) {}
     ctx.translate(sourceX, sourceY);
     ctx.rotate(aimAngle);
 
     // Cone gradient
     const beamGrad = ctx.createLinearGradient(hiddenStart, 0, beamLength, 0);
-    const alpha = 0.26;
+    const alpha = 0.2;
     beamGrad.addColorStop(0, 'rgba(255,250,220,' + alpha + ')');
     beamGrad.addColorStop(0.3, 'rgba(255,245,200,' + (alpha * 0.6) + ')');
     beamGrad.addColorStop(1, 'rgba(255,240,180,0)');

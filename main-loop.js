@@ -763,7 +763,10 @@ function loop(ts) {
     drawBullets();
     drawHealPickup();
     drawShieldPickup();
+    var _l3h0 = null; try { _l3h0 = window.__airborneL3BlimpHide ? window.__airborneL3BlimpHide() : null; } catch (eL3h0) {}
+    if (_l3h0) { ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, H); _l3h0.forEach(function (r) { ctx.rect(r.x0, 0, r.x1 - r.x0, H); }); ctx.clip("evenodd"); }
     drawBlimpHeadlight();
+    if (_l3h0) ctx.restore();
     if (typeof drawAirfieldShadow === "function") drawAirfieldShadow();
     // Ensure power-up fade never leaves the blimp transparent
     try { ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; } catch (e) {}
