@@ -722,6 +722,43 @@
     ["lamp", 1318, 394, 0.26, "255,170,80", "lamp"], ["furn2", 1362, 394, 0.25, "255,160,70", "furn"], ["cl1", 1420, 392, 0.3, "90,170,255", "cry"], ["crystalBlue", 1475, 394, 0.26, "100,190,255", "cry"],
     ["crLamp", 1530, 394, 0.28, "200,120,255", "cry"], ["crystalDark", 1795, 394, 0.22, "200,120,255", "cry"], ["cl2", 1860, 392, 0.3, "200,140,255", "cry"], ["gauge", 1895, 394, 0.25, null, "steam"], ["lamp", 1915, 396, 0.26, "110,190,255", "lamp"]
   ];
+  // ---------- extra cave atmosphere: light shafts, drifting fireflies/spores, ceiling shade, arena energy glow ----------
+  var MOTES = null, SHAFTS = [[430, 0.0], [815, 1.7], [1135, 3.1], [1470, 0.9], [1770, 2.4]];
+  var MOTE_C = ["120,230,255", "200,150,255", "255,210,140", "150,255,220"];
+  function atmos2(c, now, dt) {
+    var s = c.s, i;
+    function sx(x) { return c.x + x * s; } function sy(y) { return c.top + y * s; }
+    if (!MOTES) { MOTES = []; for (i = 0; i < 70; i++) MOTES.push({ x: WALL_L + Math.random() * (ARENA_R - WALL_L - 40), y: 195 + Math.random() * 185, ph: Math.random() * 6.28, sp: 0.4 + Math.random() * 0.9, rgb: MOTE_C[i % 4], r: 1 + Math.random() * 1.6 }); }
+    ctx.save();
+    // ceiling shade: ambient occlusion band under the roof
+    var x0 = Math.max(0, sx(WALL_L)), x1 = Math.min(W, sx(ARENA_R));
+    if (x1 > x0) { var gr = ctx.createLinearGradient(0, sy(172), 0, sy(250)); gr.addColorStop(0, "rgba(6,4,18,0.55)"); gr.addColorStop(1, "rgba(6,4,18,0)"); ctx.fillStyle = gr; ctx.fillRect(x0, sy(172), x1 - x0, 78 * s); }
+    // light shafts
+    ctx.globalCompositeOperation = "lighter";
+    for (i = 0; i < SHAFTS.length; i++) {
+      var X = sx(SHAFTS[i][0]); if (X < -140 || X > W + 140) continue;
+      var a = 0.11 + 0.06 * Math.sin(now * 0.5 + SHAFTS[i][1]), ty = sy(SHAFTS[i][0] > ARENA_L ? 190 : 186), by = sy(386), sl = 70 * s, sw = Math.sin(now * 0.25 + SHAFTS[i][1]) * 12 * s;
+      var g = ctx.createLinearGradient(0, ty, 0, by); g.addColorStop(0, "rgba(170,205,255," + a * 1.6 + ")"); g.addColorStop(1, "rgba(120,150,255,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(X - 10 * s, ty); ctx.lineTo(X + 18 * s, ty); ctx.lineTo(X + 18 * s + sl + 40 * s + sw, by); ctx.lineTo(X - 10 * s + sl - 20 * s + sw, by); ctx.closePath(); ctx.fill();
+    }
+    // fireflies / spores
+    for (i = 0; i < MOTES.length; i++) {
+      var m = MOTES[i]; m.x += Math.sin(now * 0.35 * m.sp + m.ph) * 9 * dt; m.y += Math.cos(now * 0.28 * m.sp + m.ph * 1.7) * 7 * dt - 1.5 * dt;
+      if (m.y < 190) m.y = 382; if (m.x < WALL_L) m.x = ARENA_R - 40; if (m.x > ARENA_R) m.x = WALL_L + 5;
+      var MX = sx(m.x); if (MX < -10 || MX > W + 10) continue;
+      var tw = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(now * 1.6 * m.sp + m.ph * 3));
+      glowAt(MX, sy(m.y), m.r * 5 * s, m.rgb, 0.8 * tw); glowAt(MX, sy(m.y), m.r * 1.6 * s, "255,255,255", 0.7 * tw);
+    }
+    // arena: breathing glow on the floor emblem + rising energy motes
+    var AX = sx(ARENA_CX);
+    if (AX > -300 && AX < W + 300) {
+      var br = 0.5 + 0.5 * Math.sin(now * 1.2);
+      ctx.save(); ctx.translate(AX, sy(ARENA_FLOOR - 3)); ctx.scale(1, 0.22); glowAt(0, 0, 200 * s * (0.92 + 0.1 * br), "150,110", 0.0); ctx.restore();
+      ctx.save(); ctx.translate(AX, sy(ARENA_FLOOR - 3)); ctx.scale(1, 0.2); glowAt(0, 0, 230 * s * (0.92 + 0.1 * br), "170,120,255", 0.26 + 0.14 * br); glowAt(0, 0, 120 * s, "120,200,255", 0.2 + 0.1 * br); ctx.restore();
+      if (Math.random() < dt * 8) GL.push({ w: 1, x: ARENA_CX + (Math.random() - 0.5) * 300, y: ARENA_FLOOR - 4, vx: (Math.random() - 0.5) * 8, vy: -(20 + Math.random() * 30), age: 0, life: 1.6 + Math.random(), r: 1.6 + Math.random() * 1.6, rgb: Math.random() < 0.5 ? "190,150,255" : "130,220,255", tw: 1 });
+    }
+    ctx.restore();
+  }
   var STAL = null;
   function stalInit() { STAL = [[470, "st1"], [735, "st2"], [945, "st3"], [1095, "st1"], [620, "st3"]].map(function (a) { return { x: a[0], n: a[1], st: "hang", t: 0, y: 0, vy: 0 }; }); }
   var PLATS = [["pl4", 600, 305, 0.34], ["pl5", 960, 300, 0.4], ["pl4", 1160, 310, 0.34]];
@@ -808,6 +845,7 @@
     ctx.drawImage(im, c.x, c.top, c.w, c.h);
     var now = clockT, dt = fx.last ? Math.min(0.05, Math.max(0, now - fx.last)) : 0.016;
     drawPropsAndAtmos(c, now, dt);
+    try { atmos2(c, now, dt); } catch (e2) {}
     drawBats(c, now, dt);
     drawFog(c, now);
     fogBand(c, now, 0); fogBand(c, now, 1);
@@ -884,23 +922,20 @@
   }
   window.__airborneL3Flight = function (dt) {
     if (!on || !arena || !cave || arena.st === "done" || state !== "playing") return false;
-    var R = arenaRect(), hw = (player.w || 80) * 0.36, hh = (player.h || 50) * 0.36, sf = cave.s / ARENA_SZ, SP = 300 * sf * (pshock > 0 ? 0.45 : 1);
-    var tvx = 0, tvy = 0, k = inp.k;
-    var kx = (k.ArrowRight || k.KeyD ? 1 : 0) - (k.ArrowLeft || k.KeyA ? 1 : 0), ky = (k.ArrowDown || k.KeyS ? 1 : 0) - (k.ArrowUp || k.KeyW ? 1 : 0);
-    if (kx || ky) { var kl = Math.hypot(kx, ky); tvx = kx / kl * SP; tvy = ky / kl * SP; }
-    else if (inp.down && inp.has) {
-      var pw = pointerWorld();
-      if (pw) { var dx = pw.x - player.x, dy = pw.y - player.y, d = Math.hypot(dx, dy); if (d > 3) { var kk = Math.min(1, d / (70 * sf)); tvx = dx / d * SP * kk; tvy = dy / d * SP * kk; } }
-    }
-    var a = Math.min(1, dt * 7); arena.vx += (tvx - arena.vx) * a; arena.vy += (tvy - arena.vy) * a;
-    player.x += arena.vx * dt; player.y += arena.vy * dt;
-    var minX = R.l + hw; if (player.x < minX) player.x += (minX - player.x) * Math.min(1, dt * 6);
-    if (player.x > R.r - hw) player.x = R.r - hw;
+    var R = arenaRect(), hw = (player.w || 80) * 0.36, hh = (player.h || 50) * 0.36, sf = cave.s / ARENA_SZ, k = inp.k;
+    // the normal game flight: gravity + tap-to-flap (flap() is called by the usual input handlers)
+    player.vy += GRAVITY * dt; if (player.vy > MAX_FALL_SPEED) player.vy = MAX_FALL_SPEED;
+    player.y += player.vy * dt;
+    // the camera is fixed: ease the blimp to its station on the left of the room (arrow keys / A-D nudge it for dodging)
+    var kx = (k.ArrowRight || k.KeyD ? 1 : 0) - (k.ArrowLeft || k.KeyA ? 1 : 0);
+    arena.home = (arena.home === undefined ? R.l + (R.r - R.l) * 0.24 : arena.home) + kx * 170 * sf * dt;
+    arena.home = Math.max(R.l + hw + 8, Math.min(R.l + (R.r - R.l) * 0.5, arena.home));
+    player.x += (arena.home - player.x) * Math.min(1, dt * 4); arena.vx = 0;
     var top = R.ceilAt(player.x) + hh + 6 * sf, bot = R.floor - hh;
-    if (player.y < top) { player.y = top; if (arena.vy < 0) arena.vy = 0; }
-    if (player.y > bot) { player.y = bot; if (arena.vy > 0) arena.vy = 0; }
-    player.vy = 0;
-    var tr = Math.max(-0.35, Math.min(0.45, arena.vy / 700)); player.rotation += (tr - player.rotation) * Math.min(1, dt * 8);
+    if (player.y < top) { player.y = top; if (player.vy < 0) player.vy = 0; }
+    if (player.y > bot) { player.y = bot; if (player.vy > 0) player.vy = 0; }
+    arena.vy = player.vy;
+    var tr = Math.max(-0.4, Math.min(0.5, player.vy / 650)); player.rotation += (tr - player.rotation) * Math.min(1, dt * 8);
     return true;
   };
 
