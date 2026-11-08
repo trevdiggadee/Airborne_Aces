@@ -33,13 +33,13 @@
 
   // ---------- cave geometry (sprite 2048x479, sprite px) ----------
   // Left: entry pipe -> long tunnel (row TUN_TOP is the tunnel ceiling = top of the screen) -> open archway into the boss ARENA on the right.
-  var CAVE_W = 4376, CAVE_H = 474, TUN_TOP = 0, CEIL_T = 112, FLOOR_T = 384, WATER_Y = 382;
-  var WALL_L = 210;                                 // tunnel interior starts here; the rock wing to its left is only open through the entry pipe
-  var CORR_HALF = 22, PIPE_HALF = 46;
-  var PIPE_L = [20, 205], PIPE_L_CY = 168;          // entry pipe hide zone (sprite px): open end .. mouth
-  var EXIT_X = 4215, EXIT_CY = 175;                 // exit pipe at the far end of the boss room
-  var ARENA_L = 3300, ARENA_R = 4120, ARENA_CX = 3622, ARENA_FLOOR = 372, ARENA_WATER = 384;   // boss arena (open cavern)
-  var ARENA_CEIL = [[3250, 114], [3500, 110], [3800, 110], [4100, 118]];
+  var CAVE_W = 4300, CAVE_H = 480, TUN_TOP = 0, CEIL_T = 132, FLOOR_T = 402, WATER_Y = 400;
+  var WALL_L = 240;                                 // tunnel interior starts here; the rock wing to its left is only open through the entry pipe
+  var CORR_HALF = 22, PIPE_HALF = 54;
+  var PIPE_L = [10, 235], PIPE_L_CY = 220;          // entry pipe hide zone (sprite px): open end .. mouth
+  var EXIT_X = 4165, EXIT_CY = 215;                 // exit pipe at the far end of the boss room
+  var ARENA_L = 3260, ARENA_R = 4100, ARENA_CX = 3638, ARENA_FLOOR = 396, ARENA_WATER = 410;   // boss arena (open cavern)
+  var ARENA_CEIL = [[3200, 134], [3500, 130], [3800, 130], [4100, 140]];
   var ARENA_Z = 0.84;                               // camera pull-back (whole room visible) once the blimp is in the arena
   var CAVE_RECTS = [[WALL_L, -400, ARENA_L, CEIL_T], [WALL_L, FLOOR_T, ARENA_L, CAVE_H]];   // 0 = ceiling, 1 = floor (tunnel only)
   var CAVE_NODES = [];                              // no electricity in the cave: the crystals only glow and sparkle
@@ -50,10 +50,10 @@
     return 100;
   }
   var CAVE_FX = {
-    crystals: [[573,355,0],[664,354,1],[931,376,0],[1196,403,1],[1328,404,0],[1756,403,1],[2207,382,0],[2381,389,1],[2755,392,0],[2772,355,1],[2783,432,0],[3081,412,1],[3313,361,0],[3365,368,1],[3630,384,0],[3807,366,1],[3898,350,0],[4071,419,1],[341,97,0],[469,76,0],[594,161,0],[637,135,0],[867,87,0],[1466,92,0],[1795,164,0],[2246,76,0],[2695,72,0],[2707,105,0],[2996,68,0],[3195,161,0],[3198,120,0],[3251,159,0],[3420,156,0],[3456,62,0],[3465,159,0],[3623,111,0],[3624,161,0],[3691,157,0],[3732,76,0],[3750,168,0],[3850,145,0],[3989,158,0]],
-    lamps: [[247,244,"255,170,80"],[460,145,"255,170,80"],[607,111,"255,170,80"],[742,153,"255,170,80"],[1035,182,"255,170,80"],[1148,156,"255,170,80"],[1265,146,"255,170,80"],[1342,342,"255,170,80"],[1418,340,"255,170,80"],[1572,192,"255,170,80"],[1618,143,"255,170,80"],[1880,145,"255,170,80"],[1958,159,"255,170,80"],[2042,156,"255,170,80"],[2133,124,"255,170,80"],[2253,191,"255,170,80"],[2356,152,"255,170,80"],[2446,119,"255,170,80"],[2676,253,"255,170,80"],[2791,210,"255,170,80"],[2915,110,"255,170,80"],[3072,192,"255,170,80"],[3356,150,"255,170,80"],[3896,145,"255,170,80"],[4005,163,"255,170,80"],[4056,326,"255,170,80"],[4078,290,"255,170,80"],[3622,372,"190,130,255"],[3622,260,"110,190,255"]],
-    steam: [],
-    tips: [[341,113],[469,92],[867,103],[1466,108],[2246,92],[2695,88],[2707,121],[2996,84],[3456,78],[3623,127],[3732,92]],
+    crystals: [[272,387,0],[382,385,1],[487,379,0],[558,417,1],[641,387,0],[924,390,1],[1178,390,0],[1265,423,1],[1496,382,0],[2111,401,1],[2320,421,0],[2326,389,1],[2579,423,0],[2604,388,1],[2919,398,0],[3343,367,1],[3642,392,0],[3864,359,1],[3926,363,0],[4088,415,1],[433,116,0],[484,107,0],[635,113,0],[795,108,0],[885,121,0],[978,109,0],[1225,108,0],[1272,105,0],[1528,109,0],[1585,119,0],[1661,107,0],[1754,94,0],[2053,120,0],[2163,107,0],[2442,118,0],[2591,109,0],[2762,111,0],[2940,97,0],[3050,104,0],[3123,105,0],[3168,97,0],[3329,62,0],[3358,84,0],[3517,81,0],[3541,121,0],[3738,123,0],[3782,63,0],[3920,77,0],[3984,88,0]],
+    lamps: [[356,213,"255,170,80"],[876,211,"255,170,80"],[1036,140,"255,170,80"],[1171,145,"255,170,80"],[1278,216,"255,170,80"],[1282,358,"255,170,80"],[1408,125,"255,170,80"],[1540,160,"255,170,80"],[1643,206,"255,170,80"],[1750,133,"255,170,80"],[1910,131,"255,170,80"],[1991,133,"255,170,80"],[2119,210,"255,170,80"],[2198,161,"255,170,80"],[2478,198,"255,170,80"],[2895,185,"255,170,80"],[3008,229,"255,170,80"],[3073,162,"255,170,80"],[3079,339,"255,170,80"],[3083,230,"255,170,80"],[3113,284,"255,170,80"],[3196,374,"255,170,80"],[3824,187,"255,170,80"],[3956,133,"255,170,80"],[4055,210,"255,170,80"],[3638,128,"140,200,255"]],
+    steam: [[548, 168], [725, 150], [1000, 152], [1450, 150], [1800, 148], [2250, 150], [2650, 150], [3450, 150]],
+    tips: [[433,132],[484,123],[635,129],[795,124],[885,137],[978,125],[1225,124],[1272,121],[1528,125],[1585,135],[1661,123],[1754,110],[2053,136],[2163,123],[2442,134],[2591,125],[2762,127],[2940,113],[3050,120],[3123,121],[3168,113],[3329,78],[3358,100],[3517,97],[3541,137],[3738,139],[3782,79],[3920,93],[3984,104]],
     pipes: []
   };
   var caveMaskData = null;
@@ -507,10 +507,6 @@
       var fl = 0.55 + 0.25 * Math.sin(now * 3.1 + i * 2.3) + 0.12 * Math.sin(now * 11 + i);
       glowAt(LX, sy(p[1]), (26 + 6 * Math.sin(now * 2 + i)) * s * 0.9, p[2], Math.max(0.2, Math.min(0.85, fl)));
     }
-    for (i = 0; i < F.crystals.length; i++) {
-      p = F.crystals[i]; var CX = sx(p[0]); if (CX < -40 || CX > W + 40) continue;
-      glowAt(CX, sy(p[1]) - 6 * s, 22 * s * (0.8 + 0.2 * Math.sin(now * 2.2 + i)), p[2] ? "175,120,255" : "100,190,255", 0.20 + 0.12 * Math.sin(now * 2.2 + i * 1.7));
-    }
     // sparkles
     for (i = fx.sp.length - 1; i >= 0; i--) {
       p = fx.sp[i]; p.age += dt; if (p.age >= p.life) { fx.sp.splice(i, 1); continue; }
@@ -551,8 +547,8 @@
   var FOG = null;
   function fogInit() {
     FOG = []; var i = 0, x;
-    for (x = 250; x < 3250; x += 70, i++) FOG.push({ bx: x, by: 215 + ((i * 53) % 110), w: 220 + ((i * 37) % 120), h: 56 + ((i * 29) % 50), sp: 0.12 + (i % 5) * 0.05, ph: i * 1.7, am: 26 + (i % 4) * 12, a: 0.08 + (i % 3) * 0.03 });
-    for (x = 3300; x < 4100; x += 70, i++) FOG.push({ bx: x, by: 200 + ((i * 41) % 110), w: 260 + ((i * 31) % 120), h: 70 + ((i * 23) % 50), sp: 0.10 + (i % 4) * 0.04, ph: i * 1.3, am: 30, a: 0.08 + (i % 3) * 0.02 });
+    for (x = 260; x < 3260; x += 70, i++) FOG.push({ bx: x, by: 235 + ((i * 53) % 120), w: 220 + ((i * 37) % 120), h: 56 + ((i * 29) % 50), sp: 0.12 + (i % 5) * 0.05, ph: i * 1.7, am: 26 + (i % 4) * 12, a: 0.08 + (i % 3) * 0.03 });
+    for (x = 3300; x < 4100; x += 70, i++) FOG.push({ bx: x, by: 220 + ((i * 41) % 120), w: 260 + ((i * 31) % 120), h: 70 + ((i * 23) % 50), sp: 0.10 + (i % 4) * 0.04, ph: i * 1.3, am: 30, a: 0.08 + (i % 3) * 0.02 });
   }
   var POOLS = [];
   function drawFog(c, now) {
@@ -607,8 +603,8 @@
     BATS = []; var seed = 11, i;
     function r() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
     function mk(x, y) { return { x: x, y: y, ph: r() * 6.28, sc: 0.8 + r() * 0.4, st: "hang", t: 0, dur: 0, vx: 0, vy: 0, px: 0, py: 0, wait: 1.5 + r() * 8, cd: 0, fr: Math.floor(r() * 13), face: 1 }; }
-    for (i = 0; i < 70; i++) { var x = 280 + (i + r() * 0.85) * (2950 / 70); BATS.push(mk(x, 110 + r() * 12)); }
-    for (i = 0; i < 38; i++) { var xx = 3300 + (i + r() * 0.85) * (800 / 38); BATS.push(mk(xx, arenaCeil(xx) + 4 + r() * 8)); }
+    for (i = 0; i < 70; i++) { var x = 280 + (i + r() * 0.85) * (2950 / 70); BATS.push(mk(x, 132 + r() * 12)); }
+    for (i = 0; i < 38; i++) { var xx = 3280 + (i + r() * 0.85) * (800 / 38); BATS.push(mk(xx, arenaCeil(xx) + 4 + r() * 8)); }
   }
   function canHurtNow() { return (typeof state !== "undefined" && state === "playing") && !window.__airbornePlatformTakeoffActive && !(typeof bonusActive !== "undefined" && bonusActive) && !(typeof levelEndActive !== "undefined" && levelEndActive) && typeof takeHit === "function"; }
   function sprite(list, idx, x, y, k, flip, top, rot, alpha) {
@@ -715,20 +711,21 @@
   }
   // props: [sheet rect name, cave x, base y, scale, glow rgb or null, kind]
   var PROPS = [
-    ["cl1", 560, 388, 0.28, "90,170,255", "cry"], ["spring1", 850, 388, 0.26, "90,200,255", "spring"], ["cl2", 1100, 388, 0.28, "200,140,255", "cry"],
-    ["crystalBlue", 1500, 390, 0.22, "100,190,255", "cry"], ["cl3", 1760, 388, 0.28, "200,140,255", "cry"], ["crate2", 2250, 390, 0.28, null, ""], ["barrel", 2285, 390, 0.28, null, ""],
-    ["cl4", 2560, 388, 0.28, "110,170,255", "cry"], ["spring2", 2850, 388, 0.24, "90,200,255", "spring"], ["crystalDark", 3080, 390, 0.2, "200,120,255", "cry"],
-    ["crystalBlue", 3330, 376, 0.22, "100,190,255", "cry"], ["crystalDark", 3880, 376, 0.2, "200,120,255", "cry"], ["cl2", 4020, 376, 0.28, "200,140,255", "cry"]
+    ["cl1", 560, 410, 0.28, "90,170,255", "cry"], ["spring1", 760, 410, 0.26, "90,200,255", "spring"], ["cl2", 1060, 410, 0.28, "200,140,255", "cry"],
+    ["crystalBlue", 1420, 412, 0.22, "100,190,255", "cry"], ["cl3", 1700, 410, 0.28, "200,140,255", "cry"], ["crate2", 2000, 412, 0.28, null, ""], ["barrel", 2035, 412, 0.28, null, ""],
+    ["cl4", 2420, 410, 0.28, "110,170,255", "cry"], ["spring2", 2750, 410, 0.24, "90,200,255", "spring"], ["crystalDark", 3010, 412, 0.2, "200,120,255", "cry"],
+    ["crystalBlue", 3330, 404, 0.22, "100,190,255", "cry"], ["crystalDark", 3930, 404, 0.2, "200,120,255", "cry"]
   ];
 
 
+
   // ---------- extra cave atmosphere: light shafts, drifting fireflies/spores, ceiling shade, arena energy glow ----------
-  var MOTES = null, SHAFTS = [[600, 0.0], [1050, 1.7], [1550, 3.1], [2050, 0.9], [2550, 2.4], [3000, 4.0], [3500, 1.2], [3850, 2.9]];
+  var MOTES = null, SHAFTS = [];
   var MOTE_C = ["120,230,255", "200,150,255", "255,210,140", "150,255,220"];
   function atmos2(c, now, dt) {
     var s = c.s, i;
     function sx(x) { return c.x + x * s; } function sy(y) { return c.top + y * s; }
-    if (!MOTES) { MOTES = []; for (i = 0; i < 150; i++) MOTES.push({ x: WALL_L + Math.random() * (ARENA_R - WALL_L - 40), y: 140 + Math.random() * 230, ph: Math.random() * 6.28, sp: 0.4 + Math.random() * 0.9, rgb: MOTE_C[i % 4], r: 1 + Math.random() * 1.6 }); }
+    if (!MOTES) { MOTES = []; for (i = 0; i < 150; i++) MOTES.push({ x: WALL_L + Math.random() * (ARENA_R - WALL_L - 40), y: 160 + Math.random() * 240, ph: Math.random() * 6.28, sp: 0.4 + Math.random() * 0.9, rgb: MOTE_C[i % 4], r: 1 + Math.random() * 1.6 }); }
     ctx.save();
     // ceiling shade: ambient occlusion band under the roof
     var x0 = Math.max(0, sx(WALL_L)), x1 = Math.min(W, sx(ARENA_R));
@@ -737,14 +734,14 @@
     ctx.globalCompositeOperation = "lighter";
     for (i = 0; i < SHAFTS.length; i++) {
       var X = sx(SHAFTS[i][0]); if (X < -140 || X > W + 140) continue;
-      var a = 0.11 + 0.06 * Math.sin(now * 0.5 + SHAFTS[i][1]), ty = sy(CEIL_T - 4), by = sy(380), sl = 70 * s, sw = Math.sin(now * 0.25 + SHAFTS[i][1]) * 12 * s;
+      var a = 0.11 + 0.06 * Math.sin(now * 0.5 + SHAFTS[i][1]), ty = sy(CEIL_T - 4), by = sy(396), sl = 70 * s, sw = Math.sin(now * 0.25 + SHAFTS[i][1]) * 12 * s;
       var g = ctx.createLinearGradient(0, ty, 0, by); g.addColorStop(0, "rgba(170,205,255," + a * 1.6 + ")"); g.addColorStop(1, "rgba(120,150,255,0)");
       ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(X - 10 * s, ty); ctx.lineTo(X + 18 * s, ty); ctx.lineTo(X + 18 * s + sl + 40 * s + sw, by); ctx.lineTo(X - 10 * s + sl - 20 * s + sw, by); ctx.closePath(); ctx.fill();
     }
     // fireflies / spores
     for (i = 0; i < MOTES.length; i++) {
       var m = MOTES[i]; m.x += Math.sin(now * 0.35 * m.sp + m.ph) * 9 * dt; m.y += Math.cos(now * 0.28 * m.sp + m.ph * 1.7) * 7 * dt - 1.5 * dt;
-      if (m.y < 130) m.y = 376; if (m.x < WALL_L) m.x = ARENA_R - 40; if (m.x > ARENA_R) m.x = WALL_L + 5;
+      if (m.y < 150) m.y = 396; if (m.x < WALL_L) m.x = ARENA_R - 40; if (m.x > ARENA_R) m.x = WALL_L + 5;
       var MX = sx(m.x); if (MX < -10 || MX > W + 10) continue;
       var tw = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(now * 1.6 * m.sp + m.ph * 3));
       glowAt(MX, sy(m.y), m.r * 5 * s, m.rgb, 0.8 * tw); glowAt(MX, sy(m.y), m.r * 1.6 * s, "255,255,255", 0.7 * tw);
@@ -759,9 +756,75 @@
     }
     ctx.restore();
   }
+  // ---------- shared crystal effect: layered halo, rotating soft rays, pulse, floor reflection ----------
+  function crystalFx(X, Y, s, rgb, i, now, size) {
+    var p = 0.5 + 0.5 * Math.sin(now * 1.25 + i * 1.9), q = 0.5 + 0.5 * Math.sin(now * 2.9 + i * 0.7), r0 = (size || 22) * s;
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    glowAt(X, Y, r0 * 2.6, rgb, 0.07 + 0.07 * p);                    // wide diffuse halo
+    glowAt(X, Y, r0 * 1.4, rgb, 0.14 + 0.14 * p);
+    glowAt(X, Y, r0 * 0.55, "255,255,255", 0.10 + 0.22 * q * p);     // hot core that breathes
+    var ang = now * 0.12 + i * 1.3, k, L = r0 * (1.5 + 0.5 * p);      // slow rotating soft rays
+    ctx.lineCap = "round";
+    for (k = 0; k < 4; k++) {
+      var an = ang + k * 1.5708, ex = X + Math.cos(an) * L, ey = Y + Math.sin(an) * L * 0.8, gr = ctx.createLinearGradient(X, Y, ex, ey);
+      gr.addColorStop(0, "rgba(" + rgb + ",0.22)"); gr.addColorStop(1, "rgba(" + rgb + ",0)");
+      ctx.strokeStyle = gr; ctx.lineWidth = Math.max(1, 2.2 * s); ctx.beginPath(); ctx.moveTo(X, Y); ctx.lineTo(ex, ey); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // ---------- lamps, crystals, boss-room beam, ripples, pipe glow ----------
+  var MOTH = null;
+  function atmos3(c, now, dt) {
+    var s = c.s, i, k, F = CAVE_FX, W2 = W;
+    function sx(x) { return c.x + x * s; } function sy(y) { return c.top + y * s; }
+    // crystals (baked into the art)
+    for (i = 0; i < F.crystals.length; i++) {
+      var p = F.crystals[i], CX = sx(p[0]); if (CX < -60 || CX > W2 + 60) continue;
+      var rgb = p[2] ? "185,125,255" : "105,195,255", cyY = sy(p[1]) - 4 * s;
+      crystalFx(CX, cyY, s, rgb, i, now, 20);
+      if (p[1] > 330) {                                               // reflection on the floor
+        ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.translate(CX, sy(WATER_Y + 2)); ctx.scale(1, 0.18); glowAt(0, 0, 44 * s, rgb, 0.16 + 0.08 * Math.sin(now * 1.3 + i)); ctx.restore();
+      }
+    }
+    // lamps: flickering halo, hot core, floor spill, drifting moths
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    for (i = 0; i < F.lamps.length; i++) {
+      var l = F.lamps[i], LX = sx(l[0]); if (LX < -120 || LX > W2 + 120) continue;
+      var LY = sy(l[1]), f = 0.82 + 0.1 * Math.sin(now * 5.3 + i * 2.1) + 0.06 * Math.sin(now * 17 + i * 5) + (Math.sin(now * 1.7 + i * 9) > 0.96 ? -0.25 : 0);
+      glowAt(LX, LY, 92 * s, l[2], 0.10 * f); glowAt(LX, LY, 40 * s, l[2], 0.22 * f); glowAt(LX, LY, 11 * s, "255,245,215", 0.45 * f);
+      if (l[1] < 340) { ctx.save(); ctx.translate(LX, sy(WATER_Y)); ctx.scale(1, 0.16); glowAt(0, 0, 110 * s, l[2], 0.10 * f); ctx.restore(); }
+      for (k = 0; k < 2; k++) {                                        // moths
+        var ma = now * (1.1 + k * 0.5) + i * 3 + k * 2.4, mx = LX + Math.cos(ma) * (20 + k * 9) * s, my = LY + Math.sin(ma * 1.3) * (12 + k * 6) * s;
+        glowAt(mx, my, 3.2 * s, "255,230,170", 0.55);
+      }
+    }
+    ctx.restore();
+    // boss room: diffuse crystal beam from the floor emblem up to the ceiling lamp, ripples on the floor, glowing rings
+    var BX = sx(ARENA_CX);
+    if (BX > -300 && BX < W2 + 300) {
+      var pu = 0.5 + 0.5 * Math.sin(now * 1.1), by0 = sy(ARENA_FLOOR - 4), by1 = sy(150), bh = by0 - by1;
+      ctx.save(); ctx.globalCompositeOperation = "lighter";
+      var G = glow("140,205,255"), Gw = glow("230,245,255");
+      ctx.globalAlpha = 0.30 + 0.12 * pu; ctx.drawImage(G, BX - 95 * s, by1 - 30 * s, 190 * s, bh + 60 * s);                // wide diffuse column
+      ctx.globalAlpha = 0.38 + 0.15 * pu; ctx.drawImage(Gw, BX - 32 * s, by1, 64 * s, bh);                                   // bright core column
+      ctx.globalAlpha = 1;
+      glowAt(BX, by0, 90 * s * (0.9 + 0.1 * pu), "170,120,255", 0.5); glowAt(BX, by0, 40 * s, "255,255,255", 0.45); glowAt(BX, by1 + 6 * s, 50 * s, "150,210,255", 0.4);
+      for (k = 0; k < 3; k++) {                                        // expanding ripples on the floor
+        var rp = ((now * 0.3 + k / 3) % 1), rr = (40 + rp * 330) * s;
+        ctx.save(); ctx.translate(BX, sy(ARENA_FLOOR + 6)); ctx.scale(1, 0.2); ctx.strokeStyle = "rgba(170,200,255," + (0.45 * (1 - rp)) + ")"; ctx.lineWidth = 4 * s * (1 - rp * 0.6); ctx.beginPath(); ctx.arc(0, 0, rr, 0, 6.283); ctx.stroke(); ctx.restore();
+      }
+      ctx.restore();
+      if (Math.random() < dt * 14) GL.push({ w: 1, x: ARENA_CX + (Math.random() - 0.5) * 26, y: ARENA_FLOOR - 6, vx: (Math.random() - 0.5) * 10, vy: -(40 + Math.random() * 60), age: 0, life: 1.6 + Math.random() * 1.2, r: 1.3 + Math.random() * 1.7, rgb: Math.random() < 0.5 ? "200,230,255" : "190,150,255", tw: 1 });
+    }
+    // pipe mouths: warm glow and a wisp of steam
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    var pm = [[90, PIPE_L_CY], [EXIT_X + 70, EXIT_CY]];
+    for (i = 0; i < pm.length; i++) { var PX = sx(pm[i][0]); if (PX > -100 && PX < W2 + 100) glowAt(PX, sy(pm[i][1]), 46 * s, "255,190,100", 0.14 + 0.06 * Math.sin(now * 2 + i)); }
+    ctx.restore();
+  }
   var STAL = null;
   function stalInit() { STAL = [[800, "st1"], [1450, "st2"], [2050, "st3"], [2650, "st1"], [3150, "st3"], [1150, "st3"]].map(function (a) { return { x: a[0], n: a[1], st: "hang", t: 0, y: 0, vy: 0 }; }); }
-  var PLATS = [["pl4", 1000, 255, 0.34], ["pl5", 1650, 250, 0.4], ["pl4", 2250, 258, 0.34], ["pl5", 2900, 252, 0.4]];
+  var PLATS = [["pl4", 1000, 285, 0.34], ["pl5", 1650, 280, 0.4], ["pl4", 2250, 288, 0.34], ["pl5", 2900, 282, 0.4]];
   var embers = [];
   function drawPropsAndAtmos(c, now, dt, layer) {
     var s = c.s, sh = img("level3_props"), i, p; if (!sh || !sh.naturalWidth) return;
@@ -781,14 +844,14 @@
       if (p[4]) {
         ctx.save(); ctx.globalCompositeOperation = "lighter";
         var fl = p[5] === "lamp" ? 0.3 + 0.12 * pulse + 0.1 * Math.random() * (Math.random() < 0.15 ? 1 : 0) : p[5] === "furn" ? 0.28 + 0.1 * pulse : 0.2 + 0.14 * pulse;
-        glowAt(X, cy, (p[5] === "cry" ? 36 : 44) * s * (0.95 + 0.08 * pulse), p[4], fl); ctx.restore();
+        if (p[5] === "cry") { ctx.restore(); crystalFx(X, cy, s, p[4], i, clockT, q[3] * k * 0.5); ctx.save(); ctx.globalCompositeOperation = "lighter"; } else glowAt(X, cy, 44 * s * (0.95 + 0.08 * pulse), p[4], fl); ctx.restore();
         if (p[5] === "cry" && Math.random() < dt * 2.4) GL.push({ w: 1, x: p[1] + (Math.random() - 0.5) * q[2] * k * 0.8, y: p[2] - Math.random() * q[3] * k, vx: 0, vy: -3, age: 0, life: 0.9 + Math.random() * 0.8, r: 1.6 + Math.random() * 1.6, rgb: p[4], tw: 1 });
       }
       if (p[5] === "furn" && Math.random() < dt * 5) embers.push({ w: 1, x: p[1] + (Math.random() - 0.5) * 14, y: p[2] - q[3] * k * 0.95, vx: (Math.random() - 0.5) * 8, vy: -(14 + Math.random() * 22), age: 0, life: 1 + Math.random() * 1.2, r: 1.2 + Math.random(), rgb: "255,160,60" });
       if (p[5] === "steam" && Math.random() < dt * 2.2) fx.sp.push({ k: "steam", x: X + 6 * s, y: sy(p[2] - q[3] * k * 0.9), vx: rnd2(-6, 6) * U(), vy: -rnd2(24, 40) * U(), r: rnd2(4, 6) * U(), gr: rnd2(8, 13) * U(), age: 0, life: rnd2(1.2, 1.9), a: rnd2(0.25, 0.4) });
     }
     // swaying scaffold hook
-    var hxx = 1850, sw = Math.sin(now * 1.3) * 0.07; if (sx(hxx) > -60 && sx(hxx) < W + 60) put("hook", hxx, 114, 0.34, 1, sw, undefined, true);
+    var hxx = 1850, sw = Math.sin(now * 1.3) * 0.07; if (sx(hxx) > -60 && sx(hxx) < W + 60) put("hook", hxx, 134, 0.34, 1, sw, undefined, true);
     // floating rock platforms (obstacles) – bob up and down
     for (i = 0; i < PLATS.length; i++) {
       p = PLATS[i]; var by = p[2] + Math.sin(now * 1.1 + i * 2) * 6, pq = PROP_R[p[0]], PX = sx(p[1]); if (PX < -120 || PX > W + 120) continue;
@@ -802,7 +865,7 @@
     // stalactites that shake and drop when the blimp passes
     if (!STAL) stalInit();
     for (i = 0; i < STAL.length; i++) {
-      var S = STAL[i], SX = sx(S.x), sq = PROP_R[S.n], ks = 0.3, topC = 112; if (SX < -60 || SX > W + 60) continue;
+      var S = STAL[i], SX = sx(S.x), sq = PROP_R[S.n], ks = 0.3, topC = 132; if (SX < -60 || SX > W + 60) continue;
       var dxs = Math.abs(player.x - SX);
       if (S.st === "hang") { if (dxs < 90 * s && player.y < sy(300) && state === "playing" && Math.random() < dt * 1.2) { S.st = "shake"; S.t = 0; } put(S.n, S.x, topC, ks, 1, 0, 1, true); }
       else if (S.st === "shake") { S.t += dt; var jx = (Math.random() - 0.5) * 2.2 * s; ctx.save(); ctx.translate(jx, 0); put(S.n, S.x, topC, ks, 1, 0, 1, true); ctx.restore();
@@ -821,7 +884,6 @@
     for (i = 0; i < F.crystals.length; i++) {
       p = F.crystals[i]; var CX = sx(p[0]); if (CX < -40 || CX > W + 40) continue;
       var pl = 0.5 + 0.5 * Math.sin(now * 1.4 + i * 1.7);
-      glowAt(CX, sy(p[1] - 6), 30 * s * (0.9 + 0.12 * pl), p[2] ? "180,120,255" : "110,190,255", 0.12 + 0.1 * pl);
       if (Math.random() < dt * 1.6) GL.push({ w: 1, x: p[0] + (Math.random() - 0.5) * 22, y: p[1] - Math.random() * 22, vx: 0, vy: -2, age: 0, life: 0.9 + Math.random() * 1.1, r: 1.5 + Math.random() * 2, rgb: p[2] ? "220,180,255" : "170,230,255", tw: 1 });
     }
     // glitter + embers
@@ -850,7 +912,7 @@
     ctx.drawImage(im, c.x, c.top, c.w, c.h);
     var now = clockT, dt = fx.last ? Math.min(0.05, Math.max(0, now - fx.last)) : 0.016;
     drawPropsAndAtmos(c, now, dt);
-    try { atmos2(c, now, dt); } catch (e2) {}
+    try { atmos2(c, now, dt); atmos3(c, now, dt); } catch (e2) {}
     drawBats(c, now, dt);
     drawFog(c, now);
     fogBand(c, now, 0); fogBand(c, now, 1);
