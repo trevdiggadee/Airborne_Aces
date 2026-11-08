@@ -33,14 +33,14 @@
 
   // ---------- cave geometry (sprite 2048x479, sprite px) ----------
   // Left: entry pipe -> long tunnel (row TUN_TOP is the tunnel ceiling = top of the screen) -> open archway into the boss ARENA on the right.
-  var CAVE_W = 4300, CAVE_H = 480, TUN_TOP = 0, CEIL_T = 132, FLOOR_T = 402, WATER_Y = 400;
-  var WALL_L = 240;                                 // tunnel interior starts here; the rock wing to its left is only open through the entry pipe
-  var CORR_HALF = 22, PIPE_HALF = 54;
-  var PIPE_L = [10, 235], PIPE_L_CY = 220;          // entry pipe hide zone (sprite px): open end .. mouth
-  var EXIT_X = 4165, EXIT_CY = 215;                 // exit pipe at the far end of the boss room
-  var ARENA_L = 3260, ARENA_R = 4100, ARENA_CX = 3638, ARENA_FLOOR = 396, ARENA_WATER = 410;   // boss arena (open cavern)
-  var ARENA_CEIL = [[3200, 134], [3500, 130], [3800, 130], [4100, 140]];
-  var ARENA_Z = 0.84;                               // camera pull-back (whole room visible) once the blimp is in the arena
+  var CAVE_W = 5148, CAVE_H = 692, TUN_TOP = 0, CEIL_T = 240, FLOOR_T = 598, WATER_Y = 596, KZ = 1.45;
+  var WALL_L = 330;                                 // tunnel interior starts here; the rock wing to its left is only open through the entry pipe
+  var CORR_HALF = 70, PIPE_HALF = 80;
+  var PIPE_L = [12, 320], PIPE_L_CY = 328;          // entry pipe hide zone (sprite px): open end .. mouth
+  var EXIT_X = 4960, EXIT_CY = 328;                 // exit pipe at the far end of the boss room
+  var ARENA_L = 3900, ARENA_R = 4900, ARENA_CX = 4280, ARENA_FLOOR = 585, ARENA_WATER = 600;   // boss arena (open cavern)
+  var ARENA_CEIL = [[3850, 240], [4200, 232], [4600, 232], [4900, 246]];
+  var ARENA_Z = 0.97;                               // tiny pull-back so the whole room is framed
   var CAVE_RECTS = [[WALL_L, -400, ARENA_L, CEIL_T], [WALL_L, FLOOR_T, ARENA_L, CAVE_H]];   // 0 = ceiling, 1 = floor (tunnel only)
   var CAVE_NODES = [];                              // no electricity in the cave: the crystals only glow and sparkle
   function pipeCY(lx) { return PIPE_L_CY; }
@@ -50,10 +50,10 @@
     return 100;
   }
   var CAVE_FX = {
-    crystals: [[272,387,0],[382,385,1],[487,379,0],[558,417,1],[641,387,0],[924,390,1],[1178,390,0],[1265,423,1],[1496,382,0],[2111,401,1],[2320,421,0],[2326,389,1],[2579,423,0],[2604,388,1],[2919,398,0],[3343,367,1],[3642,392,0],[3864,359,1],[3926,363,0],[4088,415,1],[433,116,0],[484,107,0],[635,113,0],[795,108,0],[885,121,0],[978,109,0],[1225,108,0],[1272,105,0],[1528,109,0],[1585,119,0],[1661,107,0],[1754,94,0],[2053,120,0],[2163,107,0],[2442,118,0],[2591,109,0],[2762,111,0],[2940,97,0],[3050,104,0],[3123,105,0],[3168,97,0],[3329,62,0],[3358,84,0],[3517,81,0],[3541,121,0],[3738,123,0],[3782,63,0],[3920,77,0],[3984,88,0]],
-    lamps: [[356,213,"255,170,80"],[876,211,"255,170,80"],[1036,140,"255,170,80"],[1171,145,"255,170,80"],[1278,216,"255,170,80"],[1282,358,"255,170,80"],[1408,125,"255,170,80"],[1540,160,"255,170,80"],[1643,206,"255,170,80"],[1750,133,"255,170,80"],[1910,131,"255,170,80"],[1991,133,"255,170,80"],[2119,210,"255,170,80"],[2198,161,"255,170,80"],[2478,198,"255,170,80"],[2895,185,"255,170,80"],[3008,229,"255,170,80"],[3073,162,"255,170,80"],[3079,339,"255,170,80"],[3083,230,"255,170,80"],[3113,284,"255,170,80"],[3196,374,"255,170,80"],[3824,187,"255,170,80"],[3956,133,"255,170,80"],[4055,210,"255,170,80"],[3638,128,"140,200,255"]],
-    steam: [[548, 168], [725, 150], [1000, 152], [1450, 150], [1800, 148], [2250, 150], [2650, 150], [3450, 150]],
-    tips: [[433,132],[484,123],[635,129],[795,124],[885,137],[978,125],[1225,124],[1272,121],[1528,125],[1585,135],[1661,123],[1754,110],[2053,136],[2163,123],[2442,134],[2591,125],[2762,127],[2940,113],[3050,120],[3123,121],[3168,113],[3329,78],[3358,100],[3517,97],[3541,137],[3738,139],[3782,79],[3920,93],[3984,104]],
+    crystals: [[525,563,0],[709,566,1],[1194,576,0],[1645,568,1],[1854,589,0],[2205,585,1],[2580,607,0],[2841,589,1],[3106,616,0],[3333,587,1],[3424,621,0],[3762,582,1],[3910,542,0],[4281,579,1],[4609,544,0],[4720,547,1],[4770,623,0],[4869,618,1],[560,156,0],[644,167,0],[729,168,0],[978,167,0],[1222,161,0],[1528,167,0],[1625,175,0],[2103,172,0],[2206,175,0],[2510,151,0],[2757,180,0],[2914,165,0],[3339,174,0],[3480,147,0],[3695,156,0],[3825,155,0],[3903,147,0],[4050,100,0],[4110,180,0],[4440,179,0],[4474,99,0],[4671,143,0],[4759,151,0]],
+    lamps: [[486,284,"255,170,80"],[749,277,"255,170,80"],[1120,301,"255,170,80"],[1206,280,"255,170,80"],[1619,300,"255,170,80"],[1634,467,"255,170,80"],[2231,309,"255,170,80"],[2555,565,"255,170,80"],[2764,302,"255,170,80"],[2863,352,"255,170,80"],[3446,403,"255,170,80"],[3470,407,"255,170,80"],[3524,325,"255,170,80"],[3526,494,"255,170,80"],[3567,413,"255,170,80"],[3678,367,"255,170,80"],[3679,541,"255,170,80"],[3834,298,"255,170,80"],[3972,279,"255,170,80"],[4610,276,"255,170,80"],[4760,291,"255,170,80"],[4844,319,"255,170,80"],[4280,168,"140,200,255"]],
+    steam: [[612, 244], [825, 236], [1400, 236], [1950, 236], [2450, 236], [2950, 236], [3450, 236], [3750, 236]],
+    tips: [[560,180],[644,191],[729,192],[978,191],[1222,185],[1528,191],[1625,199],[2103,196],[2206,199],[2510,175],[2757,204],[2914,189],[3339,198],[3480,171],[3695,180],[3825,179],[3903,171],[4050,124],[4110,204],[4440,203],[4474,123],[4671,167],[4759,175]],
     pipes: []
   };
   var caveMaskData = null;
@@ -167,7 +167,7 @@
     sprinkle(x0, spawnX);
   }
   function caveDims() {
-    var s = 0.9 * H / 420;
+    var s = 0.55 * H / 420;
     return { h: CAVE_H * s, s: s, w: CAVE_W * s, top: H - CAVE_H * s };
   }
   function spawnCave() {
@@ -547,8 +547,8 @@
   var FOG = null;
   function fogInit() {
     FOG = []; var i = 0, x;
-    for (x = 260; x < 3260; x += 70, i++) FOG.push({ bx: x, by: 235 + ((i * 53) % 120), w: 220 + ((i * 37) % 120), h: 56 + ((i * 29) % 50), sp: 0.12 + (i % 5) * 0.05, ph: i * 1.7, am: 26 + (i % 4) * 12, a: 0.08 + (i % 3) * 0.03 });
-    for (x = 3300; x < 4100; x += 70, i++) FOG.push({ bx: x, by: 220 + ((i * 41) % 120), w: 260 + ((i * 31) % 120), h: 70 + ((i * 23) % 50), sp: 0.10 + (i % 4) * 0.04, ph: i * 1.3, am: 30, a: 0.08 + (i % 3) * 0.02 });
+    for (x = 350; x < 3900; x += 90, i++) FOG.push({ bx: x, by: 380 + ((i * 53) % 190), w: 320 + ((i * 37) % 160), h: 80 + ((i * 29) % 70), sp: 0.12 + (i % 5) * 0.05, ph: i * 1.7, am: 36 + (i % 4) * 16, a: 0.08 + (i % 3) * 0.03 });
+    for (x = 3950; x < 4900; x += 90, i++) FOG.push({ bx: x, by: 360 + ((i * 41) % 200), w: 360 + ((i * 31) % 160), h: 100 + ((i * 23) % 70), sp: 0.10 + (i % 4) * 0.04, ph: i * 1.3, am: 40, a: 0.08 + (i % 3) * 0.02 });
   }
   var POOLS = [];
   function drawFog(c, now) {
@@ -603,8 +603,8 @@
     BATS = []; var seed = 11, i;
     function r() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
     function mk(x, y) { return { x: x, y: y, ph: r() * 6.28, sc: 0.8 + r() * 0.4, st: "hang", t: 0, dur: 0, vx: 0, vy: 0, px: 0, py: 0, wait: 1.5 + r() * 8, cd: 0, fr: Math.floor(r() * 13), face: 1 }; }
-    for (i = 0; i < 70; i++) { var x = 280 + (i + r() * 0.85) * (2950 / 70); BATS.push(mk(x, 132 + r() * 12)); }
-    for (i = 0; i < 38; i++) { var xx = 3280 + (i + r() * 0.85) * (800 / 38); BATS.push(mk(xx, arenaCeil(xx) + 4 + r() * 8)); }
+    for (i = 0; i < 70; i++) { var x = 360 + (i + r() * 0.85) * (3500 / 70); BATS.push(mk(x, 238 + r() * 14)); }
+    for (i = 0; i < 38; i++) { var xx = 3950 + (i + r() * 0.85) * (900 / 38); BATS.push(mk(xx, arenaCeil(xx) + 4 + r() * 8)); }
   }
   function canHurtNow() { return (typeof state !== "undefined" && state === "playing") && !window.__airbornePlatformTakeoffActive && !(typeof bonusActive !== "undefined" && bonusActive) && !(typeof levelEndActive !== "undefined" && levelEndActive) && typeof takeHit === "function"; }
   function sprite(list, idx, x, y, k, flip, top, rot, alpha) {
@@ -616,7 +616,7 @@
   }
   function drawBats(c, now, dt) {
     if (!BATS) batsInit();
-    var s = c.s, pw = (player.w || 80), ph = (player.h || 50), att = 0, i, k = 0.18 * s, hurt = canHurtNow();
+    var s = c.s, pw = (player.w || 80), ph = (player.h || 50), att = 0, i, k = 0.18 * s * KZ, hurt = canHurtNow();
     for (i = 0; i < BATS.length; i++) if (BATS[i].st === "chase" || BATS[i].st === "dive") att++;
     for (i = 0; i < BATS.length; i++) {
       var b = BATS[i], hx = c.x + b.x * s, hy = c.top + b.y * s, kk = k * b.sc;
@@ -711,11 +711,12 @@
   }
   // props: [sheet rect name, cave x, base y, scale, glow rgb or null, kind]
   var PROPS = [
-    ["cl1", 560, 410, 0.28, "90,170,255", "cry"], ["spring1", 760, 410, 0.26, "90,200,255", "spring"], ["cl2", 1060, 410, 0.28, "200,140,255", "cry"],
-    ["crystalBlue", 1420, 412, 0.22, "100,190,255", "cry"], ["cl3", 1700, 410, 0.28, "200,140,255", "cry"], ["crate2", 2000, 412, 0.28, null, ""], ["barrel", 2035, 412, 0.28, null, ""],
-    ["cl4", 2420, 410, 0.28, "110,170,255", "cry"], ["spring2", 2750, 410, 0.24, "90,200,255", "spring"], ["crystalDark", 3010, 412, 0.2, "200,120,255", "cry"],
-    ["crystalBlue", 3330, 404, 0.22, "100,190,255", "cry"], ["crystalDark", 3930, 404, 0.2, "200,120,255", "cry"]
+    ["cl1", 640, 606, 0.28, "90,170,255", "cry"], ["spring1", 960, 606, 0.26, "90,200,255", "spring"], ["cl2", 1420, 606, 0.28, "200,140,255", "cry"],
+    ["crystalBlue", 1950, 608, 0.22, "100,190,255", "cry"], ["cl3", 2300, 606, 0.28, "200,140,255", "cry"], ["crate2", 2700, 608, 0.28, null, ""], ["barrel", 2745, 608, 0.28, null, ""],
+    ["cl4", 3150, 606, 0.28, "110,170,255", "cry"], ["spring2", 3500, 606, 0.24, "90,200,255", "spring"], ["crystalDark", 3780, 608, 0.2, "200,120,255", "cry"],
+    ["crystalBlue", 4020, 596, 0.22, "100,190,255", "cry"], ["crystalDark", 4780, 596, 0.2, "200,120,255", "cry"]
   ];
+
 
 
 
@@ -725,23 +726,23 @@
   function atmos2(c, now, dt) {
     var s = c.s, i;
     function sx(x) { return c.x + x * s; } function sy(y) { return c.top + y * s; }
-    if (!MOTES) { MOTES = []; for (i = 0; i < 150; i++) MOTES.push({ x: WALL_L + Math.random() * (ARENA_R - WALL_L - 40), y: 160 + Math.random() * 240, ph: Math.random() * 6.28, sp: 0.4 + Math.random() * 0.9, rgb: MOTE_C[i % 4], r: 1 + Math.random() * 1.6 }); }
+    if (!MOTES) { MOTES = []; for (i = 0; i < 150; i++) MOTES.push({ x: WALL_L + Math.random() * (ARENA_R - WALL_L - 40), y: 270 + Math.random() * 310, ph: Math.random() * 6.28, sp: 0.4 + Math.random() * 0.9, rgb: MOTE_C[i % 4], r: 1 + Math.random() * 1.6 }); }
     ctx.save();
     // ceiling shade: ambient occlusion band under the roof
     var x0 = Math.max(0, sx(WALL_L)), x1 = Math.min(W, sx(ARENA_R));
-    if (x1 > x0) { var gr = ctx.createLinearGradient(0, sy(CEIL_T - 6), 0, sy(CEIL_T + 70)); gr.addColorStop(0, "rgba(6,4,18,0.55)"); gr.addColorStop(1, "rgba(6,4,18,0)"); ctx.fillStyle = gr; ctx.fillRect(x0, sy(CEIL_T - 6), x1 - x0, 76 * s); }
+    if (x1 > x0) { var gr = ctx.createLinearGradient(0, sy(CEIL_T - 6), 0, sy(CEIL_T + 110)); gr.addColorStop(0, "rgba(6,4,18,0.55)"); gr.addColorStop(1, "rgba(6,4,18,0)"); ctx.fillStyle = gr; ctx.fillRect(x0, sy(CEIL_T - 6), x1 - x0, 116 * s); }
     // light shafts
     ctx.globalCompositeOperation = "lighter";
     for (i = 0; i < SHAFTS.length; i++) {
       var X = sx(SHAFTS[i][0]); if (X < -140 || X > W + 140) continue;
-      var a = 0.11 + 0.06 * Math.sin(now * 0.5 + SHAFTS[i][1]), ty = sy(CEIL_T - 4), by = sy(396), sl = 70 * s, sw = Math.sin(now * 0.25 + SHAFTS[i][1]) * 12 * s;
+      var a = 0.11 + 0.06 * Math.sin(now * 0.5 + SHAFTS[i][1]), ty = sy(CEIL_T - 4), by = sy(590), sl = 70 * s, sw = Math.sin(now * 0.25 + SHAFTS[i][1]) * 12 * s;
       var g = ctx.createLinearGradient(0, ty, 0, by); g.addColorStop(0, "rgba(170,205,255," + a * 1.6 + ")"); g.addColorStop(1, "rgba(120,150,255,0)");
       ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(X - 10 * s, ty); ctx.lineTo(X + 18 * s, ty); ctx.lineTo(X + 18 * s + sl + 40 * s + sw, by); ctx.lineTo(X - 10 * s + sl - 20 * s + sw, by); ctx.closePath(); ctx.fill();
     }
     // fireflies / spores
     for (i = 0; i < MOTES.length; i++) {
       var m = MOTES[i]; m.x += Math.sin(now * 0.35 * m.sp + m.ph) * 9 * dt; m.y += Math.cos(now * 0.28 * m.sp + m.ph * 1.7) * 7 * dt - 1.5 * dt;
-      if (m.y < 150) m.y = 396; if (m.x < WALL_L) m.x = ARENA_R - 40; if (m.x > ARENA_R) m.x = WALL_L + 5;
+      if (m.y < 255) m.y = 585; if (m.x < WALL_L) m.x = ARENA_R - 40; if (m.x > ARENA_R) m.x = WALL_L + 5;
       var MX = sx(m.x); if (MX < -10 || MX > W + 10) continue;
       var tw = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(now * 1.6 * m.sp + m.ph * 3));
       glowAt(MX, sy(m.y), m.r * 5 * s, m.rgb, 0.8 * tw); glowAt(MX, sy(m.y), m.r * 1.6 * s, "255,255,255", 0.7 * tw);
@@ -775,15 +776,15 @@
   // ---------- lamps, crystals, boss-room beam, ripples, pipe glow ----------
   var MOTH = null;
   function atmos3(c, now, dt) {
-    var s = c.s, i, k, F = CAVE_FX, W2 = W;
+    var s = c.s, sk = c.s * KZ, i, k, F = CAVE_FX, W2 = W;
     function sx(x) { return c.x + x * s; } function sy(y) { return c.top + y * s; }
     // crystals (baked into the art)
     for (i = 0; i < F.crystals.length; i++) {
       var p = F.crystals[i], CX = sx(p[0]); if (CX < -60 || CX > W2 + 60) continue;
-      var rgb = p[2] ? "185,125,255" : "105,195,255", cyY = sy(p[1]) - 4 * s;
-      crystalFx(CX, cyY, s, rgb, i, now, 20);
-      if (p[1] > 330) {                                               // reflection on the floor
-        ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.translate(CX, sy(WATER_Y + 2)); ctx.scale(1, 0.18); glowAt(0, 0, 44 * s, rgb, 0.16 + 0.08 * Math.sin(now * 1.3 + i)); ctx.restore();
+      var rgb = p[2] ? "185,125,255" : "105,195,255", cyY = sy(p[1]) - 4 * sk;
+      crystalFx(CX, cyY, sk, rgb, i, now, 20);
+      if (p[1] > 500) {                                               // reflection on the floor
+        ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.translate(CX, sy(WATER_Y + 2)); ctx.scale(1, 0.18); glowAt(0, 0, 44 * sk, rgb, 0.16 + 0.08 * Math.sin(now * 1.3 + i)); ctx.restore();
       }
     }
     // lamps: flickering halo, hot core, floor spill, drifting moths
@@ -791,40 +792,40 @@
     for (i = 0; i < F.lamps.length; i++) {
       var l = F.lamps[i], LX = sx(l[0]); if (LX < -120 || LX > W2 + 120) continue;
       var LY = sy(l[1]), f = 0.82 + 0.1 * Math.sin(now * 5.3 + i * 2.1) + 0.06 * Math.sin(now * 17 + i * 5) + (Math.sin(now * 1.7 + i * 9) > 0.96 ? -0.25 : 0);
-      glowAt(LX, LY, 92 * s, l[2], 0.10 * f); glowAt(LX, LY, 40 * s, l[2], 0.22 * f); glowAt(LX, LY, 11 * s, "255,245,215", 0.45 * f);
-      if (l[1] < 340) { ctx.save(); ctx.translate(LX, sy(WATER_Y)); ctx.scale(1, 0.16); glowAt(0, 0, 110 * s, l[2], 0.10 * f); ctx.restore(); }
+      glowAt(LX, LY, 92 * sk, l[2], 0.10 * f); glowAt(LX, LY, 40 * sk, l[2], 0.22 * f); glowAt(LX, LY, 11 * sk, "255,245,215", 0.45 * f);
+      if (l[1] < 480) { ctx.save(); ctx.translate(LX, sy(WATER_Y)); ctx.scale(1, 0.16); glowAt(0, 0, 110 * sk, l[2], 0.10 * f); ctx.restore(); }
       for (k = 0; k < 2; k++) {                                        // moths
         var ma = now * (1.1 + k * 0.5) + i * 3 + k * 2.4, mx = LX + Math.cos(ma) * (20 + k * 9) * s, my = LY + Math.sin(ma * 1.3) * (12 + k * 6) * s;
-        glowAt(mx, my, 3.2 * s, "255,230,170", 0.55);
+        glowAt(mx, my, 3.2 * sk, "255,230,170", 0.55);
       }
     }
     ctx.restore();
     // boss room: diffuse crystal beam from the floor emblem up to the ceiling lamp, ripples on the floor, glowing rings
     var BX = sx(ARENA_CX);
     if (BX > -300 && BX < W2 + 300) {
-      var pu = 0.5 + 0.5 * Math.sin(now * 1.1), by0 = sy(ARENA_FLOOR - 4), by1 = sy(150), bh = by0 - by1;
+      var pu = 0.5 + 0.5 * Math.sin(now * 1.1), by0 = sy(ARENA_FLOOR - 4), by1 = sy(175), bh = by0 - by1;
       ctx.save(); ctx.globalCompositeOperation = "lighter";
       var G = glow("140,205,255"), Gw = glow("230,245,255");
-      ctx.globalAlpha = 0.30 + 0.12 * pu; ctx.drawImage(G, BX - 95 * s, by1 - 30 * s, 190 * s, bh + 60 * s);                // wide diffuse column
-      ctx.globalAlpha = 0.38 + 0.15 * pu; ctx.drawImage(Gw, BX - 32 * s, by1, 64 * s, bh);                                   // bright core column
+      ctx.globalAlpha = 0.30 + 0.12 * pu; ctx.drawImage(G, BX - 95 * sk, by1 - 30 * sk, 190 * sk, bh + 60 * sk);                // wide diffuse column
+      ctx.globalAlpha = 0.38 + 0.15 * pu; ctx.drawImage(Gw, BX - 32 * sk, by1, 64 * sk, bh);                                   // bright core column
       ctx.globalAlpha = 1;
-      glowAt(BX, by0, 90 * s * (0.9 + 0.1 * pu), "170,120,255", 0.5); glowAt(BX, by0, 40 * s, "255,255,255", 0.45); glowAt(BX, by1 + 6 * s, 50 * s, "150,210,255", 0.4);
+      glowAt(BX, by0, 90 * sk * (0.9 + 0.1 * pu), "170,120,255", 0.5); glowAt(BX, by0, 40 * sk, "255,255,255", 0.45); glowAt(BX, by1 + 6 * sk, 50 * sk, "150,210,255", 0.4);
       for (k = 0; k < 3; k++) {                                        // expanding ripples on the floor
         var rp = ((now * 0.3 + k / 3) % 1), rr = (40 + rp * 330) * s;
-        ctx.save(); ctx.translate(BX, sy(ARENA_FLOOR + 6)); ctx.scale(1, 0.2); ctx.strokeStyle = "rgba(170,200,255," + (0.45 * (1 - rp)) + ")"; ctx.lineWidth = 4 * s * (1 - rp * 0.6); ctx.beginPath(); ctx.arc(0, 0, rr, 0, 6.283); ctx.stroke(); ctx.restore();
+        ctx.save(); ctx.translate(BX, sy(ARENA_FLOOR + 10)); ctx.scale(1, 0.2); ctx.strokeStyle = "rgba(170,200,255," + (0.45 * (1 - rp)) + ")"; ctx.lineWidth = 4 * sk * (1 - rp * 0.6); ctx.beginPath(); ctx.arc(0, 0, rr, 0, 6.283); ctx.stroke(); ctx.restore();
       }
       ctx.restore();
       if (Math.random() < dt * 14) GL.push({ w: 1, x: ARENA_CX + (Math.random() - 0.5) * 26, y: ARENA_FLOOR - 6, vx: (Math.random() - 0.5) * 10, vy: -(40 + Math.random() * 60), age: 0, life: 1.6 + Math.random() * 1.2, r: 1.3 + Math.random() * 1.7, rgb: Math.random() < 0.5 ? "200,230,255" : "190,150,255", tw: 1 });
     }
     // pipe mouths: warm glow and a wisp of steam
     ctx.save(); ctx.globalCompositeOperation = "lighter";
-    var pm = [[90, PIPE_L_CY], [EXIT_X + 70, EXIT_CY]];
-    for (i = 0; i < pm.length; i++) { var PX = sx(pm[i][0]); if (PX > -100 && PX < W2 + 100) glowAt(PX, sy(pm[i][1]), 46 * s, "255,190,100", 0.14 + 0.06 * Math.sin(now * 2 + i)); }
+    var pm = [[130, PIPE_L_CY], [EXIT_X + 100, EXIT_CY]];
+    for (i = 0; i < pm.length; i++) { var PX = sx(pm[i][0]); if (PX > -100 && PX < W2 + 100) glowAt(PX, sy(pm[i][1]), 46 * sk, "255,190,100", 0.14 + 0.06 * Math.sin(now * 2 + i)); }
     ctx.restore();
   }
   var STAL = null;
-  function stalInit() { STAL = [[800, "st1"], [1450, "st2"], [2050, "st3"], [2650, "st1"], [3150, "st3"], [1150, "st3"]].map(function (a) { return { x: a[0], n: a[1], st: "hang", t: 0, y: 0, vy: 0 }; }); }
-  var PLATS = [["pl4", 1000, 285, 0.34], ["pl5", 1650, 280, 0.4], ["pl4", 2250, 288, 0.34], ["pl5", 2900, 282, 0.4]];
+  function stalInit() { STAL = [[900, "st1"], [1700, "st2"], [2500, "st3"], [3300, "st1"], [3750, "st3"], [1300, "st3"]].map(function (a) { return { x: a[0], n: a[1], st: "hang", t: 0, y: 0, vy: 0 }; }); }
+  var PLATS = [["pl4", 1300, 430, 0.34], ["pl5", 2150, 425, 0.4], ["pl4", 2950, 432, 0.34], ["pl5", 3550, 426, 0.4]];
   var embers = [];
   function drawPropsAndAtmos(c, now, dt, layer) {
     var s = c.s, sh = img("level3_props"), i, p; if (!sh || !sh.naturalWidth) return;
@@ -837,37 +838,37 @@
     // floor props
     for (i = 0; i < PROPS.length; i++) {
       p = PROPS[i]; var X = sx(p[1]); if (X < -80 || X > W + 80) continue;
-      var q = PROP_R[p[0]], k = p[3], pulse = 0.5 + 0.5 * Math.sin(now * (p[5] === "lamp" ? 9 : 1.6) + i * 2.1);
+      var q = PROP_R[p[0]], k = p[3] * KZ, pulse = 0.5 + 0.5 * Math.sin(now * (p[5] === "lamp" ? 9 : 1.6) + i * 2.1);
       if (p[5] === "spring") { var comp = Math.pow(Math.max(0, Math.sin(now * 2.2 + i)), 8) * 0.12; ctx.save(); ctx.translate(X, sy(p[2])); ctx.scale(1 + comp * 0.5, 1 - comp); ctx.drawImage(sh, q[0], q[1], q[2], q[3], -q[2] * k * s / 2, -q[3] * k * s, q[2] * k * s, q[3] * k * s); ctx.restore(); }
       else put(p[0], p[1], p[2], k, 1);
       var cy = sy(p[2] - q[3] * k * 0.55);
       if (p[4]) {
         ctx.save(); ctx.globalCompositeOperation = "lighter";
         var fl = p[5] === "lamp" ? 0.3 + 0.12 * pulse + 0.1 * Math.random() * (Math.random() < 0.15 ? 1 : 0) : p[5] === "furn" ? 0.28 + 0.1 * pulse : 0.2 + 0.14 * pulse;
-        if (p[5] === "cry") { ctx.restore(); crystalFx(X, cy, s, p[4], i, clockT, q[3] * k * 0.5); ctx.save(); ctx.globalCompositeOperation = "lighter"; } else glowAt(X, cy, 44 * s * (0.95 + 0.08 * pulse), p[4], fl); ctx.restore();
+        if (p[5] === "cry") { ctx.restore(); crystalFx(X, cy, s * KZ, p[4], i, clockT, q[3] * k * 0.5); ctx.save(); ctx.globalCompositeOperation = "lighter"; } else glowAt(X, cy, 44 * s * (0.95 + 0.08 * pulse), p[4], fl); ctx.restore();
         if (p[5] === "cry" && Math.random() < dt * 2.4) GL.push({ w: 1, x: p[1] + (Math.random() - 0.5) * q[2] * k * 0.8, y: p[2] - Math.random() * q[3] * k, vx: 0, vy: -3, age: 0, life: 0.9 + Math.random() * 0.8, r: 1.6 + Math.random() * 1.6, rgb: p[4], tw: 1 });
       }
       if (p[5] === "furn" && Math.random() < dt * 5) embers.push({ w: 1, x: p[1] + (Math.random() - 0.5) * 14, y: p[2] - q[3] * k * 0.95, vx: (Math.random() - 0.5) * 8, vy: -(14 + Math.random() * 22), age: 0, life: 1 + Math.random() * 1.2, r: 1.2 + Math.random(), rgb: "255,160,60" });
       if (p[5] === "steam" && Math.random() < dt * 2.2) fx.sp.push({ k: "steam", x: X + 6 * s, y: sy(p[2] - q[3] * k * 0.9), vx: rnd2(-6, 6) * U(), vy: -rnd2(24, 40) * U(), r: rnd2(4, 6) * U(), gr: rnd2(8, 13) * U(), age: 0, life: rnd2(1.2, 1.9), a: rnd2(0.25, 0.4) });
     }
     // swaying scaffold hook
-    var hxx = 1850, sw = Math.sin(now * 1.3) * 0.07; if (sx(hxx) > -60 && sx(hxx) < W + 60) put("hook", hxx, 134, 0.34, 1, sw, undefined, true);
+    var hxx = 2600, sw = Math.sin(now * 1.3) * 0.07; if (sx(hxx) > -60 && sx(hxx) < W + 60) put("hook", hxx, 242, 0.34 * KZ, 1, sw, undefined, true);
     // floating rock platforms (obstacles) – bob up and down
     for (i = 0; i < PLATS.length; i++) {
       p = PLATS[i]; var by = p[2] + Math.sin(now * 1.1 + i * 2) * 6, pq = PROP_R[p[0]], PX = sx(p[1]); if (PX < -120 || PX > W + 120) continue;
-      put(p[0], p[1], by + pq[3] * p[3] * 0.35, p[3], 1);
-      ctx.save(); ctx.globalCompositeOperation = "lighter"; glowAt(PX, sy(by + pq[3] * p[3] * 0.6), 34 * s, "170,120,255", 0.18 + 0.08 * Math.sin(now * 2 + i)); ctx.restore();
+      put(p[0], p[1], by + pq[3] * (p[3] * KZ) * 0.35, (p[3] * KZ), 1);
+      ctx.save(); ctx.globalCompositeOperation = "lighter"; glowAt(PX, sy(by + pq[3] * (p[3] * KZ) * 0.6), 34 * s, "170,120,255", 0.18 + 0.08 * Math.sin(now * 2 + i)); ctx.restore();
       if (canHurtNow()) {
-        var hw = pq[2] * p[3] * s * 0.5, topY = sy(by - pq[3] * p[3] * 0.1), botY = sy(by + pq[3] * p[3] * 0.8);
+        var hw = pq[2] * (p[3] * KZ) * s * 0.5, topY = sy(by - pq[3] * (p[3] * KZ) * 0.1), botY = sy(by + pq[3] * (p[3] * KZ) * 0.8);
         if (Math.abs(player.x - PX) < hw * 0.9 + (player.w || 80) * 0.3 && player.y + (player.h || 50) * 0.28 > topY && player.y - (player.h || 50) * 0.28 < botY) { try { takeHit(); } catch (e) {} }
       }
     }
     // stalactites that shake and drop when the blimp passes
     if (!STAL) stalInit();
     for (i = 0; i < STAL.length; i++) {
-      var S = STAL[i], SX = sx(S.x), sq = PROP_R[S.n], ks = 0.3, topC = 132; if (SX < -60 || SX > W + 60) continue;
+      var S = STAL[i], SX = sx(S.x), sq = PROP_R[S.n], ks = 0.3 * KZ, topC = 240; if (SX < -60 || SX > W + 60) continue;
       var dxs = Math.abs(player.x - SX);
-      if (S.st === "hang") { if (dxs < 90 * s && player.y < sy(300) && state === "playing" && Math.random() < dt * 1.2) { S.st = "shake"; S.t = 0; } put(S.n, S.x, topC, ks, 1, 0, 1, true); }
+      if (S.st === "hang") { if (dxs < 90 * s && player.y < sy(440) && state === "playing" && Math.random() < dt * 1.2) { S.st = "shake"; S.t = 0; } put(S.n, S.x, topC, ks, 1, 0, 1, true); }
       else if (S.st === "shake") { S.t += dt; var jx = (Math.random() - 0.5) * 2.2 * s; ctx.save(); ctx.translate(jx, 0); put(S.n, S.x, topC, ks, 1, 0, 1, true); ctx.restore();
         if (Math.random() < dt * 18) GL.push({ w: 1, x: S.x + (Math.random() - 0.5) * 10, y: topC + 4, vx: 0, vy: 20, age: 0, life: 0.5, r: 1.2, rgb: "150,200,255" });
         if (S.t > 0.8) { S.st = "fall"; S.vy = 0; S.y = 0; } }
@@ -932,7 +933,7 @@
     ctx.restore();
   };
   // ================= Boss arena: zoom-out, no scrolling, free flight, electric octopus =================
-  var ARENA_SZ = 0.9;                                   // reference cave scale (boss / projectile sizes are relative to it)
+  var ARENA_SZ = 0.55;                                   // reference cave scale (boss / projectile sizes are relative to it)
   function arenaRect() {
     var c = cave, s = c.s;
     return { l: c.x + ARENA_L * s, r: c.x + ARENA_R * s, floor: c.top + ARENA_FLOOR * s, cx: c.x + ARENA_CX * s,
