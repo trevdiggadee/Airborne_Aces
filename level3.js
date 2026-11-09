@@ -167,7 +167,7 @@
     sprinkle(x0, spawnX);
   }
   function caveDims() {
-    var s = 0.55 * H / 420;
+    var s = 0.4675 * H / 420;
     return { h: CAVE_H * s, s: s, w: CAVE_W * s, top: H - CAVE_H * s };
   }
   function spawnCave() {
@@ -905,10 +905,13 @@
     if (!cave) return;
     var c = cave, im = img("level3_cave"); if (!im) return;
     if (c.x > W + 40 || c.x + c.w < -40) return;
-    ctx.save();                                           // dark rock behind the dome: never any sky outside the roof
-    ctx.beginPath(); ctx.rect(c.x, c.top - c.h * 0.9, c.w, c.h * 2.8); ctx.clip();
-    ctx.drawImage(im, c.x, c.top - c.h * 0.9, c.w, c.h * 2.8);
-    ctx.fillStyle = "rgba(6,3,16,0.72)"; ctx.fillRect(c.x, c.top - c.h * 0.9, c.w, c.h * 2.8);
+    ctx.save();                                           // rock above the roof: the solid ceiling band stretched upward, fading to dark (never any sky)
+    var rs = im.naturalHeight * 0.09, rh = im.naturalHeight * 0.13, dTop = c.top - c.h * 0.7, dBot = c.top + c.h * 0.22;
+    ctx.beginPath(); ctx.rect(c.x, dTop, c.w, dBot - dTop); ctx.clip();
+    ctx.fillStyle = "#0b0826"; ctx.fillRect(c.x, dTop, c.w, dBot - dTop);
+    ctx.drawImage(im, 0, rs, im.naturalWidth, rh, c.x, dTop, c.w, dBot - dTop);
+    var gd = ctx.createLinearGradient(0, dTop, 0, dBot); gd.addColorStop(0, "rgba(4,2,16,0.9)"); gd.addColorStop(1, "rgba(4,2,16,0.25)");
+    ctx.fillStyle = gd; ctx.fillRect(c.x, dTop, c.w, dBot - dTop);
     ctx.restore();
     ctx.drawImage(im, c.x, c.top, c.w, c.h);
     var now = clockT, dt = fx.last ? Math.min(0.05, Math.max(0, now - fx.last)) : 0.016;
@@ -933,7 +936,7 @@
     ctx.restore();
   };
   // ================= Boss arena: zoom-out, no scrolling, free flight, electric octopus =================
-  var ARENA_SZ = 0.55;                                   // reference cave scale (boss / projectile sizes are relative to it)
+  var ARENA_SZ = 0.4675;                                   // reference cave scale (boss / projectile sizes are relative to it)
   function arenaRect() {
     var c = cave, s = c.s;
     return { l: c.x + ARENA_L * s, r: c.x + ARENA_R * s, floor: c.top + ARENA_FLOOR * s, cx: c.x + ARENA_CX * s,
@@ -942,7 +945,7 @@
   function startArena() {
     var c = cave, z = ARENA_Z, Xc = c.x + ARENA_CX * c.s;
     var xr = c.x + CAVE_W * c.s;
-    arena = { st: "intro", t: 0, z: z, ax: (W - z * xr) / (1 - z), ay: H, dlg: false, vx: 0, vy: 0 };
+    arena = { st: "intro", t: 0, z: z, ax: (W + 22 - z * xr) / (1 - z), ay: H, dlg: false, vx: 0, vy: 0 };
     structs = []; orbs = []; afx = [];
     window.__airborneL3Arena = true;
   }
